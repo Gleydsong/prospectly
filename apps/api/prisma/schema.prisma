@@ -1,0 +1,674 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  OWNER
+  ADMIN
+  SALES
+  MEMBER
+  VIEWER
+}
+
+enum LeadStatus {
+  NEW
+  TO_REVIEW
+  QUALIFIED
+  DISQUALIFIED
+  CONTACTED
+  RESPONDED
+  MEETING_SCHEDULED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+  ARCHIVED
+}
+
+enum LeadSource {
+  MANUAL
+  CSV_IMPORT
+  GOOGLE_PLACES
+  OPENSTREETMAP
+  YELP
+  REFERRAL
+  OTHER
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  WHATSAPP
+  INSTAGRAM
+  MEETING
+  NOTE
+  TASK
+  PROPOSAL_SENT
+  STATUS_CHANGED
+  OWNER_CHANGED
+  STAGE_CHANGED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum WebsitePresence {
+  NO_WEBSITE_REPORTED
+  WEBSITE_FOUND
+  NEEDS_REVIEW
+}
+
+enum AnalysisStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum IssueSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+// ---------- Identity & tenancy ----------
+
+model User {
+  id                    String     @id @default(uuid())
+  email                 String     @unique
+  name                  String
+  passwordHash          String?
+  avatarUrl             String?
+  googleId              String?    @unique
+  githubId              String?    @unique
+  emailVerifiedAt       DateTime?
+  emailVerifyTokenHash  String?
+  resetTokenHash        String?
+  resetTokenExpiresAt   DateTime?
+  failedLoginAttempts   Int        @default(0)
+  lockedUntil           DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  memberships           OrganizationMember[]
+  refreshTokens         RefreshToken[]
+  ownedLeads            Lead[]               @relation("LeadOwner")
+  activities            LeadActivity[]
+  assignedTasks         Task[]               @relation("TaskAssignee")
+  createdTasks          Task[]               @relation("TaskCreator")
+  searches              Search[]
+  imports               Import[]
+  campaigns             Campaign[]
+  templates             MessageTemplate[]
+  auditLogs             AuditLog[]
+
+  @@index([email])
+}
+
+model Organization {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  members     OrganizationMember[]
+  leads       Lead[]
+  tags        Tag[]
+  activities  LeadActivity[]
+  tasks       Task[]
+  pipelines   Pipeline[]
+  searches    Search[]
+  imports     Import[]
+  campaigns   Campaign[]
+  templates   MessageTemplate[]
+  scoreConfigs ScoreConfiguration[]
+  integrations Integration[]
+  auditLogs   AuditLog[]
+}
+
+model OrganizationMember {
+  id             String       @id @default(uuid())
+  userId         String
+  organizationId String
+  role           Role         @default(MEMBER)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model RefreshToken {
+  id            String    @id @default(uuid())
+  userId        String
+  tokenHash     String    @unique
+  userAgent     String?
+  ip            String?
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  replacedById  String?
+  createdAt     DateTime  @default(now())
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------- Leads ----------
+
+model Lead {
+  id              String      @id @default(uuid())
+  organizationId  String
+  ownerId         String?
+  stageId         String?
+
+  companyName     String
+  tradeName       String?
+  category        String?
+  segment         String?
+  description     String?
+  phone           String?
+  email           String?
+  whatsapp        String?
+  website         String?
+  domain          String?
+  instagram       String?
+  facebook        String?
+  linkedin        String?
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+  latitude        Float?
+  longitude       Float?
+  rating          Float?
+  reviewCount     Int?
+  openingHours    Json?
+
+  source          LeadSource  @default(MANUAL)
+  externalId      String?
+  status          LeadStatus  @default(NEW)
+  websitePresence WebsitePresence @default(NEEDS_REVIEW)
+  websiteCheckedAt DateTime?
+  websiteCheckSource String?
+  score           Int         @default(0)
+  notes           String?
+
+  doNotContact    Boolean     @default(false)
+  consentAt       DateTime?
+  dataCollectedAt DateTime?
+
+  lastContactAt   DateTime?
+  nextContactAt   DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner           User?          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  stage           PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  contacts        LeadContact[]
+  tags            LeadTag[]
+  activities      LeadActivity[]
+  tasks           Task[]
+  websiteRecord   Website?
+  scores          LeadScore[]
+  campaignLeads   CampaignLead[]
+  searchResults   SearchResult[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, ownerId])
+  @@index([organizationId, stageId])
+  @@index([organizationId, email])
+  @@index([organizationId, domain])
+  @@index([organizationId, phone])
+  @@index([organizationId, city])
+  @@index([organizationId, deletedAt])
+  @@unique([organizationId, source, externalId])
+}
+
+model LeadContact {
+  id        String   @id @default(uuid())
+  leadId    String
+  name      String
+  role      String?
+  email     String?
+  phone     String?
+  whatsapp  String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+model Tag {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  color          String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads          LeadTag[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
+model LeadTag {
+  leadId String
+  tagId  String
+
+  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([leadId, tagId])
+  @@index([tagId])
+}
+
+model LeadActivity {
+  id             String       @id @default(uuid())
+  organizationId String
+  leadId         String
+  userId         String
+  type           ActivityType
+  description    String?
+  outcome        String?
+  nextAction     String?
+  followUpAt     DateTime?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+model Task {
+  id             String       @id @default(uuid())
+  organizationId String
+  leadId         String?
+  assigneeId     String?
+  createdById    String
+  title          String
+  description    String?
+  dueAt          DateTime?
+  priority       TaskPriority @default(MEDIUM)
+  status         TaskStatus   @default(OPEN)
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignee       User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, assigneeId])
+  @@index([leadId])
+}
+
+// ---------- Pipeline ----------
+
+model Pipeline {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages         PipelineStage[]
+
+  @@index([organizationId])
+}
+
+model PipelineStage {
+  id         String   @id @default(uuid())
+  pipelineId String
+  name       String
+  order      Int
+  color      String?
+  isWon      Boolean  @default(false)
+  isLost     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads      Lead[]
+
+  @@unique([pipelineId, order])
+  @@index([pipelineId])
+}
+
+// ---------- Website analysis (Phase 4) ----------
+
+model Website {
+  id        String   @id @default(uuid())
+  leadId    String   @unique
+  url       String
+  domain    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lead      Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  analyses  WebsiteAnalysis[]
+}
+
+model WebsiteAnalysis {
+  id                String         @id @default(uuid())
+  websiteId         String
+  status            AnalysisStatus @default(PENDING)
+  httpStatus        Int?
+  https             Boolean?
+  sslValid          Boolean?
+  redirectsToHttps  Boolean?
+  responseTimeMs    Int?
+  title             String?
+  metaDescription   String?
+  hasViewport       Boolean?
+  hasContactForm    Boolean?
+  hasPhone          Boolean?
+  hasEmail          Boolean?
+  hasSocialLinks    Boolean?
+  hasWhatsapp       Boolean?
+  hasPrivacyPolicy  Boolean?
+  hasSitemap        Boolean?
+  hasRobotsTxt      Boolean?
+  hasFavicon        Boolean?
+  hasOpenGraph      Boolean?
+  hasStructuredData Boolean?
+  cms               String?
+  framework         String?
+  analytics         String?
+  technologies      Json?
+  screenshotUrl     String?
+  error             String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime       @default(now())
+
+  website           Website                 @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  issues            WebsiteAnalysisIssue[]
+
+  @@index([websiteId, createdAt])
+  @@index([status])
+}
+
+model WebsiteAnalysisIssue {
+  id         String         @id @default(uuid())
+  analysisId String
+  code       String
+  severity   IssueSeverity
+  message    String
+  createdAt  DateTime       @default(now())
+
+  analysis   WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+}
+
+// ---------- Scoring (Phase 4) ----------
+
+model ScoreConfiguration {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String   @default("default")
+  version        Int      @default(1)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rules          ScoreRule[]
+
+  @@index([organizationId, isActive])
+}
+
+model ScoreRule {
+  id         String   @id @default(uuid())
+  configId   String
+  key        String
+  description String?
+  points     Int
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  config     ScoreConfiguration @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  @@unique([configId, key])
+}
+
+model LeadScore {
+  id            String   @id @default(uuid())
+  leadId        String
+  score         Int
+  tier          String
+  rulesApplied  Json
+  configVersion Int
+  calculatedAt  DateTime @default(now())
+
+  lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, calculatedAt])
+}
+
+// ---------- Search & imports (Phase 3) ----------
+
+model Search {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  provider       String
+  input          Json
+  status         SearchStatus @default(PENDING)
+  error          String?
+  createdAt      DateTime     @default(now())
+  completedAt    DateTime?
+
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results        SearchResult[]
+
+  @@index([organizationId, createdAt])
+}
+
+model SearchResult {
+  id             String   @id @default(uuid())
+  searchId       String
+  externalId     String?
+  data           Json
+  websitePresence WebsitePresence
+  normalizedData  Json
+  importedLeadId String?
+  createdAt      DateTime @default(now())
+
+  search         Search   @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  importedLead   Lead?    @relation(fields: [importedLeadId], references: [id], onDelete: SetNull)
+
+  @@index([searchId])
+  @@unique([searchId, externalId])
+}
+
+model Import {
+  id             String       @id @default(uuid())
+  organizationId String
+  userId         String
+  fileName       String
+  status         ImportStatus @default(PENDING)
+  totalRows      Int          @default(0)
+  importedCount  Int          @default(0)
+  skippedCount   Int          @default(0)
+  invalidCount   Int          @default(0)
+  mapping        Json?
+  createdAt      DateTime     @default(now())
+  completedAt    DateTime?
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  errors         ImportError[]
+
+  @@index([organizationId, createdAt])
+}
+
+model ImportError {
+  id        String   @id @default(uuid())
+  importId  String
+  row       Int
+  message   String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  import    Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@index([importId])
+}
+
+// ---------- Campaigns & templates (Phase 5) ----------
+
+model Campaign {
+  id             String         @id @default(uuid())
+  organizationId String
+  ownerId        String?
+  templateId     String?
+  name           String
+  description    String?
+  segment        String?
+  channel        String?
+  status         CampaignStatus @default(DRAFT)
+  startsAt       DateTime?
+  endsAt         DateTime?
+  metrics        Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          User?           @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  template       MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  leads          CampaignLead[]
+
+  @@index([organizationId, status])
+}
+
+model CampaignLead {
+  campaignId String
+  leadId     String
+  status     String   @default("PENDING")
+  addedAt    DateTime @default(now())
+
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, leadId])
+  @@index([leadId])
+}
+
+model MessageTemplate {
+  id             String   @id @default(uuid())
+  organizationId String
+  createdById    String?
+  name           String
+  category       String
+  subject        String?
+  body           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  campaigns      Campaign[]
+
+  @@index([organizationId, category])
+}
+
+// ---------- Platform ----------
+
+model Integration {
+  id             String   @id @default(uuid())
+  organizationId String
+  provider       String
+  status         String   @default("DISABLED")
+  config         Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  organizationId String?
+  userId         String?
+  action         String
+  entity         String?
+  entityId       String?
+  metadata       Json?
+  ip             String?
+  createdAt      DateTime @default(now())
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([entity, entityId])
+}

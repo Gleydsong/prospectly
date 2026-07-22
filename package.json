@@ -1,0 +1,30 @@
+{
+  "name": "prospectly",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma inteligente para encontrar, analisar e organizar oportunidades comerciais locais.",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "db:generate": "pnpm --filter @prospectly/api exec prisma generate",
+    "db:migrate": "pnpm --filter @prospectly/api exec prisma migrate dev",
+    "db:seed": "pnpm --filter @prospectly/api exec prisma db seed",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.4.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
+  }
+}
