@@ -5,7 +5,7 @@
   "description": "Plataforma inteligente para encontrar, analisar e organizar oportunidades comerciais locais.",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "pnpm --filter @prospectly/shared-types build && pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",

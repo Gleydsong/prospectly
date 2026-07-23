@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/protected-route';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { DashboardPage } from '@/pages/dashboard-page';
+import { ImportsPage } from '@/pages/imports-page';
 import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
 import { LeadsPage } from '@/pages/leads/leads-page';
 import { PipelinePage } from '@/pages/pipeline-page';
@@ -22,6 +23,7 @@ export function App() {
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="imports" element={<ImportsPage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />

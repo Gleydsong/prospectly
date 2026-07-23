@@ -1,13 +1,20 @@
 import { Controller, Get, ServiceUnavailableException, VERSION_NEUTRAL } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { ApiTags } from '@nestjs/swagger';
+import type { Queue } from 'bullmq';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { Public } from '../decorators/public.decorator';
 
+export const HEALTH_REDIS_QUEUE = 'health-readiness';
+
 @ApiTags('health')
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue(HEALTH_REDIS_QUEUE) private readonly queue: Queue,
+  ) {}
 
   @Public()
   @Get()
@@ -26,9 +33,17 @@ export class HealthController {
   async readiness() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { status: 'ready', database: 'up', timestamp: new Date().toISOString() };
     } catch {
-      throw new ServiceUnavailableException({ status: 'not_ready', database: 'down' });
+      throw new ServiceUnavailableException({ status: 'not_ready', database: 'down', redis: 'unknown' });
     }
+
+    try {
+      const redis = (await this.queue.client) as unknown as { ping(): Promise<string> };
+      await redis.ping();
+    } catch {
+      throw new ServiceUnavailableException({ status: 'not_ready', database: 'up', redis: 'down' });
+    }
+
+    return { status: 'ready', database: 'up', redis: 'up', timestamp: new Date().toISOString() };
   }
 }

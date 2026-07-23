@@ -1,6 +1,7 @@
 import {
   Building2,
   CheckSquare,
+  FileUp,
   KanbanSquare,
   LayoutDashboard,
   Search,
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils';
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/search', label: 'Pesquisa', icon: Search },
+  { to: '/imports', label: 'Importar CSV', icon: FileUp },
   { to: '/leads', label: 'Leads', icon: Users },
   { to: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
   { to: '/tasks', label: 'Tarefas', icon: CheckSquare },

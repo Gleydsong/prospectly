@@ -1,11 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LeadSource, LeadStatus } from '@prisma/client';
+import { LeadStatus, Prisma } from '@prisma/client';
 import {
   IsArray,
   IsEmail,
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUrl,
@@ -144,10 +145,10 @@ export class CreateLeadDto {
   @Min(0)
   reviewCount?: number;
 
-  @ApiPropertyOptional({ enum: LeadSource, default: 'MANUAL' })
+  @ApiPropertyOptional({ type: 'object', additionalProperties: true })
   @IsOptional()
-  @IsEnum(LeadSource)
-  source?: LeadSource;
+  @IsObject()
+  openingHours?: Prisma.InputJsonValue;
 
   @ApiPropertyOptional({ enum: LeadStatus, default: 'NEW' })
   @IsOptional()

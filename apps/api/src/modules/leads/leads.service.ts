@@ -4,11 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { LeadSource, Prisma } from '@prisma/client';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
+import {
+  buildProbableDuplicateKey,
+  LeadIngestionService,
+  normalizeBrazilianPhone,
+} from './lead-ingestion.service';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 
@@ -21,7 +26,10 @@ const LEAD_INCLUDE = {
 
 @Injectable()
 export class LeadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly leadIngestion: LeadIngestionService,
+  ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
     const where: Prisma.LeadWhereInput = {
@@ -67,7 +75,12 @@ export class LeadsService {
       }),
     ]);
 
-    return paginate(leads.map((lead) => this.serialize(lead)), total, query.page, query.pageSize);
+    return paginate(
+      leads.map((lead) => this.serialize(lead)),
+      total,
+      query.page,
+      query.pageSize,
+    );
   }
 
   async getById(organizationId: string, id: string) {
@@ -75,7 +88,11 @@ export class LeadsService {
       where: { id, organizationId, deletedAt: null },
       include: {
         ...LEAD_INCLUDE,
-        websiteRecord: { include: { analyses: { orderBy: { createdAt: 'desc' }, take: 1, include: { issues: true } } } },
+        websiteRecord: {
+          include: {
+            analyses: { orderBy: { createdAt: 'desc' }, take: 1, include: { issues: true } },
+          },
+        },
         scores: { orderBy: { calculatedAt: 'desc' }, take: 1 },
       },
     });
@@ -86,86 +103,66 @@ export class LeadsService {
   }
 
   async create(organizationId: string, dto: CreateLeadDto, actorId: string) {
-    const domain = this.extractDomain(dto.website);
-    await this.assertNotDuplicate(organizationId, {
-      domain,
-      email: dto.email,
-      phone: dto.phone,
-    });
-
     if (dto.ownerId) {
       await this.assertMember(organizationId, dto.ownerId);
     }
 
-    const tagRecords = dto.tags?.length
-      ? await this.upsertTags(organizationId, dto.tags)
-      : [];
-
-    const lead = await this.prisma.lead.create({
-      data: {
-        organizationId,
-        ownerId: dto.ownerId ?? actorId,
-        companyName: dto.companyName.trim(),
-        tradeName: dto.tradeName,
-        category: dto.category,
-        segment: dto.segment,
-        description: dto.description,
-        phone: dto.phone,
-        email: dto.email?.toLowerCase(),
-        whatsapp: dto.whatsapp,
-        website: dto.website,
-        domain,
-        instagram: dto.instagram,
-        facebook: dto.facebook,
-        linkedin: dto.linkedin,
-        address: dto.address,
-        city: dto.city,
-        state: dto.state,
-        country: dto.country,
-        postalCode: dto.postalCode,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
-        rating: dto.rating,
-        reviewCount: dto.reviewCount,
-        source: dto.source ?? 'MANUAL',
-        status: dto.status ?? 'NEW',
-        notes: dto.notes,
-        dataCollectedAt: new Date(),
-        tags: tagRecords.length
-          ? { create: tagRecords.map((tag) => ({ tagId: tag.id })) }
-          : undefined,
-      },
-      include: LEAD_INCLUDE,
+    const result = await this.leadIngestion.ingest(organizationId, actorId, {
+      ...dto,
+      source: LeadSource.MANUAL,
+      externalId: undefined,
+      websitePresence: undefined,
+      websiteCheckSource: undefined,
+      status: dto.status ?? 'NEW',
     });
+    if (result.status !== 'IMPORTED') {
+      const duplicate = result.lead;
+      throw new ConflictException(
+        duplicate
+          ? `Possible duplicate of existing lead "${duplicate.companyName}" (${duplicate.id})`
+          : 'Possible duplicate of an existing lead',
+      );
+    }
 
-    return this.serialize(lead);
+    return this.serialize(result.lead);
   }
 
   async update(organizationId: string, id: string, dto: UpdateLeadDto) {
-    await this.ensureLead(organizationId, id);
+    const existing = await this.ensureLead(organizationId, id);
 
     const domain = dto.website !== undefined ? this.extractDomain(dto.website) : undefined;
+    const phone = dto.phone === undefined ? undefined : normalizeBrazilianPhone(dto.phone);
+    const probableDuplicateKey = buildProbableDuplicateKey(
+      dto.companyName ?? existing.companyName,
+      dto.city ?? existing.city,
+      dto.state ?? existing.state,
+    );
     if (dto.email !== undefined || dto.phone !== undefined || domain !== undefined) {
-      await this.assertNotDuplicate(
-        organizationId,
-        { domain, email: dto.email, phone: dto.phone },
-        id,
-      );
+      await this.assertNotDuplicate(organizationId, { domain, email: dto.email, phone }, id);
     }
 
     const { tags, ...rest } = dto;
     void tags;
 
-    const lead = await this.prisma.lead.update({
-      where: { id },
-      data: {
-        ...rest,
-        email: dto.email === undefined ? undefined : dto.email?.toLowerCase(),
-        ...(domain !== undefined ? { domain } : {}),
-      },
-      include: LEAD_INCLUDE,
-    });
-    return this.serialize(lead);
+    try {
+      const lead = await this.prisma.lead.update({
+        where: { id },
+        data: {
+          ...rest,
+          email: dto.email === undefined ? undefined : dto.email?.toLowerCase(),
+          phone,
+          probableDuplicateKey,
+          ...(domain !== undefined ? { domain } : {}),
+        },
+        include: LEAD_INCLUDE,
+      });
+      return this.serialize(lead);
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        throw new ConflictException('Possible duplicate of an existing lead');
+      }
+      throw error;
+    }
   }
 
   async softDelete(organizationId: string, id: string) {
@@ -269,11 +266,7 @@ export class LeadsService {
       conditions.push({ email: candidate.email.toLowerCase() });
     }
     if (candidate.phone) {
-      const normalized = this.normalizePhone(candidate.phone);
       conditions.push({ phone: candidate.phone });
-      if (normalized !== candidate.phone) {
-        conditions.push({ phone: normalized });
-      }
     }
     if (!conditions.length) {
       return;
@@ -282,7 +275,6 @@ export class LeadsService {
     const duplicate = await this.prisma.lead.findFirst({
       where: {
         organizationId,
-        deletedAt: null,
         OR: conditions,
         ...(excludeLeadId ? { id: { not: excludeLeadId } } : {}),
       },
@@ -296,8 +288,13 @@ export class LeadsService {
     }
   }
 
-  private normalizePhone(phone: string): string {
-    return phone.replace(/\D/g, '');
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === 'P2002'
+    );
   }
 
   private extractDomain(website?: string | null): string | null {

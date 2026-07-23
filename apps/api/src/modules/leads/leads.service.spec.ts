@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
+import type { LeadIngestionService } from './lead-ingestion.service';
 import { LeadsService } from './leads.service';
 import type { CreateLeadDto } from './dto/create-lead.dto';
 
@@ -32,6 +33,11 @@ const makePrisma = () => {
   };
 };
 
+const makeIngestion = () =>
+  ({ ingest: jest.fn() }) as unknown as LeadIngestionService & {
+    ingest: jest.Mock;
+  };
+
 const baseDto: CreateLeadDto = {
   companyName: 'Restaurante Teste',
   email: 'contato@teste.pt',
@@ -44,29 +50,130 @@ describe('LeadsService', () => {
 
   it('create throws ConflictException when domain already exists', async () => {
     const prisma = makePrisma();
-    prisma.lead.findFirst.mockResolvedValue({ id: 'dup-1', companyName: 'Outro' });
-    const service = new LeadsService(prisma);
+    const ingestion = makeIngestion();
+    ingestion.ingest.mockResolvedValue({
+      status: 'DUPLICATE',
+      lead: { id: 'dup-1', companyName: 'Outro' },
+    });
+    const service = new LeadsService(prisma, ingestion);
 
     await expect(service.create('org1', baseDto, 'user1')).rejects.toBeInstanceOf(
       ConflictException,
     );
   });
 
-  it('create stores normalized domain and lowercases email', async () => {
+  it('create delegates manual lead creation to shared ingestion and keeps its response shape', async () => {
     const prisma = makePrisma();
-    prisma.lead.findFirst.mockResolvedValue(null);
-    prisma.organizationMember.findUnique.mockResolvedValue({ id: 'm1' });
-    prisma.lead.create.mockImplementation(({ data }) => Promise.resolve({ ...data, tags: [] }));
-    const service = new LeadsService(prisma);
+    const ingestion = makeIngestion();
+    ingestion.ingest.mockResolvedValue({
+      status: 'IMPORTED',
+      lead: { id: 'lead-1', companyName: 'Restaurante Teste', tags: [] },
+    });
+    const service = new LeadsService(prisma, ingestion);
 
-    await service.create('org1', { ...baseDto, email: 'CONTATO@Teste.pt' }, 'user1');
+    const result = await service.create('org1', { ...baseDto, email: 'CONTATO@Teste.pt' }, 'user1');
 
-    expect(prisma.lead.create).toHaveBeenCalledWith(
+    expect(ingestion.ingest).toHaveBeenCalledWith(
+      'org1',
+      'user1',
+      expect.objectContaining({
+        ...baseDto,
+        email: 'CONTATO@Teste.pt',
+        status: 'NEW',
+        source: 'MANUAL',
+        externalId: undefined,
+        websitePresence: undefined,
+        websiteCheckSource: undefined,
+      }),
+    );
+    expect(result).toEqual({ id: 'lead-1', companyName: 'Restaurante Teste', tags: [] });
+  });
+
+  it('update rejects an email held by a soft-deleted lead before writing', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockImplementation(({ where }) => {
+      if (where.id === 'lead-1') {
+        return Promise.resolve({ id: 'lead-1', organizationId: 'org1' });
+      }
+      if ('deletedAt' in where) {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve({ id: 'lead-deleted', companyName: 'Lead Removido' });
+    });
+    const service = new LeadsService(prisma, makeIngestion());
+
+    await expect(
+      service.update('org1', 'lead-1', { email: 'contato@teste.pt' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+    expect(prisma.lead.findFirst).toHaveBeenLastCalledWith({
+      where: {
+        organizationId: 'org1',
+        OR: [{ email: 'contato@teste.pt' }],
+        id: { not: 'lead-1' },
+      },
+      select: { id: true, companyName: true },
+    });
+  });
+
+  it('update translates a concurrent unique constraint violation to ConflictException', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst
+      .mockResolvedValueOnce({ id: 'lead-1', organizationId: 'org1' })
+      .mockResolvedValueOnce(null);
+    prisma.lead.update.mockRejectedValue({ code: 'P2002' });
+    const service = new LeadsService(prisma, makeIngestion());
+
+    await expect(
+      service.update('org1', 'lead-1', { email: 'contato@teste.pt' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('update recognizes an equivalent formatted Brazilian phone stored in E.164', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockImplementation(({ where }) => {
+      if (where.id === 'lead-1') {
+        return Promise.resolve({ id: 'lead-1', organizationId: 'org1' });
+      }
+      if (where.OR?.some((condition: { phone?: string }) => condition.phone === '+5511998765432')) {
+        return Promise.resolve({ id: 'lead-ingested', companyName: 'Lead Ingerido' });
+      }
+      return Promise.resolve(null);
+    });
+    const service = new LeadsService(prisma, makeIngestion());
+
+    await expect(
+      service.update('org1', 'lead-1', { phone: '(11) 99876-5432' }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+    expect(prisma.lead.findFirst).toHaveBeenLastCalledWith({
+      where: {
+        organizationId: 'org1',
+        OR: [{ phone: '+5511998765432' }],
+        id: { not: 'lead-1' },
+      },
+      select: { id: true, companyName: true },
+    });
+  });
+
+  it('update recomputes the probable duplicate fingerprint from existing and changed fields', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      organizationId: 'org1',
+      companyName: 'Café São João',
+      city: 'São Paulo',
+      state: 'SP',
+    });
+    prisma.lead.update.mockResolvedValue({ id: 'lead-1', tags: [] });
+    const service = new LeadsService(prisma, makeIngestion());
+
+    await service.update('org1', 'lead-1', { city: 'Campinas' });
+
+    expect(prisma.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          organizationId: 'org1',
-          domain: 'teste.pt',
-          email: 'contato@teste.pt',
+          probableDuplicateKey: 'cafe sao joao|campinas|SP',
         }),
       }),
     );
@@ -75,7 +182,7 @@ describe('LeadsService', () => {
   it('list always scopes by organization and excludes soft-deleted', async () => {
     const prisma = makePrisma();
     prisma.$transaction.mockResolvedValue([0, []]);
-    const service = new LeadsService(prisma);
+    const service = new LeadsService(prisma, makeIngestion());
 
     await service.list('org1', { page: 1, pageSize: 20, sortBy: 'createdAt', sortOrder: 'desc' });
 
@@ -92,7 +199,7 @@ describe('LeadsService', () => {
   it('getById throws NotFoundException for lead from another org', async () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue(null);
-    const service = new LeadsService(prisma);
+    const service = new LeadsService(prisma, makeIngestion());
 
     await expect(service.getById('org-A', 'lead-from-org-B')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -108,7 +215,7 @@ describe('LeadsService', () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue({ id: 'l1', organizationId: 'org1' });
     prisma.lead.update.mockResolvedValue({});
-    const service = new LeadsService(prisma);
+    const service = new LeadsService(prisma, makeIngestion());
 
     await service.softDelete('org1', 'l1');
 

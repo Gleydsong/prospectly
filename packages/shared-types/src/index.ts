@@ -82,6 +82,7 @@ export enum ImportStatus {
 
 export enum SearchStatus {
   PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED',
 }
@@ -130,9 +131,38 @@ export interface AuthUser {
 
 // ---------- Business search provider (Phase 3) ----------
 
+export const PROSPECTING_CATEGORY_VALUES = [
+  'restaurant', 'cafe', 'bar', 'pharmacy', 'hospital', 'clinic', 'supermarket', 'bakery',
+  'butcher', 'clothes', 'hairdresser', 'carpenter', 'electrician', 'accountant', 'lawyer',
+  'hotel', 'hostel', 'guest_house',
+] as const;
+
+export type ProspectingCategory = (typeof PROSPECTING_CATEGORY_VALUES)[number];
+
+export const PROSPECTING_CATEGORIES = [
+  { value: 'restaurant', label: 'Restaurante' },
+  { value: 'cafe', label: 'Cafeteria' },
+  { value: 'bar', label: 'Bar' },
+  { value: 'pharmacy', label: 'Farmácia' },
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'clinic', label: 'Clínica' },
+  { value: 'supermarket', label: 'Supermercado' },
+  { value: 'bakery', label: 'Padaria' },
+  { value: 'butcher', label: 'Açougue' },
+  { value: 'clothes', label: 'Loja de roupas' },
+  { value: 'hairdresser', label: 'Cabeleireiro' },
+  { value: 'carpenter', label: 'Marcenaria' },
+  { value: 'electrician', label: 'Eletricista' },
+  { value: 'accountant', label: 'Contabilidade' },
+  { value: 'lawyer', label: 'Advocacia' },
+  { value: 'hotel', label: 'Hotel' },
+  { value: 'hostel', label: 'Hostel' },
+  { value: 'guest_house', label: 'Pousada' },
+] as const satisfies readonly { value: ProspectingCategory; label: string }[];
+
 export interface SearchBusinessesInput {
   query?: string;
-  category?: string;
+  category?: ProspectingCategory;
   country?: string;
   state?: string;
   city?: string;

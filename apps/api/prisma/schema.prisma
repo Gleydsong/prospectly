@@ -116,87 +116,87 @@ enum IssueSeverity {
 // ---------- Identity & tenancy ----------
 
 model User {
-  id                    String     @id @default(uuid())
-  email                 String     @unique
-  name                  String
-  passwordHash          String?
-  avatarUrl             String?
-  googleId              String?    @unique
-  githubId              String?    @unique
-  emailVerifiedAt       DateTime?
-  emailVerifyTokenHash  String?
-  resetTokenHash        String?
-  resetTokenExpiresAt   DateTime?
-  failedLoginAttempts   Int        @default(0)
-  lockedUntil           DateTime?
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  name                 String
+  passwordHash         String?
+  avatarUrl            String?
+  googleId             String?   @unique
+  githubId             String?   @unique
+  emailVerifiedAt      DateTime?
+  emailVerifyTokenHash String?
+  resetTokenHash       String?
+  resetTokenExpiresAt  DateTime?
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  memberships           OrganizationMember[]
-  refreshTokens         RefreshToken[]
-  ownedLeads            Lead[]               @relation("LeadOwner")
-  activities            LeadActivity[]
-  assignedTasks         Task[]               @relation("TaskAssignee")
-  createdTasks          Task[]               @relation("TaskCreator")
-  searches              Search[]
-  imports               Import[]
-  campaigns             Campaign[]
-  templates             MessageTemplate[]
-  auditLogs             AuditLog[]
+  memberships   OrganizationMember[]
+  refreshTokens RefreshToken[]
+  ownedLeads    Lead[]               @relation("LeadOwner")
+  activities    LeadActivity[]
+  assignedTasks Task[]               @relation("TaskAssignee")
+  createdTasks  Task[]               @relation("TaskCreator")
+  searches      Search[]
+  imports       Import[]
+  campaigns     Campaign[]
+  templates     MessageTemplate[]
+  auditLogs     AuditLog[]
 
   @@index([email])
 }
 
 model Organization {
-  id          String    @id @default(uuid())
-  name        String
-  slug        String    @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id        String    @id @default(uuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  members     OrganizationMember[]
-  leads       Lead[]
-  tags        Tag[]
-  activities  LeadActivity[]
-  tasks       Task[]
-  pipelines   Pipeline[]
-  searches    Search[]
-  imports     Import[]
-  campaigns   Campaign[]
-  templates   MessageTemplate[]
+  members      OrganizationMember[]
+  leads        Lead[]
+  tags         Tag[]
+  activities   LeadActivity[]
+  tasks        Task[]
+  pipelines    Pipeline[]
+  searches     Search[]
+  imports      Import[]
+  campaigns    Campaign[]
+  templates    MessageTemplate[]
   scoreConfigs ScoreConfiguration[]
   integrations Integration[]
-  auditLogs   AuditLog[]
+  auditLogs    AuditLog[]
 }
 
 model OrganizationMember {
-  id             String       @id @default(uuid())
+  id             String   @id @default(uuid())
   userId         String
   organizationId String
-  role           Role         @default(MEMBER)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([userId, organizationId])
   @@index([organizationId])
 }
 
 model RefreshToken {
-  id            String    @id @default(uuid())
-  userId        String
-  tokenHash     String    @unique
-  userAgent     String?
-  ip            String?
-  expiresAt     DateTime
-  revokedAt     DateTime?
-  replacedById  String?
-  createdAt     DateTime  @default(now())
+  id           String    @id @default(uuid())
+  userId       String
+  tokenHash    String    @unique
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
 
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -205,76 +205,78 @@ model RefreshToken {
 // ---------- Leads ----------
 
 model Lead {
-  id              String      @id @default(uuid())
-  organizationId  String
-  ownerId         String?
-  stageId         String?
+  id             String  @id @default(uuid())
+  organizationId String
+  ownerId        String?
+  stageId        String?
 
-  companyName     String
-  tradeName       String?
-  category        String?
-  segment         String?
-  description     String?
-  phone           String?
-  email           String?
-  whatsapp        String?
-  website         String?
-  domain          String?
-  instagram       String?
-  facebook        String?
-  linkedin        String?
-  address         String?
-  city            String?
-  state           String?
-  country         String?
-  postalCode      String?
-  latitude        Float?
-  longitude       Float?
-  rating          Float?
-  reviewCount     Int?
-  openingHours    Json?
+  companyName  String
+  tradeName    String?
+  category     String?
+  segment      String?
+  description  String?
+  phone        String?
+  email        String?
+  whatsapp     String?
+  website      String?
+  domain       String?
+  instagram    String?
+  facebook     String?
+  linkedin     String?
+  address      String?
+  city         String?
+  state        String?
+  country      String?
+  postalCode   String?
+  latitude     Float?
+  longitude    Float?
+  rating       Float?
+  reviewCount  Int?
+  openingHours Json?
 
-  source          LeadSource  @default(MANUAL)
-  externalId      String?
-  status          LeadStatus  @default(NEW)
-  websitePresence WebsitePresence @default(NEEDS_REVIEW)
-  websiteCheckedAt DateTime?
+  source             LeadSource      @default(MANUAL)
+  externalId         String?
+  status             LeadStatus      @default(NEW)
+  websitePresence    WebsitePresence @default(NEEDS_REVIEW)
+  websiteCheckedAt   DateTime?
   websiteCheckSource String?
-  score           Int         @default(0)
-  notes           String?
+  score              Int             @default(0)
+  notes              String?
+  probableDuplicateKey String?
 
-  doNotContact    Boolean     @default(false)
+  doNotContact    Boolean   @default(false)
   consentAt       DateTime?
   dataCollectedAt DateTime?
 
-  lastContactAt   DateTime?
-  nextContactAt   DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  deletedAt       DateTime?
+  lastContactAt DateTime?
+  nextContactAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner           User?          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
-  stage           PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
-  contacts        LeadContact[]
-  tags            LeadTag[]
-  activities      LeadActivity[]
-  tasks           Task[]
-  websiteRecord   Website?
-  scores          LeadScore[]
-  campaignLeads   CampaignLead[]
-  searchResults   SearchResult[]
+  organization  Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner         User?          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  stage         PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  contacts      LeadContact[]
+  tags          LeadTag[]
+  activities    LeadActivity[]
+  tasks         Task[]
+  websiteRecord Website?
+  scores        LeadScore[]
+  campaignLeads CampaignLead[]
+  searchResults SearchResult[]
 
+  @@unique([organizationId, source, externalId])
+  @@unique([organizationId, domain])
+  @@unique([organizationId, phone])
+  @@unique([organizationId, email])
+  @@unique([organizationId, probableDuplicateKey])
   @@index([organizationId])
   @@index([organizationId, status])
   @@index([organizationId, ownerId])
   @@index([organizationId, stageId])
-  @@index([organizationId, email])
-  @@index([organizationId, domain])
-  @@index([organizationId, phone])
   @@index([organizationId, city])
   @@index([organizationId, deletedAt])
-  @@unique([organizationId, source, externalId])
 }
 
 model LeadContact {
@@ -289,7 +291,7 @@ model LeadContact {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
 }
@@ -301,8 +303,8 @@ model Tag {
   color          String?
   createdAt      DateTime @default(now())
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leads          LeadTag[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        LeadTag[]
 
   @@unique([organizationId, name])
   @@index([organizationId])
@@ -312,8 +314,8 @@ model LeadTag {
   leadId String
   tagId  String
 
-  lead   Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([leadId, tagId])
   @@index([tagId])
@@ -332,9 +334,9 @@ model LeadActivity {
   metadata       Json?
   createdAt      DateTime     @default(now())
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId, createdAt])
   @@index([organizationId, createdAt])
@@ -355,10 +357,10 @@ model Task {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  assignee       User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  assignee     User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdBy    User         @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([organizationId, status])
   @@index([organizationId, assigneeId])
@@ -375,8 +377,8 @@ model Pipeline {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  stages         PipelineStage[]
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stages       PipelineStage[]
 
   @@index([organizationId])
 }
@@ -392,8 +394,8 @@ model PipelineStage {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  pipeline   Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
-  leads      Lead[]
+  pipeline Pipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  leads    Lead[]
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
@@ -409,8 +411,8 @@ model Website {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  lead      Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  analyses  WebsiteAnalysis[]
+  lead     Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  analyses WebsiteAnalysis[]
 }
 
 model WebsiteAnalysis {
@@ -446,22 +448,22 @@ model WebsiteAnalysis {
   completedAt       DateTime?
   createdAt         DateTime       @default(now())
 
-  website           Website                 @relation(fields: [websiteId], references: [id], onDelete: Cascade)
-  issues            WebsiteAnalysisIssue[]
+  website Website                @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  issues  WebsiteAnalysisIssue[]
 
   @@index([websiteId, createdAt])
   @@index([status])
 }
 
 model WebsiteAnalysisIssue {
-  id         String         @id @default(uuid())
+  id         String        @id @default(uuid())
   analysisId String
   code       String
   severity   IssueSeverity
   message    String
-  createdAt  DateTime       @default(now())
+  createdAt  DateTime      @default(now())
 
-  analysis   WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  analysis WebsiteAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
 
   @@index([analysisId])
 }
@@ -477,22 +479,22 @@ model ScoreConfiguration {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  rules          ScoreRule[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rules        ScoreRule[]
 
   @@index([organizationId, isActive])
 }
 
 model ScoreRule {
-  id         String   @id @default(uuid())
-  configId   String
-  key        String
+  id          String   @id @default(uuid())
+  configId    String
+  key         String
   description String?
-  points     Int
-  enabled    Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  points      Int
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
-  config     ScoreConfiguration @relation(fields: [configId], references: [id], onDelete: Cascade)
+  config ScoreConfiguration @relation(fields: [configId], references: [id], onDelete: Cascade)
 
   @@unique([configId, key])
 }
@@ -506,7 +508,7 @@ model LeadScore {
   configVersion Int
   calculatedAt  DateTime @default(now())
 
-  lead          Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId, calculatedAt])
 }
@@ -521,31 +523,34 @@ model Search {
   input          Json
   status         SearchStatus @default(PENDING)
   error          String?
+  correlationId  String?
+  jobDispatchedAt DateTime?
   createdAt      DateTime     @default(now())
   completedAt    DateTime?
 
-  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  results        SearchResult[]
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results      SearchResult[]
 
   @@index([organizationId, createdAt])
+  @@index([status, jobDispatchedAt])
 }
 
 model SearchResult {
-  id             String   @id @default(uuid())
-  searchId       String
-  externalId     String?
-  data           Json
+  id              String          @id @default(uuid())
+  searchId        String
+  externalId      String?
+  data            Json
   websitePresence WebsitePresence
   normalizedData  Json
-  importedLeadId String?
-  createdAt      DateTime @default(now())
+  importedLeadId  String?
+  createdAt       DateTime        @default(now())
 
-  search         Search   @relation(fields: [searchId], references: [id], onDelete: Cascade)
-  importedLead   Lead?    @relation(fields: [importedLeadId], references: [id], onDelete: SetNull)
+  search       Search @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  importedLead Lead?  @relation(fields: [importedLeadId], references: [id], onDelete: SetNull)
 
-  @@index([searchId])
   @@unique([searchId, externalId])
+  @@index([searchId])
 }
 
 model Import {
@@ -559,14 +564,18 @@ model Import {
   skippedCount   Int          @default(0)
   invalidCount   Int          @default(0)
   mapping        Json?
+  stagedRows     Json?
+  correlationId  String?
+  jobDispatchedAt DateTime?
   createdAt      DateTime     @default(now())
   completedAt    DateTime?
 
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  errors         ImportError[]
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  errors       ImportError[]
 
   @@index([organizationId, createdAt])
+  @@index([status, jobDispatchedAt])
 }
 
 model ImportError {
@@ -577,9 +586,10 @@ model ImportError {
   data      Json?
   createdAt DateTime @default(now())
 
-  import    Import   @relation(fields: [importId], references: [id], onDelete: Cascade)
+  import Import @relation(fields: [importId], references: [id], onDelete: Cascade)
 
   @@index([importId])
+  @@unique([importId, row])
 }
 
 // ---------- Campaigns & templates (Phase 5) ----------
@@ -600,10 +610,10 @@ model Campaign {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner          User?           @relation(fields: [ownerId], references: [id], onDelete: SetNull)
-  template       MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  leads          CampaignLead[]
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  template     MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  leads        CampaignLead[]
 
   @@index([organizationId, status])
 }
@@ -614,8 +624,8 @@ model CampaignLead {
   status     String   @default("PENDING")
   addedAt    DateTime @default(now())
 
-  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@id([campaignId, leadId])
   @@index([leadId])
@@ -632,9 +642,9 @@ model MessageTemplate {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  createdBy      User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  campaigns      Campaign[]
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  campaigns    Campaign[]
 
   @@index([organizationId, category])
 }
@@ -650,7 +660,7 @@ model Integration {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, provider])
 }
@@ -666,8 +676,8 @@ model AuditLog {
   ip             String?
   createdAt      DateTime @default(now())
 
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
   @@index([entity, entityId])

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -6,6 +7,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { configuration } from './config/configuration';
 import { validateEnv } from './config/validation';
+import { parseRedisConnection } from './config/redis';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { HealthModule } from './common/health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -18,6 +20,8 @@ import { ActivitiesModule } from './modules/activities/activities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ProspectingModule } from './modules/prospecting/prospecting.module';
+import { ImportsModule } from './modules/imports/imports.module';
 
 @Module({
   imports: [
@@ -54,6 +58,12 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
       }),
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: parseRedisConnection(config.getOrThrow<string>('redisUrl')),
+      }),
+    }),
     PrismaModule,
     HealthModule,
     AuthModule,
@@ -64,6 +74,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     TasksModule,
     PipelinesModule,
     DashboardModule,
+    ProspectingModule,
+    ImportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
