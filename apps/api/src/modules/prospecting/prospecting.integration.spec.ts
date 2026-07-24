@@ -308,7 +308,7 @@ describe('Prospecting HTTP integration', () => {
   it('defaults country to BR, accepts European free-text regions, and rejects invalid BR regions', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
+      .send({ categories: ['restaurant'], city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
       .expect(202);
 
     expect(prisma.search.create).toHaveBeenCalledWith(
@@ -322,7 +322,7 @@ describe('Prospecting HTTP integration', () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
       .send({
-        category: 'restaurant',
+        categories: ['restaurant'],
         country: 'PT',
         city: 'Lisboa',
         state: 'Lisboa',
@@ -341,7 +341,7 @@ describe('Prospecting HTTP integration', () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
       .send({
-        category: 'restaurant',
+        categories: ['restaurant'],
         country: 'BR',
         city: 'São Paulo',
         state: 'São Paulo',
@@ -352,7 +352,7 @@ describe('Prospecting HTTP integration', () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
       .send({
-        category: 'restaurant',
+        categories: ['restaurant'],
         country: 'US',
         city: 'New York',
         state: 'NY',
@@ -397,6 +397,7 @@ describe('Prospecting HTTP integration', () => {
 
     expect(provider.search).toHaveBeenCalledWith({
       category: 'restaurant',
+      categories: ['restaurant'],
       city: 'Lisboa',
       state: 'Lisboa',
       country: 'PT',

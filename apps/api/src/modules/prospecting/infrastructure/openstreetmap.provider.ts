@@ -9,9 +9,18 @@ import {
   type SearchProvider,
   type SearchProviderInput,
 } from '../domain/search-provider';
+import { SearchProviderError } from '../domain/search-provider-error';
 import type { NormalizedBusiness } from '../domain/normalized-business';
 import { mapCategoryToOsmTags, type OsmTagMap } from './osm-category-map';
 import type { NominatimRateLimiter } from './nominatim-rate-limiter';
+
+const DEFAULT_OVERPASS_MIRRORS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://lz4.overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+] as const;
+
+const MAX_BBOX_SPAN_DEGREES = 0.75;
 
 interface NominatimPlace {
   osm_id?: number;
@@ -56,15 +65,19 @@ interface MunicipalityCacheEntry {
 class ProviderRequestError extends Error {
   constructor(
     readonly retryable: boolean,
+    readonly reason: string,
+    readonly statusCode?: number,
     readonly retryAfterMs?: number,
   ) {
     super('OpenStreetMap provider request failed');
+    this.name = 'ProviderRequestError';
   }
 }
 
 export interface OpenStreetMapProviderOptions {
   nominatimUrl: string;
   overpassUrl: string;
+  overpassUrls?: string[];
   userAgent: string;
   timeoutMs: number;
   resultLimit: number;
@@ -195,10 +208,45 @@ function overpassServerTimeoutSec(timeoutMs: number): number {
   return Math.max(1, Math.ceil(timeoutMs / 1000) - 5);
 }
 
+function isCompactBoundingBox(boundingBox: BoundingBox): boolean {
+  const latSpan = Math.abs(boundingBox.north - boundingBox.south);
+  const lonSpan = Math.abs(boundingBox.east - boundingBox.west);
+  return latSpan <= MAX_BBOX_SPAN_DEGREES && lonSpan <= MAX_BBOX_SPAN_DEGREES;
+}
+
+function resolveSearchCategories(input: SearchProviderInput): string[] {
+  const raw = input.categories?.length ? input.categories : [input.category];
+  const categories = [...new Set(raw.map((value) => value.trim()).filter(Boolean))];
+  if (categories.length === 0) {
+    throw new Error('Category is required');
+  }
+  return categories;
+}
+
+function mergeOsmTagMaps(maps: OsmTagMap[]): OsmTagMap {
+  const merged: {
+    -readonly [K in keyof OsmTagMap]: string[];
+  } = {};
+
+  for (const map of maps) {
+    for (const [key, values] of Object.entries(map) as Array<
+      [keyof OsmTagMap, readonly string[] | undefined]
+    >) {
+      if (!values?.length) continue;
+      const bucket = merged[key] ?? (merged[key] = []);
+      for (const value of values) {
+        if (!bucket.includes(value)) bucket.push(value);
+      }
+    }
+  }
+
+  return merged;
+}
+
 function buildTagSelectors(tags: OsmTagMap, scope: string): string {
   return Object.entries(tags)
     .flatMap(([key, values]) =>
-      values.flatMap((value) => {
+      (values ?? []).flatMap((value) => {
         const filter = `["${escapeOverpassValue(key)}"="${escapeOverpassValue(value)}"]`;
         return [`node${filter}${scope};`, `way${filter}${scope};`];
       }),
@@ -215,12 +263,23 @@ function buildOverpassQuery(
 ): string {
   const timeoutSec = overpassServerTimeoutSec(timeoutMs);
 
-  if (boundingBox) {
+  if (boundingBox && isCompactBoundingBox(boundingBox)) {
     const scope = `(${boundingBox.south},${boundingBox.west},${boundingBox.north},${boundingBox.east})`;
     return `[out:json][timeout:${timeoutSec}];\n(\n${buildTagSelectors(tags, scope)}\n);\nout center tags ${resultLimit};`;
   }
 
   return `[out:json][timeout:${timeoutSec}];\narea(${areaId})->.searchArea;\n(\n${buildTagSelectors(tags, '(area.searchArea)')}\n);\nout center tags ${resultLimit};`;
+}
+
+function toSearchProviderError(error: ProviderRequestError): SearchProviderError {
+  return new SearchProviderError({
+    provider: 'OPENSTREETMAP',
+    message: 'OpenStreetMap provider request failed',
+    publicMessage: 'Search provider is temporarily unavailable. Please try again later.',
+    retryable: error.retryable,
+    statusCode: error.statusCode,
+    reason: error.reason,
+  });
 }
 
 function getWebsite(tags: Record<string, string>): string | undefined {
@@ -295,29 +354,71 @@ export class OpenStreetMapProvider implements SearchProvider {
       throw new Error(`Invalid Brazilian state: ${region}`);
     }
 
-    const categoryTags = mapCategoryToOsmTags(input.category);
+    const categories = resolveSearchCategories(input);
+    const categoryTags = mergeOsmTagMaps(categories.map((category) => mapCategoryToOsmTags(category)));
     const municipality = await this.findMunicipality(input.city.trim(), region, country);
     if (!municipality) return [];
 
-    const overpassResponse = await this.requestJson<OverpassResponse>(this.options.overpassUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=UTF-8',
-        'User-Agent': this.options.userAgent,
-      },
-      body: buildOverpassQuery(
+    const overpassResponse = await this.requestOverpass(
+      buildOverpassQuery(
         3600000000 + municipality.osm_id,
         categoryTags,
         this.options.resultLimit,
         this.options.timeoutMs,
         municipality.boundingBox,
       ),
-    });
+    );
 
     return (overpassResponse.elements ?? [])
       .map((element) => normalizeElement(element, input.city.trim(), region, country))
       .filter((business): business is NormalizedBusiness => Boolean(business))
       .filter((business) => !input.onlyWithoutWebsite || business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED);
+  }
+
+  private resolveOverpassUrls(): string[] {
+    const primary = this.options.overpassUrl.trim();
+    const extras =
+      this.options.overpassUrls ??
+      (/overpass-api\.de|overpass\.kumi\.systems/i.test(primary)
+        ? [...DEFAULT_OVERPASS_MIRRORS]
+        : []);
+    return [...new Set([primary, ...extras].map((url) => url.trim()).filter(Boolean))];
+  }
+
+  private async requestOverpass(body: string): Promise<OverpassResponse> {
+    const urls = this.resolveOverpassUrls();
+    let lastError: SearchProviderError | undefined;
+
+    for (const url of urls) {
+      try {
+        return await this.requestJson<OverpassResponse>(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=UTF-8',
+            'User-Agent': this.options.userAgent,
+          },
+          body,
+        });
+      } catch (error) {
+        if (error instanceof SearchProviderError) {
+          if (!error.retryable) throw error;
+          lastError = error;
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw (
+      lastError ??
+      new SearchProviderError({
+        provider: 'OPENSTREETMAP',
+        message: 'OpenStreetMap provider request failed',
+        publicMessage: 'Search provider is temporarily unavailable. Please try again later.',
+        retryable: true,
+        reason: 'OVERPASS_UNAVAILABLE',
+      })
+    );
   }
 
   private async findMunicipality(
@@ -400,13 +501,20 @@ export class OpenStreetMapProvider implements SearchProvider {
 
   private async requestJson<T>(url: string, init: RequestInit, applyNominatimRateLimit = false): Promise<T> {
     const maxAttempts = 3;
+    let lastError: ProviderRequestError | undefined;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       if (applyNominatimRateLimit) {
         try {
           await this.rateLimiter.waitForTurn();
         } catch {
-          throw new Error('OpenStreetMap provider request failed');
+          throw new SearchProviderError({
+            provider: 'OPENSTREETMAP',
+            message: 'OpenStreetMap provider request failed',
+            publicMessage: 'Search provider is temporarily unavailable. Please try again later.',
+            retryable: true,
+            reason: 'RATE_LIMIT_SLOT',
+          });
         }
       }
       const controller = new AbortController();
@@ -416,18 +524,29 @@ export class OpenStreetMapProvider implements SearchProvider {
       try {
         const response = await this.fetchImplementation(url, { ...init, signal: controller.signal });
         if (!response.ok) {
-          throw new ProviderRequestError(isTransientStatus(response.status), getRetryAfterMs(response));
+          throw new ProviderRequestError(
+            isTransientStatus(response.status),
+            `HTTP_${response.status}`,
+            response.status,
+            getRetryAfterMs(response),
+          );
         }
 
         try {
           return (await response.json()) as T;
         } catch {
-          throw new ProviderRequestError(false);
+          throw new ProviderRequestError(false, 'INVALID_JSON', response.status);
         }
       } catch (error) {
         if (error instanceof ProviderRequestError) {
-          if (!error.retryable) throw new Error('OpenStreetMap provider request failed');
+          lastError = error;
+          if (!error.retryable) throw toSearchProviderError(error);
           retryAfterMs = error.retryAfterMs;
+        } else if (error instanceof Error && error.name === 'AbortError') {
+          lastError = new ProviderRequestError(true, 'TIMEOUT');
+          retryAfterMs = undefined;
+        } else {
+          lastError = new ProviderRequestError(true, 'NETWORK_ERROR');
         }
       } finally {
         clearTimeout(timeout);
@@ -437,6 +556,8 @@ export class OpenStreetMapProvider implements SearchProvider {
       await new Promise<void>((resolve) => setTimeout(resolve, retryAfterMs ?? 100 * 2 ** attempt));
     }
 
-    throw new Error('OpenStreetMap provider request failed');
+    throw toSearchProviderError(
+      lastError ?? new ProviderRequestError(true, 'UPSTREAM_UNAVAILABLE'),
+    );
   }
 }

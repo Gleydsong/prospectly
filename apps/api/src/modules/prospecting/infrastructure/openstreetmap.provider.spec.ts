@@ -155,6 +155,104 @@ describe('OpenStreetMapProvider', () => {
     expect(overpassBody).not.toContain('area(');
   });
 
+  it('falls back to Overpass area query when the Nominatim bbox is oversized', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            osm_id: 326252,
+            osm_type: 'relation',
+            address: { municipality: 'Jordão', ISO3166_2_lvl4: 'BR-AC', country_code: 'br' },
+            extratags: { admin_level: '8', place: 'municipality' },
+            boundingbox: ['-9.7962197', '-8.6480123', '-72.3410009', '-71.4825955'],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(jsonResponse({ elements: [] }));
+
+    await createProvider().search({
+      category: 'cafe',
+      city: 'Jordão',
+      state: 'AC',
+      country: 'BR' as const,
+      onlyWithoutWebsite: true,
+    });
+
+    const overpassBody = String(fetchMock.mock.calls[1]?.[1]?.body);
+    expect(overpassBody).toContain('area(3600326252)');
+    expect(overpassBody).not.toContain('(-9.7962197');
+  });
+
+  it('batches multiple categories into a single Overpass query', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            osm_id: 298285,
+            osm_type: 'relation',
+            address: { city: 'São Paulo', ISO3166_2_lvl4: 'BR-SP', country_code: 'br' },
+            extratags: { admin_level: '8' },
+            boundingbox: ['-24.0', '-23.3', '-46.8', '-46.3'],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(jsonResponse({ elements: [] }));
+
+    await createProvider().search({
+      category: 'restaurant',
+      categories: ['restaurant', 'pharmacy', 'hotel'],
+      city: 'São Paulo',
+      state: 'SP',
+      country: 'BR' as const,
+      onlyWithoutWebsite: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const overpassBody = String(fetchMock.mock.calls[1]?.[1]?.body);
+    expect(overpassBody).toContain('node["amenity"="restaurant"]');
+    expect(overpassBody).toContain('node["amenity"="pharmacy"]');
+    expect(overpassBody).toContain('node["tourism"="hotel"]');
+  });
+
+  it('retries Overpass on a configured mirror after the primary endpoint fails', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            osm_id: 298285,
+            osm_type: 'relation',
+            address: { city: 'São Paulo', ISO3166_2_lvl4: 'BR-SP', country_code: 'br' },
+            extratags: { admin_level: '8' },
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
+      .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
+      .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
+      .mockResolvedValueOnce(jsonResponse({ elements: [] }));
+
+    await expect(
+      createProvider({
+        overpassUrl: 'https://overpass.primary.test/interpreter',
+        overpassUrls: [
+          'https://overpass.primary.test/interpreter',
+          'https://overpass.mirror.test/interpreter',
+        ],
+        timeoutMs: 50,
+      }).search({
+        category: 'restaurant',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR' as const,
+        onlyWithoutWebsite: true,
+      }),
+    ).resolves.toEqual([]);
+
+    const overpassUrls = fetchMock.mock.calls.slice(1).map(([url]) => String(url));
+    expect(overpassUrls).toContain('https://overpass.primary.test/interpreter');
+    expect(overpassUrls).toContain('https://overpass.mirror.test/interpreter');
+  });
+
   it('rejects a same-UF relation for a different city and matches normalized municipality fields', async () => {
     fetchMock
       .mockResolvedValueOnce(

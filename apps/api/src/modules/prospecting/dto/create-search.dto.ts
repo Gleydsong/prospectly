@@ -29,14 +29,12 @@ import {
 
 const MAX_CATEGORIES = 10;
 
-function normalizeCategories(value: unknown, legacyCategory: unknown): ProspectingCategory[] {
+function normalizeCategories(value: unknown): ProspectingCategory[] {
   const raw = Array.isArray(value)
     ? value
-    : typeof legacyCategory === 'string' && legacyCategory.trim()
-      ? [legacyCategory]
-      : typeof value === 'string' && value.trim()
-        ? [value]
-        : [];
+    : typeof value === 'string' && value.trim()
+      ? [value]
+      : [];
 
   const unique: ProspectingCategory[] = [];
   for (const entry of raw) {
@@ -74,9 +72,7 @@ export class CreateSearchDto {
     example: ['restaurant', 'bakery'],
     description: 'One or more prospecting categories (max 10)',
   })
-  @Transform(({ value, obj }) =>
-    normalizeCategories(value, (obj as Record<string, unknown>).category),
-  )
+  @Transform(({ value }) => normalizeCategories(value))
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(MAX_CATEGORIES)

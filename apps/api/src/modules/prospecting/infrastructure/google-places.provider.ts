@@ -163,21 +163,39 @@ export class GooglePlacesProvider implements SearchProvider {
       throw new Error(`Invalid Brazilian state: ${region}`);
     }
 
-    const response = await this.requestTextSearch({
-      textQuery: mapCategoryToGoogleTextQuery(input.category, input.city, region, country),
-      languageCode: googleLanguageCode(country),
-      regionCode: country,
-      maxResultCount: Math.min(20, Math.max(1, this.options.resultLimit)),
-    });
+    const categories = [
+      ...new Set(
+        (input.categories?.length ? input.categories : [input.category])
+          .map((value) => value.trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (categories.length === 0) throw new Error('Category is required');
 
-    return (response.places ?? [])
-      .map((place) => normalizePlace(place, input.city.trim(), region, country))
-      .filter((business): business is NormalizedBusiness => Boolean(business))
-      .filter(
-        (business) =>
-          !input.onlyWithoutWebsite ||
-          business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED,
-      );
+    const merged = new Map<string, NormalizedBusiness>();
+    for (const category of categories) {
+      const response = await this.requestTextSearch({
+        textQuery: mapCategoryToGoogleTextQuery(category, input.city, region, country),
+        languageCode: googleLanguageCode(country),
+        regionCode: country,
+        maxResultCount: Math.min(20, Math.max(1, this.options.resultLimit)),
+      });
+
+      for (const place of response.places ?? []) {
+        const business = normalizePlace(place, input.city.trim(), region, country);
+        if (!business) continue;
+        if (
+          input.onlyWithoutWebsite &&
+          business.websitePresence !== WebsitePresence.NO_WEBSITE_REPORTED
+        ) {
+          continue;
+        }
+        if (merged.has(business.externalId)) continue;
+        merged.set(business.externalId, { ...business, category });
+      }
+    }
+
+    return [...merged.values()];
   }
 
   private async requestTextSearch(body: Record<string, unknown>): Promise<GooglePlacesTextSearchResponse> {

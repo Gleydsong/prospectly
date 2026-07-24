@@ -167,17 +167,19 @@ export class ProspectingService {
     const input = this.readSearchInput(search.input);
     const provider = this.providers.resolve(search.provider);
     const categories = this.resolveCategories(input);
-    const merged = new Map<string, NormalizedBusiness>();
+    const businesses = await provider.search({
+      ...input,
+      category: categories[0]!,
+      categories,
+    });
 
-    for (const category of categories) {
-      const businesses = await provider.search({ ...input, category });
-      for (const business of businesses) {
-        if (merged.has(business.externalId)) continue;
-        merged.set(business.externalId, {
-          ...business,
-          category: business.category ?? category,
-        });
-      }
+    const merged = new Map<string, NormalizedBusiness>();
+    for (const business of businesses) {
+      if (merged.has(business.externalId)) continue;
+      merged.set(business.externalId, {
+        ...business,
+        category: business.category ?? categories[0],
+      });
     }
 
     const results = [...merged.values()];

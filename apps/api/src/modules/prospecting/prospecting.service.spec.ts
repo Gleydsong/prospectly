@@ -86,6 +86,7 @@ describe('ProspectingService', () => {
   it('persists European country and free-text region on create, then passes them to the provider', async () => {
     const { prisma, queue, provider, service } = createService();
     const europeanInput = {
+      categories: ['restaurant' as const],
       category: 'restaurant' as const,
       city: 'Lisboa',
       state: 'Lisboa',
@@ -268,7 +269,7 @@ describe('ProspectingService', () => {
     });
   });
 
-  it('runs the provider once per category and deduplicates by externalId', async () => {
+  it('runs the provider once with all categories and deduplicates by externalId', async () => {
     const { prisma, provider, service } = createService();
     prisma.search.findUnique.mockResolvedValue({
       id: 'search-multi',
@@ -284,53 +285,45 @@ describe('ProspectingService', () => {
       },
     });
     prisma.search.update.mockResolvedValue(undefined);
-    provider.search
-      .mockResolvedValueOnce([
-        {
-          externalId: 'node/1',
-          companyName: 'Restaurante',
-          city: 'São Paulo',
-          state: 'SP',
-          country: 'BR',
-          source: 'OPENSTREETMAP',
-          websitePresence: WebsitePresence.WEBSITE_FOUND,
-        },
-        {
-          externalId: 'node/shared',
-          companyName: 'Misto',
-          city: 'São Paulo',
-          state: 'SP',
-          country: 'BR',
-          source: 'OPENSTREETMAP',
-          websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          externalId: 'node/shared',
-          companyName: 'Misto',
-          city: 'São Paulo',
-          state: 'SP',
-          country: 'BR',
-          source: 'OPENSTREETMAP',
-          websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
-        },
-        {
-          externalId: 'node/2',
-          companyName: 'Padaria',
-          city: 'São Paulo',
-          state: 'SP',
-          country: 'BR',
-          source: 'OPENSTREETMAP',
-          websitePresence: WebsitePresence.WEBSITE_FOUND,
-        },
-      ]);
+    provider.search.mockResolvedValue([
+      {
+        externalId: 'node/1',
+        companyName: 'Restaurante',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: WebsitePresence.WEBSITE_FOUND,
+      },
+      {
+        externalId: 'node/shared',
+        companyName: 'Misto',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+      },
+      {
+        externalId: 'node/2',
+        companyName: 'Padaria',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: WebsitePresence.WEBSITE_FOUND,
+      },
+    ]);
 
     await service.process('search-multi');
 
-    expect(provider.search).toHaveBeenCalledTimes(2);
-    expect(provider.search).toHaveBeenNthCalledWith(1, expect.objectContaining({ category: 'restaurant' }));
-    expect(provider.search).toHaveBeenNthCalledWith(2, expect.objectContaining({ category: 'bakery' }));
+    expect(provider.search).toHaveBeenCalledTimes(1);
+    expect(provider.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: 'restaurant',
+        categories: ['restaurant', 'bakery'],
+      }),
+    );
     expect(prisma.searchResult.upsert).toHaveBeenCalledTimes(3);
   });
 
