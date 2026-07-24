@@ -56,8 +56,8 @@ export class CreateSearchDto {
     if (value === undefined || value === null || value === '') return 'BR';
     return typeof value === 'string' ? value.trim().toUpperCase() : value;
   })
-  @IsIn(PROSPECTING_COUNTRY_CODES)
-  country!: ProspectingCountryCode;
+  @IsIn([...PROSPECTING_COUNTRY_CODES])
+  country: ProspectingCountryCode = 'BR';
 
   @ApiProperty({ example: 'São Paulo' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

@@ -136,7 +136,27 @@ describe('Prospecting HTTP integration', () => {
                 (!where.id || where.id.in.includes(result.id)),
             ),
         ),
-        upsert: jest.fn(),
+        upsert: jest.fn(
+          async ({
+            create,
+          }: {
+            create: {
+              searchId: string;
+              externalId: string;
+              normalizedData: Record<string, unknown>;
+            };
+          }) => {
+            const id = RESULT_ID;
+            const record = {
+              id,
+              searchId: create.searchId,
+              importedLeadId: null as string | null,
+              normalizedData: create.normalizedData,
+            };
+            results.set(id, record);
+            return record;
+          },
+        ),
         deleteMany: jest.fn(),
         updateMany: jest.fn(
           async ({
@@ -188,7 +208,7 @@ describe('Prospecting HTTP integration', () => {
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true,
-        transformOptions: { enableImplicitConversion: true },
+        transformOptions: { enableImplicitConversion: true, exposeDefaultValues: true },
       }),
     );
     app.useGlobalGuards(new HeaderAuthGuard(), new RolesGuard(module.get(Reflector)));
@@ -283,6 +303,128 @@ describe('Prospecting HTTP integration', () => {
 
     expect(prisma.search.create).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('defaults country to BR, accepts European free-text regions, and rejects invalid BR regions', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/searches')
+      .send({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
+      .expect(202);
+
+    expect(prisma.search.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          input: expect.objectContaining({ country: 'BR', state: 'SP' }),
+        }),
+      }),
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/searches')
+      .send({
+        category: 'restaurant',
+        country: 'PT',
+        city: 'Lisboa',
+        state: 'Lisboa',
+        onlyWithoutWebsite: true,
+      })
+      .expect(202);
+
+    expect(prisma.search.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          input: expect.objectContaining({ country: 'PT', city: 'Lisboa', state: 'Lisboa' }),
+        }),
+      }),
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/searches')
+      .send({
+        category: 'restaurant',
+        country: 'BR',
+        city: 'São Paulo',
+        state: 'São Paulo',
+        onlyWithoutWebsite: true,
+      })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/searches')
+      .send({
+        category: 'restaurant',
+        country: 'US',
+        city: 'New York',
+        state: 'NY',
+        onlyWithoutWebsite: true,
+      })
+      .expect(400);
+  });
+
+  it('processes a Portuguese search end-to-end and imports with country PT', async () => {
+    searches.set(SEARCH_ID, {
+      id: SEARCH_ID,
+      organizationId: 'org-1',
+      userId: 'user-1',
+      provider: 'OPENSTREETMAP',
+      input: {
+        category: 'restaurant',
+        city: 'Lisboa',
+        state: 'Lisboa',
+        country: 'PT',
+        onlyWithoutWebsite: true,
+      },
+      status: 'PENDING',
+    });
+    provider.search.mockResolvedValue([
+      {
+        externalId: 'node/pt-1',
+        companyName: 'Tasca Lisboa',
+        city: 'Lisboa',
+        state: 'Lisboa',
+        country: 'PT',
+        phone: '+351 21 000 0000',
+        source: 'OPENSTREETMAP',
+        websitePresence: 'NO_WEBSITE_REPORTED',
+      },
+    ]);
+
+    await processor.process({
+      data: { searchId: SEARCH_ID },
+      attemptsMade: 0,
+      opts: { attempts: 3 },
+    } as never);
+
+    expect(provider.search).toHaveBeenCalledWith({
+      category: 'restaurant',
+      city: 'Lisboa',
+      state: 'Lisboa',
+      country: 'PT',
+      onlyWithoutWebsite: true,
+    });
+    expect(searches.get(SEARCH_ID)?.status).toBe('COMPLETED');
+
+    const storedResult = [...results.values()][0];
+    expect(storedResult?.normalizedData).toEqual(
+      expect.objectContaining({ country: 'PT', city: 'Lisboa', state: 'Lisboa' }),
+    );
+
+    ingestion.ingest.mockResolvedValue({ status: 'IMPORTED', lead: { id: LEAD_ID } });
+    await request(app.getHttpServer())
+      .post(`/api/v1/searches/${SEARCH_ID}/import`)
+      .send({ resultIds: [storedResult!.id] })
+      .expect(201);
+
+    expect(ingestion.ingest).toHaveBeenCalledWith(
+      'org-1',
+      'user-1',
+      expect.objectContaining({
+        companyName: 'Tasca Lisboa',
+        country: 'PT',
+        city: 'Lisboa',
+        state: 'Lisboa',
+      }),
+    );
   });
 
   it('returns 404 for another organization and rejects malformed UUIDs before lookup', async () => {

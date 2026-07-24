@@ -104,6 +104,36 @@ describe('SearchPage', () => {
     });
   });
 
+  it('shows country in search history labels', async () => {
+    mocks.useSearches.mockReturnValue({
+      data: {
+        data: [{
+          id: 'search-pt',
+          provider: 'OPENSTREETMAP',
+          input: {
+            category: 'restaurant',
+            city: 'Lisboa',
+            state: 'Lisboa',
+            country: 'PT',
+            onlyWithoutWebsite: true,
+          },
+          status: 'COMPLETED',
+          error: null,
+          createdAt: '2026-07-22T10:00:00.000Z',
+          completedAt: '2026-07-22T10:01:00.000Z',
+        }],
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage();
+
+    expect(screen.getByText(/restaurant em Lisboa\/Lisboa \(PT\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Brasil e na Europa/)).toBeInTheDocument();
+  });
+
   it('switches UF select to free-text region when country is Portugal', async () => {
     const user = userEvent.setup();
     mocks.createSearch.mockResolvedValue({ id: 'search-pt' });
