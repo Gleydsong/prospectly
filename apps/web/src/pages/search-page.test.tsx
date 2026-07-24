@@ -71,11 +71,11 @@ describe('SearchPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
-    expect(await screen.findByText('Categoria obrigatória')).toBeInTheDocument();
+    expect(await screen.findByText('Selecione pelo menos uma categoria')).toBeInTheDocument();
     expect(screen.getByText('Cidade obrigatória')).toBeInTheDocument();
     expect(mocks.createSearch).not.toHaveBeenCalled();
 
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'restaurant');
+    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
     await user.type(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
@@ -83,19 +83,20 @@ describe('SearchPage', () => {
     expect(mocks.createSearch).not.toHaveBeenCalled();
   });
 
-  it('keeps the no-website filter enabled by default and submits the validated search', async () => {
+  it('keeps the no-website filter enabled by default and submits multiple categories', async () => {
     const user = userEvent.setup();
     mocks.createSearch.mockResolvedValue({ id: 'search-1' });
     renderPage();
 
     expect(screen.getByRole('checkbox', { name: 'Somente empresas sem site informado' })).toBeChecked();
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'restaurant');
+    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Padaria' }));
     await user.type(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.selectOptions(screen.getByLabelText('UF'), 'SP');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
-      category: 'restaurant',
+      categories: ['restaurant', 'bakery'],
       city: 'São Paulo',
       state: 'SP',
       country: 'BR',
@@ -113,13 +114,13 @@ describe('SearchPage', () => {
     expect(screen.queryByLabelText('UF')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Região / Distrito / Província')).toBeInTheDocument();
 
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'restaurant');
+    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
     await user.type(screen.getByLabelText('Cidade'), 'Lisboa');
     await user.type(screen.getByLabelText('Região / Distrito / Província'), 'Lisboa');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
-      category: 'restaurant',
+      categories: ['restaurant'],
       city: 'Lisboa',
       state: 'Lisboa',
       country: 'PT',
@@ -133,7 +134,7 @@ describe('SearchPage', () => {
     mocks.createSearch.mockRejectedValue(new Error('offline'));
     renderPage();
 
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'restaurant');
+    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
     await user.type(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.selectOptions(screen.getByLabelText('UF'), 'SP');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
@@ -150,7 +151,7 @@ describe('SearchPage', () => {
         data: [{
           id: 'search-1',
           provider: 'OPENSTREETMAP',
-          input: { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
+          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
           status: 'FAILED',
           error: 'falhou',
           createdAt: '2026-07-22T10:00:00.000Z',
@@ -164,7 +165,7 @@ describe('SearchPage', () => {
     });
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Apagar pesquisa restaurant em São Paulo' }));
+    await user.click(screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }));
 
     expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Leads já importados permanecem'));
     expect(mocks.deleteSearch).toHaveBeenCalledWith('search-1');
@@ -198,7 +199,7 @@ describe('SearchPage', () => {
         data: [{
           id: 'search-1',
           provider: 'OPENSTREETMAP',
-          input: { category: 'restaurante', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
+          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
           status: 'PROCESSING',
           createdAt: '2026-07-22T10:00:00.000Z',
           completedAt: null,
@@ -220,7 +221,7 @@ describe('SearchPage', () => {
     });
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: /restaurante em São Paulo\/SP/i }));
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
 
     expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar os resultados.');
     expect(screen.queryByText('Nenhum resultado encontrado')).not.toBeInTheDocument();
@@ -236,7 +237,7 @@ describe('SearchPage', () => {
         data: [{
           id: 'search-1',
           provider: 'OPENSTREETMAP',
-          input: { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
+          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
           status: 'PROCESSING',
           createdAt: '2026-07-22T10:00:00.000Z',
           completedAt: null,
@@ -272,7 +273,7 @@ describe('SearchPage', () => {
     });
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: /restaurant em São Paulo\/SP/i }));
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
 
     const attribution = screen.getByRole('link', { name: 'colaboradores do OpenStreetMap' });
     expect(attribution).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');

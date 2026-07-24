@@ -89,6 +89,7 @@ export type ProspectingProviderId = (typeof PROSPECTING_PROVIDER_IDS)[number];
 
 export interface SearchProviderInput {
   category: string;
+  categories?: string[];
   city: string;
   state: string;
   country: ProspectingCountryCode;

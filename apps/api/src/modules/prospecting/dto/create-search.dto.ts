@@ -1,6 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
@@ -23,6 +27,27 @@ import {
   type ProspectingProviderId,
 } from '../domain/search-provider';
 
+const MAX_CATEGORIES = 10;
+
+function normalizeCategories(value: unknown, legacyCategory: unknown): ProspectingCategory[] {
+  const raw = Array.isArray(value)
+    ? value
+    : typeof legacyCategory === 'string' && legacyCategory.trim()
+      ? [legacyCategory]
+      : typeof value === 'string' && value.trim()
+        ? [value]
+        : [];
+
+  const unique: ProspectingCategory[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string') continue;
+    const normalized = entry.trim().toLocaleLowerCase('pt-BR') as ProspectingCategory;
+    if (!(PROSPECTING_CATEGORY_VALUES as readonly string[]).includes(normalized)) continue;
+    if (!unique.includes(normalized)) unique.push(normalized);
+  }
+  return unique;
+}
+
 @ValidatorConstraint({ name: 'prospectingRegionForCountry', async: false })
 class ProspectingRegionForCountryConstraint implements ValidatorConstraintInterface {
   validate(state: unknown, args: ValidationArguments): boolean {
@@ -43,21 +68,29 @@ class ProspectingRegionForCountryConstraint implements ValidatorConstraintInterf
 }
 
 export class CreateSearchDto {
-  @ApiProperty({ enum: [...PROSPECTING_CATEGORY_VALUES], example: 'restaurant' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  @IsIn([...PROSPECTING_CATEGORY_VALUES])
-  category!: ProspectingCategory;
+  @ApiProperty({
+    enum: [...PROSPECTING_CATEGORY_VALUES],
+    isArray: true,
+    example: ['restaurant', 'bakery'],
+    description: 'One or more prospecting categories (max 10)',
+  })
+  @Transform(({ value, obj }) =>
+    normalizeCategories(value, (obj as Record<string, unknown>).category),
+  )
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_CATEGORIES)
+  @ArrayUnique()
+  @IsIn([...PROSPECTING_CATEGORY_VALUES], { each: true })
+  categories!: ProspectingCategory[];
 
-  @ApiProperty({ enum: PROSPECTING_COUNTRY_CODES, example: 'BR', default: 'BR' })
+  @ApiProperty({ enum: [...PROSPECTING_COUNTRY_CODES], example: 'BR', default: 'BR' })
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') return 'BR';
     return typeof value === 'string' ? value.trim().toUpperCase() : value;
   })
-  @IsIn(PROSPECTING_COUNTRY_CODES)
-  country!: ProspectingCountryCode;
+  @IsIn([...PROSPECTING_COUNTRY_CODES])
+  country: ProspectingCountryCode = 'BR';
 
   @ApiProperty({ example: 'São Paulo' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -74,7 +107,10 @@ export class CreateSearchDto {
     if (typeof value !== 'string') return value;
     const trimmed = value.trim();
     const country = (obj as CreateSearchDto).country;
-    if (country === 'BR' || (!country && (BRAZILIAN_STATE_CODES as readonly string[]).includes(trimmed.toUpperCase()))) {
+    if (
+      country === 'BR' ||
+      (!country && (BRAZILIAN_STATE_CODES as readonly string[]).includes(trimmed.toUpperCase()))
+    ) {
       return trimmed.toUpperCase();
     }
     return trimmed;
@@ -88,7 +124,7 @@ export class CreateSearchDto {
   @ApiPropertyOptional({ enum: PROSPECTING_PROVIDER_IDS, default: 'OPENSTREETMAP' })
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
-  @IsIn(PROSPECTING_PROVIDER_IDS)
+  @IsIn([...PROSPECTING_PROVIDER_IDS])
   provider?: ProspectingProviderId;
 
   @ApiPropertyOptional({ default: true })

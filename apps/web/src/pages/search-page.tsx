@@ -36,9 +36,10 @@ import {
 
 const searchSchema = z
   .object({
-    category: z.enum(PROSPECTING_CATEGORY_VALUES, {
-      errorMap: () => ({ message: 'Categoria obrigatória' }),
-    }),
+    categories: z
+      .array(z.enum(PROSPECTING_CATEGORY_VALUES))
+      .min(1, 'Selecione pelo menos uma categoria')
+      .max(10, 'Selecione no máximo 10 categorias'),
     country: z.enum(PROSPECTING_COUNTRY_CODES, {
       errorMap: () => ({ message: 'Selecione um país' }),
     }),
@@ -80,6 +81,26 @@ const WEBSITE_LABEL: Record<WebsitePresence, string> = {
   WEBSITE_FOUND: 'Site informado',
   NEEDS_REVIEW: 'Rever website',
 };
+
+const CATEGORY_LABEL = Object.fromEntries(
+  PROSPECTING_CATEGORIES.map((category) => [category.value, category.label]),
+) as Record<string, string>;
+
+function formatSearchHeading(input: {
+  categories?: string[];
+  category?: string;
+  city: string;
+}): string {
+  const values =
+    input.categories && input.categories.length > 0
+      ? input.categories
+      : input.category
+        ? [input.category]
+        : [];
+  const labels = values.map((value) => CATEGORY_LABEL[value] ?? value);
+  const categoryText = labels.length > 0 ? labels.join(', ') : 'Pesquisa';
+  return `${categoryText} / ${input.city}`;
+}
 
 function statusTone(status: SearchStatus): 'amber' | 'blue' | 'green' | 'red' {
   if (status === 'PENDING') return 'amber';
@@ -148,7 +169,7 @@ export function SearchPage() {
   } = useForm<SearchForm>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
-      category: undefined,
+      categories: [],
       country: 'BR',
       city: '',
       state: '',
@@ -158,10 +179,19 @@ export function SearchPage() {
   });
 
   const selectedCountry = watch('country');
+  const selectedCategories = watch('categories');
 
   useEffect(() => {
     setValue('state', '');
   }, [selectedCountry, setValue]);
+
+  const toggleCategory = (value: (typeof PROSPECTING_CATEGORY_VALUES)[number]) => {
+    const current = selectedCategories ?? [];
+    const next = current.includes(value)
+      ? current.filter((category) => category !== value)
+      : [...current, value];
+    setValue('categories', next, { shouldValidate: true, shouldDirty: true });
+  };
 
   const searches = searchesQuery.data?.data ?? [];
   const resultPage = resultsQuery.data;
@@ -254,7 +284,7 @@ export function SearchPage() {
         <CardHeader title="Nova pesquisa" description="Os resultados são processados em segundo plano." />
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <Select label="Fonte" error={errors.provider?.message} {...register('provider')}>
                 {availableProviders.map((provider) => (
                   <option key={provider.id} value={provider.id}>{provider.label}</option>
@@ -263,12 +293,6 @@ export function SearchPage() {
               <Select label="País" error={errors.country?.message} {...register('country')}>
                 {PROSPECTING_COUNTRIES.map((country) => (
                   <option key={country.value} value={country.value}>{country.label}</option>
-                ))}
-              </Select>
-              <Select label="Categoria" error={errors.category?.message} {...register('category')}>
-                <option value="">Selecione</option>
-                {PROSPECTING_CATEGORIES.map((category) => (
-                  <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
               </Select>
               <Input label="Cidade" placeholder={selectedCountry === 'BR' ? 'São Paulo' : 'Lisboa'} error={errors.city?.message} {...register('city')} />
@@ -286,6 +310,31 @@ export function SearchPage() {
                 />
               )}
             </div>
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium text-slate-700">Categorias</legend>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {PROSPECTING_CATEGORIES.map((category) => {
+                  const checked = (selectedCategories ?? []).includes(category.value);
+                  return (
+                    <label
+                      key={category.value}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        checked={checked}
+                        onChange={() => toggleCategory(category.value)}
+                      />
+                      {category.label}
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.categories?.message ? (
+                <p className="mt-2 text-sm text-red-600" role="alert">{errors.categories.message}</p>
+              ) : null}
+            </fieldset>
             <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input
                 type="checkbox"
@@ -328,10 +377,9 @@ export function SearchPage() {
                       >
                         <span className="min-w-0">
                           <span className="block font-medium text-slate-900">
-                            {search.input.category} em {search.input.city}/{search.input.state}
-                            {search.input.country ? ` (${search.input.country})` : ''}
+                            {formatSearchHeading(search.input)}
                           </span>
-                          <span className="text-sm text-slate-500">{search.provider} · {formatDateTime(search.createdAt)}</span>
+                          <span className="text-sm text-slate-500">{formatDateTime(search.createdAt)}</span>
                         </span>
                         <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
                       </button>
@@ -340,7 +388,7 @@ export function SearchPage() {
                         variant="ghost"
                         size="sm"
                         className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        aria-label={`Apagar pesquisa ${search.input.category} em ${search.input.city}`}
+                        aria-label={`Apagar pesquisa ${formatSearchHeading(search.input)}`}
                         loading={deleteSearch.isPending && deleteSearch.variables === search.id}
                         onClick={() => { void removeSearch(search.id); }}
                       >

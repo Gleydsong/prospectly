@@ -66,7 +66,7 @@ class HeaderAuthGuard implements CanActivate {
 }
 
 function validSearchBody() {
-  return { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true };
+  return { categories: ['restaurant'], city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true };
 }
 
 describe('Prospecting HTTP integration', () => {
@@ -266,19 +266,19 @@ describe('Prospecting HTTP integration', () => {
   it('rejects blank search terms and non-boolean filter values before persistence', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: '   ', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
+      .send({ categories: ['   '], city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'restaurante', city: '   ', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
+      .send({ categories: ['restaurante'], city: '   ', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'restaurante', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: 'sometimes' })
+      .send({ categories: ['restaurante'], city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: 'sometimes' })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'categoria-livre', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
+      .send({ categories: ['categoria-livre'], city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
 
     expect(prisma.search.create).not.toHaveBeenCalled();

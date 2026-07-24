@@ -53,8 +53,10 @@ export class ProspectingService {
       throw new BadRequestException(`Search provider unavailable: ${providerId}`);
     }
 
+    const categories = [...new Set(dto.categories.map((category) => category.trim()))];
     const input: SearchInput = {
-      category: dto.category.trim(),
+      categories,
+      category: categories[0]!,
       city: dto.city.trim(),
       state: dto.state,
       country: dto.country,
@@ -163,12 +165,27 @@ export class ProspectingService {
     }
 
     const input = this.readSearchInput(search.input);
-    const businesses = await this.providers.resolve(search.provider).search(input);
-    const results = input.onlyWithoutWebsite
-      ? businesses.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
-      : businesses;
+    const provider = this.providers.resolve(search.provider);
+    const categories = this.resolveCategories(input);
+    const merged = new Map<string, NormalizedBusiness>();
 
-    await this.persistResults(searchId, results);
+    for (const category of categories) {
+      const businesses = await provider.search({ ...input, category });
+      for (const business of businesses) {
+        if (merged.has(business.externalId)) continue;
+        merged.set(business.externalId, {
+          ...business,
+          category: business.category ?? category,
+        });
+      }
+    }
+
+    const results = [...merged.values()];
+    const filtered = input.onlyWithoutWebsite
+      ? results.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
+      : results;
+
+    await this.persistResults(searchId, filtered);
     await this.prisma.search.update({
       where: { id: searchId },
       data: { status: SearchStatus.COMPLETED, error: null, completedAt: new Date() },
@@ -296,24 +313,49 @@ export class ProspectingService {
     }
     const input = value as Record<string, unknown>;
     if (
-      typeof input.category !== 'string' ||
       typeof input.city !== 'string' ||
       typeof input.state !== 'string' ||
       typeof input.onlyWithoutWebsite !== 'boolean'
     ) {
       throw new BadRequestException('Invalid persisted search input');
     }
+
+    const categories = this.resolveCategories({
+      category: typeof input.category === 'string' ? input.category : undefined,
+      categories: Array.isArray(input.categories)
+        ? input.categories.filter((entry): entry is string => typeof entry === 'string')
+        : undefined,
+    });
+    if (categories.length === 0) {
+      throw new BadRequestException('Invalid persisted search input');
+    }
+
     const country =
       typeof input.country === 'string' && isProspectingCountryCode(input.country)
         ? input.country
         : 'BR';
     return {
-      category: input.category,
+      categories,
+      category: categories[0]!,
       city: input.city,
       state: input.state,
       country,
       onlyWithoutWebsite: input.onlyWithoutWebsite,
     };
+  }
+
+  private resolveCategories(input: {
+    category?: string;
+    categories?: string[];
+  }): string[] {
+    const fromArray = (input.categories ?? [])
+      .map((category) => category.trim())
+      .filter(Boolean);
+    if (fromArray.length > 0) {
+      return [...new Set(fromArray)];
+    }
+    const single = input.category?.trim();
+    return single ? [single] : [];
   }
 
   private readNormalizedBusiness(value: Prisma.JsonValue): NormalizedBusiness | null {

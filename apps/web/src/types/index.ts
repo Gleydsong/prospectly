@@ -238,7 +238,8 @@ export type SearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export type WebsitePresence = 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
 
 export interface SearchInput {
-  category: ProspectingCategory;
+  categories: ProspectingCategory[];
+  category?: ProspectingCategory;
   city: string;
   state: string;
   country: ProspectingCountryCode;
