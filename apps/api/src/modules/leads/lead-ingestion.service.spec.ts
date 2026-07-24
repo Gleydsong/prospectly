@@ -1,5 +1,9 @@
 import type { PrismaService } from '../../common/prisma/prisma.service';
-import { LeadIngestionService, normalizeBrazilianPhone } from './lead-ingestion.service';
+import {
+  LeadIngestionService,
+  normalizeBrazilianPhone,
+  normalizePhoneForCountry,
+} from './lead-ingestion.service';
 
 const makePrisma = () => {
   const prisma = {
@@ -27,6 +31,12 @@ describe('LeadIngestionService', () => {
   it('normalizes Brazilian phone numbers to E.164', () => {
     expect(normalizeBrazilianPhone('(11) 99876-5432')).toBe('+5511998765432');
     expect(normalizeBrazilianPhone('+55 (11) 99876-5432')).toBe('+5511998765432');
+  });
+
+  it('does not force +55 when normalizing Portuguese phones', () => {
+    expect(normalizePhoneForCountry('+351 21 000 0000', 'PT')).toBe('+351210000000');
+    expect(normalizePhoneForCountry('21 000 0000', 'PT')).toBe('+210000000');
+    expect(normalizePhoneForCountry('(11) 99876-5432', 'BR')).toBe('+5511998765432');
   });
 
   it('returns DUPLICATE when the organization already has the external source identity', async () => {
@@ -247,5 +257,33 @@ describe('LeadIngestionService', () => {
       }),
     );
     expect(prisma.tag.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps Portuguese phone numbers without forcing Brazil country code on ingest', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-pt', ...data }),
+    );
+    const service = new LeadIngestionService(prisma);
+
+    await service.ingest('org-1', 'user-1', {
+      companyName: 'Pastelaria Lisboa',
+      phone: '+351 21 000 0000',
+      city: 'Lisboa',
+      state: 'Lisboa',
+      country: 'PT',
+    });
+
+    expect(prisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          phone: '+351210000000',
+          country: 'PT',
+          state: 'Lisboa',
+        }),
+      }),
+    );
   });
 });

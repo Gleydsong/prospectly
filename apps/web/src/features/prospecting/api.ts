@@ -5,6 +5,7 @@ import type {
   ProspectingSearchResult,
   SearchImportSummary,
   SearchInput,
+  SearchProviderInfo,
   SearchStatus,
 } from '@/types';
 
@@ -17,6 +18,11 @@ export interface SearchesQuery {
 export interface SearchResultsQuery {
   page?: number;
   pageSize?: number;
+}
+
+export async function fetchSearchProviders(): Promise<SearchProviderInfo[]> {
+  const { data } = await api.get<SearchProviderInfo[]>('/searches/providers');
+  return data;
 }
 
 export async function fetchSearches(query: SearchesQuery = {}): Promise<PaginatedResult<ProspectingSearch>> {
@@ -47,4 +53,8 @@ export async function createSearch(input: SearchInput): Promise<ProspectingSearc
 export async function importSearchResults(id: string, resultIds: string[]): Promise<SearchImportSummary> {
   const { data } = await api.post<SearchImportSummary>(`/searches/${id}/import`, { resultIds });
   return data;
+}
+
+export async function deleteSearch(id: string): Promise<void> {
+  await api.delete(`/searches/${id}`);
 }

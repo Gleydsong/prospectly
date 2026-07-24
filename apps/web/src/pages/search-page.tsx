@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckSquare, Search } from 'lucide-react';
+import { CheckSquare, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -14,9 +14,11 @@ import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import {
   useCreateSearch,
+  useDeleteSearch,
   useImportSearchResults,
   useSearch,
   useSearches,
+  useSearchProviders,
   useSearchResults,
 } from '@/features/prospecting/hooks';
 import { getApiErrorMessage } from '@/lib/api';
@@ -25,19 +27,44 @@ import {
   BRAZILIAN_STATE_CODES,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
+  PROSPECTING_COUNTRIES,
+  PROSPECTING_COUNTRY_CODES,
   type SearchImportSummary,
   type SearchStatus,
   type WebsitePresence,
 } from '@/types';
 
-const searchSchema = z.object({
-  category: z.enum(PROSPECTING_CATEGORY_VALUES, {
-    errorMap: () => ({ message: 'Categoria obrigatória' }),
-  }),
-  city: z.string().trim().min(1, 'Cidade obrigatória').max(120),
-  state: z.enum(BRAZILIAN_STATE_CODES, { message: 'Selecione uma UF' }),
-  onlyWithoutWebsite: z.boolean(),
-});
+const searchSchema = z
+  .object({
+    category: z.enum(PROSPECTING_CATEGORY_VALUES, {
+      errorMap: () => ({ message: 'Categoria obrigatória' }),
+    }),
+    country: z.enum(PROSPECTING_COUNTRY_CODES, {
+      errorMap: () => ({ message: 'Selecione um país' }),
+    }),
+    city: z.string().trim().min(1, 'Cidade obrigatória').max(120),
+    state: z.string().max(120).default(''),
+    provider: z.enum(['OPENSTREETMAP', 'GOOGLE_PLACES']).default('OPENSTREETMAP'),
+    onlyWithoutWebsite: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    const region = values.state.trim();
+    if (!region) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['state'],
+        message: values.country === 'BR' ? 'Selecione uma UF' : 'Região obrigatória',
+      });
+      return;
+    }
+    if (values.country === 'BR' && !(BRAZILIAN_STATE_CODES as readonly string[]).includes(region)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['state'],
+        message: 'Selecione uma UF',
+      });
+    }
+  });
 
 type SearchForm = z.infer<typeof searchSchema>;
 
@@ -102,21 +129,39 @@ export function SearchPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [importSummary, setImportSummary] = useState<SearchImportSummary | null>(null);
   const searchesQuery = useSearches({ page: historyPage, pageSize: 10 });
+  const providersQuery = useSearchProviders();
   const searchQuery = useSearch(selectedSearchId);
   const { refetch: refetchResults, ...resultsQuery } = useSearchResults(selectedSearchId, {
     page: resultsPage,
     pageSize: 20,
   });
   const createSearch = useCreateSearch();
+  const deleteSearch = useDeleteSearch();
   const importResults = useImportSearchResults();
+  const availableProviders = providersQuery.data ?? [{ id: 'OPENSTREETMAP' as const, label: 'OpenStreetMap', available: true }];
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<SearchForm>({
     resolver: zodResolver(searchSchema),
-    defaultValues: { category: undefined, city: '', state: undefined, onlyWithoutWebsite: true },
+    defaultValues: {
+      category: undefined,
+      country: 'BR',
+      city: '',
+      state: '',
+      provider: 'OPENSTREETMAP',
+      onlyWithoutWebsite: true,
+    },
   });
+
+  const selectedCountry = watch('country');
+
+  useEffect(() => {
+    setValue('state', '');
+  }, [selectedCountry, setValue]);
 
   const searches = searchesQuery.data?.data ?? [];
   const resultPage = resultsQuery.data;
@@ -178,29 +223,68 @@ export function SearchPage() {
     }
   };
 
+  const removeSearch = async (searchId: string) => {
+    const confirmed = window.confirm(
+      'Apagar esta pesquisa do histórico? Os resultados serão removidos. Leads já importados permanecem.',
+    );
+    if (!confirmed) return;
+    setServerError(null);
+    try {
+      await deleteSearch.mutateAsync(searchId);
+      if (selectedSearchId === searchId) {
+        setSelectedSearchId('');
+        setSelectedResultIds([]);
+        setImportSummary(null);
+      }
+    } catch (error) {
+      setServerError(getApiErrorMessage(error));
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Pesquisa de empresas</h1>
-        <p className="text-sm text-slate-500">Encontre negócios brasileiros sem site informado no OpenStreetMap.</p>
+        <p className="text-sm text-slate-500">
+          Encontre negócios no Brasil e na Europa via OpenStreetMap ou Google Places.
+        </p>
       </div>
 
       <Card>
         <CardHeader title="Nova pesquisa" description="Os resultados são processados em segundo plano." />
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <Select label="Fonte" error={errors.provider?.message} {...register('provider')}>
+                {availableProviders.map((provider) => (
+                  <option key={provider.id} value={provider.id}>{provider.label}</option>
+                ))}
+              </Select>
+              <Select label="País" error={errors.country?.message} {...register('country')}>
+                {PROSPECTING_COUNTRIES.map((country) => (
+                  <option key={country.value} value={country.value}>{country.label}</option>
+                ))}
+              </Select>
               <Select label="Categoria" error={errors.category?.message} {...register('category')}>
                 <option value="">Selecione</option>
                 {PROSPECTING_CATEGORIES.map((category) => (
                   <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
               </Select>
-              <Input label="Cidade" placeholder="São Paulo" error={errors.city?.message} {...register('city')} />
-              <Select label="UF" error={errors.state?.message} {...register('state')}>
-                <option value="">Selecione</option>
-                {BRAZILIAN_STATE_CODES.map((state) => <option key={state} value={state}>{state}</option>)}
-              </Select>
+              <Input label="Cidade" placeholder={selectedCountry === 'BR' ? 'São Paulo' : 'Lisboa'} error={errors.city?.message} {...register('city')} />
+              {selectedCountry === 'BR' ? (
+                <Select label="UF" error={errors.state?.message} {...register('state')}>
+                  <option value="">Selecione</option>
+                  {BRAZILIAN_STATE_CODES.map((state) => <option key={state} value={state}>{state}</option>)}
+                </Select>
+              ) : (
+                <Input
+                  label="Região / Distrito / Província"
+                  placeholder="Lisboa"
+                  error={errors.state?.message}
+                  {...register('state')}
+                />
+              )}
             </div>
             <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input
@@ -235,18 +319,34 @@ export function SearchPage() {
               <ul className="divide-y divide-slate-100" aria-label="Histórico de pesquisas">
                 {searches.map((search) => (
                   <li key={search.id}>
-                    <button
-                      type="button"
-                      onClick={() => selectSearch(search.id)}
-                      aria-pressed={search.id === selectedSearchId}
-                      className="flex w-full items-center justify-between gap-3 py-3 text-left hover:bg-slate-50 focus-visible:rounded-lg"
-                    >
-                      <span>
-                        <span className="block font-medium text-slate-900">{search.input.category} em {search.input.city}/{search.input.state}</span>
-                        <span className="text-sm text-slate-500">{formatDateTime(search.createdAt)}</span>
-                      </span>
-                      <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
-                    </button>
+                    <div className="flex items-start gap-2 py-3">
+                      <button
+                        type="button"
+                        onClick={() => selectSearch(search.id)}
+                        aria-pressed={search.id === selectedSearchId}
+                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-slate-50 focus-visible:rounded-lg"
+                      >
+                        <span className="min-w-0">
+                          <span className="block font-medium text-slate-900">
+                            {search.input.category} em {search.input.city}/{search.input.state}
+                            {search.input.country ? ` (${search.input.country})` : ''}
+                          </span>
+                          <span className="text-sm text-slate-500">{search.provider} · {formatDateTime(search.createdAt)}</span>
+                        </span>
+                        <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        aria-label={`Apagar pesquisa ${search.input.category} em ${search.input.city}`}
+                        loading={deleteSearch.isPending && deleteSearch.variables === search.id}
+                        onClick={() => { void removeSearch(search.id); }}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </div>
                     {search.status === 'FAILED' && search.error ? <p className="pb-3 text-sm text-red-700">{search.error}</p> : null}
                   </li>
                 ))}

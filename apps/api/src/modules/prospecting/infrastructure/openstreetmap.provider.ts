@@ -2,7 +2,10 @@ import { WebsitePresence } from '@prisma/client';
 
 import {
   BRAZILIAN_STATE_CODES,
+  countryDisplayName,
+  isProspectingCountryCode,
   type BrazilianStateCode,
+  type ProspectingCountryCode,
   type SearchProvider,
   type SearchProviderInput,
 } from '../domain/search-provider';
@@ -90,7 +93,7 @@ function normalizeText(value: string): string {
     .trim();
 }
 
-function isBrazilianStateCode(value: string): value is BrazilianStateCode {
+function isBrazilianStateCodeValue(value: string): value is BrazilianStateCode {
   return (BRAZILIAN_STATE_CODES as readonly string[]).includes(value);
 }
 
@@ -98,15 +101,36 @@ function escapeOverpassValue(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-function hasRequestedState(place: NominatimPlace, state: BrazilianStateCode): boolean {
+function hasRequestedRegion(
+  place: NominatimPlace,
+  region: string,
+  country: ProspectingCountryCode,
+): boolean {
   const address = place.address ?? {};
-  const isoState = address['ISO3166-2-lvl4'] ?? address.ISO3166_2_lvl4;
-  if (typeof isoState === 'string' && isoState.toUpperCase() === `BR-${state}`) {
-    return true;
+  const normalizedRegion = normalizeText(region);
+
+  if (country === 'BR' && isBrazilianStateCodeValue(region.toUpperCase())) {
+    const state = region.toUpperCase() as BrazilianStateCode;
+    const isoState = address['ISO3166-2-lvl4'] ?? address.ISO3166_2_lvl4;
+    if (typeof isoState === 'string' && isoState.toUpperCase() === `BR-${state}`) {
+      return true;
+    }
+    const placeState = address.state;
+    return typeof placeState === 'string' && normalizeText(placeState) === STATE_NAMES[state];
   }
 
-  const placeState = address.state;
-  return typeof placeState === 'string' && normalizeText(placeState) === STATE_NAMES[state];
+  const isoState = address['ISO3166-2-lvl4'] ?? address.ISO3166_2_lvl4;
+  if (typeof isoState === 'string') {
+    const suffix = isoState.includes('-') ? isoState.split('-').slice(1).join('-') : isoState;
+    if (normalizeText(suffix) === normalizedRegion || normalizeText(isoState) === normalizedRegion) {
+      return true;
+    }
+  }
+
+  const candidates = [address.state, address.county, address.region, address.province, address.state_district];
+  return candidates.some(
+    (value) => typeof value === 'string' && normalizeText(value) === normalizedRegion,
+  );
 }
 
 function hasRequestedCity(place: NominatimPlace, city: string): boolean {
@@ -122,9 +146,9 @@ function hasRequestedCity(place: NominatimPlace, city: string): boolean {
   return typeof municipality === 'string' && normalizeText(municipality) === normalizeText(city);
 }
 
-function isBrazilian(place: NominatimPlace): boolean {
-  const country = place.address?.country_code;
-  return typeof country !== 'string' || country.toLowerCase() === 'br';
+function matchesCountry(place: NominatimPlace, country: ProspectingCountryCode): boolean {
+  const code = place.address?.country_code;
+  return typeof code !== 'string' || code.toLowerCase() === country.toLowerCase();
 }
 
 function isTransientStatus(status: number): boolean {
@@ -210,7 +234,12 @@ function getAddress(tags: Record<string, string>): string | undefined {
   return street || number || tags['addr:full']?.trim() || undefined;
 }
 
-function normalizeElement(element: OverpassElement, city: string, state: BrazilianStateCode): NormalizedBusiness | undefined {
+function normalizeElement(
+  element: OverpassElement,
+  city: string,
+  state: string,
+  country: ProspectingCountryCode,
+): NormalizedBusiness | undefined {
   const tags = element.tags;
   const name = tags?.name?.trim();
   if (!element.type || typeof element.id !== 'number' || !tags || !name) return undefined;
@@ -232,7 +261,7 @@ function normalizeElement(element: OverpassElement, city: string, state: Brazili
     address: getAddress(tags),
     city,
     state,
-    country: 'BR',
+    country,
     postalCode: tags['addr:postcode']?.trim() || undefined,
     latitude,
     longitude,
@@ -253,12 +282,21 @@ export class OpenStreetMapProvider implements SearchProvider {
   }
 
   async search(input: SearchProviderInput): Promise<NormalizedBusiness[]> {
-    const state = input.state.trim().toUpperCase();
-    if (!isBrazilianStateCode(state)) throw new Error(`Invalid Brazilian state: ${state}`);
+    if (!isProspectingCountryCode(input.country)) {
+      throw new Error(`Unsupported country: ${input.country}`);
+    }
     if (!input.city.trim()) throw new Error('City is required');
+    if (!input.state.trim()) throw new Error('Region is required');
+
+    const country = input.country;
+    const region =
+      country === 'BR' ? input.state.trim().toUpperCase() : input.state.trim();
+    if (country === 'BR' && !isBrazilianStateCodeValue(region)) {
+      throw new Error(`Invalid Brazilian state: ${region}`);
+    }
 
     const categoryTags = mapCategoryToOsmTags(input.category);
-    const municipality = await this.findMunicipality(input.city.trim(), state);
+    const municipality = await this.findMunicipality(input.city.trim(), region, country);
     if (!municipality) return [];
 
     const overpassResponse = await this.requestJson<OverpassResponse>(this.options.overpassUrl, {
@@ -277,13 +315,17 @@ export class OpenStreetMapProvider implements SearchProvider {
     });
 
     return (overpassResponse.elements ?? [])
-      .map((element) => normalizeElement(element, input.city.trim(), state))
+      .map((element) => normalizeElement(element, input.city.trim(), region, country))
       .filter((business): business is NormalizedBusiness => Boolean(business))
       .filter((business) => !input.onlyWithoutWebsite || business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED);
   }
 
-  private async findMunicipality(city: string, state: BrazilianStateCode): Promise<NominatimMunicipality | undefined> {
-    const cacheKey = `${normalizeText(city)}:${state}`;
+  private async findMunicipality(
+    city: string,
+    region: string,
+    country: ProspectingCountryCode,
+  ): Promise<NominatimMunicipality | undefined> {
+    const cacheKey = `${normalizeText(city)}:${normalizeText(region)}:${country}`;
     const cached = this.municipalityCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) {
       this.municipalityCache.delete(cacheKey);
@@ -292,7 +334,7 @@ export class OpenStreetMapProvider implements SearchProvider {
     }
     if (cached) this.municipalityCache.delete(cacheKey);
 
-    const municipality = this.fetchMunicipality(city, state);
+    const municipality = this.fetchMunicipality(city, region, country);
     const maxEntries = Math.max(1, this.options.municipalityCacheMaxEntries ?? 500);
     while (this.municipalityCache.size >= maxEntries) {
       const oldestKey = this.municipalityCache.keys().next().value;
@@ -311,11 +353,15 @@ export class OpenStreetMapProvider implements SearchProvider {
     }
   }
 
-  private async fetchMunicipality(city: string, state: BrazilianStateCode): Promise<NominatimMunicipality | undefined> {
+  private async fetchMunicipality(
+    city: string,
+    region: string,
+    country: ProspectingCountryCode,
+  ): Promise<NominatimMunicipality | undefined> {
     const url = new URL(this.options.nominatimUrl);
     url.search = new URLSearchParams({
-      q: `${city}, ${state}, Brasil`,
-      countrycodes: 'br',
+      q: `${city}, ${region}, ${countryDisplayName(country)}`,
+      countrycodes: country.toLowerCase(),
       format: 'jsonv2',
       addressdetails: '1',
       extratags: '1',
@@ -331,8 +377,8 @@ export class OpenStreetMapProvider implements SearchProvider {
     const candidates = places.filter(
       (place) => place.osm_type === 'relation'
         && typeof place.osm_id === 'number'
-        && isBrazilian(place)
-        && hasRequestedState(place, state)
+        && matchesCountry(place, country)
+        && hasRequestedRegion(place, region, country)
         && hasRequestedCity(place, city),
     );
 

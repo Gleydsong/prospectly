@@ -7,7 +7,14 @@ import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto'
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
 import type { NormalizedBusiness } from './domain/normalized-business';
-import { OPENSTREETMAP_SEARCH_PROVIDER, type SearchProvider, type SearchProviderInput } from './domain/search-provider';
+import {
+  isProspectingCountryCode,
+  isProspectingProviderId,
+  SEARCH_PROVIDER_REGISTRY,
+  type ProspectingProviderId,
+  type SearchProviderInput,
+  type SearchProviderRegistry,
+} from './domain/search-provider';
 import { CreateSearchDto } from './dto/create-search.dto';
 import { QuerySearchesDto } from './dto/query-searches.dto';
 import { PROSPECTING_QUEUE, PROSPECTING_JOB_OPTIONS, RUN_SEARCH_JOB, type RunSearchJobData } from './prospecting.constants';
@@ -32,22 +39,32 @@ export class ProspectingService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(PROSPECTING_QUEUE) private readonly queue: Queue<RunSearchJobData>,
-    @Inject(OPENSTREETMAP_SEARCH_PROVIDER) private readonly provider: SearchProvider,
+    @Inject(SEARCH_PROVIDER_REGISTRY) private readonly providers: SearchProviderRegistry,
     private readonly leadIngestion: LeadIngestionService,
   ) {}
 
+  listProviders() {
+    return this.providers.list().filter((provider) => provider.available);
+  }
+
   async create(organizationId: string, userId: string, dto: CreateSearchDto, correlationId?: string) {
+    const providerId: ProspectingProviderId = dto.provider ?? 'OPENSTREETMAP';
+    if (!this.providers.isAvailable(providerId)) {
+      throw new BadRequestException(`Search provider unavailable: ${providerId}`);
+    }
+
     const input: SearchInput = {
       category: dto.category.trim(),
       city: dto.city.trim(),
       state: dto.state,
+      country: dto.country,
       onlyWithoutWebsite: dto.onlyWithoutWebsite,
     };
     const search = await this.prisma.search.create({
       data: {
         organizationId,
         userId,
-        provider: 'OPENSTREETMAP',
+        provider: providerId,
         input: input as unknown as Prisma.InputJsonValue,
         status: SearchStatus.PENDING,
         ...(correlationId ? { correlationId } : {}),
@@ -101,6 +118,11 @@ export class ProspectingService {
     return this.requireSearch(organizationId, id);
   }
 
+  async remove(organizationId: string, id: string): Promise<void> {
+    await this.requireSearch(organizationId, id);
+    await this.prisma.search.delete({ where: { id } });
+  }
+
   async getJobContext(id: string) {
     return this.prisma.search.findUnique({
       where: { id },
@@ -136,8 +158,12 @@ export class ProspectingService {
       data: { status: SearchStatus.PROCESSING, error: null, completedAt: null },
     });
 
+    if (!isProspectingProviderId(search.provider)) {
+      throw new BadRequestException('Invalid persisted search provider');
+    }
+
     const input = this.readSearchInput(search.input);
-    const businesses = await this.provider.search(input);
+    const businesses = await this.providers.resolve(search.provider).search(input);
     const results = input.onlyWithoutWebsite
       ? businesses.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
       : businesses;
@@ -149,12 +175,14 @@ export class ProspectingService {
     });
   }
 
-  async recordFailure(searchId: string): Promise<void> {
+  async recordFailure(searchId: string, errorMessage?: string): Promise<void> {
     await this.prisma.search.update({
       where: { id: searchId },
       data: {
         status: SearchStatus.FAILED,
-        error: 'Search provider is temporarily unavailable. Please try again later.',
+        error:
+          errorMessage ??
+          'Search provider is temporarily unavailable. Please try again later.',
         completedAt: new Date(),
       },
     });
@@ -275,7 +303,17 @@ export class ProspectingService {
     ) {
       throw new BadRequestException('Invalid persisted search input');
     }
-    return input as unknown as SearchInput;
+    const country =
+      typeof input.country === 'string' && isProspectingCountryCode(input.country)
+        ? input.country
+        : 'BR';
+    return {
+      category: input.category,
+      city: input.city,
+      state: input.state,
+      country,
+      onlyWithoutWebsite: input.onlyWithoutWebsite,
+    };
   }
 
   private readNormalizedBusiness(value: Prisma.JsonValue): NormalizedBusiness | null {
@@ -286,14 +324,20 @@ export class ProspectingService {
       typeof business.companyName !== 'string' ||
       typeof business.city !== 'string' ||
       typeof business.state !== 'string' ||
-      typeof business.websitePresence !== 'string'
+      typeof business.websitePresence !== 'string' ||
+      (business.source !== 'OPENSTREETMAP' && business.source !== 'GOOGLE_PLACES')
     ) {
       return null;
     }
-    return business as unknown as NormalizedBusiness;
+    const country =
+      typeof business.country === 'string' && isProspectingCountryCode(business.country)
+        ? business.country
+        : 'BR';
+    return { ...(business as unknown as NormalizedBusiness), country };
   }
 
   private toLeadCandidate(business: NormalizedBusiness): LeadIngestionCandidate {
+    const isGoogle = business.source === 'GOOGLE_PLACES';
     return {
       companyName: business.companyName,
       category: business.category,
@@ -307,13 +351,15 @@ export class ProspectingService {
       postalCode: business.postalCode,
       latitude: business.latitude,
       longitude: business.longitude,
-      source: LeadSource.OPENSTREETMAP,
+      source: isGoogle ? LeadSource.GOOGLE_PLACES : LeadSource.OPENSTREETMAP,
       externalId: business.externalId,
       status: LeadStatus.TO_REVIEW,
       websitePresence: business.websitePresence,
       websiteCheckedAt: new Date(),
-      websiteCheckSource: 'OpenStreetMap',
-      notes: 'Importado do OpenStreetMap. Validação manual de website necessária.',
+      websiteCheckSource: isGoogle ? 'Google Places' : 'OpenStreetMap',
+      notes: isGoogle
+        ? 'Importado do Google Places. Validação manual de website necessária.'
+        : 'Importado do OpenStreetMap. Validação manual de website necessária.',
       tags: ['sem-site'],
     };
   }

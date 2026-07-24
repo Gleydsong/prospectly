@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
@@ -26,6 +37,11 @@ export class ProspectingController {
     @CorrelationId() correlationId?: string,
   ) {
     return this.prospecting.create(organizationId, user.id, dto, correlationId);
+  }
+
+  @Get('providers')
+  listProviders() {
+    return this.prospecting.listProviders();
   }
 
   @Get()
@@ -56,5 +72,12 @@ export class ProspectingController {
     @Body() dto: ImportSearchResultsDto,
   ) {
     return this.prospecting.importResults(organizationId, user.id, id, dto.resultIds);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  remove(@CurrentOrg() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.prospecting.remove(organizationId, id);
   }
 }

@@ -7,6 +7,7 @@ const searchInput = {
   category: 'restaurant' as const,
   city: 'São Paulo',
   state: 'SP' as const,
+  country: 'BR' as const,
   onlyWithoutWebsite: true,
 };
 
@@ -20,6 +21,7 @@ function createService(overrides: Record<string, unknown> = {}) {
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+      delete: jest.fn(),
     },
     searchResult: {
       count: jest.fn(),
@@ -38,14 +40,20 @@ function createService(overrides: Record<string, unknown> = {}) {
   });
   const queue = { add: jest.fn() };
   const provider = { search: jest.fn() };
+  const registry = {
+    list: jest.fn(() => [{ id: 'OPENSTREETMAP', label: 'OpenStreetMap', available: true }]),
+    isAvailable: jest.fn((id: string) => id === 'OPENSTREETMAP'),
+    resolve: jest.fn(() => provider),
+  };
   const ingestion = { ingest: jest.fn() };
 
   return {
     prisma,
     queue,
     provider,
+    registry,
     ingestion,
-    service: new ProspectingService(prisma as never, queue as never, provider as never, ingestion as never),
+    service: new ProspectingService(prisma as never, queue as never, registry as never, ingestion as never),
   };
 }
 
@@ -102,6 +110,28 @@ describe('ProspectingService', () => {
     });
   });
 
+  it('rejects unavailable Google Places provider when key is missing', async () => {
+    const { prisma, registry, service } = createService();
+    registry.isAvailable.mockReturnValue(false);
+
+    await expect(
+      service.create('org-1', 'user-1', { ...searchInput, provider: 'GOOGLE_PLACES' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.search.create).not.toHaveBeenCalled();
+  });
+
+  it('lists only available providers', () => {
+    const { registry, service } = createService();
+    registry.list.mockReturnValue([
+      { id: 'OPENSTREETMAP', label: 'OpenStreetMap', available: true },
+      { id: 'GOOGLE_PLACES', label: 'Google Places', available: false },
+    ]);
+
+    expect(service.listProviders()).toEqual([
+      { id: 'OPENSTREETMAP', label: 'OpenStreetMap', available: true },
+    ]);
+  });
+
   it('scopes search history and pagination to the current organization', async () => {
     const { prisma, service } = createService();
     prisma.$transaction.mockResolvedValue([1, [{ id: 'search-1' }]]);
@@ -127,9 +157,34 @@ describe('ProspectingService', () => {
     });
   });
 
+  it('removes an owned search after scoping by organization', async () => {
+    const { prisma, service } = createService();
+    prisma.search.findFirst.mockResolvedValue({ id: 'search-1', organizationId: 'org-1' });
+    prisma.search.delete.mockResolvedValue({ id: 'search-1' });
+
+    await expect(service.remove('org-1', 'search-1')).resolves.toBeUndefined();
+    expect(prisma.search.findFirst).toHaveBeenCalledWith({
+      where: { id: 'search-1', organizationId: 'org-1' },
+    });
+    expect(prisma.search.delete).toHaveBeenCalledWith({ where: { id: 'search-1' } });
+  });
+
+  it('does not delete a search from another organization', async () => {
+    const { prisma, service } = createService();
+    prisma.search.findFirst.mockResolvedValue(null);
+
+    await expect(service.remove('org-1', 'search-2')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.search.delete).not.toHaveBeenCalled();
+  });
+
   it('transitions a queued search, persists provider results idempotently and completes it', async () => {
     const { prisma, provider, service } = createService();
-    prisma.search.findUnique.mockResolvedValue({ id: 'search-1', organizationId: 'org-1', input: searchInput });
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      input: searchInput,
+    });
     prisma.search.update.mockResolvedValue(undefined);
     provider.search.mockResolvedValue([
       {
@@ -165,7 +220,12 @@ describe('ProspectingService', () => {
 
   it('records only a sanitized failure after a provider error reaches its final attempt', async () => {
     const { prisma, provider, service } = createService();
-    prisma.search.findUnique.mockResolvedValue({ id: 'search-1', organizationId: 'org-1', input: searchInput });
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      input: searchInput,
+    });
     provider.search.mockRejectedValue(new Error('token=super-secret provider response'));
 
     await expect(service.process('search-1')).rejects.toThrow('token=super-secret provider response');

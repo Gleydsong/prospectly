@@ -37,14 +37,14 @@ describe('OpenStreetMapProvider', () => {
       fetchMock.mockResolvedValueOnce(jsonResponse([]));
 
       await expect(
-        createProvider().search({ category: 'restaurant', city: 'São Paulo', state, onlyWithoutWebsite: true }),
+        createProvider().search({ category: 'restaurant', city: 'São Paulo', state, country: 'BR' as const, onlyWithoutWebsite: true }),
       ).resolves.toEqual([]);
     },
   );
 
   it('rejects an invalid Brazilian UF before making a provider request', async () => {
     await expect(
-      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'XX', onlyWithoutWebsite: true }),
+      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'XX', country: 'BR' as const, onlyWithoutWebsite: true }),
     ).rejects.toThrow('Invalid Brazilian state: XX');
 
     expect(fetchMock).not.toHaveBeenCalled();
@@ -78,7 +78,7 @@ describe('OpenStreetMapProvider', () => {
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
 
     await expect(
-      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true }),
+      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true }),
     ).resolves.toEqual([]);
 
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -117,7 +117,7 @@ describe('OpenStreetMapProvider', () => {
       )
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
 
-    await createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true });
+    await createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true });
 
     const overpassBody = String(fetchMock.mock.calls[1]?.[1]?.body);
     expect(overpassBody).toContain('(-24.0079003,-46.8262692,-23.3577551,-46.3650898)');
@@ -146,7 +146,7 @@ describe('OpenStreetMapProvider', () => {
       category: 'restaurant',
       city: 'São Paulo',
       state: 'SP',
-      onlyWithoutWebsite: true,
+      country: 'BR' as const, onlyWithoutWebsite: true,
     });
 
     const overpassBody = String(fetchMock.mock.calls[1]?.[1]?.body);
@@ -165,7 +165,7 @@ describe('OpenStreetMapProvider', () => {
       )
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
 
-    await createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true });
+    await createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1]?.[1]?.body).toContain('area(3603550308)');
@@ -213,7 +213,7 @@ describe('OpenStreetMapProvider', () => {
       category: 'restaurant',
       city: 'São Paulo',
       state: 'SP',
-      onlyWithoutWebsite: false,
+      country: 'BR' as const, onlyWithoutWebsite: false,
     });
 
     expect(fetchMock.mock.calls[1]?.[1]?.body).not.toContain('undefined');
@@ -252,7 +252,7 @@ describe('OpenStreetMapProvider', () => {
       .mockResolvedValueOnce(jsonResponse({ elements: [] }))
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
     const provider = createProvider();
-    const input = { category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true };
+    const input = { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true };
 
     await provider.search(input);
     await provider.search(input);
@@ -271,7 +271,7 @@ describe('OpenStreetMapProvider', () => {
       .mockResolvedValueOnce(jsonResponse([{ osm_id: 3550308, osm_type: 'relation', address: { city: 'São Paulo', ISO3166_2_lvl4: 'BR-SP', country_code: 'br' } }]))
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
     const provider = createProvider({ municipalityCacheTtlMs: 1_000 });
-    const input = { category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true };
+    const input = { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true };
 
     try {
       await provider.search(input);
@@ -294,9 +294,9 @@ describe('OpenStreetMapProvider', () => {
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
     const provider = createProvider({ municipalityCacheMaxEntries: 1 });
 
-    await provider.search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true });
-    await provider.search({ category: 'restaurant', city: 'Rio de Janeiro', state: 'RJ', onlyWithoutWebsite: true });
-    await provider.search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true });
+    await provider.search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true });
+    await provider.search({ category: 'restaurant', city: 'Rio de Janeiro', state: 'RJ', country: 'BR' as const, onlyWithoutWebsite: true });
+    await provider.search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true });
 
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('nominatim.test'))).toHaveLength(3);
   });
@@ -312,7 +312,7 @@ describe('OpenStreetMapProvider', () => {
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
 
     await expect(
-      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true }),
+      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true }),
     ).resolves.toEqual([]);
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -328,7 +328,7 @@ describe('OpenStreetMapProvider', () => {
       category: 'restaurant',
       city: 'São Paulo',
       state: 'SP',
-      onlyWithoutWebsite: true,
+      country: 'BR' as const, onlyWithoutWebsite: true,
     });
 
     expect(rateLimiter.waitForTurn).toHaveBeenCalledTimes(2);
@@ -338,10 +338,41 @@ describe('OpenStreetMapProvider', () => {
     fetchMock.mockResolvedValueOnce(httpResponse(404, { error: 'not found' }));
 
     await expect(
-      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true }),
+      createProvider().search({ category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR' as const, onlyWithoutWebsite: true }),
     ).rejects.toThrow('OpenStreetMap provider request failed');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses Portuguese countrycodes and region query for Lisboa', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            osm_id: 5326784,
+            osm_type: 'relation',
+            display_name: 'Lisboa, Portugal',
+            address: { city: 'Lisboa', state: 'Lisboa', country_code: 'pt' },
+            extratags: { admin_level: '8', place: 'city' },
+            boundingbox: ['38.69', '38.80', '-9.23', '-9.08'],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(jsonResponse({ elements: [] }));
+
+    await expect(
+      createProvider().search({
+        category: 'restaurant',
+        city: 'Lisboa',
+        state: 'Lisboa',
+        country: 'PT',
+        onlyWithoutWebsite: true,
+      }),
+    ).resolves.toEqual([]);
+
+    const nominatimUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(nominatimUrl.searchParams.get('countrycodes')).toBe('pt');
+    expect(nominatimUrl.searchParams.get('q')).toBe('Lisboa, Lisboa, Portugal');
   });
 });
 

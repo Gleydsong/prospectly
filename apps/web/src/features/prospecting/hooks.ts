@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   createSearch,
+  deleteSearch,
   fetchSearch,
+  fetchSearchProviders,
   fetchSearches,
   fetchSearchResults,
   importSearchResults,
@@ -15,6 +17,14 @@ const POLLING_INTERVAL_MS = 2_000;
 
 function isActiveSearch(status?: string): boolean {
   return status === 'PENDING' || status === 'PROCESSING';
+}
+
+export function useSearchProviders() {
+  return useQuery({
+    queryKey: ['searches', 'providers'],
+    queryFn: fetchSearchProviders,
+    staleTime: 60_000,
+  });
 }
 
 export function useSearches(query: SearchesQuery = {}) {
@@ -66,6 +76,18 @@ export function useImportSearchResults() {
     onSuccess: (_summary, { searchId }) => {
       void queryClient.invalidateQueries({ queryKey: ['searches', searchId, 'results'] });
       void queryClient.invalidateQueries({ queryKey: ['searches', searchId] });
+    },
+  });
+}
+
+export function useDeleteSearch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (searchId: string) => deleteSearch(searchId),
+    onSuccess: (_void, searchId) => {
+      queryClient.removeQueries({ queryKey: ['searches', searchId] });
+      queryClient.removeQueries({ queryKey: ['searches', searchId, 'results'] });
+      void queryClient.invalidateQueries({ queryKey: ['searches'] });
     },
   });
 }

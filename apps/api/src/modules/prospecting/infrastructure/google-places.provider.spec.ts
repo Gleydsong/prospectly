@@ -1,0 +1,185 @@
+import { WebsitePresence } from '@prisma/client';
+
+import { GooglePlacesProvider } from './google-places.provider';
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+  } as unknown as Response;
+}
+
+describe('GooglePlacesProvider', () => {
+  it('maps Text Search places and filters businesses without website when requested', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({
+          places: [
+            {
+              id: 'ChIJ1',
+              displayName: { text: 'Padaria Sem Site' },
+              formattedAddress: 'Rua A, São Paulo - SP',
+              nationalPhoneNumber: '(11) 3000-0000',
+              addressComponents: [
+                { longText: 'São Paulo', shortText: 'São Paulo', types: ['locality'] },
+                { longText: 'São Paulo', shortText: 'SP', types: ['administrative_area_level_1'] },
+                { longText: '01310-100', types: ['postal_code'] },
+              ],
+              location: { latitude: -23.5, longitude: -46.6 },
+            },
+            {
+              id: 'ChIJ2',
+              displayName: { text: 'Padaria Com Site' },
+              websiteUri: 'https://padaria.example',
+              addressComponents: [
+                { longText: 'São Paulo', types: ['locality'] },
+                { shortText: 'SP', types: ['administrative_area_level_1'] },
+              ],
+            },
+          ],
+        }),
+      );
+
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    const results = await provider.search({
+      category: 'bakery',
+      city: 'São Paulo',
+      state: 'SP',
+      country: 'BR', onlyWithoutWebsite: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://places.googleapis.com/v1/places:searchText',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'X-Goog-Api-Key': 'test-key',
+        }),
+      }),
+    );
+    expect(results).toEqual([
+      expect.objectContaining({
+        externalId: 'places/ChIJ1',
+        companyName: 'Padaria Sem Site',
+        source: 'GOOGLE_PLACES',
+        websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+        state: 'SP',
+        city: 'São Paulo',
+      }),
+    ]);
+  });
+
+  it('sanitizes upstream failures without leaking response secrets', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ error: { message: 'key=secret' } }, 500));
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(
+      provider.search({
+        category: 'restaurant',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR', onlyWithoutWebsite: false,
+      }),
+    ).rejects.toMatchObject({
+      message: 'Google Places provider request failed',
+      publicMessage: 'Search provider is temporarily unavailable. Please try again later.',
+      retryable: true,
+      statusCode: 500,
+    });
+  });
+
+  it('maps SERVICE_DISABLED 403 to a permanent actionable public message', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            status: 'PERMISSION_DENIED',
+            details: [{ reason: 'SERVICE_DISABLED' }],
+          },
+        },
+        403,
+      ),
+    );
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await expect(
+      provider.search({
+        category: 'bakery',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR', onlyWithoutWebsite: true,
+      }),
+    ).rejects.toMatchObject({
+      retryable: false,
+      statusCode: 403,
+      reason: 'SERVICE_DISABLED',
+      publicMessage: expect.stringContaining('Places API (New) is disabled'),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses regionCode PT and Portuguese language for Lisbon searches', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        places: [
+          {
+            id: 'ChIJLisboa',
+            displayName: { text: 'Pastelaria Lisboa' },
+            formattedAddress: 'Lisboa, Portugal',
+            internationalPhoneNumber: '+351 21 000 0000',
+            addressComponents: [
+              { longText: 'Lisboa', types: ['locality'] },
+              { longText: 'Lisboa', shortText: 'Lisboa', types: ['administrative_area_level_1'] },
+            ],
+          },
+        ],
+      }),
+    );
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    const results = await provider.search({
+      category: 'bakery',
+      city: 'Lisboa',
+      state: 'Lisboa',
+      country: 'PT',
+      onlyWithoutWebsite: false,
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.regionCode).toBe('PT');
+    expect(body.languageCode).toBe('pt-PT');
+    expect(body.textQuery).toContain('Lisboa');
+    expect(body.textQuery).toContain('Portugal');
+    expect(results).toEqual([
+      expect.objectContaining({
+        companyName: 'Pastelaria Lisboa',
+        country: 'PT',
+        state: 'Lisboa',
+        city: 'Lisboa',
+      }),
+    ]);
+  });
+});

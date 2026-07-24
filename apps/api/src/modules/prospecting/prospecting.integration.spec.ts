@@ -14,7 +14,11 @@ import request from 'supertest';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
-import { OPENSTREETMAP_SEARCH_PROVIDER } from './domain/search-provider';
+import {
+  InMemorySearchProviderRegistry,
+  OPENSTREETMAP_SEARCH_PROVIDER,
+  SEARCH_PROVIDER_REGISTRY,
+} from './domain/search-provider';
 import { PROSPECTING_QUEUE } from './prospecting.constants';
 import { ProspectingController } from './prospecting.controller';
 import { ProspectingProcessor } from './prospecting.processor';
@@ -29,6 +33,7 @@ interface StoredSearch {
   id: string;
   organizationId: string;
   userId: string;
+  provider?: string;
   input: Record<string, unknown>;
   status: string;
   error?: string | null;
@@ -61,7 +66,7 @@ class HeaderAuthGuard implements CanActivate {
 }
 
 function validSearchBody() {
-  return { category: 'restaurant', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true };
+  return { category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true };
 }
 
 describe('Prospecting HTTP integration', () => {
@@ -111,6 +116,15 @@ describe('Prospecting HTTP integration', () => {
             return updated;
           },
         ),
+        delete: jest.fn(async ({ where }: { where: { id: string } }) => {
+          const current = searches.get(where.id);
+          if (!current) return null;
+          searches.delete(where.id);
+          for (const [resultId, result] of results) {
+            if (result.searchId === where.id) results.delete(resultId);
+          }
+          return current;
+        }),
       },
       searchResult: {
         count: jest.fn(),
@@ -155,6 +169,13 @@ describe('Prospecting HTTP integration', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: getQueueToken(PROSPECTING_QUEUE), useValue: queue },
         { provide: OPENSTREETMAP_SEARCH_PROVIDER, useValue: provider },
+        {
+          provide: SEARCH_PROVIDER_REGISTRY,
+          useValue: new InMemorySearchProviderRegistry([
+            { id: 'OPENSTREETMAP', label: 'OpenStreetMap', provider },
+            { id: 'GOOGLE_PLACES', label: 'Google Places', provider: null },
+          ]),
+        },
         { provide: LeadIngestionService, useValue: ingestion },
       ],
     }).compile();
@@ -192,6 +213,42 @@ describe('Prospecting HTTP integration', () => {
     expect(queue.add).not.toHaveBeenCalled();
   });
 
+  it('deletes an owned search and forbids cross-org deletion', async () => {
+    searches.set(SEARCH_ID, {
+      id: SEARCH_ID,
+      organizationId: 'org-1',
+      userId: 'user-1',
+      provider: 'OPENSTREETMAP',
+      input: validSearchBody(),
+      status: 'FAILED',
+    });
+    searches.set(FOREIGN_SEARCH_ID, {
+      id: FOREIGN_SEARCH_ID,
+      organizationId: 'org-2',
+      userId: 'user-2',
+      provider: 'OPENSTREETMAP',
+      input: validSearchBody(),
+      status: 'COMPLETED',
+    });
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/searches/${SEARCH_ID}`)
+      .set('x-test-org', 'org-1')
+      .expect(204);
+    expect(searches.has(SEARCH_ID)).toBe(false);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/searches/${FOREIGN_SEARCH_ID}`)
+      .set('x-test-org', 'org-1')
+      .expect(404);
+    expect(searches.has(FOREIGN_SEARCH_ID)).toBe(true);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/searches/${SEARCH_ID}`)
+      .set('x-test-role', 'VIEWER')
+      .expect(403);
+  });
+
   it('propagates the request correlation id into the durable search job', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
@@ -209,19 +266,19 @@ describe('Prospecting HTTP integration', () => {
   it('rejects blank search terms and non-boolean filter values before persistence', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: '   ', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
+      .send({ category: '   ', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'restaurante', city: '   ', state: 'SP', onlyWithoutWebsite: true })
+      .send({ category: 'restaurante', city: '   ', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'restaurante', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: 'sometimes' })
+      .send({ category: 'restaurante', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: 'sometimes' })
       .expect(400);
     await request(app.getHttpServer())
       .post('/api/v1/searches')
-      .send({ category: 'categoria-livre', city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
+      .send({ category: 'categoria-livre', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true })
       .expect(400);
 
     expect(prisma.search.create).not.toHaveBeenCalled();
@@ -296,6 +353,7 @@ describe('Prospecting HTTP integration', () => {
       id: SEARCH_ID,
       organizationId: 'org-1',
       userId: 'user-1',
+      provider: 'OPENSTREETMAP',
       input: validSearchBody(),
       status: 'PENDING',
     });

@@ -63,6 +63,24 @@ export function normalizeBrazilianPhone(phone: string): string {
   return digits ? `+${digits}` : '';
 }
 
+/** Keep leading + and digits only (light E.164); do not force a country code. */
+export function normalizeInternationalPhone(phone: string): string {
+  const trimmed = phone.trim();
+  if (!trimmed) return '';
+  const hasPlus = trimmed.startsWith('+');
+  const digits = trimmed.replace(/\D/g, '');
+  if (!digits) return '';
+  return hasPlus ? `+${digits}` : `+${digits}`;
+}
+
+export function normalizePhoneForCountry(phone: string, country?: string | null): string {
+  const code = (country ?? 'BR').trim().toUpperCase();
+  if (code === 'BR' || code === '') {
+    return normalizeBrazilianPhone(phone);
+  }
+  return normalizeInternationalPhone(phone);
+}
+
 function normalizeComparable(value: string): string {
   return value
     .normalize('NFD')
@@ -199,14 +217,21 @@ export class LeadIngestionService {
   }
 
   private normalizeCandidate(candidate: LeadIngestionCandidate) {
+    const country = candidate.country?.trim().toUpperCase() || 'BR';
     return {
       ...candidate,
       companyName: candidate.companyName.trim(),
-      phone: candidate.phone ? normalizeBrazilianPhone(candidate.phone) : undefined,
+      phone: candidate.phone
+        ? normalizePhoneForCountry(candidate.phone, country)
+        : undefined,
       email: candidate.email?.trim().toLowerCase(),
       domain: normalizeDomain(candidate.website, candidate.domain),
       city: candidate.city?.trim(),
-      state: candidate.state?.trim().toUpperCase(),
+      state:
+        country === 'BR'
+          ? candidate.state?.trim().toUpperCase()
+          : candidate.state?.trim(),
+      country,
       probableDuplicateKey: buildProbableDuplicateKey(
         candidate.companyName,
         candidate.city,

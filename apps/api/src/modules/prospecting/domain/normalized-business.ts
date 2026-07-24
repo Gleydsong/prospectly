@@ -1,6 +1,6 @@
 import type { WebsitePresence } from '@prisma/client';
 
-import type { BrazilianStateCode } from './search-provider';
+import type { ProspectingCountryCode } from './search-provider';
 
 export interface NormalizedBusiness {
   externalId: string;
@@ -11,11 +11,11 @@ export interface NormalizedBusiness {
   website?: string;
   address?: string;
   city: string;
-  state: BrazilianStateCode;
-  country: 'BR';
+  state: string;
+  country: ProspectingCountryCode;
   postalCode?: string;
   latitude?: number;
   longitude?: number;
-  source: 'OPENSTREETMAP';
+  source: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
   websitePresence: WebsitePresence;
 }

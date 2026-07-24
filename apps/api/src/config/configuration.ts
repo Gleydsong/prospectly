@@ -18,6 +18,12 @@ export const configuration = () => ({
     timeoutMs: parseInt(process.env.OSM_TIMEOUT_MS ?? '45000', 10),
     resultLimit: parseInt(process.env.OSM_RESULT_LIMIT ?? '100', 10),
   },
+  googlePlaces: {
+    apiKey: process.env.GOOGLE_PLACES_API_KEY ?? '',
+    baseUrl: process.env.GOOGLE_PLACES_BASE_URL ?? 'https://places.googleapis.com/v1',
+    timeoutMs: parseInt(process.env.GOOGLE_PLACES_TIMEOUT_MS ?? '30000', 10),
+    resultLimit: parseInt(process.env.GOOGLE_PLACES_RESULT_LIMIT ?? '20', 10),
+  },
   csv: {
     maxFileSizeBytes: parseInt(process.env.CSV_MAX_FILE_SIZE_BYTES ?? '5242880', 10),
     maxRows: parseInt(process.env.CSV_MAX_ROWS ?? '10000', 10),
