@@ -22,6 +22,7 @@ import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { ImportsModule } from './modules/imports/imports.module';
+import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { ImportsModule } from './modules/imports/imports.module';
     DashboardModule,
     ProspectingModule,
     ImportsModule,
+    GeoModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

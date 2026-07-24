@@ -8,13 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import {
   useCreateSearch,
   useDeleteSearch,
+  useGeoCities,
+  useGeoRegions,
   useImportSearchResults,
   useSearch,
   useSearches,
@@ -24,7 +25,6 @@ import {
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import {
-  BRAZILIAN_STATE_CODES,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   PROSPECTING_COUNTRIES,
@@ -42,26 +42,24 @@ const searchSchema = z
     country: z.enum(PROSPECTING_COUNTRY_CODES, {
       errorMap: () => ({ message: 'Selecione um país' }),
     }),
-    city: z.string().trim().min(1, 'Cidade obrigatória').max(120),
+    city: z.string().max(120).default(''),
     state: z.string().max(120).default(''),
     provider: z.enum(['OPENSTREETMAP', 'GOOGLE_PLACES']).default('OPENSTREETMAP'),
     onlyWithoutWebsite: z.boolean(),
   })
   .superRefine((values, ctx) => {
-    const region = values.state.trim();
-    if (!region) {
+    if (!values.state.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['state'],
-        message: values.country === 'BR' ? 'Selecione uma UF' : 'Região obrigatória',
+        message: 'Selecione uma região',
       });
-      return;
     }
-    if (values.country === 'BR' && !(BRAZILIAN_STATE_CODES as readonly string[]).includes(region)) {
+    if (!values.city.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['state'],
-        message: 'Selecione uma UF',
+        path: ['city'],
+        message: 'Selecione uma cidade',
       });
     }
   });
@@ -80,6 +78,14 @@ const WEBSITE_LABEL: Record<WebsitePresence, string> = {
   WEBSITE_FOUND: 'Site informado',
   NEEDS_REVIEW: 'Rever website',
 };
+
+const CATEGORY_LABEL = Object.fromEntries(
+  PROSPECTING_CATEGORIES.map((category) => [category.value, category.label]),
+) as Record<string, string>;
+
+function formatSearchHeading(category: string, city: string): string {
+  return `${CATEGORY_LABEL[category] ?? category} / ${city}`;
+}
 
 function statusTone(status: SearchStatus): 'amber' | 'blue' | 'green' | 'red' {
   if (status === 'PENDING') return 'amber';
@@ -158,10 +164,20 @@ export function SearchPage() {
   });
 
   const selectedCountry = watch('country');
+  const selectedRegion = watch('state');
+  const regionsQuery = useGeoRegions(selectedCountry);
+  const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
+  const regions = regionsQuery.data ?? [];
+  const cities = citiesQuery.data ?? [];
 
   useEffect(() => {
     setValue('state', '');
+    setValue('city', '');
   }, [selectedCountry, setValue]);
+
+  useEffect(() => {
+    setValue('city', '');
+  }, [selectedRegion, setValue]);
 
   const searches = searchesQuery.data?.data ?? [];
   const resultPage = resultsQuery.data;
@@ -191,7 +207,13 @@ export function SearchPage() {
     setServerError(null);
     setImportSummary(null);
     try {
-      const search = await createSearch.mutateAsync(values);
+      const region = regions.find((entry) => entry.code === values.state);
+      const stateForSearch =
+        values.country === 'BR' ? values.state : (region?.name ?? values.state);
+      const search = await createSearch.mutateAsync({
+        ...values,
+        state: stateForSearch,
+      });
       selectSearch(search.id);
     } catch (error) {
       setServerError(getApiErrorMessage(error));
@@ -271,20 +293,32 @@ export function SearchPage() {
                   <option key={category.value} value={category.value}>{category.label}</option>
                 ))}
               </Select>
-              <Input label="Cidade" placeholder={selectedCountry === 'BR' ? 'São Paulo' : 'Lisboa'} error={errors.city?.message} {...register('city')} />
-              {selectedCountry === 'BR' ? (
-                <Select label="UF" error={errors.state?.message} {...register('state')}>
-                  <option value="">Selecione</option>
-                  {BRAZILIAN_STATE_CODES.map((state) => <option key={state} value={state}>{state}</option>)}
-                </Select>
-              ) : (
-                <Input
-                  label="Região / Distrito / Província"
-                  placeholder="Lisboa"
-                  error={errors.state?.message}
-                  {...register('state')}
-                />
-              )}
+              <Select
+                label="Região"
+                error={errors.state?.message ?? (regionsQuery.isError ? getApiErrorMessage(regionsQuery.error) : undefined)}
+                disabled={!selectedCountry || regionsQuery.isLoading}
+                {...register('state')}
+              >
+                <option value="">{regionsQuery.isLoading ? 'A carregar…' : 'Selecione'}</option>
+                {regions.map((region) => (
+                  <option key={region.code} value={region.code}>
+                    {selectedCountry === 'BR' ? `${region.code} — ${region.name}` : region.name}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                label="Cidade"
+                error={errors.city?.message ?? (citiesQuery.isError ? getApiErrorMessage(citiesQuery.error) : undefined)}
+                disabled={!selectedRegion || citiesQuery.isLoading}
+                {...register('city')}
+              >
+                <option value="">
+                  {!selectedRegion ? 'Selecione a região primeiro' : citiesQuery.isLoading ? 'A carregar…' : 'Selecione'}
+                </option>
+                {cities.map((city) => (
+                  <option key={city.name} value={city.name}>{city.name}</option>
+                ))}
+              </Select>
             </div>
             <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
               <input
@@ -328,10 +362,9 @@ export function SearchPage() {
                       >
                         <span className="min-w-0">
                           <span className="block font-medium text-slate-900">
-                            {search.input.category} em {search.input.city}/{search.input.state}
-                            {search.input.country ? ` (${search.input.country})` : ''}
+                            {formatSearchHeading(search.input.category, search.input.city)}
                           </span>
-                          <span className="text-sm text-slate-500">{search.provider} · {formatDateTime(search.createdAt)}</span>
+                          <span className="text-sm text-slate-500">{formatDateTime(search.createdAt)}</span>
                         </span>
                         <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
                       </button>
@@ -340,7 +373,7 @@ export function SearchPage() {
                         variant="ghost"
                         size="sm"
                         className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        aria-label={`Apagar pesquisa ${search.input.category} em ${search.input.city}`}
+                        aria-label={`Apagar pesquisa ${formatSearchHeading(search.input.category, search.input.city)}`}
                         loading={deleteSearch.isPending && deleteSearch.variables === search.id}
                         onClick={() => { void removeSearch(search.id); }}
                       >
