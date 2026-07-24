@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSearch,
   deleteSearch,
+  fetchGeoCities,
+  fetchGeoRegions,
   fetchSearch,
   fetchSearchProviders,
   fetchSearches,
@@ -89,5 +91,23 @@ export function useDeleteSearch() {
       queryClient.removeQueries({ queryKey: ['searches', searchId, 'results'] });
       void queryClient.invalidateQueries({ queryKey: ['searches'] });
     },
+  });
+}
+
+export function useGeoRegions(country?: string) {
+  return useQuery({
+    queryKey: ['geo', 'regions', country],
+    queryFn: () => fetchGeoRegions(country!),
+    enabled: Boolean(country),
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useGeoCities(country?: string, region?: string) {
+  return useQuery({
+    queryKey: ['geo', 'cities', country, region],
+    queryFn: () => fetchGeoCities(country!, region!),
+    enabled: Boolean(country && region),
+    staleTime: 60 * 60_000,
   });
 }

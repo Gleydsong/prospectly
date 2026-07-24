@@ -83,6 +83,54 @@ describe('ProspectingService', () => {
     );
   });
 
+  it('persists European country and free-text region on create, then passes them to the provider', async () => {
+    const { prisma, queue, provider, service } = createService();
+    const europeanInput = {
+      category: 'restaurant' as const,
+      city: 'Lisboa',
+      state: 'Lisboa',
+      country: 'PT' as const,
+      onlyWithoutWebsite: true,
+    };
+    prisma.search.create.mockResolvedValue({ id: 'search-pt', status: 'PENDING' });
+    queue.add.mockResolvedValue(undefined);
+
+    await service.create('org-1', 'user-1', europeanInput);
+
+    expect(prisma.search.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        input: europeanInput,
+      }),
+    });
+
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-pt',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      input: europeanInput,
+    });
+    provider.search.mockResolvedValue([
+      {
+        externalId: 'node/pt-1',
+        companyName: 'Tasca Lisboa',
+        city: 'Lisboa',
+        state: 'Lisboa',
+        country: 'PT',
+        source: 'OPENSTREETMAP',
+        websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+      },
+    ]);
+
+    await service.process('search-pt');
+
+    expect(provider.search).toHaveBeenCalledWith(europeanInput);
+    expect(prisma.searchResult.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { searchId_externalId: { searchId: 'search-pt', externalId: 'node/pt-1' } },
+      }),
+    );
+  });
+
   it('keeps a failed dispatch recoverable and republishes it idempotently', async () => {
     const { prisma, queue, service } = createService();
     const search = { id: 'search-1', status: 'PENDING', correlationId: 'corr-1' };

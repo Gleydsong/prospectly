@@ -58,3 +58,22 @@ export async function importSearchResults(id: string, resultIds: string[]): Prom
 export async function deleteSearch(id: string): Promise<void> {
   await api.delete(`/searches/${id}`);
 }
+
+export interface GeoRegionOption {
+  code: string;
+  name: string;
+}
+
+export interface GeoCityOption {
+  name: string;
+}
+
+export async function fetchGeoRegions(country: string): Promise<GeoRegionOption[]> {
+  const { data } = await api.get<GeoRegionOption[]>('/geo/regions', { params: { country } });
+  return data;
+}
+
+export async function fetchGeoCities(country: string, region: string): Promise<GeoCityOption[]> {
+  const { data } = await api.get<GeoCityOption[]>('/geo/cities', { params: { country, region } });
+  return data;
+}

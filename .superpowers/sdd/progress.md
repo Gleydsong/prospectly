@@ -1,11 +1,28 @@
-Task 1: complete (no Git repository; report task-1-report.md; review approved)
-Task 2: complete (no Git repository; 46 focused tests; review approved)
-Task 3: complete (no Git repository; 89 API tests; review approved)
-Task 4: complete (no Git repository; 111 API tests; review approved)
-Task 5: complete (no Git repository; 13 web tests; review approved)
-Task 6: complete (no Git repository; 29 web tests; review approved; bundle warning 861.62 kB)
-Task 7: complete (integration/docs/security; review approved)
-Final review: approved after remediation I7; 165 tests; typecheck/lint/build/Prisma green; PostgreSQL 16 migrations validated
-Task 7: complete (no Git used; 147 workspace tests; report task-7-report.md; non-blocking bundle/Prisma warnings)
-Final review remediation: complete (C1, I1–I6, M1–M3 fixed; 164 tests; migration applied on disposable PostgreSQL 16; report final-fix-report.md; live OSM smoke remains an operational release step)
-Final re-review remediation: complete (I7 public import projection plus terminal staging cleanup fixed by TDD; 165 tests, typecheck, lint and build passed)
+# SDD Progress — Geo Selectors
+
+**Branch:** `selectores`  
+**Started:** 2026-07-24
+
+## Status
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Design + plan | done | `docs/superpowers/specs/2026-07-24-geo-selectors-design.md` |
+| API GeoService + unit | done | `country-state-city`, 6 unit tests |
+| API Geo HTTP e2e | done | `geo.integration.spec.ts` |
+| Web cascade selects | done | País → Região → Cidade |
+| Verify + report | done | Ver `task-geo-selectors-report.md` |
+
+## Decisions
+
+- Cobertura: países já listados em prospecting
+- Fonte: API + `country-state-city`
+- Cascata: País → Região → Cidade
+- Submit: BR envia UF (`code`); outros países enviam `name` da região
+- Labels da lib em inglês (ex.: Lisbon)
+
+## Changelog
+
+- 2026-07-24: Spec e plan criados
+- 2026-07-24: Módulo `geo` (service/controller/DTOs) + testes unit/integration
+- 2026-07-24: Web hooks `useGeoRegions` / `useGeoCities` + SearchPage selects encadeados + testes
