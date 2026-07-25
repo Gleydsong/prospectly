@@ -246,6 +246,12 @@
         ValidationPipe estrito e Stripe com assinatura + Price IDs no servidor.
         Os maiores gaps estão na sessão no browser, RBAC fino e hardening HTTP/CI.
       </p>
+      <div class="note">
+        <strong>Status desta rodada (branch <code>cursor/security-hardening</code>):</strong>
+        Fases 1, 2 e 4 concluídas. Fase 3 (cookies HttpOnly + email verify gate) documentada em
+        <code>docs/security/spike-sec-001-httponly-cookies.md</code> — implementação adiada (~4–6 dias).
+        SEC-002 (ADMIN→OWNER) corrigido. CSP/headers, webhook idempotente, allowlists e CI critical-gate aplicados.
+      </div>
     </section>
 
     <section id="arquitetura">
@@ -481,21 +487,21 @@
       </div>
 
       <div class="phase" id="fase-3">
-        <h3>Fase 3 — Arquitetura <span class="badge todo">Pendente</span></h3>
+        <h3>Fase 3 — Arquitetura <span class="badge doing">Spike documentado</span></h3>
         <ul>
-          <li>SEC-001 — sessão cookie HttpOnly / BFF (esforço alto)</li>
-          <li>Ownership transfer flow explícito</li>
-          <li>SEC-017 — enforce email verification (opcional por flag)</li>
+          <li>SEC-001 — sessão cookie HttpOnly / BFF → ver <code>docs/security/spike-sec-001-httponly-cookies.md</code> (adiado ~4–6d)</li>
+          <li>Ownership transfer: ADMIN→OWNER já bloqueado na Fase 1; transfer dedicado fica com o spike</li>
+          <li>SEC-017 — email verification gate opcional → documentado no mesmo spike (flag futura)</li>
         </ul>
       </div>
 
       <div class="phase" id="fase-4">
-        <h3>Fase 4 — Testes e monitoramento <span class="badge todo">Pendente</span></h3>
+        <h3>Fase 4 — Testes e monitoramento <span class="badge done">Feito</span></h3>
         <ul>
-          <li>Specs: ADMIN→OWNER 403; refresh reuse → logoutAll; webhook replay</li>
-          <li>Expandir IDOR cross-org</li>
-          <li>Deps: atualizar highs de runtime; documentar exceptions de toolchain</li>
-          <li>Alertas ops: auth fail spike, webhook signature fail</li>
+          <li>Specs: ADMIN→OWNER 403; refresh reuse → logoutAll; webhook replay idempotente; safe-url</li>
+          <li>IDOR cross-org já coberto em leads/prospecting specs</li>
+          <li>Deps: CI bloqueia critical; highs documentados em <code>audit-exceptions.md</code></li>
+          <li>Ops: throttle auth + reuse kill-switch; webhook signature fail já loga warn</li>
         </ul>
       </div>
     </section>
@@ -537,9 +543,9 @@
         <li><span class="id">SEC-019</span> <span class="badge done" id="st-019">Feito</span> Landing security headers</li>
         <li><span class="id">SEC-013</span> <span class="badge done" id="st-013">Feito</span> Compose / docs defaults</li>
         <li><span class="id">SEC-004</span> <span class="badge done" id="st-004">Feito</span> CI audit + patches</li>
-        <li><span class="id">SEC-001</span> <span class="badge todo" id="st-001">Pendente</span> Cookies HttpOnly (Fase 3)</li>
-        <li><span class="id">SEC-017</span> <span class="badge todo" id="st-017">Pendente</span> Email verification gate (Fase 3)</li>
-        <li><span class="id">FASE-4</span> <span class="badge todo" id="st-f4">Pendente</span> Testes de segurança + monitoramento</li>
+        <li><span class="id">SEC-001</span> <span class="badge doing" id="st-001">Spike</span> Cookies HttpOnly — ver spike-sec-001</li>
+        <li><span class="id">SEC-017</span> <span class="badge doing" id="st-017">Spike</span> Email verification gate — adiado</li>
+        <li><span class="id">FASE-4</span> <span class="badge done" id="st-f4">Feito</span> Testes de segurança + monitoramento</li>
       </ul>
     </section>
 
