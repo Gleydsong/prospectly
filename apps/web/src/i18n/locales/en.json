@@ -63,7 +63,10 @@
     "benefit3Body": "Validate your niche before you subscribe to Starter.",
     "trustSsl": "Secure SSL",
     "trustLgpd": "LGPD-minded flow",
-    "trustFree": "Start free"
+    "trustFree": "Start free",
+    "orContinueWith": "or continue with",
+    "googleError": "Could not sign in with Google. Please try again.",
+    "googleNeedsRegister": "New Google account: accept the terms and create an account on the register page."
   },
   "dashboard": {
     "title": "Dashboard",

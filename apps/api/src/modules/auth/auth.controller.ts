@@ -7,6 +7,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { AuthService, type AuthResponse, type AuthTokens } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -31,6 +32,14 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginDto): Promise<AuthResponse> {
     return this.auth.login(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @HttpCode(HttpStatus.OK)
+  @Post('google')
+  googleAuth(@Body() dto: GoogleAuthDto): Promise<AuthResponse> {
+    return this.auth.googleAuth(dto);
   }
 
   @Public()

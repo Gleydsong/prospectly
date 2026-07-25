@@ -9,11 +9,16 @@ import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { createCheckoutSession, register as registerUser } from '@/features/auth/api';
+import {
+  createCheckoutSession,
+  register as registerUser,
+  type AuthResponse,
+} from '@/features/auth/api';
+import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
+import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
 import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
-import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { useAuthStore } from '@/stores/auth.store';
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
@@ -73,6 +78,26 @@ export function RegisterPage() {
   });
 
   const locale = watch('locale');
+  const acceptTerms = watch('acceptTerms');
+  const organizationName = watch('organizationName');
+
+  const finishAuth = async (response: AuthResponse, fallbackLocale?: AppLocale) => {
+    setAuth(response);
+    await setAppLocale(response.user.locale ?? fallbackLocale ?? 'pt');
+
+    if (plan) {
+      try {
+        const checkout = await createCheckoutSession({ interval: plan, currency });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
+        return;
+      }
+    }
+
+    navigate('/', { replace: true });
+  };
 
   const onSubmit = async (values: RegisterForm) => {
     setServerError(null);
@@ -85,23 +110,15 @@ export function RegisterPage() {
         locale: values.locale,
         acceptTerms: true,
       });
-      setAuth(response);
-      await setAppLocale(response.user.locale ?? values.locale);
-
-      if (plan) {
-        try {
-          const checkout = await createCheckoutSession({ interval: plan, currency });
-          handleCheckoutResult(checkout);
-          return;
-        } catch {
-          navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
-          return;
-        }
-      }
-
-      navigate('/', { replace: true });
+      await finishAuth(response, values.locale);
     } catch (error) {
       setServerError(getApiErrorMessage(error));
+    }
+  };
+
+  const onGoogleClickBlocked = () => {
+    if (!acceptTerms) {
+      setServerError(t('auth.acceptTermsRequired'));
     }
   };
 
@@ -205,6 +222,26 @@ export function RegisterPage() {
           {plan ? t('auth.createAndPay') : t('auth.createAccount')}
         </Button>
       </form>
+
+      <div
+        className="mt-4"
+        onClickCapture={(event) => {
+          if (!acceptTerms) {
+            event.preventDefault();
+            event.stopPropagation();
+            onGoogleClickBlocked();
+          }
+        }}
+      >
+        <GoogleSignInButton
+          acceptTerms={acceptTerms ? true : undefined}
+          organizationName={organizationName}
+          locale={locale}
+          disabled={!acceptTerms}
+          onSuccess={(response) => finishAuth(response, locale)}
+          onError={(message) => setServerError(message)}
+        />
+      </div>
     </AuthShell>
   );
 }

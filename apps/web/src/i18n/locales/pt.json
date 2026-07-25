@@ -63,7 +63,10 @@
     "benefit3Body": "Valide o nicho antes de assinar o Starter.",
     "trustSsl": "SSL seguro",
     "trustLgpd": "Fluxo alinhado à LGPD",
-    "trustFree": "Comece grátis"
+    "trustFree": "Comece grátis",
+    "orContinueWith": "ou continue com",
+    "googleError": "Não foi possível entrar com Google. Tente novamente.",
+    "googleNeedsRegister": "Conta Google nova: aceite os termos e crie a conta na página de registro."
   },
   "dashboard": {
     "title": "Dashboard",

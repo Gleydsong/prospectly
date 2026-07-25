@@ -11,6 +11,9 @@ export const configuration = () => ({
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   corsOrigins: process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://localhost:3001',
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+  },
   openStreetMap: {
     nominatimUrl: process.env.OSM_NOMINATIM_URL ?? 'https://nominatim.openstreetmap.org/search',
     overpassUrl: process.env.OSM_OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter',

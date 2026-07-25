@@ -2,6 +2,8 @@
 
 Blueprint: [`render.yaml`](../../render.yaml) (project **prospectly** / env **production**, region **frankfurt**).
 
+Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/specs/2026-07-25-go-live-env-config-spec.md`](../superpowers/specs/2026-07-25-go-live-env-config-spec.md).
+
 ## What gets created
 
 | Resource | Name | Role |
@@ -33,9 +35,10 @@ API health check: `GET /health/ready` (Postgres + Redis).
 | `STRIPE_*_URL` / `ABACATE_*_URL` | api | billing success/cancel on web |
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
-6. Point Stripe webhook to `https://<api>/api/v1/billing/webhook/stripe`.
-7. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate?webhookSecret=<ABACATE_WEBHOOK_SECRET>`.
-8. Confirm migrate ran on API boot (`prisma migrate deploy` in Docker `CMD`).
+6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
+7. Point Stripe webhook to `https://<api>/api/v1/billing/webhook/stripe`.
+8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate?webhookSecret=<ABACATE_WEBHOOK_SECRET>`.
+9. Confirm migrate ran on API boot (`prisma migrate deploy` in Docker `CMD`).
 
 ## Local Dockerfiles (optional)
 

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { LocaleSync } from './components/locale-sync';
+import { GoogleAuthProvider } from './features/auth/google-auth-provider';
 import { App } from './App';
 import './i18n';
 import './index.css';
@@ -27,8 +28,10 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <LocaleSync />
-        <App />
+        <GoogleAuthProvider>
+          <LocaleSync />
+          <App />
+        </GoogleAuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
