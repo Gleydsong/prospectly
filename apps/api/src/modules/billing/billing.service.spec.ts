@@ -106,12 +106,14 @@ describe('BillingService', () => {
     );
   });
 
-  it('activates LIFETIME on checkout.session.completed payment', async () => {
+  it('activates LIFETIME on checkout.session.completed when paid', async () => {
     constructEvent.mockReturnValue({
       type: 'checkout.session.completed',
       data: {
         object: {
+          id: 'cs_paid',
           mode: 'payment',
+          payment_status: 'paid',
           metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
           customer: 'cus_1',
         },
@@ -126,6 +128,106 @@ describe('BillingService', () => {
         plan: OrgPlan.LIFETIME,
         planStatus: PlanStatus.ACTIVE,
       }),
+    });
+  });
+
+  it('does not activate LIFETIME on unpaid checkout.session.completed', async () => {
+    constructEvent.mockReturnValue({
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'cs_unpaid',
+          mode: 'payment',
+          payment_status: 'unpaid',
+          metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
+          customer: 'cus_1',
+        },
+      },
+    });
+
+    await service.handleWebhook(Buffer.from('{}'), 'sig');
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('activates LIFETIME on checkout.session.async_payment_succeeded', async () => {
+    constructEvent.mockReturnValue({
+      type: 'checkout.session.async_payment_succeeded',
+      data: {
+        object: {
+          id: 'cs_async',
+          mode: 'payment',
+          payment_status: 'paid',
+          metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
+          customer: 'cus_1',
+        },
+      },
+    });
+    prisma.organization.update.mockResolvedValue({});
+
+    await service.handleWebhook(Buffer.from('{}'), 'sig');
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({
+        plan: OrgPlan.LIFETIME,
+        planStatus: PlanStatus.ACTIVE,
+      }),
+    });
+  });
+
+  it('ignores invoice.paid when subscription does not match org', async () => {
+    constructEvent.mockReturnValue({
+      type: 'invoice.paid',
+      data: {
+        object: {
+          id: 'in_stale',
+          customer: 'cus_1',
+          parent: {
+            subscription_details: { subscription: 'sub_old' },
+          },
+        },
+      },
+    });
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.CANCELED,
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: null,
+    });
+
+    await service.handleWebhook(Buffer.from('{}'), 'sig');
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('reactivates plan on invoice.paid for the current subscription', async () => {
+    constructEvent.mockReturnValue({
+      type: 'invoice.paid',
+      data: {
+        object: {
+          id: 'in_current',
+          customer: 'cus_1',
+          parent: {
+            subscription_details: { subscription: 'sub_current' },
+          },
+        },
+      },
+    });
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.PAST_DUE,
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: 'sub_current',
+    });
+    prisma.organization.update.mockResolvedValue({});
+
+    await service.handleWebhook(Buffer.from('{}'), 'sig');
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: {
+        planStatus: PlanStatus.ACTIVE,
+        plan: OrgPlan.STARTER_MONTHLY,
+      },
     });
   });
 });
