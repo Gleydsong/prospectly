@@ -67,6 +67,8 @@
     "orContinueWith": "or continue with",
     "continueWithGoogle": "Continue with Google",
     "googleError": "Could not sign in with Google. Please try again.",
+    "googlePopupBlocked": "The Google popup was blocked. Allow popups for this site and try again.",
+    "googlePopupClosed": "Google sign-in was cancelled before completion.",
     "googleNeedsRegister": "New Google account: accept the terms and create an account on the register page."
   },
   "dashboard": {

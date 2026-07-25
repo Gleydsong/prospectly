@@ -67,6 +67,8 @@
     "orContinueWith": "ou continue com",
     "continueWithGoogle": "Continuar com Google",
     "googleError": "Não foi possível entrar com Google. Tente novamente.",
+    "googlePopupBlocked": "O popup do Google foi bloqueado. Permita popups neste site e tente novamente.",
+    "googlePopupClosed": "Login com Google cancelado antes de concluir.",
     "googleNeedsRegister": "Conta Google nova: aceite os termos e crie a conta na página de registro."
   },
   "dashboard": {

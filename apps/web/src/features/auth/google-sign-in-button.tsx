@@ -74,6 +74,17 @@ function GoogleSignInButtonInner({
       }
     },
     onError: () => onError?.(t('auth.googleError')),
+    onNonOAuthError: (error) => {
+      if (error.type === 'popup_failed_to_open') {
+        onError?.(t('auth.googlePopupBlocked'));
+        return;
+      }
+      if (error.type === 'popup_closed') {
+        onError?.(t('auth.googlePopupClosed'));
+        return;
+      }
+      onError?.(t('auth.googleError'));
+    },
   });
 
   return (
@@ -92,7 +103,13 @@ function GoogleSignInButtonInner({
         className="w-full"
         loading={loading}
         disabled={disabled || loading}
-        onClick={() => login()}
+        onClick={() => {
+          try {
+            login();
+          } catch {
+            onError?.(t('auth.googleError'));
+          }
+        }}
       >
         <GoogleMark className="h-5 w-5" />
         {t('auth.continueWithGoogle')}
