@@ -88,7 +88,7 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
         <Textarea label="Observações" {...register('notes')} />
 
         {serverError ? (
-          <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
             {serverError}
           </p>
         ) : null}

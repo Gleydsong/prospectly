@@ -37,7 +37,7 @@ export function PipelinePage() {
 
   if (board.isError || !board.data) {
     return (
-      <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
+      <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
         Erro ao carregar pipeline.
       </p>
     );
@@ -46,7 +46,7 @@ export function PipelinePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.pipeline')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.pipeline')}</h1>
         <p className="text-sm text-zinc-500">{board.data.pipeline.name} — arraste leads entre etapas</p>
       </div>
 
@@ -70,22 +70,22 @@ export function PipelinePage() {
               setOverStageId(null);
             }}
             className={cn(
-              'flex w-72 shrink-0 flex-col rounded-control border border-zinc-200 bg-zinc-100/60',
-              overStageId === stage.id ? 'border-brand-400 ring-2 ring-brand-200' : 'border-zinc-200',
+              'flex w-72 shrink-0 flex-col rounded-control border border-zinc-800 bg-zinc-900/60',
+              overStageId === stage.id ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-zinc-800',
             )}
           >
             <header
               className="flex items-center justify-between rounded-t-xl px-3 py-2.5"
               style={{ borderTop: `3px solid ${stage.color ?? '#94a3b8'}` }}
             >
-              <h2 className="text-sm font-semibold text-zinc-800">{stage.name}</h2>
-              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-zinc-500">
+              <h2 className="text-sm font-semibold text-zinc-100">{stage.name}</h2>
+              <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-xs font-medium text-zinc-500">
                 {stage.leads.length}
               </span>
             </header>
             <div className="flex flex-1 flex-col gap-2 p-2">
               {stage.leads.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-zinc-300 p-3 text-center text-xs text-zinc-400">
+                <p className="rounded-lg border border-dashed border-zinc-700 p-3 text-center text-xs text-zinc-400">
                   Arraste leads para cá
                 </p>
               ) : (
@@ -105,7 +105,7 @@ export function PipelinePage() {
                   >
                     <Link
                       to={`/leads/${lead.id}`}
-                      className="block text-sm font-medium text-zinc-900 hover:text-brand-600"
+                      className="block text-sm font-medium text-zinc-50 hover:text-brand-400"
                     >
                       {lead.companyName}
                     </Link>

@@ -99,10 +99,10 @@ export function LeadDetailPage() {
   if (leadQuery.isError || !leadQuery.data) {
     return (
       <div className="space-y-4">
-        <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-600">
+        <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400">
           <ArrowLeft className="h-4 w-4" /> Voltar para leads
         </Link>
-        <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
+        <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
           Lead não encontrado ou sem permissão de acesso.
         </p>
       </div>
@@ -118,13 +118,13 @@ export function LeadDetailPage() {
 
   return (
     <div className="space-y-5">
-      <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
+      <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
         <ArrowLeft className="h-4 w-4" /> Voltar para leads
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{lead.companyName}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{lead.companyName}</h1>
           <p className="text-sm text-zinc-500">
             {[lead.segment, lead.city, lead.country].filter(Boolean).join(' · ') || 'Sem segmento'}
           </p>
@@ -151,7 +151,7 @@ export function LeadDetailPage() {
                     href={safeWebsite}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-brand-600 hover:underline"
+                    className="text-brand-400 hover:underline"
                   >
                     {lead.website}
                   </a>
@@ -176,7 +176,7 @@ export function LeadDetailPage() {
             {lead.notes ? (
               <div className="pt-2">
                 <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Observações</p>
-                <p className="whitespace-pre-wrap text-zinc-600">{lead.notes}</p>
+                <p className="whitespace-pre-wrap text-zinc-300">{lead.notes}</p>
               </div>
             ) : null}
           </CardContent>
@@ -190,7 +190,7 @@ export function LeadDetailPage() {
             />
             <CardContent>
               {latestScore ? (
-                <ul className="space-y-1 text-sm text-zinc-600">
+                <ul className="space-y-1 text-sm text-zinc-300">
                   {(latestScore.rulesApplied as Array<{ key: string; points: number }>).map((rule) => (
                     <li key={rule.key} className="flex justify-between gap-3">
                       <span>{t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}</span>
@@ -228,7 +228,7 @@ export function LeadDetailPage() {
             />
             <CardContent>
               {analysisMessage ? (
-                <p className="mb-3 text-sm text-zinc-600" role="status">
+                <p className="mb-3 text-sm text-zinc-300" role="status">
                   {analysisMessage}
                 </p>
               ) : null}
@@ -283,13 +283,13 @@ export function LeadDetailPage() {
               ) : !activitiesQuery.data || activitiesQuery.data.data.length === 0 ? (
                 <p className="text-sm text-zinc-500">Nenhuma atividade registrada.</p>
               ) : (
-                <ol className="relative space-y-4 border-l border-zinc-200 pl-5">
+                <ol className="relative space-y-4 border-l border-zinc-800 pl-5">
                   {activitiesQuery.data.data.map((activity) => (
                     <li key={activity.id} className="relative">
-                      <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden />
-                      <p className="text-sm font-medium text-zinc-900">{activity.type}</p>
+                      <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500/150" aria-hidden />
+                      <p className="text-sm font-medium text-zinc-50">{activity.type}</p>
                       {activity.description ? (
-                        <p className="text-sm text-zinc-600">{activity.description}</p>
+                        <p className="text-sm text-zinc-300">{activity.description}</p>
                       ) : null}
                       <p className="text-xs text-zinc-400">
                         {activity.user.name} · {formatDateTime(activity.createdAt)}
@@ -320,10 +320,10 @@ export function LeadDetailPage() {
                   {tasksQuery.data.data.map((task) => (
                     <li
                       key={task.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-100 p-3"
+                      className="flex items-center justify-between rounded-lg border border-zinc-800 p-3"
                     >
                       <div>
-                        <p className="text-sm font-medium text-zinc-900">{task.title}</p>
+                        <p className="text-sm font-medium text-zinc-50">{task.title}</p>
                         <p className="text-xs text-zinc-500">
                           {task.assignee?.name ?? 'Sem responsável'} · {formatDateTime(task.dueAt)}
                         </p>
@@ -418,7 +418,7 @@ function InfoRow({
       <Icon className="mt-0.5 h-4 w-4 text-zinc-400" aria-hidden />
       <div>
         <p className="text-xs font-medium uppercase text-zinc-400">{label}</p>
-        <p className="text-zinc-700">{value ?? '—'}</p>
+        <p className="text-zinc-200">{value ?? '—'}</p>
       </div>
     </div>
   );
@@ -428,7 +428,7 @@ function AnalysisItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-xs font-medium uppercase text-zinc-400">{label}</dt>
-      <dd className="truncate text-zinc-700" title={value}>
+      <dd className="truncate text-zinc-200" title={value}>
         {value}
       </dd>
     </div>

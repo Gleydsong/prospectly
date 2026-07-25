@@ -5,13 +5,13 @@ import { cn } from '@/lib/utils';
 type Tone = 'slate' | 'green' | 'amber' | 'red' | 'blue' | 'brand' | 'purple';
 
 const tones: Record<Tone, string> = {
-  slate: 'bg-zinc-100 text-zinc-700',
-  green: 'bg-brand-100 text-brand-800',
-  amber: 'bg-amber-100 text-amber-800',
-  red: 'bg-red-100 text-red-700',
-  blue: 'bg-sky-100 text-sky-800',
-  brand: 'bg-brand-100 text-brand-800',
-  purple: 'bg-brand-50 text-brand-700',
+  slate: 'bg-zinc-800 text-zinc-200',
+  green: 'bg-brand-500/15 text-brand-300',
+  amber: 'bg-amber-500/15 text-amber-300',
+  red: 'bg-red-500/15 text-red-300',
+  blue: 'bg-sky-500/15 text-sky-300',
+  brand: 'bg-brand-500/15 text-brand-300',
+  purple: 'bg-brand-500/10 text-brand-300',
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

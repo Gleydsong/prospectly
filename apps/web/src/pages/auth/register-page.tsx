@@ -137,7 +137,7 @@ export function RegisterPage() {
           {t('auth.hasAccount')}{' '}
           <Link
             to={plan ? `/login?plan=${plan}&currency=${currency}` : '/login'}
-            className="font-medium text-brand-600 hover:text-brand-700"
+            className="font-medium text-brand-400 hover:text-brand-300"
           >
             {t('auth.login')}
           </Link>
@@ -184,12 +184,12 @@ export function RegisterPage() {
           <option value="en">{t('auth.languageEn')}</option>
         </Select>
 
-        <label className="flex items-start gap-2 text-sm text-zinc-600">
+        <label className="flex items-start gap-2 text-sm text-zinc-300">
           <input type="checkbox" className="mt-1" {...register('acceptTerms')} />
           <span>
             {t('auth.acceptTermsPrefix')}{' '}
             <a
-              className="font-medium text-brand-600 hover:text-brand-700"
+              className="font-medium text-brand-400 hover:text-brand-300"
               href={`${LANDING_URL}/terms`}
               target="_blank"
               rel="noreferrer"
@@ -198,7 +198,7 @@ export function RegisterPage() {
             </a>{' '}
             {t('auth.acceptTermsAnd')}{' '}
             <a
-              className="font-medium text-brand-600 hover:text-brand-700"
+              className="font-medium text-brand-400 hover:text-brand-300"
               href={`${LANDING_URL}/privacy`}
               target="_blank"
               rel="noreferrer"
@@ -209,11 +209,11 @@ export function RegisterPage() {
           </span>
         </label>
         {errors.acceptTerms?.message ? (
-          <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
+          <p className="text-sm text-red-400">{errors.acceptTerms.message}</p>
         ) : null}
 
         {serverError ? (
-          <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
             {serverError}
           </p>
         ) : null}

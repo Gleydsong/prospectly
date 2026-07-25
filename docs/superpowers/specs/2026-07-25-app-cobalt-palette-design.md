@@ -6,12 +6,15 @@
 
 ## Goal
 
-Align the product app with the landing premium palette: zinc neutrals + cobalt accent (`#2563EB`), retiring emerald as brand color.
+Align the product app with the landing premium palette: zinc neutrals + cobalt accent (`#2563EB` light / `#60A5FA` dark), retiring emerald as brand color — and ship the app in **dark mode** so it matches the landing visual system.
 
 ## Changes
 
 - `tailwind.config.js` `brand.*` scale remapped to Tailwind blue / cobalt
-- `index.css` CSS variables `--accent`, `--ring`, `::selection` → cobalt
+- `index.css` forced dark tokens (`--bg: #09090b`, `--accent: #60a5fa`)
+- `index.html` `class="dark"`, `color-scheme` / `theme-color`
+- UI primitives + layouts (app/auth/sidebar/header) on zinc-950 / zinc-900 surfaces
+- Pages remapped: `bg-white` → `bg-zinc-900`, light borders/text → dark counterparts, soft brand tints → `brand-500/15`
 - Hardcoded emerald status surfaces → `brand-*`
 - Dashboard chart fills → cobalt blues
 - Badge `green` / `purple` tones → brand soft blues
@@ -19,6 +22,6 @@ Align the product app with the landing premium palette: zinc neutrals + cobalt a
 
 ## Out of scope
 
-- Full dark-mode product shell
+- User-toggleable light/dark theme
 - Re-rendering Remotion MP4s
 - Auth copy / layout redesign

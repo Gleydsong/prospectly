@@ -44,11 +44,11 @@ function StatCard({
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-control bg-brand-50">
-          <Icon className="h-5 w-5 text-brand-600" aria-hidden />
+        <div className="flex h-11 w-11 items-center justify-center rounded-control bg-brand-500/15">
+          <Icon className="h-5 w-5 text-brand-400" aria-hidden />
         </div>
         <div>
-          <p className="text-2xl font-semibold tracking-tight text-zinc-900">{value}</p>
+          <p className="text-2xl font-semibold tracking-tight text-zinc-50">{value}</p>
           <p className="text-sm text-zinc-500">{label}</p>
         </div>
       </CardContent>
@@ -63,7 +63,7 @@ export function DashboardPage() {
 
   if (summary.isError) {
     return (
-      <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
+      <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
         {t('dashboard.loadError')}
       </p>
     );
@@ -88,7 +88,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6" key={i18n.language}>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('dashboard.title')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('dashboard.title')}</h1>
         <p className="text-sm text-zinc-500">{t('dashboard.subtitle')}</p>
       </div>
 
@@ -179,10 +179,10 @@ export function DashboardPage() {
                 <Link
                   key={lead.id}
                   to={`/leads/${lead.id}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-zinc-100 p-3 hover:bg-zinc-50"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800 p-3 hover:bg-zinc-950"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-900">{lead.companyName}</p>
+                    <p className="truncate text-sm font-medium text-zinc-50">{lead.companyName}</p>
                     <p className="text-xs text-zinc-500">{lead.city ?? t('common.dash')}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -205,9 +205,9 @@ export function DashboardPage() {
                 <Link
                   key={item.id}
                   to={`/leads/${item.id}`}
-                  className="flex items-center justify-between rounded-lg border border-zinc-100 p-3 hover:bg-zinc-50"
+                  className="flex items-center justify-between rounded-lg border border-zinc-800 p-3 hover:bg-zinc-950"
                 >
-                  <span className="text-sm font-medium text-zinc-900">{item.companyName}</span>
+                  <span className="text-sm font-medium text-zinc-50">{item.companyName}</span>
                   <span className="text-xs text-zinc-500">{formatDate(item.nextContactAt)}</span>
                 </Link>
               ))

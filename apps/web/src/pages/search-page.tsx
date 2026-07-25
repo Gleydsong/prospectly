@@ -114,7 +114,7 @@ function websiteTone(status: WebsitePresence): 'amber' | 'green' | 'slate' {
 
 function ImportSummary({ summary }: { summary: SearchImportSummary }) {
   return (
-    <p className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800" role="status">
+    <p className="rounded-lg bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
       Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s), {summary.invalid}{' '}
       inválido(s) e {summary.conflicts} possível(is) duplicado(s).
     </p>
@@ -131,7 +131,7 @@ function QueryErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800" role="alert">
+    <div className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
       <p className="font-medium">{title}</p>
       <p className="mt-1">{getApiErrorMessage(error)}</p>
       <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
@@ -290,7 +290,7 @@ export function SearchPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.search')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.search')}</h1>
         <p className="text-sm text-zinc-500">
           Encontre negócios no Brasil e na Europa via OpenStreetMap ou Google Places.
         </p>
@@ -339,18 +339,18 @@ export function SearchPage() {
               </Select>
             </div>
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-zinc-700">Categorias</legend>
+              <legend className="mb-2 text-sm font-medium text-zinc-200">Categorias</legend>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {PROSPECTING_CATEGORIES.map((category) => {
                   const checked = (selectedCategories ?? []).includes(category.value);
                   return (
                     <label
                       key={category.value}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-800 px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-950"
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                        className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                         checked={checked}
                         onChange={() => toggleCategory(category.value)}
                       />
@@ -360,18 +360,18 @@ export function SearchPage() {
                 })}
               </div>
               {errors.categories?.message ? (
-                <p className="mt-2 text-sm text-red-600" role="alert">{errors.categories.message}</p>
+                <p className="mt-2 text-sm text-red-400" role="alert">{errors.categories.message}</p>
               ) : null}
             </fieldset>
-            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-zinc-700">
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-zinc-200">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                 {...register('onlyWithoutWebsite')}
               />
               Somente empresas sem site informado
             </label>
-            {serverError ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{serverError}</p> : null}
+            {serverError ? <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">{serverError}</p> : null}
             <Button type="submit" loading={createSearch.isPending}>
               <Search className="h-4 w-4" aria-hidden />
               Pesquisar empresas
@@ -393,7 +393,7 @@ export function SearchPage() {
             <EmptyState title="Nenhuma pesquisa" description="Crie uma pesquisa para começar a encontrar empresas." />
           ) : (
             <div className="space-y-3">
-              <ul className="divide-y divide-zinc-100" aria-label="Histórico de pesquisas">
+              <ul className="divide-y divide-zinc-800" aria-label="Histórico de pesquisas">
                 {searches.map((search) => (
                   <li key={search.id}>
                     <div className="flex items-start gap-2 py-3">
@@ -401,10 +401,10 @@ export function SearchPage() {
                         type="button"
                         onClick={() => selectSearch(search.id)}
                         aria-pressed={search.id === selectedSearchId}
-                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-zinc-50 focus-visible:rounded-lg"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-zinc-950 focus-visible:rounded-lg"
                       >
                         <span className="min-w-0">
-                          <span className="block font-medium text-zinc-900">
+                          <span className="block font-medium text-zinc-50">
                             {formatSearchHeading(search.input)}
                           </span>
                           <span className="text-sm text-zinc-500">{formatDateTime(search.createdAt)}</span>
@@ -415,7 +415,7 @@ export function SearchPage() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                         aria-label={`Apagar pesquisa ${formatSearchHeading(search.input)}`}
                         loading={deleteSearch.isPending && deleteSearch.variables === search.id}
                         onClick={() => { void removeSearch(search.id); }}
@@ -423,7 +423,7 @@ export function SearchPage() {
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </Button>
                     </div>
-                    {search.status === 'FAILED' && search.error ? <p className="pb-3 text-sm text-red-700">{search.error}</p> : null}
+                    {search.status === 'FAILED' && search.error ? <p className="pb-3 text-sm text-red-300">{search.error}</p> : null}
                   </li>
                 ))}
               </ul>
@@ -463,7 +463,7 @@ export function SearchPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[880px] text-left text-sm">
                     <thead>
-                      <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
+                      <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
                         <th scope="col" className="w-12 px-3 py-3">
                           <input
                             type="checkbox"
@@ -471,7 +471,7 @@ export function SearchPage() {
                             checked={allCurrentResultsSelected}
                             onChange={toggleCurrentPage}
                             disabled={selectableResultIds.length === 0}
-                            className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                            className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                           />
                         </th>
                         <th scope="col" className="px-3 py-3 font-medium">Empresa</th>
@@ -495,13 +495,13 @@ export function SearchPage() {
                                 onChange={() => toggleResult(result.id)}
                                 disabled={imported || !canImport}
                                 title={imported ? 'Resultado já importado' : !canImport ? 'Aguarde a conclusão da pesquisa' : undefined}
-                                className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                                className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                               />
                             </td>
-                            <td className="px-3 py-3 font-medium text-zinc-900">{business.companyName}{imported ? <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span> : null}</td>
-                            <td className="px-3 py-3 text-zinc-600">{business.phone ?? '—'}</td>
-                            <td className="px-3 py-3 text-zinc-600">{business.address ?? `${business.city}/${business.state}`}</td>
-                            <td className="px-3 py-3 text-zinc-600">{business.category ?? '—'}</td>
+                            <td className="px-3 py-3 font-medium text-zinc-50">{business.companyName}{imported ? <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span> : null}</td>
+                            <td className="px-3 py-3 text-zinc-300">{business.phone ?? '—'}</td>
+                            <td className="px-3 py-3 text-zinc-300">{business.address ?? `${business.city}/${business.state}`}</td>
+                            <td className="px-3 py-3 text-zinc-300">{business.category ?? '—'}</td>
                             <td className="px-3 py-3"><Badge tone={websiteTone(result.websitePresence)}>{WEBSITE_LABEL[result.websitePresence]}</Badge></td>
                           </tr>
                         );
@@ -516,7 +516,7 @@ export function SearchPage() {
                     href="https://www.openstreetmap.org/copyright"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline hover:text-zinc-700"
+                    className="underline hover:text-zinc-200"
                   >
                     colaboradores do OpenStreetMap
                   </a>

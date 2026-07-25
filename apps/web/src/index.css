@@ -3,15 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --bg: #fafafa;
-  --bg-raised: #ffffff;
-  --bg-sunken: #f4f4f5;
-  --ink: #18181b;
-  --ink-muted: #52525b;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --ring: rgb(37 99 235 / 0.35);
-  --border: rgb(24 24 27 / 0.1);
+  color-scheme: dark;
+  --bg: #09090b;
+  --bg-raised: #18181b;
+  --bg-sunken: #27272a;
+  --ink: #fafafa;
+  --ink-muted: #a1a1aa;
+  --accent: #60a5fa;
+  --accent-hover: #93c5fd;
+  --ring: rgb(96 165 250 / 0.35);
+  --border: rgb(250 250 250 / 0.12);
 }
 
 @layer base {
@@ -27,10 +28,10 @@
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500/40 ring-offset-2;
+    @apply outline-none ring-2 ring-brand-400/40 ring-offset-2 ring-offset-zinc-950;
   }
 
   ::selection {
-    background: rgb(37 99 235 / 0.22);
+    background: rgb(96 165 250 / 0.28);
   }
 }

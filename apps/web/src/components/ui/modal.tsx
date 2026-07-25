@@ -35,23 +35,23 @@ export function Modal({
       aria-label={title}
     >
       <button
-        className="absolute inset-0 bg-zinc-950/40"
+        className="absolute inset-0 bg-zinc-950/70"
         onClick={onClose}
         aria-label="Fechar"
         tabIndex={-1}
       />
       <div
         className={cn(
-          'relative w-full max-w-lg rounded-control border border-zinc-200/80 bg-white shadow-soft',
+          'relative w-full max-w-lg rounded-control border border-zinc-800 bg-zinc-900 shadow-soft',
           'max-h-[90vh] overflow-y-auto',
           className,
         )}
       >
-        <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-900">{title}</h2>
+        <div className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-50">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded-control p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="rounded-control p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
             aria-label="Fechar modal"
           >
             <X className="h-5 w-5" />

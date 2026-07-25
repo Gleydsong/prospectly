@@ -67,7 +67,7 @@ export function LeadsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.title')}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.title')}</h1>
           <p className="text-sm text-zinc-500">Gerencie e qualifique suas oportunidades</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>
@@ -127,7 +127,7 @@ export function LeadsPage() {
           <TableSkeleton rows={8} columns={5} />
         </Card>
       ) : query.isError ? (
-        <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
+        <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
           Erro ao carregar leads. Tente novamente.
         </p>
       ) : leads.length === 0 ? (
@@ -144,14 +144,14 @@ export function LeadsPage() {
       ) : (
         <>
           {actionError ? (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
               {actionError}
             </p>
           ) : null}
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
+                <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
                   <th scope="col" className="px-5 py-3 font-medium">Cidade</th>
                   <th scope="col" className="px-5 py-3 font-medium">Status</th>
@@ -167,7 +167,7 @@ export function LeadsPage() {
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="cursor-pointer border-b border-zinc-50 hover:bg-zinc-50"
+                    className="cursor-pointer border-b border-zinc-50 hover:bg-zinc-950"
                     onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <td className="px-5 py-3">
@@ -175,7 +175,7 @@ export function LeadsPage() {
                         <div>
                           <Link
                             to={`/leads/${lead.id}`}
-                            className="font-medium text-zinc-900 hover:text-brand-600"
+                            className="font-medium text-zinc-50 hover:text-brand-400"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {lead.companyName}
@@ -189,14 +189,14 @@ export function LeadsPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-zinc-600">{lead.city ?? '—'}</td>
+                    <td className="px-5 py-3 text-zinc-300">{lead.city ?? '—'}</td>
                     <td className="px-5 py-3">
                       <LeadStatusBadge status={lead.status} />
                     </td>
                     <td className="px-5 py-3">
                       <ScoreBadge score={lead.score} />
                     </td>
-                    <td className="px-5 py-3 text-zinc-600">{lead.owner?.name ?? '—'}</td>
+                    <td className="px-5 py-3 text-zinc-300">{lead.owner?.name ?? '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {lead.tags.slice(0, 3).map((tag) => (
@@ -209,7 +209,7 @@ export function LeadsPage() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                         aria-label={`Apagar lead ${lead.companyName}`}
                         loading={deleteLead.isPending && deleteLead.variables === lead.id}
                         onClick={(event) => {

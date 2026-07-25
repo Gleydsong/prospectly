@@ -82,18 +82,18 @@ function ScoringSettingsCard() {
         {configQuery.isLoading ? (
           <Skeleton className="h-40" />
         ) : configQuery.isError ? (
-          <p className="text-sm text-red-700" role="alert">
+          <p className="text-sm text-red-300" role="alert">
             {getApiErrorMessage(configQuery.error) || t('settings.scoringError')}
           </p>
         ) : (
           <>
-            <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+            <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
               {rules.map((rule) => (
                 <li key={rule.key} className="flex flex-wrap items-center gap-3 px-3 py-3">
-                  <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-zinc-800">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-zinc-100">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                      className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                       checked={rule.enabled}
                       onChange={(event) => updateRule(rule.key, { enabled: event.target.checked })}
                     />
@@ -121,11 +121,11 @@ function ScoringSettingsCard() {
               ))}
             </ul>
             {saveError ? (
-              <p className="text-sm text-red-700" role="alert">
+              <p className="text-sm text-red-300" role="alert">
                 {saveError}
               </p>
             ) : null}
-            {saveMessage ? <p className="text-sm text-brand-700">{saveMessage}</p> : null}
+            {saveMessage ? <p className="text-sm text-brand-300">{saveMessage}</p> : null}
             <Button
               type="button"
               loading={saveMutation.isPending}
@@ -233,7 +233,7 @@ export function SettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('settings.title')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('settings.title')}</h1>
         <p className="text-sm text-zinc-500">{user?.organizationName}</p>
       </div>
 
@@ -248,9 +248,9 @@ export function SettingsPage() {
             <option value="pt">{t('auth.languagePt')}</option>
             <option value="en">{t('auth.languageEn')}</option>
           </Select>
-          {message ? <p className="text-sm text-brand-700">{message}</p> : null}
+          {message ? <p className="text-sm text-brand-300">{message}</p> : null}
           {error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-red-400" role="alert">
               {error}
             </p>
           ) : null}
@@ -285,7 +285,7 @@ export function SettingsPage() {
           )}
 
           {billingError ? (
-            <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
               {billingError}
             </p>
           ) : null}
@@ -322,7 +322,7 @@ export function SettingsPage() {
               </Button>
             ) : null}
             <a
-              className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-700"
+              className="inline-flex items-center text-sm font-medium text-brand-400 hover:text-brand-300"
               href={`${LANDING_URL}/pricing`}
               target="_blank"
               rel="noreferrer"
@@ -339,11 +339,11 @@ export function SettingsPage() {
           {members.isLoading ? (
             <Skeleton className="h-32" />
           ) : (
-            <ul className="divide-y divide-zinc-100">
+            <ul className="divide-y divide-zinc-800">
               {(members.data ?? []).map((member) => (
                 <li key={member.id} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-zinc-900">{member.user.name}</p>
+                    <p className="text-sm font-medium text-zinc-50">{member.user.name}</p>
                     <p className="text-xs text-zinc-500">{member.user.email}</p>
                   </div>
                   <Badge tone={member.role === 'OWNER' ? 'brand' : 'slate'}>{member.role}</Badge>
@@ -357,11 +357,11 @@ export function SettingsPage() {
       <Card>
         <CardHeader title={t('settings.privacyTitle')} description={t('settings.privacyDesc')} />
         <CardContent className="space-y-3">
-          <p className="text-sm text-zinc-600">{t('settings.privacyBody')}</p>
+          <p className="text-sm text-zinc-300">{t('settings.privacyBody')}</p>
           <Button type="button" variant="secondary" loading={dsr.isPending} onClick={() => dsr.mutate()}>
             {t('settings.requestDeletion')}
           </Button>
-          {dsrMessage ? <p className="text-sm text-zinc-700">{dsrMessage}</p> : null}
+          {dsrMessage ? <p className="text-sm text-zinc-200">{dsrMessage}</p> : null}
         </CardContent>
       </Card>
 

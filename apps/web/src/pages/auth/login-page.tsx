@@ -88,7 +88,7 @@ export function LoginPage() {
       footer={
         <>
           {t('auth.noAccount')}{' '}
-          <Link to={registerHref} className="font-medium text-brand-600 hover:text-brand-700">
+          <Link to={registerHref} className="font-medium text-brand-400 hover:text-brand-300">
             {t('auth.createAccount')}
           </Link>
         </>
@@ -111,7 +111,7 @@ export function LoginPage() {
         />
 
         {serverError ? (
-          <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
             {serverError}
           </p>
         ) : null}
