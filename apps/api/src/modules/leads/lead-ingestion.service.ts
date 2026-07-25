@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { LeadSource, LeadStatus, Prisma, WebsitePresence } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 
 const INGESTED_LEAD_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -126,7 +127,10 @@ function normalizeTagNames(names: string[] | undefined): string[] {
 
 @Injectable()
 export class LeadIngestionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
+  ) {}
 
   async ingest(
     organizationId: string,
@@ -136,14 +140,14 @@ export class LeadIngestionService {
     const normalized = this.normalizeCandidate(candidate);
 
     try {
-      return await this.prisma.$transaction(async (transaction) => {
+      const result = await this.prisma.$transaction(async (transaction) => {
         const strongDuplicate = await this.findStrongDuplicate(
           transaction,
           organizationId,
           normalized,
         );
         if (strongDuplicate) {
-          return { status: 'DUPLICATE', lead: strongDuplicate };
+          return { status: 'DUPLICATE' as const, lead: strongDuplicate };
         }
 
         const possibleDuplicate = await this.findPossibleDuplicate(
@@ -152,7 +156,7 @@ export class LeadIngestionService {
           normalized,
         );
         if (possibleDuplicate) {
-          return { status: 'POSSIBLE_DUPLICATE', lead: possibleDuplicate };
+          return { status: 'POSSIBLE_DUPLICATE' as const, lead: possibleDuplicate };
         }
 
         const tags = await this.upsertTags(transaction, organizationId, normalized.tags);
@@ -197,8 +201,18 @@ export class LeadIngestionService {
           },
           include: INGESTED_LEAD_INCLUDE,
         });
-        return { status: 'IMPORTED', lead };
+        return { status: 'IMPORTED' as const, lead };
       });
+
+      if (result.status === 'IMPORTED' && this.websiteAnalysis) {
+        void this.websiteAnalysis.onLeadUpsert(
+          organizationId,
+          result.lead.id,
+          result.lead.website,
+        );
+      }
+
+      return result;
     } catch (error) {
       if (!this.isUniqueConstraintViolation(error)) {
         throw error;

@@ -14,9 +14,9 @@ const pt: Dict = {
   heroPrimary: 'Começar grátis',
   heroSecondary: 'Ver preços',
   trustLabel: 'Feito para quem vende site, SEO e presença digital',
-  problemTitle: 'Chega de copiar telefone do Maps',
+  problemTitle: 'Manhã no Maps, tarde sem pipeline',
   problemBody:
-    'Agências e freelancers perdem manhãs inteiras listando negócios à mão. Prospectly busca o nicho, marca quem ainda não tem site e joga no pipeline.',
+    'Abrir o Maps, copiar telefone, colar na planilha, repetir. Esse loop não escala. Prospectly faz a busca, corta quem já tem site e deixa a lista pronta no funil.',
   filterTitle: 'O filtro que importa: sem website',
   filterBody:
     'Priorize negócios locais sem presença digital reportada. Menos volume inútil, mais conversa com quem precisa do que você vende.',
@@ -34,11 +34,11 @@ const pt: Dict = {
   proofTitle: 'Prospecção B2B local, com LGPD em mente',
   proofBody:
     'Para agências digitais e freelancers que usam Google Maps ou OpenStreetMap para achar clientes locais e querem um fluxo sério, não mais uma planilha solta.',
-  ctaBandBefore: 'Pare de perder',
-  ctaBandHighlight: 'horas no Maps',
-  ctaBandAfter: 'e foque em fechar clientes.',
+  ctaBandBefore: 'Copiar lead do Maps',
+  ctaBandHighlight: 'não é prospecção.',
+  ctaBandAfter: '',
   ctaBandBody:
-    'Extraia leads locais automaticamente. Enquanto a concorrência ainda copia telefone à mão, você já está no pipeline.',
+    'Prospectly busca o nicho, corta quem já tem site e joga no pipeline. Sem manhã perdida no Maps.',
   ctaBandPrimary: 'Começar grátis',
   ctaBandSecondary: 'Ver como funciona',
   ctaSignal1: 'OpenStreetMap e Google Places',
@@ -92,9 +92,9 @@ const en: Dict = {
   heroPrimary: 'Start free',
   heroSecondary: 'See pricing',
   trustLabel: 'Built for agencies selling websites, SEO, and digital presence',
-  problemTitle: 'Stop copying phone numbers from Maps',
+  problemTitle: 'Morning on Maps, afternoon with no pipeline',
   problemBody:
-    'Agencies and freelancers burn mornings listing businesses by hand. Prospectly searches the niche, flags who still has no website, and drops them into your pipeline.',
+    'Open Maps, copy a phone number, paste into a sheet, repeat. That loop does not scale. Prospectly runs the search, drops businesses that already have a site, and leaves the list ready in your funnel.',
   filterTitle: 'The filter that matters: no website',
   filterBody:
     'Prioritize local businesses with no reported digital presence. Less useless volume, more outreach to people who need what you sell.',
@@ -112,11 +112,11 @@ const en: Dict = {
   proofTitle: 'Local B2B prospecting, privacy-aware',
   proofBody:
     'For digital agencies and freelancers who use Google Maps or OpenStreetMap to find local clients and want a serious workflow, not another loose spreadsheet.',
-  ctaBandBefore: 'Stop wasting',
-  ctaBandHighlight: 'hours on Maps',
-  ctaBandAfter: 'and focus on closing clients.',
+  ctaBandBefore: 'Copying leads from Maps',
+  ctaBandHighlight: 'is not prospecting.',
+  ctaBandAfter: '',
   ctaBandBody:
-    'Pull local leads automatically. While competitors still copy phone numbers by hand, you are already in the pipeline.',
+    'Prospectly finds the niche, drops businesses with a site, and fills your pipeline. No morning lost on Maps.',
   ctaBandPrimary: 'Start free',
   ctaBandSecondary: 'See how it works',
   ctaSignal1: 'OpenStreetMap and Google Places',

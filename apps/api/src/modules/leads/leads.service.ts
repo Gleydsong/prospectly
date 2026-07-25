@@ -3,11 +3,13 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { LeadSource, Prisma } from '@prisma/client';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
   buildProbableDuplicateKey,
@@ -29,6 +31,7 @@ export class LeadsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leadIngestion: LeadIngestionService,
+    @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
   ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
@@ -156,6 +159,9 @@ export class LeadsService {
         },
         include: LEAD_INCLUDE,
       });
+      if (this.websiteAnalysis && (dto.website !== undefined || dto.phone !== undefined || dto.email !== undefined || dto.rating !== undefined)) {
+        void this.websiteAnalysis.onLeadUpsert(organizationId, id, lead.website);
+      }
       return this.serialize(lead);
     } catch (error) {
       if (this.isUniqueConstraintViolation(error)) {
@@ -163,6 +169,14 @@ export class LeadsService {
       }
       throw error;
     }
+  }
+
+  async requestWebsiteAnalysis(organizationId: string, id: string) {
+    await this.ensureLead(organizationId, id);
+    if (!this.websiteAnalysis) {
+      throw new BadRequestException('Website analysis is not available');
+    }
+    return this.websiteAnalysis.enqueueForLead(organizationId, id, true);
   }
 
   async softDelete(organizationId: string, id: string) {

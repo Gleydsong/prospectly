@@ -95,8 +95,11 @@
     "membersTitle": "Users and permissions",
     "membersDesc": "Organization members",
     "scoringTitle": "Scoring",
-    "scoringDesc": "Organization scoring configuration",
+    "scoringDesc": "Enable/disable rules and adjust opportunity score points",
     "scoringSoon": "Configurable scoring rules land in Phase 4, along with automatic website analysis.",
+    "scoringSave": "Save rules",
+    "scoringSaved": "Rules saved. Scores will be recalculated in the background.",
+    "scoringError": "Could not load or save scoring rules.",
     "languageTitle": "Language",
     "languageDesc": "Prospectly interface language",
     "languageSaved": "Language updated.",
@@ -160,5 +163,17 @@
     "imports": "Import leads from CSV",
     "pipeline": "Pipeline",
     "tasks": "Tasks"
+  },
+  "scoreRules": {
+    "NO_WEBSITE": "No website",
+    "NO_HTTPS": "Website without HTTPS",
+    "NOT_RESPONSIVE": "Website not responsive",
+    "SLOW": "Slow performance",
+    "NO_CONTACT_FORM": "No contact form",
+    "NO_META_DESCRIPTION": "No meta description",
+    "MANY_REVIEWS_BAD_SITE": "Many reviews and weak website",
+    "HAS_PHONE": "Phone available",
+    "HAS_EMAIL": "Email available",
+    "HIGH_RATING": "High rating"
   }
 }

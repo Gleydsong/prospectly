@@ -24,6 +24,8 @@ import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { ScoringModule } from './modules/scoring/scoring.module';
+import { WebsiteAnalysisModule } from './modules/website-analysis/website-analysis.module';
 
 @Module({
   imports: [
@@ -87,6 +89,8 @@ import { BillingModule } from './modules/billing/billing.module';
     ImportsModule,
     GeoModule,
     BillingModule,
+    ScoringModule,
+    WebsiteAnalysisModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

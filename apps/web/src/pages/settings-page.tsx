@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -17,6 +18,7 @@ import {
   updateProfile,
 } from '@/features/auth/api';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
+import { fetchScoreConfig, updateScoreRules, type ScoreRule } from '@/features/scoring/api';
 import { setAppLocale } from '@/i18n';
 import { api, getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
@@ -30,6 +32,114 @@ interface Member {
 }
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
+
+function ScoringSettingsCard() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState<ScoreRule[] | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const configQuery = useQuery({
+    queryKey: ['scoring', 'config'],
+    queryFn: fetchScoreConfig,
+  });
+
+  const rules = draft ?? configQuery.data?.rules ?? [];
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      updateScoreRules(
+        rules.map((rule) => ({
+          key: rule.key,
+          enabled: rule.enabled,
+          points: rule.points,
+        })),
+      ),
+    onSuccess: async (data) => {
+      setDraft(null);
+      setSaveError(null);
+      setSaveMessage(t('settings.scoringSaved'));
+      await queryClient.setQueryData(['scoring', 'config'], data);
+    },
+    onError: (err) => {
+      setSaveMessage(null);
+      setSaveError(getApiErrorMessage(err) || t('settings.scoringError'));
+    },
+  });
+
+  const updateRule = (key: string, patch: Partial<Pick<ScoreRule, 'enabled' | 'points'>>) => {
+    const base = draft ?? configQuery.data?.rules ?? [];
+    setDraft(
+      base.map((rule) => (rule.key === key ? { ...rule, ...patch } : rule)),
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader title={t('settings.scoringTitle')} description={t('settings.scoringDesc')} />
+      <CardContent className="space-y-4">
+        {configQuery.isLoading ? (
+          <Skeleton className="h-40" />
+        ) : configQuery.isError ? (
+          <p className="text-sm text-red-700" role="alert">
+            {getApiErrorMessage(configQuery.error) || t('settings.scoringError')}
+          </p>
+        ) : (
+          <>
+            <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+              {rules.map((rule) => (
+                <li key={rule.key} className="flex flex-wrap items-center gap-3 px-3 py-3">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-zinc-800">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
+                      checked={rule.enabled}
+                      onChange={(event) => updateRule(rule.key, { enabled: event.target.checked })}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-medium">
+                        {t(`scoreRules.${rule.key}`, { defaultValue: rule.description || rule.key })}
+                      </span>
+                      <span className="text-xs text-zinc-500">{rule.key}</span>
+                    </span>
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={50}
+                    className="w-24"
+                    aria-label={`${rule.key} points`}
+                    value={rule.points}
+                    onChange={(event) =>
+                      updateRule(rule.key, {
+                        points: Math.max(0, Math.min(50, Number(event.target.value) || 0)),
+                      })
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+            {saveError ? (
+              <p className="text-sm text-red-700" role="alert">
+                {saveError}
+              </p>
+            ) : null}
+            {saveMessage ? <p className="text-sm text-emerald-700">{saveMessage}</p> : null}
+            <Button
+              type="button"
+              loading={saveMutation.isPending}
+              disabled={!draft}
+              onClick={() => saveMutation.mutate()}
+            >
+              {t('settings.scoringSave')}
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -255,12 +365,7 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader title={t('settings.scoringTitle')} description={t('settings.scoringDesc')} />
-        <CardContent>
-          <p className="text-sm text-zinc-500">{t('settings.scoringSoon')}</p>
-        </CardContent>
-      </Card>
+      <ScoringSettingsCard />
     </div>
   );
 }

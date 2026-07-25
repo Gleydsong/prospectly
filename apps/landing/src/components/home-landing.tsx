@@ -32,29 +32,14 @@ export function HomeLanding({ locale }: { locale: Locale }) {
       <TrustStrip locale={locale} />
 
       <section className="mx-auto max-w-shell px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
-          <Reveal className="relative aspect-[4/3] overflow-hidden rounded-control lg:col-span-6">
-            <Image
-              src="/images/no-website-shop.jpg"
-              alt={
-                locale === 'pt'
-                  ? 'Vitrine de negócio local sem presença digital'
-                  : 'Local storefront with little digital presence'
-              }
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-            />
-          </Reveal>
-          <Reveal className="lg:col-span-6" delay={0.08}>
-            <h2 className="max-w-[16ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
-              {t(locale, 'problemTitle')}
-            </h2>
-            <p className="mt-5 max-w-[55ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
-              {t(locale, 'problemBody')}
-            </p>
-          </Reveal>
-        </div>
+        <Reveal className="max-w-3xl">
+          <h2 className="max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
+            {t(locale, 'problemTitle')}
+          </h2>
+          <p className="mt-5 max-w-[60ch] text-base leading-relaxed text-[color:var(--ink-muted)] md:text-lg">
+            {t(locale, 'problemBody')}
+          </p>
+        </Reveal>
       </section>
 
       <section className="bg-[color:var(--bg)]">

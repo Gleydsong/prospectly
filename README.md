@@ -215,7 +215,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 - [x] **Fase 1 — Fundação:** monorepo, Docker, autenticação (JWT + refresh rotation, Argon2), organizações, RBAC, layout principal
 - [x] **Fase 2 — Leads (base):** CRUD, filtros, paginação, tags, responsáveis, detalhes, atividades, tarefas
 - [x] **Fase 3 — Prospecção:** pesquisa OpenStreetMap, filas BullMQ, importação seletiva e CSV com deduplicação
-- [ ] **Fase 4 — Análise:** fila BullMQ, análise de website, proteção SSRF, scoring
+- [x] **Fase 4 — Análise:** fila BullMQ, análise de website, proteção SSRF, scoring configurável por organização
 - [ ] **Fase 5 — CRM:** pipeline Kanban drag-and-drop, templates, campanhas
 - [ ] **Fase 6 — Dashboard e produção:** relatórios, testes E2E Playwright, observabilidade, deploy
 

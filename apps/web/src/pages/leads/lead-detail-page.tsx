@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Globe, Mail, MapPin, Phone } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Globe, Mail, MapPin, Phone, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -17,8 +18,10 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
+import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
+import { getApiErrorMessage } from '@/lib/api';
 import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { formatDateTime } from '@/lib/utils';
 
@@ -44,6 +47,7 @@ const ACTIVITY_TYPES = [
 ];
 
 export function LeadDetailPage() {
+  const { t } = useTranslation();
   const { id = '' } = useParams();
   const leadQuery = useLead(id);
   const activitiesQuery = useLeadActivities(id);
@@ -55,9 +59,23 @@ export function LeadDetailPage() {
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
+  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
 
   const createActivity = useCreateActivity(id);
   const createTask = useCreateTaskForLead(id);
+  const analyzeMutation = useMutation({
+    mutationFn: () => requestLeadWebsiteAnalysis(id),
+    onSuccess: async () => {
+      setAnalysisMessage(t('leads.analysisQueued', { defaultValue: 'Análise enfileirada.' }));
+      await leadQuery.refetch();
+      window.setTimeout(() => {
+        void leadQuery.refetch();
+      }, 2500);
+    },
+    onError: (error) => {
+      setAnalysisMessage(getApiErrorMessage(error));
+    },
+  });
 
   const activityForm = useForm<z.infer<typeof activitySchema>>({
     resolver: zodResolver(activitySchema),
@@ -95,6 +113,8 @@ export function LeadDetailPage() {
   const latestAnalysis = lead.websiteRecord?.analyses?.[0];
   const latestScore = lead.scores?.[0];
   const safeWebsite = lead.website ? sanitizeExternalUrl(lead.website) : null;
+  const analysisPending =
+    latestAnalysis?.status === 'PENDING' || latestAnalysis?.status === 'RUNNING';
 
   return (
     <div className="space-y-5">
@@ -172,39 +192,67 @@ export function LeadDetailPage() {
               {latestScore ? (
                 <ul className="space-y-1 text-sm text-zinc-600">
                   {(latestScore.rulesApplied as Array<{ key: string; points: number }>).map((rule) => (
-                    <li key={rule.key} className="flex justify-between">
-                      <span>{rule.key}</span>
+                    <li key={rule.key} className="flex justify-between gap-3">
+                      <span>{t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}</span>
                       <span className="font-medium">+{rule.points}</span>
                     </li>
                   ))}
                 </ul>
               ) : (
                 <p className="text-sm text-zinc-500">
-                  Score detalhado disponível após análise automática (Fase 4).
+                  Score detalhado aparece após a primeira análise ou recálculo.
                 </p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader title="Análise do website" />
+            <CardHeader
+              title="Análise do website"
+              action={
+                lead.website ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    loading={analyzeMutation.isPending || analysisPending}
+                    onClick={() => {
+                      setAnalysisMessage(null);
+                      analyzeMutation.mutate();
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" aria-hidden />
+                    Reanalisar
+                  </Button>
+                ) : undefined
+              }
+            />
             <CardContent>
+              {analysisMessage ? (
+                <p className="mb-3 text-sm text-zinc-600" role="status">
+                  {analysisMessage}
+                </p>
+              ) : null}
               {latestAnalysis ? (
-                <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                  <AnalysisItem label="Status HTTP" value={latestAnalysis.httpStatus?.toString() ?? '—'} />
-                  <AnalysisItem label="HTTPS" value={boolLabel(latestAnalysis.https)} />
-                  <AnalysisItem
-                    label="Resposta"
-                    value={latestAnalysis.responseTimeMs ? `${latestAnalysis.responseTimeMs} ms` : '—'}
-                  />
-                  <AnalysisItem label="Responsivo" value={boolLabel(latestAnalysis.hasViewport)} />
-                  <AnalysisItem label="Formulário" value={boolLabel(latestAnalysis.hasContactForm)} />
-                  <AnalysisItem label="Título" value={latestAnalysis.title ?? '—'} />
-                </dl>
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">
+                    Status: {latestAnalysis.status}
+                  </p>
+                  <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                    <AnalysisItem label="Status HTTP" value={latestAnalysis.httpStatus?.toString() ?? '—'} />
+                    <AnalysisItem label="HTTPS" value={boolLabel(latestAnalysis.https)} />
+                    <AnalysisItem
+                      label="Resposta"
+                      value={latestAnalysis.responseTimeMs ? `${latestAnalysis.responseTimeMs} ms` : '—'}
+                    />
+                    <AnalysisItem label="Responsivo" value={boolLabel(latestAnalysis.hasViewport)} />
+                    <AnalysisItem label="Formulário" value={boolLabel(latestAnalysis.hasContactForm)} />
+                    <AnalysisItem label="Título" value={latestAnalysis.title ?? '—'} />
+                  </dl>
+                </div>
               ) : (
                 <p className="text-sm text-zinc-500">
                   {lead.website
-                    ? 'Análise automática disponível na Fase 4.'
+                    ? 'Ainda sem análise. Use Reanalisar ou aguarde o processamento automático.'
                     : 'Lead sem website cadastrado.'}
                 </p>
               )}

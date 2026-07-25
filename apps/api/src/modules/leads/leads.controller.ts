@@ -12,6 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -61,6 +62,16 @@ export class LeadsController {
     @Body() dto: UpdateLeadDto,
   ) {
     return this.leads.update(organizationId, id, dto);
+  }
+
+  @Post(':id/analyze')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  analyzeWebsite(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.leads.requestWebsiteAnalysis(organizationId, id);
   }
 
   @Delete(':id')

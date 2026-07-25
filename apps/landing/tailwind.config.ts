@@ -17,10 +17,10 @@ const config: Config = {
           sunken: '#f4f4f5',
         },
         accent: {
-          DEFAULT: '#059669',
-          hover: '#047857',
-          soft: '#d1fae5',
-          ink: '#064e3b',
+          DEFAULT: '#2563eb',
+          hover: '#1d4ed8',
+          soft: '#dbeafe',
+          ink: '#1e3a8a',
         },
       },
       fontFamily: {

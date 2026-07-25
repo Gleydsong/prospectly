@@ -1,0 +1,1 @@
+export const WEBSITE_ANALYZER = Symbol('WEBSITE_ANALYZER');

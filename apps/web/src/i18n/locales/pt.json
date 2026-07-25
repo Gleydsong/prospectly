@@ -95,8 +95,11 @@
     "membersTitle": "Usuários e permissões",
     "membersDesc": "Membros da organização",
     "scoringTitle": "Scoring",
-    "scoringDesc": "Configuração de pontuação por organização",
+    "scoringDesc": "Ligue/desligue regras e ajuste os pontos da pontuação de oportunidade",
     "scoringSoon": "Regras de scoring configuráveis disponíveis na Fase 4, junto com a análise automática de websites.",
+    "scoringSave": "Guardar regras",
+    "scoringSaved": "Regras guardadas. Os scores serão recalculados em segundo plano.",
+    "scoringError": "Não foi possível carregar ou guardar as regras de scoring.",
     "languageTitle": "Idioma",
     "languageDesc": "Idioma da interface do Prospectly",
     "languageSaved": "Idioma atualizado.",
@@ -160,5 +163,17 @@
     "imports": "Importar leads por CSV",
     "pipeline": "Pipeline",
     "tasks": "Tarefas"
+  },
+  "scoreRules": {
+    "NO_WEBSITE": "Sem website",
+    "NO_HTTPS": "Website sem HTTPS",
+    "NOT_RESPONSIVE": "Website não responsivo",
+    "SLOW": "Performance baixa",
+    "NO_CONTACT_FORM": "Sem formulário de contato",
+    "NO_META_DESCRIPTION": "Sem meta description",
+    "MANY_REVIEWS_BAD_SITE": "Muitas avaliações e site fraco",
+    "HAS_PHONE": "Telefone disponível",
+    "HAS_EMAIL": "E-mail disponível",
+    "HIGH_RATING": "Nota alta"
   }
 }

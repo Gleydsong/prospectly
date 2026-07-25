@@ -31,6 +31,11 @@ export const configuration = () => ({
     maxFileSizeBytes: parseInt(process.env.CSV_MAX_FILE_SIZE_BYTES ?? '5242880', 10),
     maxRows: parseInt(process.env.CSV_MAX_ROWS ?? '10000', 10),
   },
+  websiteAnalysis: {
+    timeoutMs: parseInt(process.env.WEBSITE_ANALYSIS_TIMEOUT_MS ?? '10000', 10),
+    maxBodyBytes: parseInt(process.env.WEBSITE_ANALYSIS_MAX_BODY_BYTES ?? '1500000', 10),
+    maxRedirects: parseInt(process.env.WEBSITE_ANALYSIS_MAX_REDIRECTS ?? '5', 10),
+  },
   smtp: {
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT ?? '587', 10),
