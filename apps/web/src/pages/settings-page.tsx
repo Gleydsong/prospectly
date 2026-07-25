@@ -1,18 +1,23 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   createBillingPortal,
   createCheckoutSession,
   getBillingStatus,
   requestDataDeletion,
+  updateProfile,
 } from '@/features/auth/api';
+import { setAppLocale } from '@/i18n';
 import { api, getApiErrorMessage } from '@/lib/api';
+import type { AppLocale } from '@/lib/locale';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface Member {
@@ -24,8 +29,13 @@ interface Member {
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
   const [searchParams] = useSearchParams();
+  const [locale, setLocale] = useState<AppLocale>((user?.locale as AppLocale) ?? 'pt');
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [dsrMessage, setDsrMessage] = useState<string | null>(null);
 
@@ -51,12 +61,26 @@ export function SettingsPage() {
     queryFn: getBillingStatus,
   });
 
+  const saveLocale = useMutation({
+    mutationFn: (next: AppLocale) => updateProfile({ locale: next }),
+    onSuccess: async (data) => {
+      updateUser({ locale: data.locale });
+      await setAppLocale(data.locale);
+      setMessage(t('settings.languageSaved'));
+      setError(null);
+    },
+    onError: (err) => {
+      setMessage(null);
+      setError(getApiErrorMessage(err) || t('settings.languageError'));
+    },
+  });
+
   const checkout = useMutation({
     mutationFn: createCheckoutSession,
     onSuccess: (data) => {
       window.location.assign(data.url);
     },
-    onError: (error) => setBillingError(getApiErrorMessage(error)),
+    onError: (err) => setBillingError(getApiErrorMessage(err)),
   });
 
   const portal = useMutation({
@@ -64,49 +88,74 @@ export function SettingsPage() {
     onSuccess: (data) => {
       window.location.assign(data.url);
     },
-    onError: (error) => setBillingError(getApiErrorMessage(error)),
+    onError: (err) => setBillingError(getApiErrorMessage(err)),
   });
 
   const dsr = useMutation({
     mutationFn: () =>
       requestDataDeletion('Solicitação via app — exclusão de dados pessoais (LGPD)'),
     onSuccess: () => {
-      setDsrMessage(
-        'Solicitação registrada. Entraremos em contato em privacy@prospectly.dev para concluir a exclusão.',
-      );
+      setDsrMessage(t('settings.dsrSuccess'));
     },
-    onError: (error) => setDsrMessage(getApiErrorMessage(error)),
+    onError: (err) => setDsrMessage(getApiErrorMessage(err)),
   });
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
-        <p className="text-sm text-slate-500">{user?.organizationName}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('settings.title')}</h1>
+        <p className="text-sm text-zinc-500">{user?.organizationName}</p>
       </div>
 
       <Card>
-        <CardHeader title="Plano e cobrança" description="Starter mensal ou vitalício via Stripe" />
+        <CardHeader title={t('settings.languageTitle')} description={t('settings.languageDesc')} />
+        <CardContent className="space-y-3">
+          <Select
+            label={t('auth.language')}
+            value={locale}
+            onChange={(event) => setLocale(event.target.value as AppLocale)}
+          >
+            <option value="pt">{t('auth.languagePt')}</option>
+            <option value="en">{t('auth.languageEn')}</option>
+          </Select>
+          {message ? <p className="text-sm text-brand-700">{message}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            loading={saveLocale.isPending}
+            disabled={locale === (user?.locale ?? 'pt')}
+            onClick={() => saveLocale.mutate(locale)}
+          >
+            {t('common.save')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader title={t('settings.billingTitle')} description={t('settings.billingDesc')} />
         <CardContent className="space-y-4">
           {billing.isLoading ? (
             <Skeleton className="h-20" />
           ) : (
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span>
-                Plano: <strong>{billing.data?.plan ?? 'FREE'}</strong>
+                {t('settings.planLabel')}: <strong>{billing.data?.plan ?? 'FREE'}</strong>
               </span>
               <Badge tone={billing.data?.planStatus === 'ACTIVE' ? 'brand' : 'slate'}>
                 {billing.data?.planStatus ?? 'INACTIVE'}
               </Badge>
               {billing.data?.planCurrency ? <span>{billing.data.planCurrency}</span> : null}
-              <span className="text-slate-500">
-                Demo grátis: {billing.data?.freeSearchLimit ?? 3} buscas
+              <span className="text-zinc-500">
+                {t('settings.freeSearches', { count: billing.data?.freeSearchLimit ?? 3 })}
               </span>
             </div>
           )}
 
           {billingError ? (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
               {billingError}
             </p>
           ) : null}
@@ -119,15 +168,10 @@ export function SettingsPage() {
                 checkout.mutate({ interval: defaultInterval, currency: defaultCurrency })
               }
             >
-              Assinar / comprar
+              {t('settings.subscribe')}
             </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              loading={portal.isPending}
-              onClick={() => portal.mutate()}
-            >
-              Portal Stripe
+            <Button type="button" variant="secondary" loading={portal.isPending} onClick={() => portal.mutate()}>
+              {t('settings.stripePortal')}
             </Button>
             <a
               className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-700"
@@ -135,24 +179,24 @@ export function SettingsPage() {
               target="_blank"
               rel="noreferrer"
             >
-              Ver preços
+              {t('settings.viewPricing')}
             </a>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader title="Usuários e permissões" description="Membros da organização" />
+        <CardHeader title={t('settings.membersTitle')} description={t('settings.membersDesc')} />
         <CardContent>
           {members.isLoading ? (
             <Skeleton className="h-32" />
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-zinc-100">
               {(members.data ?? []).map((member) => (
                 <li key={member.id} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{member.user.name}</p>
-                    <p className="text-xs text-slate-500">{member.user.email}</p>
+                    <p className="text-sm font-medium text-zinc-900">{member.user.name}</p>
+                    <p className="text-xs text-zinc-500">{member.user.email}</p>
                   </div>
                   <Badge tone={member.role === 'OWNER' ? 'brand' : 'slate'}>{member.role}</Badge>
                 </li>
@@ -163,29 +207,20 @@ export function SettingsPage() {
       </Card>
 
       <Card>
-        <CardHeader
-          title="Privacidade (LGPD)"
-          description="Solicitar exclusão ou exportação de dados pessoais"
-        />
+        <CardHeader title={t('settings.privacyTitle')} description={t('settings.privacyDesc')} />
         <CardContent className="space-y-3">
-          <p className="text-sm text-slate-600">
-            A exclusão completa é processada manualmente na fase MVP. Registrar a solicitação cria um
-            ticket interno (DELETE /users/me/data-requests).
-          </p>
+          <p className="text-sm text-zinc-600">{t('settings.privacyBody')}</p>
           <Button type="button" variant="secondary" loading={dsr.isPending} onClick={() => dsr.mutate()}>
-            Solicitar exclusão dos meus dados
+            {t('settings.requestDeletion')}
           </Button>
-          {dsrMessage ? <p className="text-sm text-slate-700">{dsrMessage}</p> : null}
+          {dsrMessage ? <p className="text-sm text-zinc-700">{dsrMessage}</p> : null}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader title="Scoring" description="Configuração de pontuação por organização" />
+        <CardHeader title={t('settings.scoringTitle')} description={t('settings.scoringDesc')} />
         <CardContent>
-          <p className="text-sm text-slate-500">
-            Regras de scoring configuráveis disponíveis na Fase 4, junto com a análise automática
-            de websites.
-          </p>
+          <p className="text-sm text-zinc-500">{t('settings.scoringSoon')}</p>
         </CardContent>
       </Card>
     </div>

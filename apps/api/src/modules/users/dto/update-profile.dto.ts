@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional()
@@ -13,4 +13,9 @@ export class UpdateProfileDto {
   @IsUrl({ require_tld: false })
   @MaxLength(500)
   avatarUrl?: string;
+
+  @ApiPropertyOptional({ enum: ['pt', 'en'] })
+  @IsOptional()
+  @IsIn(['pt', 'en'])
+  locale?: 'pt' | 'en';
 }

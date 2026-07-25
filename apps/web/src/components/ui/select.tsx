@@ -13,7 +13,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-slate-700">
+          <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-zinc-700">
             {label}
           </label>
         ) : null}
@@ -22,9 +22,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={inputId}
           aria-invalid={error ? true : undefined}
           className={cn(
-            'h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900',
+            'h-10 w-full rounded-control border border-zinc-300 bg-white px-3 text-sm text-zinc-900',
             'focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
-            error && 'border-red-500',
+            error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
             className,
           )}
           {...props}

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { AppLocale } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 
@@ -14,6 +15,7 @@ export class UsersService {
         name: true,
         email: true,
         avatarUrl: true,
+        locale: true,
         emailVerifiedAt: true,
         createdAt: true,
         memberships: {
@@ -30,11 +32,18 @@ export class UsersService {
     return user;
   }
 
-  async updateProfile(userId: string, data: { name?: string; avatarUrl?: string }) {
+  async updateProfile(
+    userId: string,
+    data: { name?: string; avatarUrl?: string; locale?: AppLocale },
+  ) {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { name: data.name?.trim(), avatarUrl: data.avatarUrl },
-      select: { id: true, name: true, email: true, avatarUrl: true },
+      data: {
+        name: data.name?.trim(),
+        avatarUrl: data.avatarUrl,
+        locale: data.locale,
+      },
+      select: { id: true, name: true, email: true, avatarUrl: true, locale: true },
     });
   }
 

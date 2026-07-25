@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckSquare, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +142,7 @@ function QueryErrorState({
 }
 
 export function SearchPage() {
+  const { t } = useTranslation();
   const [historyPage, setHistoryPage] = useState(1);
   const [selectedSearchId, setSelectedSearchId] = useState('');
   const [resultsPage, setResultsPage] = useState(1);
@@ -288,8 +290,8 @@ export function SearchPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Pesquisa de empresas</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.search')}</h1>
+        <p className="text-sm text-zinc-500">
           Encontre negócios no Brasil e na Europa via OpenStreetMap ou Google Places.
         </p>
       </div>
@@ -337,18 +339,18 @@ export function SearchPage() {
               </Select>
             </div>
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-slate-700">Categorias</legend>
+              <legend className="mb-2 text-sm font-medium text-zinc-700">Categorias</legend>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                 {PROSPECTING_CATEGORIES.map((category) => {
                   const checked = (selectedCategories ?? []).includes(category.value);
                   return (
                     <label
                       key={category.value}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
                         checked={checked}
                         onChange={() => toggleCategory(category.value)}
                       />
@@ -361,10 +363,10 @@ export function SearchPage() {
                 <p className="mt-2 text-sm text-red-600" role="alert">{errors.categories.message}</p>
               ) : null}
             </fieldset>
-            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-zinc-700">
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
                 {...register('onlyWithoutWebsite')}
               />
               Somente empresas sem site informado
@@ -391,7 +393,7 @@ export function SearchPage() {
             <EmptyState title="Nenhuma pesquisa" description="Crie uma pesquisa para começar a encontrar empresas." />
           ) : (
             <div className="space-y-3">
-              <ul className="divide-y divide-slate-100" aria-label="Histórico de pesquisas">
+              <ul className="divide-y divide-zinc-100" aria-label="Histórico de pesquisas">
                 {searches.map((search) => (
                   <li key={search.id}>
                     <div className="flex items-start gap-2 py-3">
@@ -399,13 +401,13 @@ export function SearchPage() {
                         type="button"
                         onClick={() => selectSearch(search.id)}
                         aria-pressed={search.id === selectedSearchId}
-                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-slate-50 focus-visible:rounded-lg"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-zinc-50 focus-visible:rounded-lg"
                       >
                         <span className="min-w-0">
-                          <span className="block font-medium text-slate-900">
+                          <span className="block font-medium text-zinc-900">
                             {formatSearchHeading(search.input)}
                           </span>
-                          <span className="text-sm text-slate-500">{formatDateTime(search.createdAt)}</span>
+                          <span className="text-sm text-zinc-500">{formatDateTime(search.createdAt)}</span>
                         </span>
                         <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
                       </button>
@@ -461,7 +463,7 @@ export function SearchPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[880px] text-left text-sm">
                     <thead>
-                      <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                      <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
                         <th scope="col" className="w-12 px-3 py-3">
                           <input
                             type="checkbox"
@@ -469,7 +471,7 @@ export function SearchPage() {
                             checked={allCurrentResultsSelected}
                             onChange={toggleCurrentPage}
                             disabled={selectableResultIds.length === 0}
-                            className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
                           />
                         </th>
                         <th scope="col" className="px-3 py-3 font-medium">Empresa</th>
@@ -484,7 +486,7 @@ export function SearchPage() {
                         const business = result.normalizedData ?? result.data;
                         const imported = Boolean(result.importedLeadId);
                         return (
-                          <tr key={result.id} className="border-b border-slate-50">
+                          <tr key={result.id} className="border-b border-zinc-50">
                             <td className="px-3 py-3">
                               <input
                                 type="checkbox"
@@ -493,13 +495,13 @@ export function SearchPage() {
                                 onChange={() => toggleResult(result.id)}
                                 disabled={imported || !canImport}
                                 title={imported ? 'Resultado já importado' : !canImport ? 'Aguarde a conclusão da pesquisa' : undefined}
-                                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                                className="h-4 w-4 rounded border-zinc-300 text-brand-600 focus:ring-brand-500"
                               />
                             </td>
-                            <td className="px-3 py-3 font-medium text-slate-900">{business.companyName}{imported ? <span className="ml-2 text-xs font-normal text-slate-500">Importado</span> : null}</td>
-                            <td className="px-3 py-3 text-slate-600">{business.phone ?? '—'}</td>
-                            <td className="px-3 py-3 text-slate-600">{business.address ?? `${business.city}/${business.state}`}</td>
-                            <td className="px-3 py-3 text-slate-600">{business.category ?? '—'}</td>
+                            <td className="px-3 py-3 font-medium text-zinc-900">{business.companyName}{imported ? <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span> : null}</td>
+                            <td className="px-3 py-3 text-zinc-600">{business.phone ?? '—'}</td>
+                            <td className="px-3 py-3 text-zinc-600">{business.address ?? `${business.city}/${business.state}`}</td>
+                            <td className="px-3 py-3 text-zinc-600">{business.category ?? '—'}</td>
                             <td className="px-3 py-3"><Badge tone={websiteTone(result.websitePresence)}>{WEBSITE_LABEL[result.websitePresence]}</Badge></td>
                           </tr>
                         );
@@ -508,13 +510,13 @@ export function SearchPage() {
                   </table>
                 </div>
                 {resultPage?.meta ? <Pagination {...resultPage.meta} onPageChange={changeResultsPage} /> : null}
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-zinc-500">
                   Dados ©{' '}
                   <a
                     href="https://www.openstreetmap.org/copyright"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline hover:text-slate-700"
+                    className="underline hover:text-zinc-700"
                   >
                     colaboradores do OpenStreetMap
                   </a>

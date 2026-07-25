@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Globe, Plus } from 'lucide-react';
 
@@ -18,6 +19,7 @@ import { LeadStatus } from '@/types';
 import { LeadFormModal } from './lead-form-modal';
 
 export function LeadsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
@@ -48,8 +50,8 @@ export function LeadsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Leads</h1>
-          <p className="text-sm text-slate-500">Gerencie e qualifique suas oportunidades</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.title')}</h1>
+          <p className="text-sm text-zinc-500">Gerencie e qualifique suas oportunidades</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4" aria-hidden />
@@ -127,7 +129,7 @@ export function LeadsPage() {
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
                   <th scope="col" className="px-5 py-3 font-medium">Cidade</th>
                   <th scope="col" className="px-5 py-3 font-medium">Status</th>
@@ -140,7 +142,7 @@ export function LeadsPage() {
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="cursor-pointer border-b border-slate-50 hover:bg-slate-50"
+                    className="cursor-pointer border-b border-zinc-50 hover:bg-zinc-50"
                     onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <td className="px-5 py-3">
@@ -148,12 +150,12 @@ export function LeadsPage() {
                         <div>
                           <Link
                             to={`/leads/${lead.id}`}
-                            className="font-medium text-slate-900 hover:text-brand-600"
+                            className="font-medium text-zinc-900 hover:text-brand-600"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {lead.companyName}
                           </Link>
-                          <p className="text-xs text-slate-500">{lead.segment ?? lead.category ?? '—'}</p>
+                          <p className="text-xs text-zinc-500">{lead.segment ?? lead.category ?? '—'}</p>
                         </div>
                         {!lead.website ? (
                           <Badge tone="amber" title="Sem website">
@@ -162,14 +164,14 @@ export function LeadsPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{lead.city ?? '—'}</td>
+                    <td className="px-5 py-3 text-zinc-600">{lead.city ?? '—'}</td>
                     <td className="px-5 py-3">
                       <LeadStatusBadge status={lead.status} />
                     </td>
                     <td className="px-5 py-3">
                       <ScoreBadge score={lead.score} />
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{lead.owner?.name ?? '—'}</td>
+                    <td className="px-5 py-3 text-zinc-600">{lead.owner?.name ?? '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {lead.tags.slice(0, 3).map((tag) => (

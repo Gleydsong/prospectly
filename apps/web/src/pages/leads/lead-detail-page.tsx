@@ -102,8 +102,8 @@ export function LeadDetailPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{lead.companyName}</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{lead.companyName}</h1>
+          <p className="text-sm text-zinc-500">
             {[lead.segment, lead.city, lead.country].filter(Boolean).join(' · ') || 'Sem segmento'}
           </p>
         </div>
@@ -140,10 +140,10 @@ export function LeadDetailPage() {
             />
             <InfoRow icon={MapPin} label="Endereço" value={[lead.address, lead.city, lead.state].filter(Boolean).join(', ') || undefined} />
             <div className="pt-2">
-              <p className="mb-1 text-xs font-medium uppercase text-slate-400">Tags</p>
+              <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Tags</p>
               <div className="flex flex-wrap gap-1">
                 {lead.tags.length === 0 ? (
-                  <span className="text-slate-400">—</span>
+                  <span className="text-zinc-400">—</span>
                 ) : (
                   lead.tags.map((tag) => <Badge key={tag.id}>{tag.name}</Badge>)
                 )}
@@ -151,8 +151,8 @@ export function LeadDetailPage() {
             </div>
             {lead.notes ? (
               <div className="pt-2">
-                <p className="mb-1 text-xs font-medium uppercase text-slate-400">Observações</p>
-                <p className="whitespace-pre-wrap text-slate-600">{lead.notes}</p>
+                <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Observações</p>
+                <p className="whitespace-pre-wrap text-zinc-600">{lead.notes}</p>
               </div>
             ) : null}
           </CardContent>
@@ -166,7 +166,7 @@ export function LeadDetailPage() {
             />
             <CardContent>
               {latestScore ? (
-                <ul className="space-y-1 text-sm text-slate-600">
+                <ul className="space-y-1 text-sm text-zinc-600">
                   {(latestScore.rulesApplied as Array<{ key: string; points: number }>).map((rule) => (
                     <li key={rule.key} className="flex justify-between">
                       <span>{rule.key}</span>
@@ -175,7 +175,7 @@ export function LeadDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-zinc-500">
                   Score detalhado disponível após análise automática (Fase 4).
                 </p>
               )}
@@ -198,7 +198,7 @@ export function LeadDetailPage() {
                   <AnalysisItem label="Título" value={latestAnalysis.title ?? '—'} />
                 </dl>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-zinc-500">
                   {lead.website
                     ? 'Análise automática disponível na Fase 4.'
                     : 'Lead sem website cadastrado.'}
@@ -229,17 +229,17 @@ export function LeadDetailPage() {
               {activitiesQuery.isLoading ? (
                 <Skeleton className="h-24" />
               ) : !activitiesQuery.data || activitiesQuery.data.data.length === 0 ? (
-                <p className="text-sm text-slate-500">Nenhuma atividade registrada.</p>
+                <p className="text-sm text-zinc-500">Nenhuma atividade registrada.</p>
               ) : (
-                <ol className="relative space-y-4 border-l border-slate-200 pl-5">
+                <ol className="relative space-y-4 border-l border-zinc-200 pl-5">
                   {activitiesQuery.data.data.map((activity) => (
                     <li key={activity.id} className="relative">
                       <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden />
-                      <p className="text-sm font-medium text-slate-900">{activity.type}</p>
+                      <p className="text-sm font-medium text-zinc-900">{activity.type}</p>
                       {activity.description ? (
-                        <p className="text-sm text-slate-600">{activity.description}</p>
+                        <p className="text-sm text-zinc-600">{activity.description}</p>
                       ) : null}
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-zinc-400">
                         {activity.user.name} · {formatDateTime(activity.createdAt)}
                       </p>
                     </li>
@@ -262,17 +262,17 @@ export function LeadDetailPage() {
               {tasksQuery.isLoading ? (
                 <Skeleton className="h-20" />
               ) : !tasksQuery.data || tasksQuery.data.data.length === 0 ? (
-                <p className="text-sm text-slate-500">Nenhuma tarefa.</p>
+                <p className="text-sm text-zinc-500">Nenhuma tarefa.</p>
               ) : (
                 <ul className="space-y-2">
                   {tasksQuery.data.data.map((task) => (
                     <li
                       key={task.id}
-                      className="flex items-center justify-between rounded-lg border border-slate-100 p-3"
+                      className="flex items-center justify-between rounded-lg border border-zinc-100 p-3"
                     >
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{task.title}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-sm font-medium text-zinc-900">{task.title}</p>
+                        <p className="text-xs text-zinc-500">
                           {task.assignee?.name ?? 'Sem responsável'} · {formatDateTime(task.dueAt)}
                         </p>
                       </div>
@@ -363,10 +363,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-4 w-4 text-slate-400" aria-hidden />
+      <Icon className="mt-0.5 h-4 w-4 text-zinc-400" aria-hidden />
       <div>
-        <p className="text-xs font-medium uppercase text-slate-400">{label}</p>
-        <p className="text-slate-700">{value ?? '—'}</p>
+        <p className="text-xs font-medium uppercase text-zinc-400">{label}</p>
+        <p className="text-zinc-700">{value ?? '—'}</p>
       </div>
     </div>
   );
@@ -375,8 +375,8 @@ function InfoRow({
 function AnalysisItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase text-slate-400">{label}</dt>
-      <dd className="truncate text-slate-700" title={value}>
+      <dt className="text-xs font-medium uppercase text-zinc-400">{label}</dt>
+      <dd className="truncate text-zinc-700" title={value}>
         {value}
       </dd>
     </div>

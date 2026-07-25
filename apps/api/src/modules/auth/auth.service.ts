@@ -30,6 +30,7 @@ export interface AuthResponse extends AuthTokens {
     organizationId: string;
     organizationName: string;
     role: Role;
+    locale: 'pt' | 'en';
   };
 }
 
@@ -68,6 +69,7 @@ export class AuthService {
           email,
           name: dto.name.trim(),
           passwordHash,
+          locale: dto.locale,
           termsAcceptedAt: acceptedAt,
           termsVersion: TERMS_VERSION,
           privacyAcceptedAt: acceptedAt,
@@ -298,6 +300,7 @@ export class AuthService {
         organizationId,
         organizationName: organization.name,
         role,
+        locale: user.locale,
       },
     };
   }

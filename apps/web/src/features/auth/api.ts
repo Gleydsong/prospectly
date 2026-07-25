@@ -17,9 +17,19 @@ export async function register(input: {
   email: string;
   password: string;
   organizationName: string;
+  locale: 'pt' | 'en';
   acceptTerms: true;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/register', input);
+  return data;
+}
+
+export async function updateProfile(input: {
+  name?: string;
+  avatarUrl?: string;
+  locale?: 'pt' | 'en';
+}): Promise<{ id: string; name: string; email: string; avatarUrl?: string | null; locale: 'pt' | 'en' }> {
+  const { data } = await api.patch('/users/me', input);
   return data;
 }
 

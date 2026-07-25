@@ -2,14 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --bg: #fafafa;
+  --bg-raised: #ffffff;
+  --bg-sunken: #f4f4f5;
+  --ink: #18181b;
+  --ink-muted: #52525b;
+  --accent: #059669;
+  --accent-hover: #047857;
+  --ring: rgb(5 150 105 / 0.35);
+  --border: rgb(24 24 27 / 0.1);
+}
+
 @layer base {
   html {
     @apply antialiased;
   }
+
   body {
-    @apply bg-slate-50 text-slate-900;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100dvh;
+    @apply font-sans;
   }
+
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+    @apply outline-none ring-2 ring-brand-500/40 ring-offset-2;
+  }
+
+  ::selection {
+    background: rgb(5 150 105 / 0.22);
   }
 }
