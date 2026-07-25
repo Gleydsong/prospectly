@@ -47,14 +47,17 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Prospectly API')
-    .setDescription('Plataforma inteligente para prospecção de clientes locais.')
-    .setVersion('0.1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  const nodeEnv = config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+  if (nodeEnv !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Prospectly API')
+      .setDescription('Plataforma inteligente para prospecção de clientes locais.')
+      .setVersion('0.1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = config.get<number>('PORT') ?? 3000;
   await app.listen(port);

@@ -52,7 +52,8 @@ export class AuthService {
     const email = dto.email.toLowerCase().trim();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      throw new ConflictException('Email already registered');
+      // Generic message avoids account enumeration via register.
+      throw new ConflictException('Unable to complete registration with the provided data');
     }
 
     const passwordHash = await argon2.hash(dto.password);
@@ -158,7 +159,15 @@ export class AuthService {
     }
 
     const stored = await this.prisma.refreshToken.findUnique({ where: { id: payload.jti } });
-    if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
+    if (!stored || stored.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token expired or revoked');
+    }
+
+    // Reuse of an already-rotated refresh token → revoke the whole session family.
+    if (stored.revokedAt) {
+      if (stored.replacedById) {
+        await this.logoutAll(payload.sub);
+      }
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 

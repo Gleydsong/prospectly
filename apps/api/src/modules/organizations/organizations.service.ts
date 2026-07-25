@@ -80,6 +80,7 @@ export class OrganizationsService {
     memberId: string,
     role: Role,
     actingUserId: string,
+    actingRole: Role,
   ) {
     const member = await this.prisma.organizationMember.findFirst({
       where: { id: memberId, organizationId },
@@ -87,6 +88,12 @@ export class OrganizationsService {
     if (!member) {
       throw new NotFoundException('Member not found');
     }
+
+    // Only OWNER may assign OWNER or change an existing OWNER (blocks ADMIN privilege escalation).
+    if (actingRole !== 'OWNER' && (role === 'OWNER' || member.role === 'OWNER')) {
+      throw new ForbiddenException('Only OWNER can assign or change the OWNER role');
+    }
+
     if (member.userId === actingUserId && member.role === 'OWNER' && role !== 'OWNER') {
       const owners = await this.prisma.organizationMember.count({
         where: { organizationId, role: 'OWNER' },

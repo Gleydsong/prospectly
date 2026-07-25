@@ -45,7 +45,13 @@ export class OrganizationsController {
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberRoleDto,
   ) {
-    return this.organizations.updateMemberRole(organizationId, memberId, dto.role, user.id);
+    return this.organizations.updateMemberRole(
+      organizationId,
+      memberId,
+      dto.role,
+      user.id,
+      user.role,
+    );
   }
 
   @Delete('members/:memberId')

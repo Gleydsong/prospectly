@@ -34,6 +34,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
   refresh(
@@ -61,6 +62,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {

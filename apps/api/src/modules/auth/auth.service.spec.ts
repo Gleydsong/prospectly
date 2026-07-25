@@ -67,7 +67,7 @@ const makeJwt = () =>
 describe('AuthService', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('register rejects duplicated email', async () => {
+  it('register rejects duplicated email with generic message', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
     const service = new AuthService(prisma, makeJwt(), makeConfig());
@@ -81,7 +81,9 @@ describe('AuthService', () => {
         locale: 'pt',
         acceptTerms: true,
       }),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toMatchObject({
+      message: 'Unable to complete registration with the provided data',
+    });
   });
 
   it('register persists locale on the user', async () => {
@@ -212,9 +214,34 @@ describe('AuthService', () => {
       tokenHash: 'hash',
       revokedAt: new Date(),
       expiresAt: new Date(Date.now() + 10000),
+      replacedById: null,
     });
 
     const service = new AuthService(prisma, jwt, makeConfig());
     await expect(service.refresh('stale-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refresh reuse of rotated token revokes all sessions', async () => {
+    const jwt = makeJwt();
+    (jwt.verifyAsync as jest.Mock).mockResolvedValue({ sub: 'u1', jti: 'jti-1' });
+    const prisma = makePrisma();
+    prisma.refreshToken.findUnique = jest.fn().mockResolvedValue({
+      id: 'jti-1',
+      tokenHash: 'hash',
+      revokedAt: new Date(),
+      expiresAt: new Date(Date.now() + 10000),
+      replacedById: 'jti-2',
+    });
+    prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 2 });
+
+    const service = new AuthService(prisma, jwt, makeConfig());
+    await expect(service.refresh('reused-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      }),
+    );
   });
 });
