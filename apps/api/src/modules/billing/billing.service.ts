@@ -154,7 +154,15 @@ export class BillingService {
 
     switch (event.type) {
       case 'checkout.session.completed':
+      case 'checkout.session.async_payment_succeeded':
         await this.onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      case 'checkout.session.async_payment_failed':
+        this.logger.warn(
+          `Async checkout payment failed for session ${
+            (event.data.object as Stripe.Checkout.Session).id
+          }`,
+        );
         break;
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted':
@@ -170,11 +178,24 @@ export class BillingService {
     return { received: true };
   }
 
+  private isCheckoutPaid(session: Stripe.Checkout.Session): boolean {
+    // Delayed methods (e.g. boleto/bank transfer) complete checkout with payment_status=unpaid.
+    // Only activate entitlements once funds are secured.
+    return session.payment_status === 'paid' || session.payment_status === 'no_payment_required';
+  }
+
   private async onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
     const organizationId =
       session.metadata?.organizationId ?? session.client_reference_id ?? undefined;
     if (!organizationId) {
       this.logger.warn('checkout.session.completed without organizationId');
+      return;
+    }
+
+    if (!this.isCheckoutPaid(session)) {
+      this.logger.log(
+        `Skipping entitlement activation for unpaid checkout session ${session.id} (org=${organizationId})`,
+      );
       return;
     }
 
@@ -250,14 +271,42 @@ export class BillingService {
     });
   }
 
+  private invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+    const fromParent = invoice.parent?.subscription_details?.subscription;
+    if (typeof fromParent === 'string') return fromParent;
+    if (fromParent && typeof fromParent === 'object' && 'id' in fromParent) {
+      return fromParent.id;
+    }
+    // Legacy payloads / older API versions may still expose subscription at the top level.
+    const legacy = (invoice as unknown as { subscription?: string | { id: string } | null })
+      .subscription;
+    if (typeof legacy === 'string') return legacy;
+    if (legacy && typeof legacy === 'object' && 'id' in legacy) return legacy.id;
+    return null;
+  }
+
   private async onInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
     if (!customerId) return;
+
+    const subscriptionId = this.invoiceSubscriptionId(invoice);
+    if (!subscriptionId) {
+      this.logger.debug(`Ignoring invoice.paid ${invoice.id} without subscription`);
+      return;
+    }
 
     const org = await this.prisma.organization.findFirst({
       where: { stripeCustomerId: customerId },
     });
     if (!org || org.plan === OrgPlan.LIFETIME) return;
+
+    // Ignore stale/out-of-order invoices after cancel or subscription replacement.
+    if (!org.stripeSubscriptionId || org.stripeSubscriptionId !== subscriptionId) {
+      this.logger.warn(
+        `Ignoring invoice.paid ${invoice.id}: subscription ${subscriptionId} does not match org ${org.id}`,
+      );
+      return;
+    }
 
     await this.prisma.organization.update({
       where: { id: org.id },
