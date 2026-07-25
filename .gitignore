@@ -1,17 +1,35 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build outputs
 dist/
 build/
 .next/
 coverage/
-*.log
+*.tsbuildinfo
+
+# Env / secrets
 .env
 .env.local
 .env.*.local
 !.env.example
+
+# Logs & OS
+*.log
 .DS_Store
+Thumbs.db
+
+# Tooling caches / local state
 .turbo/
 .vitest/
+.cache/
+.ua/
+.idea/
+
+# Test artifacts
 playwright-report/
 test-results/
+
+# App runtime uploads
 uploads/
-*.tsbuildinfo

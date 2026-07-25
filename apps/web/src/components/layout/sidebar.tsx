@@ -28,24 +28,26 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     <>
       {open ? (
         <button
-          className="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"
+          className="fixed inset-0 z-30 bg-zinc-900/50 lg:hidden"
           onClick={onClose}
           aria-label="Fechar menu"
         />
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-zinc-200 bg-white transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-slate-100 px-5">
-          <NavLink to="/" className="flex items-center gap-2" onClick={onClose}>
-            <Building2 className="h-6 w-6 text-brand-600" aria-hidden />
-            <span className="text-lg font-bold text-slate-900">Prospectly</span>
+        <div className="flex h-16 items-center justify-between border-b border-zinc-100 px-5">
+          <NavLink to="/" className="flex items-center gap-2.5" onClick={onClose}>
+            <span className="flex h-8 w-8 items-center justify-center rounded-control bg-brand-600 text-white">
+              <Building2 className="h-4 w-4" aria-hidden />
+            </span>
+            <span className="text-lg font-semibold tracking-tight text-zinc-900">Prospectly</span>
           </NavLink>
           <button className="lg:hidden" onClick={onClose} aria-label="Fechar menu lateral">
-            <X className="h-5 w-5 text-slate-500" />
+            <X className="h-5 w-5 text-zinc-500" />
           </button>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegação principal">
@@ -57,10 +59,10 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
                 )
               }
             >

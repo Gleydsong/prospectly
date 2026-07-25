@@ -46,12 +46,18 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 p-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgb(5_150_105_/_0.12),_transparent_55%)]"
+      />
+      <div className="relative w-full max-w-md rounded-control border border-zinc-200/80 bg-white p-8 shadow-soft">
         <div className="mb-8 flex flex-col items-center gap-2">
-          <Building2 className="h-10 w-10 text-brand-600" aria-hidden />
-          <h1 className="text-2xl font-bold text-slate-900">Criar conta</h1>
-          <p className="text-sm text-slate-500">Comece a prospectar em minutos</p>
+          <span className="flex h-12 w-12 items-center justify-center rounded-control bg-brand-600 text-white">
+            <Building2 className="h-6 w-6" aria-hidden />
+          </span>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Criar conta</h1>
+          <p className="text-sm text-zinc-500">Comece a prospectar em minutos</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -77,7 +83,7 @@ export function RegisterPage() {
           />
 
           {serverError ? (
-            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
               {serverError}
             </p>
           ) : null}
@@ -87,7 +93,7 @@ export function RegisterPage() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-zinc-500">
           Já tem conta?{' '}
           <Link to="/login" className="font-medium text-brand-600 hover:text-brand-700">
             Entrar

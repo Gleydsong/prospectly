@@ -15,7 +15,7 @@ export function Pagination({
 }) {
   return (
     <nav className="flex items-center justify-between" aria-label="Paginação">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-zinc-500">
         {total} resultado{total === 1 ? '' : 's'} — página {page} de {totalPages}
       </p>
       <div className="flex gap-2">

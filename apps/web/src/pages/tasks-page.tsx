@@ -64,8 +64,8 @@ export function TasksPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Tarefas</h1>
-          <p className="text-sm text-slate-500">Acompanhe próximos passos com os leads</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Tarefas</h1>
+          <p className="text-sm text-zinc-500">Acompanhe próximos passos com os leads</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4" aria-hidden />
@@ -112,7 +112,7 @@ export function TasksPage() {
           <Card className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Título</th>
                   <th scope="col" className="px-5 py-3 font-medium">Lead</th>
                   <th scope="col" className="px-5 py-3 font-medium">Vencimento</th>
@@ -123,8 +123,8 @@ export function TasksPage() {
               </thead>
               <tbody>
                 {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-slate-50">
-                    <td className="px-5 py-3 font-medium text-slate-900">{task.title}</td>
+                  <tr key={task.id} className="border-b border-zinc-50">
+                    <td className="px-5 py-3 font-medium text-zinc-900">{task.title}</td>
                     <td className="px-5 py-3">
                       {task.lead ? (
                         <Link to={`/leads/${task.lead.id}`} className="text-brand-600 hover:underline">
@@ -134,7 +134,7 @@ export function TasksPage() {
                         '—'
                       )}
                     </td>
-                    <td className="px-5 py-3 text-slate-600">{formatDate(task.dueAt)}</td>
+                    <td className="px-5 py-3 text-zinc-600">{formatDate(task.dueAt)}</td>
                     <td className="px-5 py-3">
                       <Badge tone={task.priority === 'URGENT' || task.priority === 'HIGH' ? 'red' : 'slate'}>
                         {PRIORITY_LABEL[task.priority]}

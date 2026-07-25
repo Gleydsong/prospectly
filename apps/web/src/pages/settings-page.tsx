@@ -25,8 +25,8 @@ export function SettingsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
-        <p className="text-sm text-slate-500">{user?.organizationName}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Configurações</h1>
+        <p className="text-sm text-zinc-500">{user?.organizationName}</p>
       </div>
 
       <Card>
@@ -35,12 +35,12 @@ export function SettingsPage() {
           {members.isLoading ? (
             <Skeleton className="h-32" />
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-zinc-100">
               {(members.data ?? []).map((member) => (
                 <li key={member.id} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="text-sm font-medium text-slate-900">{member.user.name}</p>
-                    <p className="text-xs text-slate-500">{member.user.email}</p>
+                    <p className="text-sm font-medium text-zinc-900">{member.user.name}</p>
+                    <p className="text-xs text-zinc-500">{member.user.email}</p>
                   </div>
                   <Badge tone={member.role === 'OWNER' ? 'brand' : 'slate'}>{member.role}</Badge>
                 </li>
@@ -53,7 +53,7 @@ export function SettingsPage() {
       <Card>
         <CardHeader title="Scoring" description="Configuração de pontuação por organização" />
         <CardContent>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-zinc-500">
             Regras de scoring configuráveis disponíveis na Fase 4, junto com a análise automática
             de websites.
           </p>
