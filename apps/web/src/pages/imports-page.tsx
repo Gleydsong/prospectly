@@ -187,7 +187,7 @@ export function ImportsPage() {
                 </thead>
                 <tbody>
                   {preview.rows.slice(0, 5).map((row, index) => (
-                    <tr key={index} className="border-b border-zinc-50">
+                    <tr key={index} className="border-b border-zinc-800">
                       {preview.headers.map((header) => <td key={header} className="px-3 py-3 text-zinc-200">{row[header] || '—'}</td>)}
                     </tr>
                   ))}

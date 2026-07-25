@@ -55,7 +55,7 @@ export function PricingCard({ locale }: { locale: Locale }) {
             key={value}
             type="button"
             onClick={() => setInterval(value)}
-            className={`focus-ring flex-1 rounded-[10px] px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.99] ${
+            className={`focus-ring flex-1 rounded-[10px] px-3 py-3 min-h-11 text-sm font-medium transition-colors active:scale-[0.99] ${
               interval === value
                 ? 'bg-[color:var(--bg-raised)] text-[color:var(--ink)] shadow-sm'
                 : 'text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'

@@ -10,7 +10,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-zinc-950">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <main className="p-4 lg:p-6">
           <Outlet />

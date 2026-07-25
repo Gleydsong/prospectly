@@ -24,7 +24,11 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-zinc-800 bg-zinc-950/90 px-4 backdrop-blur-md lg:px-6">
-      <button className="lg:hidden" onClick={onMenuClick} aria-label={t('nav.openMenu')}>
+      <button
+        className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control lg:hidden"
+        onClick={onMenuClick}
+        aria-label={t('nav.openMenu')}
+      >
         <Menu className="h-6 w-6 text-zinc-300" />
       </button>
       <div className="flex-1" />
@@ -45,7 +49,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         </div>
         <button
           onClick={() => void handleLogout()}
-          className="rounded-control p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
           aria-label={t('nav.logout')}
           title={t('nav.logout')}
         >

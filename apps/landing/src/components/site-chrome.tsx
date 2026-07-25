@@ -1,10 +1,30 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { List, X } from '@phosphor-icons/react';
 import { prefix, t, type Locale } from '@/lib/i18n';
 import { appLoginUrl, appRegisterUrl } from '@/lib/pricing';
 
 export function SiteHeader({ locale }: { locale: Locale }) {
   const p = prefix(locale);
   const defaultCurrency = locale === 'pt' ? 'BRL' : 'EUR';
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
+  const close = () => setMenuOpen(false);
 
   return (
     <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)]/90 backdrop-blur-md">
@@ -12,10 +32,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         <Link
           href={p || '/'}
           className="focus-ring text-lg font-semibold tracking-tight text-[color:var(--ink)]"
+          onClick={close}
         >
           {t(locale, 'brand')}
         </Link>
-        <nav className="flex items-center gap-1 text-sm sm:gap-2">
+
+        <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
           <Link
             href={`${p}/faq`}
             className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
@@ -30,7 +52,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           </Link>
           <a
             href={appLoginUrl()}
-            className="focus-ring hidden rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)] sm:inline"
+            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
           >
             {t(locale, 'navLogin')}
           </a>
@@ -41,7 +63,57 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             {t(locale, 'navCta')}
           </a>
         </nav>
+
+        <div className="flex items-center gap-2 md:hidden">
+          <a
+            href={appRegisterUrl('monthly', defaultCurrency)}
+            className="focus-ring rounded-control bg-accent px-3 py-2 text-sm font-medium text-white dark:text-accent-ink"
+          >
+            {t(locale, 'navCta')}
+          </a>
+          <button
+            type="button"
+            className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink)]"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X weight="bold" className="h-5 w-5" /> : <List weight="bold" className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
+
+      {menuOpen ? (
+        <div
+          id="mobile-nav"
+          className="border-t border-[color:var(--border)] bg-[color:var(--bg)] md:hidden"
+        >
+          <nav className="mx-auto flex max-w-shell flex-col gap-1 px-4 py-3 text-sm sm:px-6">
+            <Link
+              href={`${p}/faq`}
+              onClick={close}
+              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
+            >
+              {t(locale, 'navFaq')}
+            </Link>
+            <Link
+              href={`${p}/pricing`}
+              onClick={close}
+              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
+            >
+              {t(locale, 'navPricing')}
+            </Link>
+            <a
+              href={appLoginUrl()}
+              onClick={close}
+              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
+            >
+              {t(locale, 'navLogin')}
+            </a>
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }

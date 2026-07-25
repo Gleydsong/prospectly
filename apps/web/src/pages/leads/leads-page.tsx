@@ -148,8 +148,39 @@ export function LeadsPage() {
               {actionError}
             </p>
           ) : null}
-          <Card className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-zinc-800 md:hidden">
+              {leads.map((lead) => (
+                <li key={lead.id}>
+                  <button
+                    type="button"
+                    className="flex w-full flex-col gap-2 px-4 py-3.5 text-left hover:bg-zinc-950/80"
+                    onClick={() => navigate(`/leads/${lead.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-zinc-50">{lead.companyName}</p>
+                        <p className="text-xs text-zinc-500">
+                          {[lead.city, lead.segment ?? lead.category].filter(Boolean).join(' · ') || '—'}
+                        </p>
+                      </div>
+                      <ScoreBadge score={lead.score} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <LeadStatusBadge status={lead.status} />
+                      {!lead.website ? (
+                        <Badge tone="amber" title="Sem website">
+                          <Globe className="h-3 w-3" aria-hidden /> sem site
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
@@ -167,7 +198,7 @@ export function LeadsPage() {
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="cursor-pointer border-b border-zinc-50 hover:bg-zinc-950"
+                    className="cursor-pointer border-b border-zinc-800 hover:bg-zinc-950"
                     onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <td className="px-5 py-3">
@@ -224,6 +255,7 @@ export function LeadsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
           {meta ? (
             <Pagination page={meta.page} totalPages={meta.totalPages} total={meta.total} onPageChange={setPage} />

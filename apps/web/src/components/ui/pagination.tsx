@@ -14,11 +14,14 @@ export function Pagination({
   onPageChange: (page: number) => void;
 }) {
   return (
-    <nav className="flex items-center justify-between" aria-label="Paginação">
-      <p className="text-sm text-zinc-500">
+    <nav
+      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+      aria-label="Paginação"
+    >
+      <p className="text-center text-sm text-zinc-500 sm:text-left">
         {total} resultado{total === 1 ? '' : 's'} — página {page} de {totalPages}
       </p>
-      <div className="flex gap-2">
+      <div className="flex justify-center gap-2 sm:justify-end">
         <Button
           variant="outline"
           size="sm"

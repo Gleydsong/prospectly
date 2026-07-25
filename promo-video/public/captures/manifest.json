@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-07-25T13:26:13.922Z",
+  "capturedAt": "2026-07-25T22:07:11.588Z",
   "landingUrl": "http://localhost:3001",
   "appUrl": "http://localhost:5173",
   "viewport": {
@@ -9,6 +9,8 @@
   "files": [
     "landing-hero.png",
     "landing-scroll.png",
+    "app-register-empty.png",
+    "app-register-filled.png",
     "app-login.png",
     "app-dashboard.png",
     "app-search.png",

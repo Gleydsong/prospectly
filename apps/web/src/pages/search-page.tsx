@@ -439,7 +439,13 @@ export function SearchPage() {
             title="Resultados da pesquisa"
             description={currentSearch ? `${STATUS_LABEL[currentSearch.status]}${currentSearch.status === 'COMPLETED' ? ' — selecione os resultados para importar.' : ' — atualizando automaticamente enquanto estiver ativa.'}` : 'A carregar pesquisa.'}
             action={
-              <Button size="sm" disabled={!canImport || selectedResultIds.length === 0} loading={importResults.isPending} onClick={submitImport}>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto"
+                disabled={!canImport || selectedResultIds.length === 0}
+                loading={importResults.isPending}
+                onClick={submitImport}
+              >
                 <CheckSquare className="h-4 w-4" aria-hidden />
                 Importar selecionados ({selectedResultIds.length})
               </Button>
@@ -460,7 +466,40 @@ export function SearchPage() {
               />
             ) : (
               <div className="space-y-4">
-                <div className="overflow-x-auto">
+                <ul className="divide-y divide-zinc-800 rounded-control border border-zinc-800 md:hidden">
+                  {results.map((result) => {
+                    const business = result.normalizedData ?? result.data;
+                    const imported = Boolean(result.importedLeadId);
+                    return (
+                      <li key={result.id} className="flex gap-3 px-3 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Selecionar ${business.companyName}`}
+                          checked={selectedResultIds.includes(result.id)}
+                          onChange={() => toggleResult(result.id)}
+                          disabled={imported || !canImport}
+                          className="mt-1 h-5 w-5 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
+                        />
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="font-medium text-zinc-50">
+                            {business.companyName}
+                            {imported ? (
+                              <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span>
+                            ) : null}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {[business.phone, business.city].filter(Boolean).join(' · ') || '—'}
+                          </p>
+                          <Badge tone={websiteTone(result.websitePresence)}>
+                            {WEBSITE_LABEL[result.websitePresence]}
+                          </Badge>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full min-w-[880px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
@@ -486,7 +525,7 @@ export function SearchPage() {
                         const business = result.normalizedData ?? result.data;
                         const imported = Boolean(result.importedLeadId);
                         return (
-                          <tr key={result.id} className="border-b border-zinc-50">
+                          <tr key={result.id} className="border-b border-zinc-800">
                             <td className="px-3 py-3">
                               <input
                                 type="checkbox"

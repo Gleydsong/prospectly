@@ -111,8 +111,38 @@ export function TasksPage() {
         />
       ) : (
         <>
-          <Card className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-zinc-800 md:hidden">
+              {tasks.map((task) => (
+                <li key={task.id} className="space-y-2 px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-zinc-50">{task.title}</p>
+                    <Badge tone={task.priority === 'URGENT' || task.priority === 'HIGH' ? 'red' : 'slate'}>
+                      {PRIORITY_LABEL[task.priority]}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    {task.lead ? task.lead.companyName : '—'} · {formatDate(task.dueAt)}
+                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge tone={task.status === 'DONE' ? 'green' : task.status === 'CANCELLED' ? 'slate' : 'blue'}>
+                      {STATUS_LABEL[task.status]}
+                    </Badge>
+                    {task.status !== 'DONE' && task.status !== 'CANCELLED' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
+                      >
+                        Concluir
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Título</th>
@@ -125,7 +155,7 @@ export function TasksPage() {
               </thead>
               <tbody>
                 {tasks.map((task) => (
-                  <tr key={task.id} className="border-b border-zinc-50">
+                  <tr key={task.id} className="border-b border-zinc-800">
                     <td className="px-5 py-3 font-medium text-zinc-50">{task.title}</td>
                     <td className="px-5 py-3">
                       {task.lead ? (
@@ -162,6 +192,7 @@ export function TasksPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
           {meta ? (
             <Pagination page={meta.page} totalPages={meta.totalPages} total={meta.total} onPageChange={setPage} />

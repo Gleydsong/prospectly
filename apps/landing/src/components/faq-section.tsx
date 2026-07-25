@@ -43,7 +43,7 @@ function FaqAccordion({
                   className="focus-ring flex w-full items-start justify-between gap-4 py-5 text-left transition-colors hover:text-accent"
                   onClick={() => setOpenId(isOpen ? null : item.id)}
                 >
-                  <span className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">
+                  <span className="break-words text-balance text-lg font-semibold tracking-tight text-[color:var(--ink)]">
                     {item.question}
                   </span>
                   <CaretDown

@@ -28,8 +28,9 @@ export const COLORS = {
 } as const;
 
 export const FONTS = {
-  sans: '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif',
-  display: '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif',
+  sans: '"Outfit", "SF Pro Display", system-ui, -apple-system, sans-serif',
+  display: '"Outfit", "SF Pro Display", system-ui, -apple-system, sans-serif',
+  mono: '"JetBrains Mono", ui-monospace, monospace',
 } as const;
 
 export const TYPOGRAPHY = {

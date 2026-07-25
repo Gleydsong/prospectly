@@ -36,6 +36,7 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -48,6 +49,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   min-height: 100dvh;
+  overflow-x: clip;
 }
 
 ::selection {

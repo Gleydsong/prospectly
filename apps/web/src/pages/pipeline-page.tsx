@@ -50,7 +50,7 @@ export function PipelinePage() {
         <p className="text-sm text-zinc-500">{board.data.pipeline.name} — arraste leads entre etapas</p>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto pb-4" role="list" aria-label="Etapas do pipeline">
+      <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 pb-4" role="list" aria-label="Etapas do pipeline">
         {board.data.stages.map((stage) => (
           <section
             key={stage.id}

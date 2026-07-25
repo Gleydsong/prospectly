@@ -49,7 +49,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             </span>
             <span className="text-lg font-semibold tracking-tight text-zinc-50">Prospectly</span>
           </NavLink>
-          <button className="lg:hidden" onClick={onClose} aria-label={t('nav.closeMenu')}>
+          <button
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control lg:hidden"
+            onClick={onClose}
+            aria-label={t('nav.closeMenu')}
+          >
             <X className="h-5 w-5 text-zinc-400" />
           </button>
         </div>

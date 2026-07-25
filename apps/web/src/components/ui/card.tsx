@@ -23,12 +23,12 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 border-b border-zinc-800 p-5', className)}>
-      <div>
+    <div className={cn('flex flex-col gap-3 border-b border-zinc-800 p-5 sm:flex-row sm:items-start sm:justify-between', className)}>
+      <div className="min-w-0">
         <h3 className="text-base font-semibold tracking-tight text-zinc-50">{title}</h3>
         {description ? <p className="mt-0.5 text-sm text-zinc-400">{description}</p> : null}
       </div>
-      {action}
+      {action ? <div className="w-full shrink-0 sm:w-auto">{action}</div> : null}
     </div>
   );
 }

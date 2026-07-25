@@ -24,6 +24,7 @@
     background: var(--bg);
     color: var(--ink);
     min-height: 100dvh;
+    overflow-x: clip;
     @apply font-sans;
   }
 
