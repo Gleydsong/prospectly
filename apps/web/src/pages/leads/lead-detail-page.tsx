@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
+import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { formatDateTime } from '@/lib/utils';
 
 const activitySchema = z.object({
@@ -93,6 +94,7 @@ export function LeadDetailPage() {
   const lead = leadQuery.data;
   const latestAnalysis = lead.websiteRecord?.analyses?.[0];
   const latestScore = lead.scores?.[0];
+  const safeWebsite = lead.website ? sanitizeExternalUrl(lead.website) : null;
 
   return (
     <div className="space-y-5">
@@ -124,15 +126,17 @@ export function LeadDetailPage() {
               icon={Globe}
               label="Website"
               value={
-                lead.website ? (
+                safeWebsite ? (
                   <a
-                    href={lead.website}
+                    href={safeWebsite}
                     target="_blank"
                     rel="noreferrer noopener"
                     className="text-brand-600 hover:underline"
                   >
                     {lead.website}
                   </a>
+                ) : lead.website ? (
+                  lead.website
                 ) : (
                   'Sem site'
                 )

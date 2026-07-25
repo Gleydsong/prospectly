@@ -11,7 +11,7 @@
     "build:landing": "pnpm --filter @prospectly/landing build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck",
+    "typecheck": "pnpm --filter @prospectly/shared-types build && pnpm -r run typecheck",
     "db:generate": "pnpm --filter @prospectly/api exec prisma generate",
     "db:migrate": "pnpm --filter @prospectly/api exec prisma migrate dev",
     "db:seed": "pnpm --filter @prospectly/api exec prisma db seed",

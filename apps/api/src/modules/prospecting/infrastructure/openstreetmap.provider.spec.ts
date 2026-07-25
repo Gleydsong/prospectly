@@ -502,8 +502,8 @@ describe('OpenStreetMap configuration', () => {
   it('rejects malformed OpenStreetMap URLs and unsafe numeric limits', () => {
     const baseConfig = {
       DATABASE_URL: 'postgresql://localhost/prospectly',
-      JWT_ACCESS_SECRET: '1234567890123456',
-      JWT_REFRESH_SECRET: '1234567890123456',
+      JWT_ACCESS_SECRET: '12345678901234567890123456789012',
+      JWT_REFRESH_SECRET: '12345678901234567890123456789012',
       OSM_NOMINATIM_URL: 'not-a-url',
       OSM_OVERPASS_URL: 'https://overpass.example/interpreter',
       OSM_USER_AGENT: 'prospectly/1.0',

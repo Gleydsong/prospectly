@@ -152,6 +152,18 @@ export class BillingService {
       throw new BadRequestException('Invalid Stripe webhook signature');
     }
 
+    try {
+      await this.prisma.stripeWebhookEvent.create({
+        data: { id: event.id, type: event.type },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        this.logger.debug(`Ignoring duplicate Stripe webhook event ${event.id}`);
+        return { received: true };
+      }
+      throw error;
+    }
+
     switch (event.type) {
       case 'checkout.session.completed':
         await this.onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
@@ -318,5 +330,14 @@ export class BillingService {
       throw new BadRequestException('Organization not found');
     }
     return org;
+  }
+
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === 'P2002'
+    );
   }
 }

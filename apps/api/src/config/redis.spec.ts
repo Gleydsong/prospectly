@@ -3,8 +3,8 @@ import { validateEnv } from './validation';
 
 const baseConfig = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/prospectly',
-  JWT_ACCESS_SECRET: 'a-very-long-access-secret',
-  JWT_REFRESH_SECRET: 'a-very-long-refresh-secret',
+  JWT_ACCESS_SECRET: 'a-very-long-access-secret-32chars!',
+  JWT_REFRESH_SECRET: 'a-very-long-refresh-secret-32chars',
 };
 
 describe('Redis configuration', () => {

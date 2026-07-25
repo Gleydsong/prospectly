@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { createCheckoutSession, login } from '@/features/auth/api';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
+import { assignStripeRedirect, resolveInternalRedirect } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 
 type LoginForm = { email: string; password: string };
@@ -57,7 +58,7 @@ export function LoginPage() {
       if (plan) {
         try {
           const checkout = await createCheckoutSession({ interval: plan, currency });
-          window.location.assign(checkout.url);
+          assignStripeRedirect(checkout.url);
           return;
         } catch {
           navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
@@ -65,8 +66,8 @@ export function LoginPage() {
         }
       }
 
-      const from = (location.state as { from?: string } | null)?.from ?? '/';
-      navigate(from, { replace: true });
+      const from = (location.state as { from?: string } | null)?.from;
+      navigate(resolveInternalRedirect(from), { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     }

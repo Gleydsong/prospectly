@@ -31,6 +31,9 @@ describe('BillingService', () => {
     search: {
       count: jest.fn(),
     },
+    stripeWebhookEvent: {
+      create: jest.fn().mockResolvedValue({}),
+    },
   };
 
   const configGet = jest.fn((key: string) => {
@@ -108,6 +111,7 @@ describe('BillingService', () => {
 
   it('activates LIFETIME on checkout.session.completed payment', async () => {
     constructEvent.mockReturnValue({
+      id: 'evt_1',
       type: 'checkout.session.completed',
       data: {
         object: {
@@ -120,6 +124,9 @@ describe('BillingService', () => {
     prisma.organization.update.mockResolvedValue({});
 
     await service.handleWebhook(Buffer.from('{}'), 'sig');
+    expect(prisma.stripeWebhookEvent.create).toHaveBeenCalledWith({
+      data: { id: 'evt_1', type: 'checkout.session.completed' },
+    });
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
       data: expect.objectContaining({
@@ -127,5 +134,25 @@ describe('BillingService', () => {
         planStatus: PlanStatus.ACTIVE,
       }),
     });
+  });
+
+  it('ignores duplicate webhook events (idempotent replay)', async () => {
+    constructEvent.mockReturnValue({
+      id: 'evt_dup',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          mode: 'payment',
+          metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
+          customer: 'cus_1',
+        },
+      },
+    });
+    prisma.stripeWebhookEvent.create.mockRejectedValue({ code: 'P2002' });
+
+    await expect(service.handleWebhook(Buffer.from('{}'), 'sig')).resolves.toEqual({
+      received: true,
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,7 @@ import request from 'supertest';
 
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
 import {
   InMemorySearchProviderRegistry,
@@ -197,6 +198,10 @@ describe('Prospecting HTTP integration', () => {
           ]),
         },
         { provide: LeadIngestionService, useValue: ingestion },
+        {
+          provide: BillingService,
+          useValue: { assertCanCreateSearch: jest.fn().mockResolvedValue(undefined) },
+        },
       ],
     }).compile();
 
@@ -219,7 +224,9 @@ describe('Prospecting HTTP integration', () => {
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('forbids VIEWER writes before a search or queue job is created', async () => {

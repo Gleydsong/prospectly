@@ -4,11 +4,12 @@ services:
     container_name: prospectly-postgres
     restart: unless-stopped
     environment:
+      # Local/dev only — never reuse these defaults in shared or production hosts.
       POSTGRES_USER: ${POSTGRES_USER:-prospectly}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prospectly}
       POSTGRES_DB: ${POSTGRES_DB:-prospectly}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +26,7 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -48,7 +49,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:-prospectly}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
       REDIS_URL: redis://redis:6379
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,7 +69,7 @@ services:
     container_name: prospectly-web
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       - api
     networks:
