@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   Equals,
   IsIn,
@@ -10,10 +10,19 @@ import {
 } from 'class-validator';
 
 export class GoogleAuthDto {
-  @ApiProperty({ description: 'Google ID token (credential) from GIS / One Tap' })
+  @ApiPropertyOptional({ description: 'Google ID token (credential) from GIS / One Tap' })
+  @ValidateIf((o: GoogleAuthDto) => !o.accessToken)
   @IsString()
   @IsNotEmpty()
-  idToken!: string;
+  idToken?: string;
+
+  @ApiPropertyOptional({
+    description: 'Google OAuth access token from GIS token client / custom button',
+  })
+  @ValidateIf((o: GoogleAuthDto) => !o.idToken)
+  @IsString()
+  @IsNotEmpty()
+  accessToken?: string;
 
   @ApiPropertyOptional({
     example: 'Agência XPTO',

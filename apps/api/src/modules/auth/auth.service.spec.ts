@@ -358,4 +358,44 @@ describe('AuthService', () => {
     expect(result.user.organizationId).toBe('org1');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it('googleAuth accepts accessToken via Google userinfo', async () => {
+    const fetchMock = jest.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ aud: 'google-client-id.apps.googleusercontent.com' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          sub: 'google-sub-1',
+          email: 'ana@agency.dev',
+          email_verified: true,
+          name: 'Ana',
+        }),
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt',
+      googleId: 'google-sub-1',
+      avatarUrl: null,
+      memberships: [{ organizationId: 'org1', role: 'OWNER' }],
+    });
+    prisma.organization.findUniqueOrThrow = jest.fn().mockResolvedValue({ id: 'org1', name: 'Org' });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'u1', email: 'ana@agency.dev', locale: 'pt' });
+    prisma.refreshToken.create = jest.fn().mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const result = await service.googleAuth({ accessToken: 'ya29.access-token' });
+    expect(result.user.organizationId).toBe('org1');
+    expect(verifyIdToken).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

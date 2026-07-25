@@ -21,7 +21,8 @@ export async function login(input: { email: string; password: string }): Promise
 }
 
 export async function googleAuth(input: {
-  idToken: string;
+  idToken?: string;
+  accessToken?: string;
   organizationName?: string;
   locale?: 'pt' | 'en';
   acceptTerms?: true;

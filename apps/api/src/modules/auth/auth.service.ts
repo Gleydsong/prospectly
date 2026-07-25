@@ -80,23 +80,9 @@ export class AuthService {
       throw new ServiceUnavailableException('Google Sign-In is not configured');
     }
 
-    let payload: {
-      sub?: string;
-      email?: string;
-      email_verified?: boolean | string;
-      name?: string;
-      picture?: string;
-    };
-    try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken: dto.idToken,
-        audience: clientId,
-      });
-      payload = ticket.getPayload() ?? {};
-    } catch (error) {
-      this.logger.warn(`Google ID token verification failed: ${(error as Error).message}`);
-      throw new UnauthorizedException('Invalid Google credentials');
-    }
+    const payload = dto.accessToken
+      ? await this.resolveGoogleProfileFromAccessToken(dto.accessToken, clientId)
+      : await this.resolveGoogleProfileFromIdToken(dto.idToken!, clientId);
 
     const googleId = payload.sub?.trim();
     const email = payload.email?.toLowerCase().trim();
@@ -367,6 +353,70 @@ export class AuthService {
     }
     await this.logoutAll(userId);
     return this.issueTokens(userId, organizationId, membership.role);
+  }
+
+  private async resolveGoogleProfileFromIdToken(
+    idToken: string,
+    clientId: string,
+  ): Promise<{
+    sub?: string;
+    email?: string;
+    email_verified?: boolean | string;
+    name?: string;
+    picture?: string;
+  }> {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: clientId,
+      });
+      return ticket.getPayload() ?? {};
+    } catch (error) {
+      this.logger.warn(`Google ID token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Google credentials');
+    }
+  }
+
+  private async resolveGoogleProfileFromAccessToken(
+    accessToken: string,
+    clientId: string,
+  ): Promise<{
+    sub?: string;
+    email?: string;
+    email_verified?: boolean | string;
+    name?: string;
+    picture?: string;
+  }> {
+    try {
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (!tokenInfoRes.ok) {
+        throw new Error(`tokeninfo HTTP ${tokenInfoRes.status}`);
+      }
+      const tokenInfo = (await tokenInfoRes.json()) as { aud?: string; azp?: string };
+      const audience = tokenInfo.aud ?? tokenInfo.azp;
+      if (audience !== clientId) {
+        throw new Error('access token audience mismatch');
+      }
+
+      const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!profileRes.ok) {
+        throw new Error(`userinfo HTTP ${profileRes.status}`);
+      }
+      return (await profileRes.json()) as {
+        sub?: string;
+        email?: string;
+        email_verified?: boolean | string;
+        name?: string;
+        picture?: string;
+      };
+    } catch (error) {
+      this.logger.warn(`Google access token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Google credentials');
+    }
   }
 
   private async provisionOwnerAccount(input: {
