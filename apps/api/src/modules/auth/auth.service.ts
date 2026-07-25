@@ -34,6 +34,7 @@ export interface AuthResponse extends AuthTokens {
     organizationName: string;
     role: Role;
     locale: 'pt' | 'en';
+    avatarUrl?: string | null;
   };
 }
 
@@ -501,6 +502,7 @@ export class AuthService {
         organizationName: organization.name,
         role,
         locale: user.locale,
+        avatarUrl: user.avatarUrl ?? null,
       },
     };
   }

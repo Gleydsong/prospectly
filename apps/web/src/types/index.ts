@@ -18,6 +18,7 @@ export interface AuthUser {
   organizationId: string;
   organizationName: string;
   role: Role;
+  avatarUrl?: string | null;
   /** Present after login/register; may be missing in older persisted sessions. */
   locale?: AppLocale;
 }

@@ -66,6 +66,14 @@ export async function requestDataDeletion(notes?: string): Promise<{ id: string;
   return data;
 }
 
+export async function requestDataExport(notes?: string): Promise<{ id: string; status: string }> {
+  const { data } = await api.post<{ id: string; status: string }>('/users/me/data-requests', {
+    type: 'EXPORT',
+    notes,
+  });
+  return data;
+}
+
 export async function logout(refreshToken: string): Promise<void> {
   await api.post('/auth/logout', { refreshToken });
 }
