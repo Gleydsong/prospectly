@@ -1,0 +1,188 @@
+# Prospectly — Render Blueprint (production)
+# Schema: https://render.com/schema/render.yaml.json
+# Docs: docs/deploy/render.md
+#
+# After first sync: fill sync:false secrets in the Dashboard, then set public URLs
+# (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Stripe/Abacate webhooks).
+
+previews:
+  generation: manual
+  expireAfterDays: 3
+
+projects:
+  - name: prospectly
+    environments:
+      - name: production
+        databases:
+          - name: prospectly-db
+            plan: basic-256mb
+            region: frankfurt
+            postgresMajorVersion: "16"
+            diskSizeGB: 5
+
+        services:
+          - type: keyvalue
+            name: prospectly-redis
+            plan: starter
+            region: frankfurt
+            maxmemoryPolicy: noeviction
+            ipAllowList: []
+
+          - type: web
+            name: prospectly-api
+            runtime: docker
+            region: frankfurt
+            plan: starter
+            branch: main
+            dockerfilePath: ./apps/api/Dockerfile
+            dockerContext: .
+            healthCheckPath: /health/ready
+            autoDeployTrigger: checksPass
+            buildFilter:
+              paths:
+                - apps/api/**
+                - packages/**
+                - pnpm-lock.yaml
+                - pnpm-workspace.yaml
+                - package.json
+            envVars:
+              - key: NODE_ENV
+                value: production
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: prospectly-db
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  type: keyvalue
+                  name: prospectly-redis
+                  property: connectionString
+              - key: JWT_ACCESS_SECRET
+                generateValue: true
+              - key: JWT_REFRESH_SECRET
+                generateValue: true
+              - key: JWT_ACCESS_EXPIRES_IN
+                value: 15m
+              - key: JWT_REFRESH_EXPIRES_IN
+                value: 7d
+              - key: FRONTEND_URL
+                sync: false
+              - key: CORS_ORIGINS
+                sync: false
+              - key: STRIPE_SECRET_KEY
+                sync: false
+              - key: STRIPE_WEBHOOK_SECRET
+                sync: false
+              - key: STRIPE_PRICE_MONTHLY_EUR
+                sync: false
+              - key: STRIPE_PRICE_MONTHLY_USD
+                sync: false
+              - key: STRIPE_PRICE_LIFETIME_EUR
+                sync: false
+              - key: STRIPE_PRICE_LIFETIME_USD
+                sync: false
+              - key: STRIPE_SUCCESS_URL
+                sync: false
+              - key: STRIPE_CANCEL_URL
+                sync: false
+              - key: STRIPE_PORTAL_RETURN_URL
+                sync: false
+              - key: ABACATE_API_KEY
+                sync: false
+              - key: ABACATE_WEBHOOK_SECRET
+                sync: false
+              - key: ABACATE_PRODUCT_MONTHLY_BRL
+                sync: false
+              - key: ABACATE_LIFETIME_AMOUNT_CENTAVOS
+                value: "99700"
+              - key: ABACATE_SUCCESS_URL
+                sync: false
+              - key: ABACATE_CANCEL_URL
+                sync: false
+              - key: ABACATE_API_BASE_URL
+                value: https://api.abacatepay.com/v2
+              - key: OSM_USER_AGENT
+                value: Prospectly/1.0 (https://prospectly.dev)
+              - key: SMTP_HOST
+                sync: false
+              - key: SMTP_PORT
+                value: "587"
+              - key: SMTP_USER
+                sync: false
+              - key: SMTP_PASSWORD
+                sync: false
+              - key: SMTP_FROM
+                sync: false
+              - key: SENTRY_DSN
+                sync: false
+              - key: LOG_LEVEL
+                value: info
+              - key: GOOGLE_PLACES_API_KEY
+                sync: false
+
+          - type: web
+            name: prospectly-web
+            runtime: static
+            region: frankfurt
+            branch: main
+            autoDeployTrigger: checksPass
+            buildCommand: corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile --filter @prospectly/web... && pnpm --filter @prospectly/web run build
+            staticPublishPath: apps/web/dist
+            buildFilter:
+              paths:
+                - apps/web/**
+                - packages/**
+                - pnpm-lock.yaml
+                - pnpm-workspace.yaml
+                - package.json
+            routes:
+              - type: rewrite
+                source: /*
+                destination: /index.html
+            headers:
+              - path: /*
+                name: X-Frame-Options
+                value: DENY
+              - path: /*
+                name: X-Content-Type-Options
+                value: nosniff
+              - path: /*
+                name: Referrer-Policy
+                value: strict-origin-when-cross-origin
+              - path: /*
+                name: Permissions-Policy
+                value: "camera=(), microphone=(), geolocation=()"
+              - path: /*
+                name: Content-Security-Policy
+                value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:"
+            envVars:
+              - key: VITE_API_URL
+                sync: false
+              - key: VITE_LANDING_URL
+                sync: false
+
+          - type: web
+            name: prospectly-landing
+            runtime: node
+            region: frankfurt
+            plan: starter
+            branch: main
+            autoDeployTrigger: checksPass
+            buildCommand: corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile --filter @prospectly/landing... && pnpm --filter @prospectly/landing run build
+            startCommand: pnpm --filter @prospectly/landing start
+            healthCheckPath: /
+            buildFilter:
+              paths:
+                - apps/landing/**
+                - pnpm-lock.yaml
+                - pnpm-workspace.yaml
+                - package.json
+            envVars:
+              - key: NODE_ENV
+                value: production
+              - key: NEXT_PUBLIC_APP_URL
+                sync: false
+              - key: NEXT_PUBLIC_LANDING_URL
+                sync: false
+              - key: NEXT_PUBLIC_API_URL
+                sync: false
