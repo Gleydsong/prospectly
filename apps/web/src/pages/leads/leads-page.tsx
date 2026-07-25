@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Globe, Plus } from 'lucide-react';
+import { Globe, Plus, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,9 @@ import { Pagination } from '@/components/ui/pagination';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { useLeads } from '@/features/leads/hooks';
+import { getApiErrorMessage } from '@/lib/api';
+import { getLeadStatusLabel } from '@/lib/lead-status';
+import { useDeleteLead, useLeads } from '@/features/leads/hooks';
 import { LeadStatus } from '@/types';
 
 import { LeadFormModal } from './lead-form-modal';
@@ -27,6 +29,8 @@ export function LeadsPage() {
   const [status, setStatus] = useState<LeadStatus | ''>('');
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const deleteLead = useDeleteLead();
 
   const query = useLeads({
     page,
@@ -44,6 +48,19 @@ export function LeadsPage() {
   const applySearch = () => {
     setPage(1);
     setSearch(q.trim());
+  };
+
+  const removeLead = async (leadId: string, companyName: string) => {
+    const confirmed = window.confirm(
+      `Apagar o lead "${companyName}"? Ele será removido da lista.`,
+    );
+    if (!confirmed) return;
+    setActionError(null);
+    try {
+      await deleteLead.mutateAsync(leadId);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    }
   };
 
   return (
@@ -83,7 +100,7 @@ export function LeadsPage() {
             <option value="">Todos os status</option>
             {Object.values(LeadStatus).map((value) => (
               <option key={value} value={value}>
-                {value}
+                {getLeadStatusLabel(value)}
               </option>
             ))}
           </Select>
@@ -126,8 +143,13 @@ export function LeadsPage() {
         />
       ) : (
         <>
+          {actionError ? (
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+              {actionError}
+            </p>
+          ) : null}
           <Card className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
                 <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-500">
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
@@ -136,6 +158,9 @@ export function LeadsPage() {
                   <th scope="col" className="px-5 py-3 font-medium">Score</th>
                   <th scope="col" className="px-5 py-3 font-medium">Responsável</th>
                   <th scope="col" className="px-5 py-3 font-medium">Tags</th>
+                  <th scope="col" className="px-5 py-3 font-medium">
+                    <span className="sr-only">Ações</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -178,6 +203,22 @@ export function LeadsPage() {
                           <Badge key={tag.id}>{tag.name}</Badge>
                         ))}
                       </div>
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        aria-label={`Apagar lead ${lead.companyName}`}
+                        loading={deleteLead.isPending && deleteLead.variables === lead.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void removeLead(lead.id, lead.companyName);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </Button>
                     </td>
                   </tr>
                 ))}
