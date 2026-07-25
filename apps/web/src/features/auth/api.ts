@@ -17,8 +17,47 @@ export async function register(input: {
   email: string;
   password: string;
   organizationName: string;
+  acceptTerms: true;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/register', input);
+  return data;
+}
+
+export async function createCheckoutSession(input: {
+  interval: 'monthly' | 'lifetime';
+  currency: 'BRL' | 'EUR' | 'USD';
+}): Promise<{ url: string }> {
+  const { data } = await api.post<{ url: string }>('/billing/checkout', input);
+  return data;
+}
+
+export async function createBillingPortal(): Promise<{ url: string }> {
+  const { data } = await api.post<{ url: string }>('/billing/portal');
+  return data;
+}
+
+export async function getBillingStatus(): Promise<{
+  plan: string;
+  planStatus: string;
+  planCurrency: string | null;
+  currentPeriodEnd: string | null;
+  freeSearchLimit: number;
+}> {
+  const { data } = await api.get<{
+    plan: string;
+    planStatus: string;
+    planCurrency: string | null;
+    currentPeriodEnd: string | null;
+    freeSearchLimit: number;
+  }>('/billing/status');
+  return data;
+}
+
+export async function requestDataDeletion(notes?: string): Promise<{ id: string; status: string }> {
+  const { data } = await api.post<{ id: string; status: string }>('/users/me/data-requests', {
+    type: 'DELETE',
+    notes,
+  });
   return data;
 }
 

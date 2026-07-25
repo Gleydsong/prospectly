@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 
 import { LeadsModule } from '../leads/leads.module';
+import { BillingModule } from '../billing/billing.module';
 import {
   GOOGLE_PLACES_SEARCH_PROVIDER,
   InMemorySearchProviderRegistry,
@@ -24,7 +25,7 @@ import { ProspectingProcessor } from './prospecting.processor';
 import { ProspectingService } from './prospecting.service';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: PROSPECTING_QUEUE }), LeadsModule],
+  imports: [BullModule.registerQueue({ name: PROSPECTING_QUEUE }), LeadsModule, BillingModule],
   controllers: [ProspectingController],
   providers: [
     ProspectingService,

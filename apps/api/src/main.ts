@@ -9,14 +9,18 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
 
   const config = app.get(ConfigService);
   app.useLogger(app.get(Logger));
 
   app.use(helmet());
 
-  const corsOrigins = (config.get<string>('CORS_ORIGINS') ?? 'http://localhost:5173')
+  const corsOrigins = (
+    config.get<string>('corsOrigins') ??
+    config.get<string>('CORS_ORIGINS') ??
+    'http://localhost:5173,http://localhost:3001'
+  )
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);

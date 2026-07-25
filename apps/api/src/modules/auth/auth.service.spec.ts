@@ -78,6 +78,7 @@ describe('AuthService', () => {
         email: 'ana@agency.dev',
         password: 'Passw0rd!',
         organizationName: 'Agency',
+        acceptTerms: true,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });

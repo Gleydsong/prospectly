@@ -1,13 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { login } from '@/features/auth/api';
+import { createCheckoutSession, login } from '@/features/auth/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -21,8 +21,18 @@ type LoginForm = z.infer<typeof loginSchema>;
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const plan = useMemo(() => {
+    const value = searchParams.get('plan');
+    return value === 'lifetime' || value === 'monthly' ? value : null;
+  }, [searchParams]);
+  const currency = useMemo(() => {
+    const value = searchParams.get('currency');
+    return value === 'BRL' || value === 'EUR' || value === 'USD' ? value : 'BRL';
+  }, [searchParams]);
 
   const {
     register,
@@ -35,12 +45,28 @@ export function LoginPage() {
     try {
       const response = await login(values);
       setAuth(response);
+
+      if (plan) {
+        try {
+          const checkout = await createCheckoutSession({ interval: plan, currency });
+          window.location.assign(checkout.url);
+          return;
+        } catch {
+          navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
+          return;
+        }
+      }
+
       const from = (location.state as { from?: string } | null)?.from ?? '/';
       navigate(from, { replace: true });
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     }
   };
+
+  const registerHref = plan
+    ? `/register?plan=${plan}&currency=${currency}`
+    : '/register';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
@@ -80,7 +106,7 @@ export function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-slate-500">
           Ainda não tem conta?{' '}
-          <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
+          <Link to={registerHref} className="font-medium text-brand-600 hover:text-brand-700">
             Criar conta
           </Link>
         </p>

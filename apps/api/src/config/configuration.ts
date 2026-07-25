@@ -10,7 +10,7 @@ export const configuration = () => ({
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
-  corsOrigins: process.env.CORS_ORIGINS ?? 'http://localhost:5173',
+  corsOrigins: process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://localhost:3001',
   openStreetMap: {
     nominatimUrl: process.env.OSM_NOMINATIM_URL ?? 'https://nominatim.openstreetmap.org/search',
     overpassUrl: process.env.OSM_OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter',
@@ -34,6 +34,25 @@ export const configuration = () => ({
     user: process.env.SMTP_USER,
     password: process.env.SMTP_PASSWORD,
     from: process.env.SMTP_FROM ?? 'no-reply@prospectly.dev',
+  },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY ?? '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
+    successUrl: process.env.STRIPE_SUCCESS_URL,
+    cancelUrl: process.env.STRIPE_CANCEL_URL,
+    portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL,
+    prices: {
+      monthly: {
+        brl: process.env.STRIPE_PRICE_MONTHLY_BRL ?? '',
+        eur: process.env.STRIPE_PRICE_MONTHLY_EUR ?? '',
+        usd: process.env.STRIPE_PRICE_MONTHLY_USD ?? '',
+      },
+      lifetime: {
+        brl: process.env.STRIPE_PRICE_LIFETIME_BRL ?? '',
+        eur: process.env.STRIPE_PRICE_LIFETIME_EUR ?? '',
+        usd: process.env.STRIPE_PRICE_LIFETIME_USD ?? '',
+      },
+    },
   },
   sentryDsn: process.env.SENTRY_DSN,
 });

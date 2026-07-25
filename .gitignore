@@ -1,17 +1,46 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+.pnp
+.pnp.js
+
+# Build outputs
 dist/
 build/
+out/
 .next/
-coverage/
-*.log
-.env
-.env.local
-.env.*.local
-!.env.example
-.DS_Store
 .turbo/
+.swc/
+.vercel/
+coverage/
+*.tsbuildinfo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+
+# Logs / caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
 .vitest/
 playwright-report/
 test-results/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+
+# Local tooling (não versionar)
+.ua/
+.understand-anything/
+
+# App runtime uploads
 uploads/
-*.tsbuildinfo

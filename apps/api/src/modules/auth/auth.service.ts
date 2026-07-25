@@ -12,6 +12,7 @@ import * as argon2 from 'argon2';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { TERMS_VERSION } from '../billing/billing.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -55,6 +56,7 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(dto.password);
     const slug = await this.generateOrgSlug(dto.organizationName);
+    const acceptedAt = new Date();
 
     const { user, organizationId, role } = await this.prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
@@ -62,7 +64,14 @@ export class AuthService {
       });
 
       const createdUser = await tx.user.create({
-        data: { email, name: dto.name.trim(), passwordHash },
+        data: {
+          email,
+          name: dto.name.trim(),
+          passwordHash,
+          termsAcceptedAt: acceptedAt,
+          termsVersion: TERMS_VERSION,
+          privacyAcceptedAt: acceptedAt,
+        },
       });
 
       const membership = await tx.organizationMember.create({

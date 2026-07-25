@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { Equals, IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'Ana Silva' })
@@ -27,4 +27,11 @@ export class RegisterDto {
   @IsNotEmpty()
   @MaxLength(120)
   organizationName!: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Must accept Terms of Use and Privacy Policy',
+  })
+  @Equals(true, { message: 'You must accept the Terms of Use and Privacy Policy' })
+  acceptTerms!: true;
 }

@@ -5,6 +5,7 @@ import type { Queue } from 'bullmq';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
 import type { NormalizedBusiness } from './domain/normalized-business';
 import {
@@ -41,6 +42,7 @@ export class ProspectingService {
     @InjectQueue(PROSPECTING_QUEUE) private readonly queue: Queue<RunSearchJobData>,
     @Inject(SEARCH_PROVIDER_REGISTRY) private readonly providers: SearchProviderRegistry,
     private readonly leadIngestion: LeadIngestionService,
+    private readonly billing: BillingService,
   ) {}
 
   listProviders() {
@@ -48,6 +50,8 @@ export class ProspectingService {
   }
 
   async create(organizationId: string, userId: string, dto: CreateSearchDto, correlationId?: string) {
+    await this.billing.assertCanCreateSearch(organizationId);
+
     const providerId: ProspectingProviderId = dto.provider ?? 'OPENSTREETMAP';
     if (!this.providers.isAvailable(providerId)) {
       throw new BadRequestException(`Search provider unavailable: ${providerId}`);

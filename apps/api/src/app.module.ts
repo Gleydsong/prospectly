@@ -23,6 +23,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { GeoModule } from './modules/geo/geo.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { GeoModule } from './modules/geo/geo.module';
     ProspectingModule,
     ImportsModule,
     GeoModule,
+    BillingModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

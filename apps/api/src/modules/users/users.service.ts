@@ -37,4 +37,16 @@ export class UsersService {
       select: { id: true, name: true, email: true, avatarUrl: true },
     });
   }
+
+  async createDataSubjectRequest(userId: string, type: 'DELETE' | 'EXPORT', notes?: string) {
+    return this.prisma.dataSubjectRequest.create({
+      data: {
+        userId,
+        type,
+        status: 'PENDING',
+        notes: notes?.trim() || `Solicitação ${type} via API (MVP — processamento manual)`,
+      },
+      select: { id: true, type: true, status: true, createdAt: true },
+    });
+  }
 }
