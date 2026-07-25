@@ -47,6 +47,7 @@ function createService(overrides: Record<string, unknown> = {}) {
     resolve: jest.fn(() => provider),
   };
   const ingestion = { ingest: jest.fn() };
+  const billing = { assertCanCreateSearch: jest.fn().mockResolvedValue(undefined) };
 
   return {
     prisma,
@@ -54,7 +55,14 @@ function createService(overrides: Record<string, unknown> = {}) {
     provider,
     registry,
     ingestion,
-    service: new ProspectingService(prisma as never, queue as never, registry as never, ingestion as never),
+    billing,
+    service: new ProspectingService(
+      prisma as never,
+      queue as never,
+      registry as never,
+      ingestion as never,
+      billing as never,
+    ),
   };
 }
 

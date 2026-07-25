@@ -69,6 +69,23 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
+  for (const key of [
+    'STRIPE_PRICE_MONTHLY_BRL',
+    'STRIPE_PRICE_MONTHLY_EUR',
+    'STRIPE_PRICE_MONTHLY_USD',
+    'STRIPE_PRICE_LIFETIME_BRL',
+    'STRIPE_PRICE_LIFETIME_EUR',
+    'STRIPE_PRICE_LIFETIME_USD',
+    'STRIPE_SUCCESS_URL',
+    'STRIPE_CANCEL_URL',
+  ] as const) {
+    const value = config[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'string') {
+      throw new Error(`${key} must be a string`);
+    }
+  }
+
   return config;
 }
 import { parseRedisConnection } from './redis';

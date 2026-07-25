@@ -6,7 +6,9 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "pnpm --filter @prospectly/shared-types build && pnpm -r --parallel run dev",
+    "dev:landing": "pnpm --filter @prospectly/landing dev",
     "build": "pnpm -r run build",
+    "build:landing": "pnpm --filter @prospectly/landing build",
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
