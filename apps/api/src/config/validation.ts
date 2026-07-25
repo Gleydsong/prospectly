@@ -85,6 +85,7 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     'ABACATE_SUCCESS_URL',
     'ABACATE_CANCEL_URL',
     'ABACATE_API_BASE_URL',
+    'GOOGLE_CLIENT_ID',
   ] as const) {
     const value = config[key];
     if (value === undefined) continue;

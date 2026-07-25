@@ -3,17 +3,20 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { Role, User } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { OAuth2Client } from 'google-auth-library';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { TERMS_VERSION } from '../billing/billing.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -41,12 +44,15 @@ const INVALID_CREDENTIALS = 'Invalid credentials';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly googleClient: OAuth2Client;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
-  ) {}
+  ) {
+    this.googleClient = new OAuth2Client(this.config.get<string>('google.clientId') ?? undefined);
+  }
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = dto.email.toLowerCase().trim();
@@ -57,51 +63,107 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
-    const slug = await this.generateOrgSlug(dto.organizationName);
-    const acceptedAt = new Date();
+    const { user, organizationId, role } = await this.provisionOwnerAccount({
+      email,
+      name: dto.name.trim(),
+      passwordHash,
+      organizationName: dto.organizationName.trim(),
+      locale: dto.locale,
+    });
 
-    const { user, organizationId, role } = await this.prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
-        data: { name: dto.organizationName.trim(), slug },
-      });
+    return this.buildAuthResponse(user, organizationId, role);
+  }
 
-      const createdUser = await tx.user.create({
+  async googleAuth(dto: GoogleAuthDto): Promise<AuthResponse> {
+    const clientId = this.config.get<string>('google.clientId')?.trim();
+    if (!clientId) {
+      throw new ServiceUnavailableException('Google Sign-In is not configured');
+    }
+
+    const payload = dto.accessToken
+      ? await this.resolveGoogleProfileFromAccessToken(dto.accessToken, clientId)
+      : await this.resolveGoogleProfileFromIdToken(dto.idToken!, clientId);
+
+    const googleId = payload.sub?.trim();
+    const email = payload.email?.toLowerCase().trim();
+    if (!googleId || !email) {
+      throw new UnauthorizedException('Invalid Google credentials');
+    }
+
+    const emailVerified =
+      payload.email_verified === true || payload.email_verified === 'true';
+    const displayName = (payload.name?.trim() || email.split('@')[0] || 'User').slice(0, 120);
+    const avatarUrl = payload.picture?.trim() || null;
+
+    const byGoogle = await this.prisma.user.findUnique({
+      where: { googleId },
+      include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
+    });
+    if (byGoogle) {
+      const membership = byGoogle.memberships[0];
+      if (!membership) {
+        throw new UnauthorizedException('User has no organization');
+      }
+      if (avatarUrl && avatarUrl !== byGoogle.avatarUrl) {
+        await this.prisma.user.update({
+          where: { id: byGoogle.id },
+          data: { avatarUrl },
+        });
+      }
+      return this.buildAuthResponse(byGoogle, membership.organizationId, membership.role);
+    }
+
+    const byEmail = await this.prisma.user.findUnique({
+      where: { email },
+      include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
+    });
+    if (byEmail) {
+      if (byEmail.googleId && byEmail.googleId !== googleId) {
+        throw new ConflictException('Unable to complete registration with the provided data');
+      }
+      if (!emailVerified && !byEmail.googleId) {
+        throw new UnauthorizedException(
+          'Sign in with your email and password to link Google to this account',
+        );
+      }
+
+      const membership = byEmail.memberships[0];
+      if (!membership) {
+        throw new UnauthorizedException('User has no organization');
+      }
+
+      const linked = await this.prisma.user.update({
+        where: { id: byEmail.id },
         data: {
-          email,
-          name: dto.name.trim(),
-          passwordHash,
-          locale: dto.locale,
-          termsAcceptedAt: acceptedAt,
-          termsVersion: TERMS_VERSION,
-          privacyAcceptedAt: acceptedAt,
+          googleId,
+          ...(avatarUrl ? { avatarUrl } : {}),
+          ...(emailVerified && !byEmail.emailVerifiedAt
+            ? { emailVerifiedAt: new Date() }
+            : {}),
         },
       });
 
-      const membership = await tx.organizationMember.create({
-        data: { userId: createdUser.id, organizationId: organization.id, role: 'OWNER' },
-      });
+      return this.buildAuthResponse(linked, membership.organizationId, membership.role);
+    }
 
-      const pipeline = await tx.pipeline.create({
-        data: { organizationId: organization.id, name: 'Pipeline padrão', isDefault: true },
-      });
+    if (dto.acceptTerms !== true) {
+      throw new BadRequestException('You must accept the Terms of Use and Privacy Policy');
+    }
 
-      const stages: Array<{ name: string; order: number; color: string; isWon?: boolean; isLost?: boolean }> = [
-        { name: 'Novos', order: 0, color: '#6366f1' },
-        { name: 'Em análise', order: 1, color: '#0ea5e9' },
-        { name: 'Qualificados', order: 2, color: '#14b8a6' },
-        { name: 'Contatados', order: 3, color: '#f59e0b' },
-        { name: 'Responderam', order: 4, color: '#f97316' },
-        { name: 'Reunião marcada', order: 5, color: '#8b5cf6' },
-        { name: 'Proposta enviada', order: 6, color: '#d946ef' },
-        { name: 'Negociação', order: 7, color: '#ec4899' },
-        { name: 'Ganhos', order: 8, color: '#22c55e', isWon: true },
-        { name: 'Perdidos', order: 9, color: '#ef4444', isLost: true },
-      ];
-      await tx.pipelineStage.createMany({
-        data: stages.map((stage) => ({ ...stage, pipelineId: pipeline.id })),
-      });
+    const organizationName = (
+      dto.organizationName?.trim() || `Workspace de ${displayName}`
+    ).slice(0, 120);
+    const locale = dto.locale ?? 'pt';
 
-      return { user: createdUser, organizationId: organization.id, role: membership.role };
+    const { user, organizationId, role } = await this.provisionOwnerAccount({
+      email,
+      name: displayName,
+      passwordHash: null,
+      organizationName,
+      locale,
+      googleId,
+      avatarUrl,
+      emailVerifiedAt: emailVerified ? new Date() : null,
     });
 
     return this.buildAuthResponse(user, organizationId, role);
@@ -291,6 +353,137 @@ export class AuthService {
     }
     await this.logoutAll(userId);
     return this.issueTokens(userId, organizationId, membership.role);
+  }
+
+  private async resolveGoogleProfileFromIdToken(
+    idToken: string,
+    clientId: string,
+  ): Promise<{
+    sub?: string;
+    email?: string;
+    email_verified?: boolean | string;
+    name?: string;
+    picture?: string;
+  }> {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: clientId,
+      });
+      return ticket.getPayload() ?? {};
+    } catch (error) {
+      this.logger.warn(`Google ID token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Google credentials');
+    }
+  }
+
+  private async resolveGoogleProfileFromAccessToken(
+    accessToken: string,
+    clientId: string,
+  ): Promise<{
+    sub?: string;
+    email?: string;
+    email_verified?: boolean | string;
+    name?: string;
+    picture?: string;
+  }> {
+    try {
+      const tokenInfoRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (!tokenInfoRes.ok) {
+        throw new Error(`tokeninfo HTTP ${tokenInfoRes.status}`);
+      }
+      const tokenInfo = (await tokenInfoRes.json()) as { aud?: string; azp?: string };
+      const audience = tokenInfo.aud ?? tokenInfo.azp;
+      if (audience !== clientId) {
+        throw new Error('access token audience mismatch');
+      }
+
+      const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!profileRes.ok) {
+        throw new Error(`userinfo HTTP ${profileRes.status}`);
+      }
+      return (await profileRes.json()) as {
+        sub?: string;
+        email?: string;
+        email_verified?: boolean | string;
+        name?: string;
+        picture?: string;
+      };
+    } catch (error) {
+      this.logger.warn(`Google access token verification failed: ${(error as Error).message}`);
+      throw new UnauthorizedException('Invalid Google credentials');
+    }
+  }
+
+  private async provisionOwnerAccount(input: {
+    email: string;
+    name: string;
+    passwordHash: string | null;
+    organizationName: string;
+    locale: 'pt' | 'en';
+    googleId?: string;
+    avatarUrl?: string | null;
+    emailVerifiedAt?: Date | null;
+  }): Promise<{ user: User; organizationId: string; role: Role }> {
+    const slug = await this.generateOrgSlug(input.organizationName);
+    const acceptedAt = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const organization = await tx.organization.create({
+        data: { name: input.organizationName, slug },
+      });
+
+      const createdUser = await tx.user.create({
+        data: {
+          email: input.email,
+          name: input.name,
+          passwordHash: input.passwordHash,
+          locale: input.locale,
+          googleId: input.googleId,
+          avatarUrl: input.avatarUrl ?? undefined,
+          emailVerifiedAt: input.emailVerifiedAt ?? undefined,
+          termsAcceptedAt: acceptedAt,
+          termsVersion: TERMS_VERSION,
+          privacyAcceptedAt: acceptedAt,
+        },
+      });
+
+      const membership = await tx.organizationMember.create({
+        data: { userId: createdUser.id, organizationId: organization.id, role: 'OWNER' },
+      });
+
+      const pipeline = await tx.pipeline.create({
+        data: { organizationId: organization.id, name: 'Pipeline padrão', isDefault: true },
+      });
+
+      const stages: Array<{
+        name: string;
+        order: number;
+        color: string;
+        isWon?: boolean;
+        isLost?: boolean;
+      }> = [
+        { name: 'Novos', order: 0, color: '#6366f1' },
+        { name: 'Em análise', order: 1, color: '#0ea5e9' },
+        { name: 'Qualificados', order: 2, color: '#14b8a6' },
+        { name: 'Contatados', order: 3, color: '#f59e0b' },
+        { name: 'Responderam', order: 4, color: '#f97316' },
+        { name: 'Reunião marcada', order: 5, color: '#8b5cf6' },
+        { name: 'Proposta enviada', order: 6, color: '#d946ef' },
+        { name: 'Negociação', order: 7, color: '#ec4899' },
+        { name: 'Ganhos', order: 8, color: '#22c55e', isWon: true },
+        { name: 'Perdidos', order: 9, color: '#ef4444', isLost: true },
+      ];
+      await tx.pipelineStage.createMany({
+        data: stages.map((stage) => ({ ...stage, pipelineId: pipeline.id })),
+      });
+
+      return { user: createdUser, organizationId: organization.id, role: membership.role };
+    });
   }
 
   private async buildAuthResponse(user: User, organizationId: string, role: Role): Promise<AuthResponse> {

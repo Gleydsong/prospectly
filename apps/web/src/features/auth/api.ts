@@ -20,6 +20,17 @@ export async function login(input: { email: string; password: string }): Promise
   return data;
 }
 
+export async function googleAuth(input: {
+  idToken?: string;
+  accessToken?: string;
+  organizationName?: string;
+  locale?: 'pt' | 'en';
+  acceptTerms?: true;
+}): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>('/auth/google', input);
+  return data;
+}
+
 export async function register(input: {
   name: string;
   email: string;

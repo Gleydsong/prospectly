@@ -8,7 +8,8 @@ import { z } from 'zod';
 import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createCheckoutSession, login } from '@/features/auth/api';
+import { createCheckoutSession, login, type AuthResponse } from '@/features/auth/api';
+import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
@@ -49,26 +50,30 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
 
+  const finishAuth = async (response: AuthResponse) => {
+    setAuth(response);
+    await setAppLocale(response.user.locale ?? 'pt');
+
+    if (plan) {
+      try {
+        const checkout = await createCheckoutSession({ interval: plan, currency });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
+        return;
+      }
+    }
+
+    const from = (location.state as { from?: string } | null)?.from;
+    navigate(resolveInternalRedirect(from), { replace: true });
+  };
+
   const onSubmit = async (values: LoginForm) => {
     setServerError(null);
     try {
       const response = await login(values);
-      setAuth(response);
-      await setAppLocale(response.user.locale ?? 'pt');
-
-      if (plan) {
-        try {
-          const checkout = await createCheckoutSession({ interval: plan, currency });
-          handleCheckoutResult(checkout);
-          return;
-        } catch {
-          navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
-          return;
-        }
-      }
-
-      const from = (location.state as { from?: string } | null)?.from;
-      navigate(resolveInternalRedirect(from), { replace: true });
+      await finishAuth(response);
     } catch (error) {
       setServerError(getApiErrorMessage(error));
     }
@@ -115,6 +120,19 @@ export function LoginPage() {
           {t('auth.login')}
         </Button>
       </form>
+
+      <div className="mt-4">
+        <GoogleSignInButton
+          onSuccess={finishAuth}
+          onError={(message) => {
+            if (/accept the Terms/i.test(message) || /must accept/i.test(message)) {
+              setServerError(t('auth.googleNeedsRegister'));
+              return;
+            }
+            setServerError(message);
+          }}
+        />
+      </div>
     </AuthShell>
   );
 }
