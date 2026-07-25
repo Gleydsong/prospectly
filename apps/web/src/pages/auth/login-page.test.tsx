@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
+import i18n from '@/i18n';
 import { LoginPage } from './login-page';
 
 const renderPage = () =>
@@ -16,6 +17,10 @@ const renderPage = () =>
   );
 
 describe('LoginPage', () => {
+  beforeAll(async () => {
+    await i18n.changeLanguage('pt');
+  });
+
   it('renders email and password fields', () => {
     renderPage();
     expect(screen.getByLabelText('E-mail')).toBeInTheDocument();

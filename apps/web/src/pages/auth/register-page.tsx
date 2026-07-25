@@ -1,11 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Building2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
+import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -23,7 +23,7 @@ type RegisterForm = {
   password: string;
   organizationName: string;
   locale: AppLocale;
-  acceptTerms: true;
+  acceptTerms: boolean;
 };
 
 export function RegisterPage() {
@@ -53,9 +53,9 @@ export function RegisterPage() {
           .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, t('auth.passwordPattern')),
         organizationName: z.string().min(2, t('auth.orgRequired')),
         locale: z.enum(['pt', 'en']),
-        acceptTerms: z.literal(true, {
-          errorMap: () => ({ message: t('auth.acceptTermsRequired') }),
-        }),
+        acceptTerms: z
+          .boolean({ required_error: t('auth.acceptTermsRequired') })
+          .refine((value) => value === true, { message: t('auth.acceptTermsRequired') }),
       }),
     [t],
   );
@@ -68,7 +68,7 @@ export function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { locale: detectBrowserLocale(), acceptTerms: undefined },
+    defaultValues: { locale: detectBrowserLocale(), acceptTerms: false },
   });
 
   const locale = watch('locale');
@@ -105,113 +105,17 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-50 p-4">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgb(5_150_105_/_0.12),_transparent_55%)]"
-      />
-      <div className="relative w-full max-w-md rounded-control border border-zinc-200/80 bg-white p-8 shadow-soft">
-        <div className="mb-8 flex flex-col items-center gap-2">
-          <span className="flex h-12 w-12 items-center justify-center rounded-control bg-brand-600 text-white">
-            <Building2 className="h-6 w-6" aria-hidden />
-          </span>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('auth.registerTitle')}</h1>
-          <p className="text-sm text-zinc-500">
-            {plan
-              ? t('auth.registerPlanSubtitle', {
-                  plan: plan === 'monthly' ? t('auth.planMonthly') : t('auth.planLifetime'),
-                })
-              : t('auth.registerSubtitle')}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <Input
-            label={t('auth.name')}
-            autoComplete="name"
-            error={errors.name?.message}
-            {...register('name')}
-          />
-          <Input
-            label={t('auth.email')}
-            type="email"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <Input
-            label={t('auth.password')}
-            type="password"
-            autoComplete="new-password"
-            error={errors.password?.message}
-            {...register('password')}
-          />
-          <Input
-            label={t('auth.organization')}
-            error={errors.organizationName?.message}
-            {...register('organizationName')}
-          />
-          <Select
-            label={t('auth.language')}
-            value={locale}
-            error={errors.locale?.message}
-            onChange={(event) => {
-              const next = event.target.value as AppLocale;
-              setValue('locale', next, { shouldValidate: true });
-              void setAppLocale(next);
-            }}
-          >
-            <option value="pt">{t('auth.languagePt')}</option>
-            <option value="en">{t('auth.languageEn')}</option>
-          </Select>
-
-          <label className="flex items-start gap-2 text-sm text-zinc-600">
-            <input
-              type="checkbox"
-              className="mt-1"
-              value="true"
-              {...register('acceptTerms', {
-                setValueAs: (value) => value === true || value === 'true' || value === 'on',
-              })}
-            />
-            <span>
-              {t('auth.acceptTermsPrefix')}{' '}
-              <a
-                className="font-medium text-brand-600 hover:text-brand-700"
-                href={`${LANDING_URL}/terms`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {t('auth.terms')}
-              </a>{' '}
-              {t('auth.acceptTermsAnd')}{' '}
-              <a
-                className="font-medium text-brand-600 hover:text-brand-700"
-                href={`${LANDING_URL}/privacy`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {t('auth.privacy')}
-              </a>
-              .
-            </span>
-          </label>
-          {errors.acceptTerms?.message ? (
-            <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
-          ) : null}
-
-          {serverError ? (
-            <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
-              {serverError}
-            </p>
-          ) : null}
-
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            {plan ? t('auth.createAndPay') : t('auth.createAccount')}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-zinc-500">
+    <AuthShell
+      title={t('auth.registerTitle')}
+      subtitle={
+        plan
+          ? t('auth.registerPlanSubtitle', {
+              plan: plan === 'monthly' ? t('auth.planMonthly') : t('auth.planLifetime'),
+            })
+          : t('auth.registerSubtitle')
+      }
+      footer={
+        <>
           {t('auth.hasAccount')}{' '}
           <Link
             to={plan ? `/login?plan=${plan}&currency=${currency}` : '/login'}
@@ -219,8 +123,87 @@ export function RegisterPage() {
           >
             {t('auth.login')}
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <Input
+          label={t('auth.name')}
+          autoComplete="name"
+          error={errors.name?.message}
+          {...register('name')}
+        />
+        <Input
+          label={t('auth.email')}
+          type="email"
+          autoComplete="email"
+          error={errors.email?.message}
+          {...register('email')}
+        />
+        <Input
+          label={t('auth.password')}
+          type="password"
+          autoComplete="new-password"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+        <Input
+          label={t('auth.organization')}
+          error={errors.organizationName?.message}
+          {...register('organizationName')}
+        />
+        <Select
+          label={t('auth.language')}
+          value={locale}
+          error={errors.locale?.message}
+          onChange={(event) => {
+            const next = event.target.value as AppLocale;
+            setValue('locale', next, { shouldValidate: true });
+            void setAppLocale(next);
+          }}
+        >
+          <option value="pt">{t('auth.languagePt')}</option>
+          <option value="en">{t('auth.languageEn')}</option>
+        </Select>
+
+        <label className="flex items-start gap-2 text-sm text-zinc-600">
+          <input type="checkbox" className="mt-1" {...register('acceptTerms')} />
+          <span>
+            {t('auth.acceptTermsPrefix')}{' '}
+            <a
+              className="font-medium text-brand-600 hover:text-brand-700"
+              href={`${LANDING_URL}/terms`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('auth.terms')}
+            </a>{' '}
+            {t('auth.acceptTermsAnd')}{' '}
+            <a
+              className="font-medium text-brand-600 hover:text-brand-700"
+              href={`${LANDING_URL}/privacy`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('auth.privacy')}
+            </a>
+            .
+          </span>
+        </label>
+        {errors.acceptTerms?.message ? (
+          <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
+        ) : null}
+
+        {serverError ? (
+          <p className="rounded-control bg-red-50 p-3 text-sm text-red-700" role="alert">
+            {serverError}
+          </p>
+        ) : null}
+
+        <Button type="submit" className="w-full" loading={isSubmitting}>
+          {plan ? t('auth.createAndPay') : t('auth.createAccount')}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

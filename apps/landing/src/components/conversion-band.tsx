@@ -63,7 +63,7 @@ export function ConversionBand({ locale }: { locale: Locale }) {
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <a
               href={appRegisterUrl('monthly', currency)}
-              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98]"
+              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-blue-600 px-6 text-sm font-semibold text-white transition-transform hover:bg-blue-700 active:scale-[0.98]"
             >
               <RocketLaunch weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'ctaBandPrimary')}
