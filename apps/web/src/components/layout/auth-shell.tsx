@@ -38,7 +38,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 
   return (
     <div className="min-h-[100dvh] bg-zinc-50 lg:grid lg:grid-cols-2">
-      <aside className="relative overflow-hidden border-b border-zinc-200/80 bg-[radial-gradient(ellipse_70%_55%_at_85%_15%,rgb(5_150_105_/_0.14),transparent_55%),radial-gradient(ellipse_50%_40%_at_10%_80%,rgb(24_24_27_/_0.04),transparent_50%),linear-gradient(180deg,#fafafa_0%,#f4f4f5_100%)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
+      <aside className="relative overflow-hidden border-b border-zinc-200/80 bg-[radial-gradient(ellipse_70%_55%_at_85%_15%,rgb(37_99_235_/_0.14),transparent_55%),radial-gradient(ellipse_50%_40%_at_10%_80%,rgb(24_24_27_/_0.04),transparent_50%),linear-gradient(180deg,#fafafa_0%,#f4f4f5_100%)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
         <div className="mx-auto flex h-full max-w-lg flex-col justify-center lg:mx-0">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-control bg-brand-600 text-white shadow-soft">

@@ -125,7 +125,7 @@ function ScoringSettingsCard() {
                 {saveError}
               </p>
             ) : null}
-            {saveMessage ? <p className="text-sm text-emerald-700">{saveMessage}</p> : null}
+            {saveMessage ? <p className="text-sm text-brand-700">{saveMessage}</p> : null}
             <Button
               type="button"
               loading={saveMutation.isPending}

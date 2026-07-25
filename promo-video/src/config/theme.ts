@@ -1,4 +1,4 @@
-/** Prospectly brand tokens — aligned with landing zinc/emerald identity. */
+/** Prospectly brand tokens — aligned with landing zinc + cobalt identity. */
 export const COLORS = {
   ink: '#09090b',
   zinc950: '#09090b',
@@ -10,17 +10,21 @@ export const COLORS = {
   zinc100: '#f4f4f5',
   zinc50: '#fafafa',
   white: '#ffffff',
-  emerald400: '#34d399',
-  emerald500: '#10b981',
-  emerald600: '#059669',
+  /** @deprecated Prefer blue* / accent*; kept for existing scene call sites. */
+  emerald400: '#60a5fa',
+  emerald500: '#3b82f6',
+  emerald600: '#2563eb',
+  blue400: '#60a5fa',
+  blue500: '#3b82f6',
   blue600: '#2563eb',
   blue700: '#1d4ed8',
-  glowEmerald: 'rgba(5, 150, 105, 0.35)',
+  glowEmerald: 'rgba(37, 99, 235, 0.35)',
+  glowBlue: 'rgba(37, 99, 235, 0.35)',
   glowSoft: 'rgba(255, 255, 255, 0.08)',
   browserChrome: '#1c1c1e',
   browserBar: '#2c2c2e',
   calloutBg: 'rgba(9, 9, 11, 0.88)',
-  calloutBorder: 'rgba(52, 211, 153, 0.55)',
+  calloutBorder: 'rgba(96, 165, 250, 0.55)',
 } as const;
 
 export const FONTS = {

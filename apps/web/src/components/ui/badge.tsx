@@ -6,13 +6,12 @@ type Tone = 'slate' | 'green' | 'amber' | 'red' | 'blue' | 'brand' | 'purple';
 
 const tones: Record<Tone, string> = {
   slate: 'bg-zinc-100 text-zinc-700',
-  green: 'bg-emerald-100 text-emerald-800',
+  green: 'bg-brand-100 text-brand-800',
   amber: 'bg-amber-100 text-amber-800',
   red: 'bg-red-100 text-red-700',
   blue: 'bg-sky-100 text-sky-800',
   brand: 'bg-brand-100 text-brand-800',
-  // Mantém a chave `purple` por compatibilidade, mas usa teal do MVP (sem violeta)
-  purple: 'bg-teal-100 text-teal-800',
+  purple: 'bg-brand-50 text-brand-700',
 };
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

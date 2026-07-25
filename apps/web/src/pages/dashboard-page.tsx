@@ -19,7 +19,7 @@ import { fetchDashboardCharts, fetchDashboardSummary } from '@/features/dashboar
 import { getLeadStatusLabel, getLeadStatusShortLabel } from '@/lib/lead-status';
 import { formatDate } from '@/lib/utils';
 
-const PIE_COLORS = ['#059669', '#0d9488', '#0ea5e9', '#14b8a6', '#f59e0b', '#f97316', '#047857', '#38bdf8'];
+const PIE_COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#f59e0b', '#f97316', '#1d4ed8', '#38bdf8'];
 
 const SCORE_BUCKET_LABELS: Record<string, string> = {
   '0-29': '0–29',
@@ -133,7 +133,7 @@ export function DashboardPage() {
                       return row?.fullLabel ?? row?.label ?? '';
                     }}
                   />
-                  <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name={t('dashboard.leadsSeries')} />
+                  <Bar dataKey="count" fill="#2563eb" radius={[4, 4, 0, 0]} name={t('dashboard.leadsSeries')} />
                 </BarChart>
               </ResponsiveContainer>
             )}

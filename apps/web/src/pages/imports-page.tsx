@@ -256,7 +256,7 @@ export function ImportsPage() {
           <CardContent className="space-y-5">
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg bg-zinc-50 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">Total</dt><dd className="mt-1 font-semibold text-zinc-900">{selectedImport.totalRows} linha(s)</dd></div>
-              <div className="rounded-lg bg-emerald-50 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-emerald-700">Importados</dt><dd className="mt-1 font-semibold text-emerald-900">{selectedImport.importedCount} importado(s)</dd></div>
+              <div className="rounded-lg bg-brand-50 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-brand-700">Importados</dt><dd className="mt-1 font-semibold text-brand-900">{selectedImport.importedCount} importado(s)</dd></div>
               <div className="rounded-lg bg-amber-50 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-amber-700">Ignorados</dt><dd className="mt-1 font-semibold text-amber-900">{selectedImport.skippedCount} ignorado(s)</dd></div>
               <div className="rounded-lg bg-red-50 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-red-700">Inválidos</dt><dd className="mt-1 font-semibold text-red-900">{selectedImport.invalidCount} inválido(s)</dd></div>
             </dl>

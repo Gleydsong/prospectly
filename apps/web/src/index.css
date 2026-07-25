@@ -8,9 +8,9 @@
   --bg-sunken: #f4f4f5;
   --ink: #18181b;
   --ink-muted: #52525b;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --ring: rgb(5 150 105 / 0.35);
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --ring: rgb(37 99 235 / 0.35);
   --border: rgb(24 24 27 / 0.1);
 }
 
@@ -31,6 +31,6 @@
   }
 
   ::selection {
-    background: rgb(5 150 105 / 0.22);
+    background: rgb(37 99 235 / 0.22);
   }
 }

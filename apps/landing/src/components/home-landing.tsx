@@ -1,9 +1,9 @@
-import Image from 'next/image';
 import { MagnifyingGlass } from '@phosphor-icons/react/dist/ssr';
 import { ConversionBand } from '@/components/conversion-band';
 import { FaqSection } from '@/components/faq-section';
 import { LeadCaptureGuide } from '@/components/lead-capture-guide';
 import { Reveal } from '@/components/motion';
+import { ProductDemoVideo } from '@/components/product-demo-video';
 import { TrustStrip } from '@/components/trust-strip';
 import { getHomeFaqItems, t, type Locale } from '@/lib/i18n';
 
@@ -56,18 +56,11 @@ export function HomeLanding({ locale }: { locale: Locale }) {
               {locale === 'pt' ? 'Filtro sem website ativo' : 'No-website filter on'}
             </div>
           </Reveal>
-          <Reveal className="relative aspect-[4/3] overflow-hidden rounded-control lg:col-span-7" delay={0.06}>
-            <Image
-              src="/images/workflow-desk.jpg"
-              alt={
-                locale === 'pt'
-                  ? 'Mesa de trabalho com mapa de prospecção no notebook'
-                  : 'Desk with a prospecting map open on a laptop'
-              }
-              fill
-              sizes="(max-width: 1024px) 100vw, 58vw"
-              className="object-cover"
-            />
+          <Reveal
+            className="relative aspect-video overflow-hidden rounded-control border border-[color:var(--border)] bg-[color:var(--bg-sunken)] shadow-soft lg:col-span-7"
+            delay={0.06}
+          >
+            <ProductDemoVideo locale={locale} className="absolute inset-0" />
           </Reveal>
         </div>
       </section>

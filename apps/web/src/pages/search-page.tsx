@@ -114,7 +114,7 @@ function websiteTone(status: WebsitePresence): 'amber' | 'green' | 'slate' {
 
 function ImportSummary({ summary }: { summary: SearchImportSummary }) {
   return (
-    <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800" role="status">
+    <p className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800" role="status">
       Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s), {summary.invalid}{' '}
       inválido(s) e {summary.conflicts} possível(is) duplicado(s).
     </p>
