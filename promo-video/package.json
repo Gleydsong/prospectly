@@ -1,0 +1,46 @@
+{
+  "name": "promo-video",
+  "version": "1.0.0",
+  "description": "My Remotion video",
+  "repository": {},
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.499",
+    "@remotion/media": "4.0.499",
+    "@remotion/tailwind-v4": "4.0.499",
+    "@remotion/transitions": "4.0.499",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.499",
+    "tailwindcss": "4.0.0"
+  },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.499",
+    "@types/node": "^26.1.1",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.19.0",
+    "playwright": "^1.62.0",
+    "prettier": "3.8.1",
+    "tsx": "^4.23.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio --no-open",
+    "build": "remotion bundle",
+    "upgrade": "remotion upgrade",
+    "lint": "eslint src && tsc",
+    "capture": "tsx scripts/capture.ts",
+    "validate-assets": "tsx scripts/validate-assets.ts",
+    "render": "npm run validate-assets && remotion render ProspectlyPromo out/prospectly-promo.mp4",
+    "render:howto-account": "npm run validate-assets && remotion render HowToCreateAccount out/como-criar-conta.mp4",
+    "render:free-account": "npm run validate-assets && remotion render CreateFreeAccount out/criar-conta-gratis.mp4",
+    "render:signup": "npm run render:howto-account && npm run render:free-account",
+    "render:pricing": "remotion render PricingPromo out/precos.mp4",
+    "render:still": "remotion still Still-Intro out/still-intro.png"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
