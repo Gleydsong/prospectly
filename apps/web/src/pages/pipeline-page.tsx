@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Card } from '@/components/ui/card';
@@ -9,6 +10,7 @@ import { fetchPipelineBoard, moveLeadToStage } from '@/features/pipeline/api';
 import { cn } from '@/lib/utils';
 
 export function PipelinePage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const board = useQuery({ queryKey: ['pipeline', 'board'], queryFn: fetchPipelineBoard });
   const [draggingLeadId, setDraggingLeadId] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export function PipelinePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Pipeline</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.pipeline')}</h1>
         <p className="text-sm text-zinc-500">{board.data.pipeline.name} — arraste leads entre etapas</p>
       </div>
 

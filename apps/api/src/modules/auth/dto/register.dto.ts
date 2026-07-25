@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({ example: 'Ana Silva' })
@@ -27,4 +27,8 @@ export class RegisterDto {
   @IsNotEmpty()
   @MaxLength(120)
   organizationName!: string;
+
+  @ApiProperty({ enum: ['pt', 'en'], example: 'pt' })
+  @IsIn(['pt', 'en'])
+  locale!: 'pt' | 'en';
 }

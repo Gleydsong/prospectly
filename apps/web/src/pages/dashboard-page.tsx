@@ -7,6 +7,7 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -56,13 +57,14 @@ function StatCard({
 }
 
 export function DashboardPage() {
+  const { t, i18n } = useTranslation();
   const summary = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: fetchDashboardSummary });
   const charts = useQuery({ queryKey: ['dashboard', 'charts'], queryFn: fetchDashboardCharts });
 
   if (summary.isError) {
     return (
       <p className="rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert">
-        Erro ao carregar o dashboard. Tente novamente.
+        {t('dashboard.loadError')}
       </p>
     );
   }
@@ -84,10 +86,10 @@ export function DashboardPage() {
     })) ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={i18n.language}>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Dashboard</h1>
-        <p className="text-sm text-zinc-500">Visão geral das suas oportunidades</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('dashboard.title')}</h1>
+        <p className="text-sm text-zinc-500">{t('dashboard.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -95,19 +97,19 @@ export function DashboardPage() {
           Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-20" />)
         ) : (
           <>
-            <StatCard label="Total de leads" value={data.totalLeads} icon={Users} />
-            <StatCard label="Novos (30 dias)" value={data.newLeads} icon={UserPlus} />
-            <StatCard label="Reuniões marcadas" value={data.meetings} icon={CalendarClock} />
-            <StatCard label="Propostas enviadas" value={data.proposals} icon={FileText} />
-            <StatCard label="Clientes ganhos" value={data.won} icon={Handshake} />
-            <StatCard label="Taxa de conversão" value={`${data.conversionRate}%`} icon={Target} />
+            <StatCard label={t('dashboard.totalLeads')} value={data.totalLeads} icon={Users} />
+            <StatCard label={t('dashboard.newLeads')} value={data.newLeads} icon={UserPlus} />
+            <StatCard label={t('dashboard.meetings')} value={data.meetings} icon={CalendarClock} />
+            <StatCard label={t('dashboard.proposals')} value={data.proposals} icon={FileText} />
+            <StatCard label={t('dashboard.won')} value={data.won} icon={Handshake} />
+            <StatCard label={t('dashboard.conversion')} value={`${data.conversionRate}%`} icon={Target} />
           </>
         )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Leads por status" />
+          <CardHeader title={t('dashboard.byStatus')} />
           <CardContent className="h-72">
             {charts.isLoading || !charts.data ? (
               <Skeleton className="h-full" />
@@ -125,13 +127,13 @@ export function DashboardPage() {
                   />
                   <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#52525b' }} width={32} />
                   <Tooltip
-                    formatter={(value: number) => [value, 'Leads']}
+                    formatter={(value: number) => [value, t('dashboard.leadsSeries')]}
                     labelFormatter={(_, payload) => {
                       const row = payload?.[0]?.payload as { fullLabel?: string; label?: string } | undefined;
                       return row?.fullLabel ?? row?.label ?? '';
                     }}
                   />
-                  <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name="Leads" />
+                  <Bar dataKey="count" fill="#059669" radius={[4, 4, 0, 0]} name={t('dashboard.leadsSeries')} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -139,7 +141,7 @@ export function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Distribuição por score" />
+          <CardHeader title={t('dashboard.byScore')} />
           <CardContent className="h-72">
             {charts.isLoading || !charts.data ? (
               <Skeleton className="h-full" />
@@ -168,10 +170,10 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Principais oportunidades" description="Leads com maior score" />
+          <CardHeader title={t('dashboard.topOpportunities')} description={t('dashboard.topOpportunitiesDesc')} />
           <CardContent className="space-y-3">
             {!data || data.topOpportunities.length === 0 ? (
-              <p className="text-sm text-zinc-500">Sem leads ainda.</p>
+              <p className="text-sm text-zinc-500">{t('dashboard.noLeads')}</p>
             ) : (
               data.topOpportunities.map((lead) => (
                 <Link
@@ -181,7 +183,7 @@ export function DashboardPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-zinc-900">{lead.companyName}</p>
-                    <p className="text-xs text-zinc-500">{lead.city ?? '—'}</p>
+                    <p className="text-xs text-zinc-500">{lead.city ?? t('common.dash')}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <LeadStatusBadge status={lead.status} />
@@ -194,10 +196,10 @@ export function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Próximos acompanhamentos" />
+          <CardHeader title={t('dashboard.upcoming')} />
           <CardContent className="space-y-3">
             {!data || data.upcomingFollowUps.length === 0 ? (
-              <p className="text-sm text-zinc-500">Nenhum acompanhamento agendado.</p>
+              <p className="text-sm text-zinc-500">{t('dashboard.noFollowUps')}</p>
             ) : (
               data.upcomingFollowUps.map((item) => (
                 <Link

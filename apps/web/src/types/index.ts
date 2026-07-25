@@ -9,6 +9,8 @@ export {
   Role,
 } from '@prospectly/shared-types';
 
+export type AppLocale = 'pt' | 'en';
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -16,6 +18,8 @@ export interface AuthUser {
   organizationId: string;
   organizationName: string;
   role: Role;
+  /** Present after login/register; may be missing in older persisted sessions. */
+  locale?: AppLocale;
 }
 
 export interface Tag {

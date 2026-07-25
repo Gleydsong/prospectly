@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -39,6 +40,7 @@ const STATUS_LABEL: Record<Task['status'], string> = {
 };
 
 export function TasksPage() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<Task['status'] | ''>('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -64,7 +66,7 @@ export function TasksPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Tarefas</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.tasks')}</h1>
           <p className="text-sm text-zinc-500">Acompanhe próximos passos com os leads</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>

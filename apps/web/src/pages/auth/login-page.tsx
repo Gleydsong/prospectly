@@ -1,28 +1,35 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Building2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { login } from '@/features/auth/api';
+import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
-const loginSchema = z.object({
-  email: z.string().email('E-mail inválido'),
-  password: z.string().min(1, 'Senha obrigatória'),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = { email: string; password: string };
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().email(t('auth.emailInvalid')),
+        password: z.string().min(1, t('auth.passwordRequired')),
+      }),
+    [t],
+  );
 
   const {
     register,
@@ -35,6 +42,7 @@ export function LoginPage() {
     try {
       const response = await login(values);
       setAuth(response);
+      await setAppLocale(response.user.locale ?? 'pt');
       const from = (location.state as { from?: string } | null)?.from ?? '/';
       navigate(from, { replace: true });
     } catch (error) {
@@ -53,20 +61,20 @@ export function LoginPage() {
           <span className="flex h-12 w-12 items-center justify-center rounded-control bg-brand-600 text-white">
             <Building2 className="h-6 w-6" aria-hidden />
           </span>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Prospectly</h1>
-          <p className="text-sm text-zinc-500">Entre na sua conta</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('auth.loginTitle')}</h1>
+          <p className="text-sm text-zinc-500">{t('auth.loginSubtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <Input
-            label="E-mail"
+            label={t('auth.email')}
             type="email"
             autoComplete="email"
             error={errors.email?.message}
             {...register('email')}
           />
           <Input
-            label="Senha"
+            label={t('auth.password')}
             type="password"
             autoComplete="current-password"
             error={errors.password?.message}
@@ -80,14 +88,14 @@ export function LoginPage() {
           ) : null}
 
           <Button type="submit" className="w-full" loading={isSubmitting}>
-            Entrar
+            {t('auth.login')}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-500">
-          Ainda não tem conta?{' '}
+          {t('auth.noAccount')}{' '}
           <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
-            Criar conta
+            {t('auth.createAccount')}
           </Link>
         </p>
       </div>

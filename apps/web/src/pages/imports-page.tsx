@@ -1,5 +1,6 @@
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ function importStatusDescription(status: keyof typeof IMPORT_STATUS_LABEL): stri
 }
 
 export function ImportsPage() {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
   const [mapping, setMapping] = useState<CsvImportMapping>({});
@@ -128,7 +130,7 @@ export function ImportsPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Importar leads por CSV</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.imports')}</h1>
         <p className="text-sm text-zinc-500">Pré-visualize o arquivo, confirme o mapeamento e acompanhe o processamento.</p>
       </div>
 

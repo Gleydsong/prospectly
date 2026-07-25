@@ -78,8 +78,64 @@ describe('AuthService', () => {
         email: 'ana@agency.dev',
         password: 'Passw0rd!',
         organizationName: 'Agency',
+        locale: 'pt',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('register persists locale on the user', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const createdUser = {
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'en' as const,
+    };
+    const orgFindUnique = jest.fn().mockResolvedValue(null);
+    const userCreate = jest.fn().mockResolvedValue(createdUser);
+    const orgCreate = jest.fn().mockResolvedValue({ id: 'org1', name: 'Agency', slug: 'agency' });
+    const memberCreate = jest.fn().mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org1',
+      role: 'OWNER',
+    });
+    const pipelineCreate = jest.fn().mockResolvedValue({ id: 'p1' });
+    const stageCreateMany = jest.fn().mockResolvedValue({ count: 10 });
+
+    (prisma.organization as unknown as { findUnique: jest.Mock }).findUnique = orgFindUnique;
+    (prisma.organization as unknown as { create: jest.Mock }).create = orgCreate;
+    (prisma.user as unknown as { create: jest.Mock }).create = userCreate;
+    (prisma.organizationMember as unknown as { create: jest.Mock }).create = memberCreate;
+    (prisma.pipeline as unknown as { create: jest.Mock }).create = pipelineCreate;
+    (prisma.pipelineStage as unknown as { createMany: jest.Mock }).createMany = stageCreateMany;
+
+    prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+      fn(prisma),
+    );
+    (prisma.organization as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'org1', name: 'Agency' });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue(createdUser);
+    (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const result = await service.register({
+      name: 'Ana',
+      email: 'ana@agency.dev',
+      password: 'Passw0rd!',
+      organizationName: 'Agency',
+      locale: 'en',
+    });
+
+    expect(userCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ locale: 'en' }),
+      }),
+    );
+    expect(result.user.locale).toBe('en');
   });
 
   it('login fails with unknown email using generic message', async () => {
@@ -125,18 +181,20 @@ describe('AuthService', () => {
       passwordHash: 'hash',
       failedLoginAttempts: 2,
       lockedUntil: null,
+      locale: 'pt',
       memberships: [{ organizationId: 'org1', role: 'OWNER' }],
     });
     prisma.organization.findUniqueOrThrow = jest.fn().mockResolvedValue({ id: 'org1', name: 'Org' });
     prisma.refreshToken.create = jest.fn().mockResolvedValue({});
     (prisma.user as unknown as Record<string, jest.Mock>).findUniqueOrThrow = jest
       .fn()
-      .mockResolvedValue({ id: 'u1', email: 'a@b.dev' });
+      .mockResolvedValue({ id: 'u1', email: 'a@b.dev', locale: 'pt' });
 
     const service = new AuthService(prisma, makeJwt(), makeConfig());
     const result = await service.login({ email: 'a@b.dev', password: 'RightPass1' });
 
     expect(result.user.organizationId).toBe('org1');
+    expect(result.user.locale).toBe('pt');
     expect(result.accessToken).toBe('token');
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { failedLoginAttempts: 0, lockedUntil: null } }),

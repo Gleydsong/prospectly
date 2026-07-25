@@ -17,6 +17,11 @@ enum Role {
   VIEWER
 }
 
+enum AppLocale {
+  pt
+  en
+}
+
 enum LeadStatus {
   NEW
   TO_REVIEW
@@ -129,6 +134,7 @@ model User {
   resetTokenExpiresAt  DateTime?
   failedLoginAttempts  Int       @default(0)
   lockedUntil          DateTime?
+  locale               AppLocale @default(pt)
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 

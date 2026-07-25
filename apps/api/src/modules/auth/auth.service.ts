@@ -29,6 +29,7 @@ export interface AuthResponse extends AuthTokens {
     organizationId: string;
     organizationName: string;
     role: Role;
+    locale: 'pt' | 'en';
   };
 }
 
@@ -62,7 +63,7 @@ export class AuthService {
       });
 
       const createdUser = await tx.user.create({
-        data: { email, name: dto.name.trim(), passwordHash },
+        data: { email, name: dto.name.trim(), passwordHash, locale: dto.locale },
       });
 
       const membership = await tx.organizationMember.create({
@@ -289,6 +290,7 @@ export class AuthService {
         organizationId,
         organizationName: organization.name,
         role,
+        locale: user.locale,
       },
     };
   }

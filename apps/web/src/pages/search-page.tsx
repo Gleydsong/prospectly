@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckSquare, Search, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
@@ -141,6 +142,7 @@ function QueryErrorState({
 }
 
 export function SearchPage() {
+  const { t } = useTranslation();
   const [historyPage, setHistoryPage] = useState(1);
   const [selectedSearchId, setSelectedSearchId] = useState('');
   const [resultsPage, setResultsPage] = useState(1);
@@ -288,7 +290,7 @@ export function SearchPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Pesquisa de empresas</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.search')}</h1>
         <p className="text-sm text-zinc-500">
           Encontre negócios no Brasil e na Europa via OpenStreetMap ou Google Places.
         </p>

@@ -1,10 +1,12 @@
 import { Building2, LogOut, Menu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { logout } from '@/features/auth/api';
 import { useAuthStore } from '@/stores/auth.store';
 
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, refreshToken, clear } = useAuthStore();
 
@@ -22,7 +24,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-zinc-200 bg-white px-4 lg:px-6">
-      <button className="lg:hidden" onClick={onMenuClick} aria-label="Abrir menu">
+      <button className="lg:hidden" onClick={onMenuClick} aria-label={t('nav.openMenu')}>
         <Menu className="h-6 w-6 text-zinc-600" />
       </button>
       <div className="flex-1" />
@@ -44,8 +46,8 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <button
           onClick={() => void handleLogout()}
           className="rounded-control p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700"
-          aria-label="Sair"
-          title="Sair"
+          aria-label={t('nav.logout')}
+          title={t('nav.logout')}
         >
           <LogOut className="h-5 w-5" />
         </button>

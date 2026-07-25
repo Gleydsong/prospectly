@@ -9,28 +9,31 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/search', label: 'Pesquisa', icon: Search },
-  { to: '/imports', label: 'Importar CSV', icon: FileUp },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/pipeline', label: 'Pipeline', icon: KanbanSquare },
-  { to: '/tasks', label: 'Tarefas', icon: CheckSquare },
-  { to: '/settings', label: 'Configurações', icon: Settings },
-];
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/search', labelKey: 'nav.search', icon: Search },
+  { to: '/imports', labelKey: 'nav.imports', icon: FileUp },
+  { to: '/leads', labelKey: 'nav.leads', icon: Users },
+  { to: '/pipeline', labelKey: 'nav.pipeline', icon: KanbanSquare },
+  { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
+] as const;
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+
   return (
     <>
       {open ? (
         <button
           className="fixed inset-0 z-30 bg-zinc-900/50 lg:hidden"
           onClick={onClose}
-          aria-label="Fechar menu"
+          aria-label={t('nav.closeMenu')}
         />
       ) : null}
       <aside
@@ -46,11 +49,11 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             </span>
             <span className="text-lg font-semibold tracking-tight text-zinc-900">Prospectly</span>
           </NavLink>
-          <button className="lg:hidden" onClick={onClose} aria-label="Fechar menu lateral">
+          <button className="lg:hidden" onClick={onClose} aria-label={t('nav.closeMenu')}>
             <X className="h-5 w-5 text-zinc-500" />
           </button>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navegação principal">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Navigation">
           {NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -67,7 +70,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
               }
             >
               <item.icon className="h-5 w-5" aria-hidden />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>

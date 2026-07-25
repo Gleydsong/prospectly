@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Globe, Plus } from 'lucide-react';
 
@@ -18,6 +19,7 @@ import { LeadStatus } from '@/types';
 import { LeadFormModal } from './lead-form-modal';
 
 export function LeadsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState('');
@@ -48,7 +50,7 @@ export function LeadsPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Leads</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{t('leads.title')}</h1>
           <p className="text-sm text-zinc-500">Gerencie e qualifique suas oportunidades</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>

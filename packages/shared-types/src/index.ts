@@ -120,6 +120,8 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
+export type AppLocale = 'pt' | 'en';
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -127,6 +129,7 @@ export interface AuthUser {
   organizationId: string;
   organizationName: string;
   role: Role;
+  locale: AppLocale;
 }
 
 // ---------- Business search provider (Phase 3) ----------
