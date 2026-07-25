@@ -131,6 +131,11 @@ enum PlanStatus {
   CANCELED
 }
 
+enum PaymentProvider {
+  STRIPE
+  ABACATE
+}
+
 // ---------- Identity & tenancy ----------
 
 model User {
@@ -171,18 +176,22 @@ model User {
 }
 
 model Organization {
-  id                   String     @id @default(uuid())
-  name                 String
-  slug                 String     @unique
-  stripeCustomerId     String?    @unique
-  stripeSubscriptionId String?    @unique
-  plan                 OrgPlan    @default(FREE)
-  planStatus           PlanStatus @default(INACTIVE)
-  planCurrency         String?
-  currentPeriodEnd     DateTime?
-  createdAt            DateTime   @default(now())
-  updatedAt            DateTime   @updatedAt
-  deletedAt            DateTime?
+  id                    String           @id @default(uuid())
+  name                  String
+  slug                  String           @unique
+  paymentProvider       PaymentProvider?
+  stripeCustomerId      String?          @unique
+  stripeSubscriptionId  String?          @unique
+  abacateCustomerId     String?          @unique
+  abacateSubscriptionId String?          @unique
+  abacatePaymentId      String?          @unique
+  plan                  OrgPlan          @default(FREE)
+  planStatus            PlanStatus       @default(INACTIVE)
+  planCurrency          String?
+  currentPeriodEnd      DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  deletedAt             DateTime?
 
   members      OrganizationMember[]
   leads        Lead[]
@@ -200,6 +209,8 @@ model Organization {
 
   @@index([planStatus])
   @@index([stripeCustomerId])
+  @@index([abacateCustomerId])
+  @@index([paymentProvider])
 }
 
 model DataSubjectRequest {
@@ -730,11 +741,14 @@ model AuditLog {
   @@index([entity, entityId])
 }
 
-/// Stripe event.id used for webhook idempotency (replay-safe).
-model StripeWebhookEvent {
-  id          String   @id
+/// Provider-agnostic webhook idempotency (Stripe + Abacate).
+model BillingWebhookEvent {
+  id          String           @id @default(uuid())
+  provider    PaymentProvider
+  eventId     String
   type        String
-  processedAt DateTime @default(now())
+  processedAt DateTime         @default(now())
 
+  @@unique([provider, eventId])
   @@index([processedAt])
 }

@@ -13,7 +13,7 @@ import { createCheckoutSession, register as registerUser } from '@/features/auth
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
 import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
-import { assignStripeRedirect } from '@/lib/safe-url';
+import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { useAuthStore } from '@/stores/auth.store';
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
@@ -91,7 +91,7 @@ export function RegisterPage() {
       if (plan) {
         try {
           const checkout = await createCheckoutSession({ interval: plan, currency });
-          assignStripeRedirect(checkout.url);
+          handleCheckoutResult(checkout);
           return;
         } catch {
           navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });

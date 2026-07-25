@@ -4,6 +4,7 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { ProtectedRoute } from '@/components/protected-route';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
+import { PixCheckoutPage } from '@/pages/billing/pix-checkout-page';
 import { BillingCancelPage, BillingSuccessPage } from '@/pages/billing-result-page';
 import { DashboardPage } from '@/pages/dashboard-page';
 import { ImportsPage } from '@/pages/imports-page';
@@ -23,6 +24,7 @@ export function App() {
       <Route path="/billing/cancel" element={<BillingCancelPage />} />
 
       <Route element={<ProtectedRoute />}>
+        <Route path="/billing/pix" element={<PixCheckoutPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="search" element={<SearchPage />} />

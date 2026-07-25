@@ -9,9 +9,10 @@ import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createCheckoutSession, login } from '@/features/auth/api';
+import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
-import { assignStripeRedirect, resolveInternalRedirect } from '@/lib/safe-url';
+import { resolveInternalRedirect } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 
 type LoginForm = { email: string; password: string };
@@ -58,7 +59,7 @@ export function LoginPage() {
       if (plan) {
         try {
           const checkout = await createCheckoutSession({ interval: plan, currency });
-          assignStripeRedirect(checkout.url);
+          handleCheckoutResult(checkout);
           return;
         } catch {
           navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });

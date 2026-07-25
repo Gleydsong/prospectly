@@ -5,6 +5,7 @@ import {
   Get,
   Headers,
   Post,
+  Query,
   Req,
   type RawBodyRequest,
 } from '@nestjs/common';
@@ -52,9 +53,44 @@ export class BillingController {
     return this.billing.createPortalSession(organizationId);
   }
 
+  @ApiBearerAuth()
+  @Roles('OWNER', 'ADMIN')
+  @Post('cancel')
+  cancelSubscription(@CurrentOrg() organizationId: string) {
+    return this.billing.cancelSubscription(organizationId);
+  }
+
+  @Public()
+  @Post('webhook/stripe')
+  handleStripeWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ) {
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      throw new BadRequestException('Raw body missing for Stripe webhook');
+    }
+    return this.billing.handleStripeWebhook(rawBody, headers);
+  }
+
+  @Public()
+  @Post('webhook/abacate')
+  handleAbacateWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Query() query: Record<string, string | string[] | undefined>,
+  ) {
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      throw new BadRequestException('Raw body missing for Abacate webhook');
+    }
+    return this.billing.handleAbacateWebhook(rawBody, headers, query);
+  }
+
+  /** @deprecated Alias → Stripe webhook (one release). Prefer `/billing/webhook/stripe`. */
   @Public()
   @Post('webhook')
-  handleWebhook(
+  handleWebhookLegacy(
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string | undefined,
   ) {

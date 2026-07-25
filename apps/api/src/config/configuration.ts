@@ -43,6 +43,7 @@ export const configuration = () => ({
     portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL,
     prices: {
       monthly: {
+        // Deprecated for new BRL checkouts (AbacatePay). Kept for legacy Stripe BRL orgs.
         brl: process.env.STRIPE_PRICE_MONTHLY_BRL ?? '',
         eur: process.env.STRIPE_PRICE_MONTHLY_EUR ?? '',
         usd: process.env.STRIPE_PRICE_MONTHLY_USD ?? '',
@@ -53,6 +54,19 @@ export const configuration = () => ({
         usd: process.env.STRIPE_PRICE_LIFETIME_USD ?? '',
       },
     },
+  },
+  abacate: {
+    apiKey: process.env.ABACATE_API_KEY ?? '',
+    webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
+    webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY ?? '',
+    productMonthlyBrl: process.env.ABACATE_PRODUCT_MONTHLY_BRL ?? '',
+    lifetimeAmountCentavos: parseInt(
+      process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '99700',
+      10,
+    ),
+    successUrl: process.env.ABACATE_SUCCESS_URL,
+    cancelUrl: process.env.ABACATE_CANCEL_URL,
+    apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
   },
   sentryDsn: process.env.SENTRY_DSN,
 });

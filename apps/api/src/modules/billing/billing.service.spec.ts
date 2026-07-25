@@ -4,21 +4,10 @@ import { OrgPlan, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
-
-const constructEvent = jest.fn();
-const checkoutSessionsCreate = jest.fn();
-const billingPortalSessionsCreate = jest.fn();
-const customersCreate = jest.fn();
-
-jest.mock('stripe', () => {
-  return jest.fn().mockImplementation(() => ({
-    webhooks: { constructEvent },
-    checkout: { sessions: { create: checkoutSessionsCreate } },
-    billingPortal: { sessions: { create: billingPortalSessionsCreate } },
-    customers: { create: customersCreate },
-  }));
-});
+import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
+import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -31,19 +20,36 @@ describe('BillingService', () => {
     search: {
       count: jest.fn(),
     },
-    stripeWebhookEvent: {
+    billingWebhookEvent: {
       create: jest.fn().mockResolvedValue({}),
     },
   };
 
+  const stripeProvider = {
+    createCheckout: jest.fn(),
+    createPortal: jest.fn(),
+    verifyAndParseWebhook: jest.fn(),
+    applyWebhookEvent: jest.fn(),
+  };
+
+  const abacateProvider = {
+    createCheckout: jest.fn(),
+    cancelSubscription: jest.fn(),
+    verifyAndParseWebhook: jest.fn(),
+    applyWebhookEvent: jest.fn(),
+  };
+
+  const activation = {
+    bindCheckoutIntent: jest.fn().mockResolvedValue(undefined),
+  };
+
   const configGet = jest.fn((key: string) => {
     const map: Record<string, string> = {
-      'stripe.secretKey': 'sk_test_123',
-      'stripe.webhookSecret': 'whsec_test',
-      'stripe.prices.monthly.brl': 'price_monthly_brl',
-      'stripe.prices.lifetime.brl': 'price_lifetime_brl',
       'stripe.successUrl': 'https://app.test/success',
       'stripe.cancelUrl': 'https://app.test/cancel',
+      'stripe.portalReturnUrl': 'https://app.test/settings',
+      'abacate.successUrl': 'https://app.test/success',
+      'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
     };
     return map[key];
@@ -56,6 +62,9 @@ describe('BillingService', () => {
         BillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: configGet } },
+        { provide: BillingActivationService, useValue: activation },
+        { provide: StripePaymentProvider, useValue: stripeProvider },
+        { provide: AbacatePaymentProvider, useValue: abacateProvider },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -81,78 +90,103 @@ describe('BillingService', () => {
     await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it('creates monthly checkout session', async () => {
+  it('routes EUR monthly checkout to Stripe redirect', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       name: 'Acme',
       stripeCustomerId: 'cus_1',
+      paymentProvider: null,
       deletedAt: null,
     });
-    checkoutSessionsCreate.mockResolvedValue({ url: 'https://checkout.stripe.com/test' });
-
-    const result = await service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL');
-    expect(result.url).toContain('checkout.stripe.com');
-    expect(checkoutSessionsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mode: 'subscription',
-        customer: 'cus_1',
-      }),
-    );
-  });
-
-  it('rejects invalid webhook signature', async () => {
-    constructEvent.mockImplementation(() => {
-      throw new Error('bad sig');
+    stripeProvider.createCheckout.mockResolvedValue({
+      mode: 'redirect',
+      url: 'https://checkout.stripe.com/test',
+      provider: 'STRIPE',
+      externalCustomerId: 'cus_1',
     });
-    await expect(service.handleWebhook(Buffer.from('{}'), 'sig')).rejects.toBeInstanceOf(
-      BadRequestException,
+
+    const result = await service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'EUR');
+    expect(result).toEqual(
+      expect.objectContaining({ mode: 'redirect', url: 'https://checkout.stripe.com/test' }),
     );
+    expect(stripeProvider.createCheckout).toHaveBeenCalled();
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('activates LIFETIME on checkout.session.completed payment', async () => {
-    constructEvent.mockReturnValue({
-      id: 'evt_1',
+  it('routes BRL lifetime checkout to Abacate PIX', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: null,
+      deletedAt: null,
+    });
+    abacateProvider.createCheckout.mockResolvedValue({
+      mode: 'pix',
+      provider: 'ABACATE',
+      brCode: '000201',
+      brCodeBase64: 'data:image/png;base64,abc',
+      externalPaymentId: 'pix_1',
+      amountCentavos: 99700,
+    });
+
+    const result = await service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL');
+    expect(result.mode).toBe('pix');
+    expect(abacateProvider.createCheckout).toHaveBeenCalled();
+    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('rejects cross-provider checkout when org already bound', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: 'STRIPE',
+      planStatus: PlanStatus.ACTIVE,
+      deletedAt: null,
+    });
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rejects invalid Stripe webhook signature', async () => {
+    stripeProvider.verifyAndParseWebhook.mockRejectedValue(new BadRequestException('bad sig'));
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('activates via Stripe webhook once (idempotent)', async () => {
+    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
+      eventId: 'evt_1',
       type: 'checkout.session.completed',
-      data: {
-        object: {
-          mode: 'payment',
-          metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
-          customer: 'cus_1',
-        },
-      },
+      payload: { id: 'evt_1' },
     });
-    prisma.organization.update.mockResolvedValue({});
+    stripeProvider.applyWebhookEvent.mockResolvedValue({
+      handled: true,
+      eventId: 'evt_1',
+      type: 'checkout.session.completed',
+    });
 
-    await service.handleWebhook(Buffer.from('{}'), 'sig');
-    expect(prisma.stripeWebhookEvent.create).toHaveBeenCalledWith({
-      data: { id: 'evt_1', type: 'checkout.session.completed' },
-    });
-    expect(prisma.organization.update).toHaveBeenCalledWith({
-      where: { id: 'org1' },
+    await service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' });
+    expect(prisma.billingWebhookEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        plan: OrgPlan.LIFETIME,
-        planStatus: PlanStatus.ACTIVE,
+        eventId: 'evt_1',
+        type: 'checkout.session.completed',
       }),
     });
+    expect(stripeProvider.applyWebhookEvent).toHaveBeenCalled();
   });
 
-  it('ignores duplicate webhook events (idempotent replay)', async () => {
-    constructEvent.mockReturnValue({
-      id: 'evt_dup',
+  it('ignores duplicate webhook events', async () => {
+    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
+      eventId: 'evt_dup',
       type: 'checkout.session.completed',
-      data: {
-        object: {
-          mode: 'payment',
-          metadata: { organizationId: 'org1', interval: 'lifetime', currency: 'BRL' },
-          customer: 'cus_1',
-        },
-      },
+      payload: { id: 'evt_dup' },
     });
-    prisma.stripeWebhookEvent.create.mockRejectedValue({ code: 'P2002' });
+    prisma.billingWebhookEvent.create.mockRejectedValue({ code: 'P2002' });
 
-    await expect(service.handleWebhook(Buffer.from('{}'), 'sig')).resolves.toEqual({
-      received: true,
-    });
-    expect(prisma.organization.update).not.toHaveBeenCalled();
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
+    ).resolves.toEqual({ received: true });
+    expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
   });
 });

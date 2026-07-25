@@ -78,11 +78,27 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     'STRIPE_PRICE_LIFETIME_USD',
     'STRIPE_SUCCESS_URL',
     'STRIPE_CANCEL_URL',
+    'ABACATE_API_KEY',
+    'ABACATE_WEBHOOK_SECRET',
+    'ABACATE_WEBHOOK_HMAC_KEY',
+    'ABACATE_PRODUCT_MONTHLY_BRL',
+    'ABACATE_SUCCESS_URL',
+    'ABACATE_CANCEL_URL',
+    'ABACATE_API_BASE_URL',
   ] as const) {
     const value = config[key];
     if (value === undefined) continue;
     if (typeof value !== 'string') {
       throw new Error(`${key} must be a string`);
+    }
+  }
+
+  const lifetimeAmount = config.ABACATE_LIFETIME_AMOUNT_CENTAVOS;
+  if (lifetimeAmount !== undefined) {
+    const parsed =
+      typeof lifetimeAmount === 'number' ? lifetimeAmount : Number(lifetimeAmount);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('ABACATE_LIFETIME_AMOUNT_CENTAVOS must be a positive integer');
     }
   }
 

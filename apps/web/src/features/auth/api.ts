@@ -1,6 +1,14 @@
 import { api } from '@/lib/api';
 import type { AuthUser } from '@/types';
 
+export type { BillingStatus, CheckoutResult } from '@/features/billing/types';
+export {
+  cancelBillingSubscription,
+  createBillingPortal,
+  createCheckoutSession,
+  getBillingStatus,
+} from '@/features/billing/api';
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -28,38 +36,14 @@ export async function updateProfile(input: {
   name?: string;
   avatarUrl?: string;
   locale?: 'pt' | 'en';
-}): Promise<{ id: string; name: string; email: string; avatarUrl?: string | null; locale: 'pt' | 'en' }> {
-  const { data } = await api.patch('/users/me', input);
-  return data;
-}
-
-export async function createCheckoutSession(input: {
-  interval: 'monthly' | 'lifetime';
-  currency: 'BRL' | 'EUR' | 'USD';
-}): Promise<{ url: string }> {
-  const { data } = await api.post<{ url: string }>('/billing/checkout', input);
-  return data;
-}
-
-export async function createBillingPortal(): Promise<{ url: string }> {
-  const { data } = await api.post<{ url: string }>('/billing/portal');
-  return data;
-}
-
-export async function getBillingStatus(): Promise<{
-  plan: string;
-  planStatus: string;
-  planCurrency: string | null;
-  currentPeriodEnd: string | null;
-  freeSearchLimit: number;
+}): Promise<{
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  locale: 'pt' | 'en';
 }> {
-  const { data } = await api.get<{
-    plan: string;
-    planStatus: string;
-    planCurrency: string | null;
-    currentPeriodEnd: string | null;
-    freeSearchLimit: number;
-  }>('/billing/status');
+  const { data } = await api.patch('/users/me', input);
   return data;
 }
 

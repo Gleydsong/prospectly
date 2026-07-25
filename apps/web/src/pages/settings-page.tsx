@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -9,12 +9,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  cancelBillingSubscription,
   createBillingPortal,
   createCheckoutSession,
   getBillingStatus,
   requestDataDeletion,
   updateProfile,
 } from '@/features/auth/api';
+import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { api, getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
@@ -31,6 +33,7 @@ const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const [searchParams] = useSearchParams();
@@ -79,7 +82,7 @@ export function SettingsPage() {
   const checkout = useMutation({
     mutationFn: createCheckoutSession,
     onSuccess: (data) => {
-      assignStripeRedirect(data.url);
+      handleCheckoutResult(data);
     },
     onError: (err) => setBillingError(getApiErrorMessage(err)),
   });
@@ -92,6 +95,15 @@ export function SettingsPage() {
     onError: (err) => setBillingError(getApiErrorMessage(err)),
   });
 
+  const cancelSub = useMutation({
+    mutationFn: cancelBillingSubscription,
+    onSuccess: async () => {
+      setBillingError(null);
+      await queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
+    },
+    onError: (err) => setBillingError(getApiErrorMessage(err)),
+  });
+
   const dsr = useMutation({
     mutationFn: () =>
       requestDataDeletion('Solicitação via app — exclusão de dados pessoais (LGPD)'),
@@ -100,6 +112,13 @@ export function SettingsPage() {
     },
     onError: (err) => setDsrMessage(getApiErrorMessage(err)),
   });
+
+  const subscribeLabel =
+    defaultCurrency === 'BRL' && defaultInterval === 'lifetime'
+      ? t('settings.subscribeLifetimePix')
+      : defaultCurrency === 'BRL' && defaultInterval === 'monthly'
+        ? t('settings.subscribeMonthly')
+        : t('settings.subscribe');
 
   return (
     <div className="space-y-5">
@@ -169,11 +188,29 @@ export function SettingsPage() {
                 checkout.mutate({ interval: defaultInterval, currency: defaultCurrency })
               }
             >
-              {t('settings.subscribe')}
+              {subscribeLabel}
             </Button>
-            <Button type="button" variant="secondary" loading={portal.isPending} onClick={() => portal.mutate()}>
-              {t('settings.stripePortal')}
-            </Button>
+            {billing.data?.canOpenPortal ? (
+              <Button
+                type="button"
+                variant="secondary"
+                loading={portal.isPending}
+                onClick={() => portal.mutate()}
+              >
+                {t('settings.stripePortal')}
+              </Button>
+            ) : null}
+            {billing.data?.canCancelSubscription &&
+            billing.data.paymentProvider === 'ABACATE' ? (
+              <Button
+                type="button"
+                variant="outline"
+                loading={cancelSub.isPending}
+                onClick={() => cancelSub.mutate()}
+              >
+                {t('settings.cancelSubscription')}
+              </Button>
+            ) : null}
             <a
               className="inline-flex items-center text-sm font-medium text-brand-600 hover:text-brand-700"
               href={`${LANDING_URL}/pricing`}

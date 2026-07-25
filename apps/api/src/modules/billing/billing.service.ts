@@ -3,53 +3,51 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PlanStatus, type Organization } from '@prisma/client';
-import Stripe from 'stripe';
+import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { BillingActivationService } from './billing-activation.service';
 import { FREE_SEARCH_LIMIT } from './billing.constants';
-import type { BillingCurrency, BillingInterval } from './dto/create-checkout.dto';
+import type {
+  BillingCurrency,
+  BillingInterval,
+  CheckoutResult,
+  PaymentProviderId,
+} from './domain/payment-provider';
+import { resolvePaymentProviderId } from './domain/payment-router';
+import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
+import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
-  private readonly stripe: Stripe | null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {
-    const secret = this.config.get<string>('stripe.secretKey');
-    this.stripe = secret ? new Stripe(secret) : null;
-  }
-
-  private requireStripe(): Stripe {
-    if (!this.stripe) {
-      throw new ServiceUnavailableException('Stripe is not configured');
-    }
-    return this.stripe;
-  }
-
-  resolvePriceId(interval: BillingInterval, currency: BillingCurrency): string {
-    const key = `stripe.prices.${interval}.${currency.toLowerCase()}` as const;
-    const priceId = this.config.get<string>(key);
-    if (!priceId) {
-      throw new BadRequestException(`Price not configured for ${interval}/${currency}`);
-    }
-    return priceId;
-  }
+    private readonly activation: BillingActivationService,
+    private readonly stripeProvider: StripePaymentProvider,
+    private readonly abacateProvider: AbacatePaymentProvider,
+  ) {}
 
   async getOrganizationBilling(organizationId: string) {
     const org = await this.requireOrg(organizationId);
+    const provider = org.paymentProvider;
     return {
       plan: org.plan,
       planStatus: org.planStatus,
       planCurrency: org.planCurrency,
+      paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
       hasStripeCustomer: Boolean(org.stripeCustomerId),
+      canOpenPortal: provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId),
+      canCancelSubscription:
+        org.plan === OrgPlan.STARTER_MONTHLY &&
+        org.planStatus === PlanStatus.ACTIVE &&
+        ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
+          (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId))),
       freeSearchLimit: FREE_SEARCH_LIMIT,
     };
   }
@@ -73,54 +71,65 @@ export class BillingService {
     userEmail: string,
     interval: BillingInterval,
     currency: BillingCurrency,
-  ): Promise<{ url: string }> {
-    const stripe = this.requireStripe();
+  ): Promise<CheckoutResult> {
     const org = await this.requireOrg(organizationId);
-    const priceId = this.resolvePriceId(interval, currency);
-    const customerId = await this.ensureCustomer(org, userEmail);
+    const providerId = resolvePaymentProviderId(currency);
+    this.assertProviderCompatible(org, providerId);
 
+    const provider =
+      providerId === 'ABACATE' ? this.abacateProvider : this.stripeProvider;
+
+    const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
     const successUrl =
-      this.config.get<string>('stripe.successUrl') ??
-      `${this.config.get<string>('frontendUrl')}/billing/success?session_id={CHECKOUT_SESSION_ID}`;
+      providerId === 'ABACATE'
+        ? (this.config.get<string>('abacate.successUrl') ??
+          `${frontendUrl}/billing/success`)
+        : (this.config.get<string>('stripe.successUrl') ??
+          `${frontendUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`);
     const cancelUrl =
-      this.config.get<string>('stripe.cancelUrl') ??
-      `${this.config.get<string>('frontendUrl')}/billing/cancel`;
+      providerId === 'ABACATE'
+        ? (this.config.get<string>('abacate.cancelUrl') ?? `${frontendUrl}/billing/cancel`)
+        : (this.config.get<string>('stripe.cancelUrl') ?? `${frontendUrl}/billing/cancel`);
 
-    const session = await stripe.checkout.sessions.create({
-      mode: interval === 'monthly' ? 'subscription' : 'payment',
-      customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: organizationId,
-      metadata: {
-        organizationId,
-        interval,
-        currency,
-      },
-      ...(interval === 'monthly'
-        ? {
-            subscription_data: {
-              metadata: { organizationId, currency },
-            },
-          }
-        : {
-            payment_intent_data: {
-              metadata: { organizationId, currency, interval },
-            },
-          }),
+    const existingCustomerId =
+      providerId === 'ABACATE' ? org.abacateCustomerId : org.stripeCustomerId;
+
+    const result = await provider.createCheckout({
+      organizationId,
+      customerEmail: userEmail,
+      customerName: org.name,
+      interval,
+      currency,
+      successUrl,
+      cancelUrl,
+      existingCustomerId,
     });
 
-    if (!session.url) {
-      throw new BadRequestException('Stripe did not return a checkout URL');
-    }
+    await this.activation.bindCheckoutIntent({
+      organizationId,
+      provider: providerId === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+      interval,
+      abacatePaymentId: result.mode === 'pix' ? result.externalPaymentId : undefined,
+      abacateCustomerId:
+        result.mode === 'redirect' && result.provider === 'ABACATE'
+          ? result.externalCustomerId
+          : undefined,
+      stripeCustomerId:
+        result.mode === 'redirect' && result.provider === 'STRIPE'
+          ? result.externalCustomerId
+          : undefined,
+    });
 
-    return { url: session.url };
+    return result;
   }
 
   async createPortalSession(organizationId: string): Promise<{ url: string }> {
-    const stripe = this.requireStripe();
     const org = await this.requireOrg(organizationId);
+    if (org.paymentProvider === PaymentProvider.ABACATE) {
+      throw new BadRequestException(
+        'Customer portal is only available for Stripe (EUR/USD). Cancel via API for Abacate subscriptions.',
+      );
+    }
     if (!org.stripeCustomerId) {
       throw new BadRequestException('No Stripe customer for this organization');
     }
@@ -129,197 +138,107 @@ export class BillingService {
       this.config.get<string>('stripe.portalReturnUrl') ??
       `${this.config.get<string>('frontendUrl')}/settings`;
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: org.stripeCustomerId,
-      return_url: returnUrl,
+    return this.stripeProvider.createPortal({
+      organizationId,
+      externalCustomerId: org.stripeCustomerId,
+      returnUrl,
     });
-
-    return { url: session.url };
   }
 
-  async handleWebhook(rawBody: Buffer, signature: string): Promise<{ received: true }> {
-    const stripe = this.requireStripe();
-    const secret = this.config.get<string>('stripe.webhookSecret');
-    if (!secret) {
-      throw new ServiceUnavailableException('Stripe webhook secret is not configured');
+  async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
+    const org = await this.requireOrg(organizationId);
+    if (org.plan !== OrgPlan.STARTER_MONTHLY) {
+      throw new BadRequestException('Only monthly subscriptions can be canceled');
     }
 
-    let event: Stripe.Event;
-    try {
-      event = stripe.webhooks.constructEvent(rawBody, signature, secret);
-    } catch (error) {
-      this.logger.warn(`Webhook signature verification failed: ${(error as Error).message}`);
-      throw new BadRequestException('Invalid Stripe webhook signature');
-    }
-
-    try {
-      await this.prisma.stripeWebhookEvent.create({
-        data: { id: event.id, type: event.type },
-      });
-    } catch (error) {
-      if (this.isUniqueConstraintViolation(error)) {
-        this.logger.debug(`Ignoring duplicate Stripe webhook event ${event.id}`);
-        return { received: true };
+    if (org.paymentProvider === PaymentProvider.ABACATE) {
+      if (!org.abacateSubscriptionId) {
+        throw new BadRequestException('No Abacate subscription for this organization');
       }
-      throw error;
+      await this.abacateProvider.cancelSubscription({
+        organizationId,
+        externalSubscriptionId: org.abacateSubscriptionId,
+      });
+      return { canceled: true };
     }
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await this.onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted':
-        await this.onSubscriptionChanged(event.data.object as Stripe.Subscription);
-        break;
-      case 'invoice.paid':
-        await this.onInvoicePaid(event.data.object as Stripe.Invoice);
-        break;
-      default:
-        this.logger.debug(`Unhandled Stripe event: ${event.type}`);
+    if (!org.stripeSubscriptionId) {
+      throw new BadRequestException('No Stripe subscription for this organization');
     }
 
+    // Stripe: cancel via portal is preferred; API cancel not exposed here yet.
+    // Mark intent by requiring portal — keep explicit error for Stripe.
+    throw new BadRequestException(
+      'Cancel Stripe subscriptions via the customer portal',
+    );
+  }
+
+  async handleStripeWebhook(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+  ): Promise<{ received: true }> {
+    const parsed = await this.stripeProvider.verifyAndParseWebhook(rawBody, headers);
+    const firstTime = await this.claimWebhookEvent('STRIPE', parsed.eventId, parsed.type);
+    if (!firstTime) {
+      return { received: true };
+    }
+    await this.stripeProvider.applyWebhookEvent(parsed.payload, parsed.type);
     return { received: true };
   }
 
-  private async onCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-    const organizationId =
-      session.metadata?.organizationId ?? session.client_reference_id ?? undefined;
-    if (!organizationId) {
-      this.logger.warn('checkout.session.completed without organizationId');
-      return;
+  /** @deprecated Prefer handleStripeWebhook — alias kept one release. */
+  async handleWebhook(rawBody: Buffer, signature: string): Promise<{ received: true }> {
+    return this.handleStripeWebhook(rawBody, { 'stripe-signature': signature });
+  }
+
+  async handleAbacateWebhook(
+    rawBody: Buffer,
+    headers: Record<string, string | string[] | undefined>,
+    query: Record<string, string | string[] | undefined>,
+  ): Promise<{ received: true }> {
+    const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers, query);
+    const firstTime = await this.claimWebhookEvent('ABACATE', parsed.eventId, parsed.type);
+    if (!firstTime) {
+      return { received: true };
     }
+    await this.abacateProvider.applyWebhookEvent(parsed.payload, parsed.type);
+    return { received: true };
+  }
 
-    const interval = (session.metadata?.interval ??
-      (session.mode === 'subscription' ? 'monthly' : 'lifetime')) as BillingInterval;
-    const currency = (session.metadata?.currency ?? session.currency?.toUpperCase() ?? null) as
-      | BillingCurrency
-      | null;
+  private assertProviderCompatible(org: Organization, next: PaymentProviderId): void {
+    if (!org.paymentProvider) return;
+    if (org.paymentProvider === next) return;
+    if (org.planStatus === PlanStatus.ACTIVE) {
+      throw new ForbiddenException(
+        'Organization already has an active plan on another payment provider. Currency/gateway migration is not supported.',
+      );
+    }
+    throw new ForbiddenException(
+      'Organization is bound to another payment provider. Use the same currency as the existing gateway.',
+    );
+  }
 
-    if (interval === 'lifetime' || session.mode === 'payment') {
-      await this.prisma.organization.update({
-        where: { id: organizationId },
+  private async claimWebhookEvent(
+    provider: PaymentProviderId,
+    eventId: string,
+    type: string,
+  ): Promise<boolean> {
+    try {
+      await this.prisma.billingWebhookEvent.create({
         data: {
-          plan: OrgPlan.LIFETIME,
-          planStatus: PlanStatus.ACTIVE,
-          planCurrency: currency,
-          stripeCustomerId: typeof session.customer === 'string' ? session.customer : undefined,
-          currentPeriodEnd: null,
-          stripeSubscriptionId: null,
+          provider: provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+          eventId,
+          type,
         },
       });
-      return;
+      return true;
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        this.logger.debug(`Ignoring duplicate ${provider} webhook event ${eventId}`);
+        return false;
+      }
+      throw error;
     }
-
-    const subscriptionId =
-      typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
-
-    await this.prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        plan: OrgPlan.STARTER_MONTHLY,
-        planStatus: PlanStatus.ACTIVE,
-        planCurrency: currency,
-        stripeCustomerId: typeof session.customer === 'string' ? session.customer : undefined,
-        stripeSubscriptionId: subscriptionId ?? undefined,
-      },
-    });
-  }
-
-  private async onSubscriptionChanged(subscription: Stripe.Subscription): Promise<void> {
-    const organizationId = subscription.metadata?.organizationId;
-    const org = organizationId
-      ? await this.prisma.organization.findUnique({ where: { id: organizationId } })
-      : await this.prisma.organization.findFirst({
-          where: { stripeSubscriptionId: subscription.id },
-        });
-
-    if (!org) {
-      this.logger.warn(`Subscription ${subscription.id} not mapped to organization`);
-      return;
-    }
-
-    if (org.plan === OrgPlan.LIFETIME) {
-      return;
-    }
-
-    const status = this.mapSubscriptionStatus(subscription.status);
-    const periodEnd = this.subscriptionPeriodEnd(subscription);
-
-    await this.prisma.organization.update({
-      where: { id: org.id },
-      data: {
-        plan: OrgPlan.STARTER_MONTHLY,
-        planStatus: status,
-        stripeSubscriptionId: subscription.id,
-        stripeCustomerId:
-          typeof subscription.customer === 'string' ? subscription.customer : org.stripeCustomerId,
-        currentPeriodEnd: periodEnd,
-        ...(status === PlanStatus.CANCELED || status === PlanStatus.INACTIVE
-          ? { plan: OrgPlan.FREE }
-          : {}),
-      },
-    });
-  }
-
-  private async onInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-    const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
-    if (!customerId) return;
-
-    const org = await this.prisma.organization.findFirst({
-      where: { stripeCustomerId: customerId },
-    });
-    if (!org || org.plan === OrgPlan.LIFETIME) return;
-
-    await this.prisma.organization.update({
-      where: { id: org.id },
-      data: {
-        planStatus: PlanStatus.ACTIVE,
-        plan: OrgPlan.STARTER_MONTHLY,
-      },
-    });
-  }
-
-  private mapSubscriptionStatus(status: Stripe.Subscription.Status): PlanStatus {
-    switch (status) {
-      case 'active':
-      case 'trialing':
-        return PlanStatus.ACTIVE;
-      case 'past_due':
-      case 'unpaid':
-        return PlanStatus.PAST_DUE;
-      case 'canceled':
-      case 'incomplete_expired':
-        return PlanStatus.CANCELED;
-      default:
-        return PlanStatus.INACTIVE;
-    }
-  }
-
-  private subscriptionPeriodEnd(subscription: Stripe.Subscription): Date | null {
-    const item = subscription.items?.data?.[0] as { current_period_end?: number } | undefined;
-    const end =
-      item?.current_period_end ??
-      (subscription as unknown as { current_period_end?: number }).current_period_end;
-    return typeof end === 'number' ? new Date(end * 1000) : null;
-  }
-
-  private async ensureCustomer(org: Organization, email: string): Promise<string> {
-    const stripe = this.requireStripe();
-    if (org.stripeCustomerId) return org.stripeCustomerId;
-
-    const customer = await stripe.customers.create({
-      email,
-      name: org.name,
-      metadata: { organizationId: org.id },
-    });
-
-    await this.prisma.organization.update({
-      where: { id: org.id },
-      data: { stripeCustomerId: customer.id },
-    });
-
-    return customer.id;
   }
 
   private async requireOrg(organizationId: string): Promise<Organization> {
