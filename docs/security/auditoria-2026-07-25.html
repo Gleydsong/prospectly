@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Auditoria de Segurança — Prospectly — 2026-07-25</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --ink: #18181b;
+      --muted: #52525b;
+      --border: #e4e4e7;
+      --card: #fff;
+      --crit: #991b1b;
+      --crit-bg: #fef2f2;
+      --high: #9a3412;
+      --high-bg: #fff7ed;
+      --med: #854d0e;
+      --med-bg: #fefce8;
+      --low: #1e40af;
+      --low-bg: #eff6ff;
+      --info: #334155;
+      --info-bg: #f1f5f9;
+      --ok: #065f46;
+      --ok-bg: #ecfdf5;
+      --accent: #059669;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    header.hero {
+      background: linear-gradient(145deg, #064e3b 0%, #18181b 55%);
+      color: #fafafa;
+      padding: 2.5rem 1.25rem 2rem;
+    }
+    header.hero .inner { max-width: 1100px; margin: 0 auto; }
+    header.hero h1 { margin: 0 0 0.5rem; font-size: 1.85rem; letter-spacing: -0.02em; }
+    header.hero p { margin: 0.35rem 0; color: #d4d4d8; max-width: 65ch; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.35rem 0.75rem; border-radius: 999px;
+      background: rgb(255 255 255 / 0.1); font-size: 0.85rem;
+    }
+    nav.toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin: 1.5rem 0;
+    }
+    nav.toc h2 { margin: 0 0 0.75rem; font-size: 1rem; }
+    nav.toc ol { margin: 0; padding-left: 1.25rem; columns: 2; gap: 2rem; }
+    @media (max-width: 720px) { nav.toc ol { columns: 1; } }
+    nav.toc a { color: var(--accent); text-decoration: none; }
+    nav.toc a:hover { text-decoration: underline; }
+    h2 { margin-top: 2.5rem; font-size: 1.45rem; letter-spacing: -0.02em; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+    h3 { margin-top: 1.75rem; font-size: 1.15rem; }
+    h4 { margin: 1rem 0 0.4rem; font-size: 0.95rem; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+      margin: 1rem 0 1.5rem;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .card .n { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.03em; }
+    .card .l { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .card.crit .n { color: var(--crit); }
+    .card.high .n { color: var(--high); }
+    .card.med .n { color: var(--med); }
+    .card.low .n { color: var(--low); }
+    .card.info .n { color: var(--info); }
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      vertical-align: middle;
+    }
+    .badge.crit { background: var(--crit-bg); color: var(--crit); }
+    .badge.high { background: var(--high-bg); color: var(--high); }
+    .badge.med { background: var(--med-bg); color: var(--med); }
+    .badge.low { background: var(--low-bg); color: var(--low); }
+    .badge.info { background: var(--info-bg); color: var(--info); }
+    .badge.ok { background: var(--ok-bg); color: var(--ok); }
+    .badge.todo { background: #f4f4f5; color: #52525b; }
+    .badge.doing { background: #ecfdf5; color: #047857; }
+    .badge.done { background: #d1fae5; color: #065f46; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 0.88rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.65rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th { background: #f4f4f5; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    code, .mono { font-family: var(--mono); font-size: 0.84em; }
+    pre {
+      background: #18181b;
+      color: #e4e4e7;
+      padding: 0.9rem 1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .finding {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--high);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+      margin: 1rem 0;
+    }
+    .finding.crit { border-left-color: var(--crit); }
+    .finding.high { border-left-color: var(--high); }
+    .finding.med { border-left-color: var(--med); }
+    .finding.low { border-left-color: var(--low); }
+    .finding.info { border-left-color: #94a3b8; }
+    .finding h3 { margin-top: 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 800px) { .grid2 { grid-template-columns: 1fr; } }
+    ul.checklist { list-style: none; padding: 0; }
+    ul.checklist li {
+      display: flex; gap: 0.75rem; align-items: flex-start;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card);
+      margin-bottom: 0.5rem;
+    }
+    ul.checklist .id { font-family: var(--mono); font-size: 0.8rem; min-width: 4.5rem; color: var(--muted); }
+    .phase {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1rem 0;
+    }
+    .phase h3 { margin-top: 0; }
+    footer {
+      margin-top: 3rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .note {
+      background: var(--ok-bg);
+      border: 1px solid #a7f3d0;
+      color: var(--ok);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin: 1rem 0;
+    }
+    .warn {
+      background: var(--high-bg);
+      border: 1px solid #fed7aa;
+      color: var(--high);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="inner">
+      <h1>Auditoria de Segurança — Prospectly</h1>
+      <p>
+        Avaliação full-stack (NestJS API, React/Vite web, Next.js landing, Docker, CI)
+        com referência OWASP Top 10, OWASP API Security Top 10, CWE e menor privilégio.
+      </p>
+      <div class="meta">
+        <span class="pill">Data: 2026-07-25</span>
+        <span class="pill">Escopo: monorepo completo</span>
+        <span class="pill">Modo: somente leitura na análise</span>
+        <span class="pill">Segredos: valores omitidos</span>
+        <span class="pill">Nível geral: intermediário-bom (backend forte, sessão/browser e RBAC a endurecer)</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <nav class="toc" aria-label="Índice">
+      <h2>Índice</h2>
+      <ol>
+        <li><a href="#resumo">Resumo executivo</a></li>
+        <li><a href="#arquitetura">Arquitetura e superfícies</a></li>
+        <li><a href="#tabela">Tabela de achados</a></li>
+        <li><a href="#detalhes">Detalhamento SEC-*</a></li>
+        <li><a href="#solidos">Controles sólidos</a></li>
+        <li><a href="#segredos">Segredos (sem valores)</a></li>
+        <li><a href="#plano">Plano em 4 fases</a></li>
+        <li><a href="#execucao">O que será executado</a></li>
+        <li><a href="#checklist">Checklist de execução</a></li>
+        <li><a href="#propostos">Arquivos e riscos das mudanças</a></li>
+      </ol>
+    </nav>
+
+    <section id="resumo">
+      <h2>1. Resumo executivo</h2>
+      <div class="cards">
+        <div class="card crit"><div class="n">0</div><div class="l">Críticos</div></div>
+        <div class="card high"><div class="n">4</div><div class="l">Altos</div></div>
+        <div class="card med"><div class="n">9</div><div class="l">Médios</div></div>
+        <div class="card low"><div class="n">7</div><div class="l">Baixos</div></div>
+        <div class="card info"><div class="n">5</div><div class="l">Informativos</div></div>
+      </div>
+      <div class="warn">
+        <strong>Três riscos prioritários</strong>
+        <ol>
+          <li>Access + refresh tokens em <code>localStorage</code> (XSS futura = sessão roubada).</li>
+          <li><code>ADMIN</code> pode promover membro (incl. a si) a <code>OWNER</code>.</li>
+          <li>CSP ausente/quebrada em produção + Swagger sempre público + deps high no audit.</li>
+        </ol>
+      </div>
+      <p>
+        O backend já aplica JWT global, isolamento por <code>organizationId</code>, Argon2,
+        ValidationPipe estrito e Stripe com assinatura + Price IDs no servidor.
+        Os maiores gaps estão na sessão no browser, RBAC fino e hardening HTTP/CI.
+      </p>
+    </section>
+
+    <section id="arquitetura">
+      <h2>2. Arquitetura e superfícies de ataque</h2>
+      <div class="grid2">
+        <div class="card">
+          <h4>Aplicações</h4>
+          <ul>
+            <li><code>apps/api</code> — NestJS + Prisma + BullMQ</li>
+            <li><code>apps/web</code> — Vite + React SPA</li>
+            <li><code>apps/landing</code> — Next.js App Router</li>
+            <li><code>packages/shared-types</code>, eslint, tsconfig</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Confiança / entrada</h4>
+          <ul>
+            <li>Browser → API REST <code>/api/v1</code></li>
+            <li>Stripe → webhook público assinado</li>
+            <li>Workers Redis → DB</li>
+            <li>Landing → links para register/login</li>
+            <li>Health + Swagger + Docker ports</li>
+          </ul>
+        </div>
+      </div>
+      <h3>Auth e multi-tenant</h3>
+      <ul>
+        <li>JWT access + refresh (hash Argon2 no DB)</li>
+        <li>Guards globais: Jwt → Roles → Throttler</li>
+        <li><code>CurrentOrg</code> sempre do token (não do client)</li>
+        <li>Billing: price IDs no servidor; checkout OWNER/ADMIN</li>
+      </ul>
+    </section>
+
+    <section id="tabela">
+      <h2>3. Tabela de achados</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Sev.</th>
+              <th>Conf.</th>
+              <th>Categoria</th>
+              <th>Arquivo</th>
+              <th>Problema</th>
+              <th>Fase</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">SEC-001</td><td><span class="badge high">Alto</span></td><td>Alta</td><td>A07 / CWE-922</td><td class="mono">auth.store.ts</td><td>Tokens em localStorage</td><td>3</td></tr>
+            <tr><td class="mono">SEC-002</td><td><span class="badge high">Alto</span></td><td>Alta</td><td>A01 / CWE-269</td><td class="mono">organizations.service.ts</td><td>ADMIN → OWNER</td><td>1</td></tr>
+            <tr><td class="mono">SEC-003</td><td><span class="badge high">Alto</span></td><td>Alta</td><td>A05 / CWE-693</td><td class="mono">index.html / nginx / next.config</td><td>CSP frágil/ausente</td><td>2</td></tr>
+            <tr><td class="mono">SEC-004</td><td><span class="badge high">Alto</span></td><td>Alta</td><td>A06</td><td class="mono">pnpm audit + ci.yml</td><td>16 highs; CI soft-fail</td><td>2 / 4</td></tr>
+            <tr><td class="mono">SEC-005</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A07 / CWE-613</td><td class="mono">auth.service.ts</td><td>Sem family kill no refresh</td><td>1</td></tr>
+            <tr><td class="mono">SEC-006</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A07 / CWE-307</td><td class="mono">auth.controller.ts</td><td>Sem throttle refresh/reset</td><td>1</td></tr>
+            <tr><td class="mono">SEC-007</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A01 / CWE-203</td><td class="mono">auth.service.ts</td><td>Enumeração de e-mail</td><td>1</td></tr>
+            <tr><td class="mono">SEC-008</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A10 / CWE-841</td><td class="mono">billing.service.ts</td><td>Webhook sem idempotência</td><td>2</td></tr>
+            <tr><td class="mono">SEC-009</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A05</td><td class="mono">main.ts</td><td>Swagger sempre aberto</td><td>1</td></tr>
+            <tr><td class="mono">SEC-010</td><td><span class="badge med">Médio</span></td><td>Média</td><td>A01</td><td class="mono">organizations.service.ts</td><td>Stripe IDs a qualquer membro</td><td>2</td></tr>
+            <tr><td class="mono">SEC-011</td><td><span class="badge med">Médio</span></td><td>Média</td><td>A03 / CWE-79</td><td class="mono">lead-detail-page.tsx</td><td>href website sem allowlist</td><td>2</td></tr>
+            <tr><td class="mono">SEC-012</td><td><span class="badge med">Médio</span></td><td>Média</td><td>A01</td><td class="mono">settings/login/register</td><td>assign(url) sem host check</td><td>2</td></tr>
+            <tr><td class="mono">SEC-013</td><td><span class="badge med">Médio</span></td><td>Alta</td><td>A05</td><td class="mono">docker-compose.yml</td><td>Portas + senha default</td><td>2</td></tr>
+            <tr><td class="mono">SEC-014</td><td><span class="badge low">Baixo</span></td><td>Alta</td><td>A09</td><td class="mono">auth.service.ts</td><td>Token reset em log non-prod</td><td>2</td></tr>
+            <tr><td class="mono">SEC-015</td><td><span class="badge low">Baixo</span></td><td>Alta</td><td>A07</td><td class="mono">validation.ts</td><td>JWT secret min 16</td><td>2</td></tr>
+            <tr><td class="mono">SEC-016</td><td><span class="badge low">Baixo</span></td><td>Alta</td><td>A01</td><td class="mono">login-page.tsx</td><td>from sem allowlist</td><td>2</td></tr>
+            <tr><td class="mono">SEC-017</td><td><span class="badge low">Baixo</span></td><td>Alta</td><td>A07</td><td class="mono">schema + auth</td><td>emailVerified não enforced</td><td>3</td></tr>
+            <tr><td class="mono">SEC-018</td><td><span class="badge low">Baixo</span></td><td>Média</td><td>A09</td><td class="mono">app.module.ts</td><td>Redact incompleto</td><td>2</td></tr>
+            <tr><td class="mono">SEC-019</td><td><span class="badge low">Baixo</span></td><td>Alta</td><td>A05</td><td class="mono">landing next.config</td><td>Sem security headers</td><td>2</td></tr>
+            <tr><td class="mono">SEC-020</td><td><span class="badge info">Info</span></td><td>Alta</td><td>—</td><td class="mono">*.env locais</td><td>Existem, não versionados</td><td>—</td></tr>
+            <tr><td class="mono">SEC-021</td><td><span class="badge info">Info</span></td><td>Alta</td><td>—</td><td>—</td><td>Controles sólidos a manter</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size:0.9rem;color:var(--muted)">
+        Dependências (<code>pnpm audit</code> em 2026-07-25): 0 critical · 16 high · 12 moderate · 4 low.
+      </p>
+    </section>
+
+    <section id="detalhes">
+      <h2>4. Detalhamento dos achados</h2>
+
+      <article class="finding high" id="sec-001">
+        <h3>SEC-001 — Tokens JWT em localStorage <span class="badge high">Alto</span></h3>
+        <p><strong>Status:</strong> Confirmada · <strong>OWASP/CWE:</strong> A07 / CWE-922</p>
+        <p><strong>Arquivo:</strong> <code>apps/web/src/stores/auth.store.ts</code></p>
+        <p>Access + refresh + user persistidos via Zustand <code>persist</code>. XSS lê refresh de longa duração.</p>
+        <p><strong>Correção (Fase 3):</strong> refresh em cookie HttpOnly/Secure/SameSite; access em memória; CSRF nas mutações.</p>
+      </article>
+
+      <article class="finding high" id="sec-002">
+        <h3>SEC-002 — Escalação ADMIN → OWNER <span class="badge high">Alto</span></h3>
+        <p><strong>Status:</strong> Confirmada · <strong>OWASP/CWE:</strong> A01 / CWE-269</p>
+        <p><strong>Arquivos:</strong> <code>organizations.service.ts</code>, <code>update-member-role.dto.ts</code>, controller</p>
+        <p>Invite bloqueia OWNER; update aceita qualquer Role. ADMIN no @Roles pode promover.</p>
+        <p><strong>Correção (Fase 1):</strong> só OWNER atribui OWNER (ou fluxo de transferência dedicado); testes 403.</p>
+      </article>
+
+      <article class="finding high" id="sec-003">
+        <h3>SEC-003 — CSP inadequada / ausente <span class="badge high">Alto</span></h3>
+        <p><strong>Status:</strong> Confirmada · A05 / CWE-693</p>
+        <p>Meta CSP no Vite com <code>connect-src</code> só localhost; nginx sem CSP; landing sem headers.</p>
+        <p><strong>Correção (Fase 2):</strong> CSP em nginx + <code>next.config.ts</code> headers().</p>
+      </article>
+
+      <article class="finding high" id="sec-004">
+        <h3>SEC-004 — Dependências high + CI soft-fail <span class="badge high">Alto</span></h3>
+        <p><strong>Status:</strong> Confirmada · A06</p>
+        <p><code>pnpm audit --audit-level=high || true</code> não bloqueia o pipeline.</p>
+        <p><strong>Correção (Fase 2/4):</strong> remover soft-fail; patch runtime primeiro; exceptions documentadas.</p>
+      </article>
+
+      <article class="finding med" id="sec-005">
+        <h3>SEC-005 — Refresh sem family revocation <span class="badge med">Médio</span></h3>
+        <p>Token revogado falha, mas reuse após rotação não mata a família.</p>
+        <p><strong>Correção (Fase 1):</strong> se refresh já revogado com replacedById → <code>logoutAll(userId)</code>.</p>
+      </article>
+
+      <article class="finding med" id="sec-006">
+        <h3>SEC-006 — Sem throttle em refresh/reset <span class="badge med">Médio</span></h3>
+        <p><strong>Correção (Fase 1):</strong> <code>@Throttle</code> dedicado nesses endpoints.</p>
+      </article>
+
+      <article class="finding med" id="sec-007">
+        <h3>SEC-007 — Enumeração de e-mail no register <span class="badge med">Médio</span></h3>
+        <p><code>ConflictException('Email already registered')</code> vs login genérico.</p>
+        <p><strong>Correção (Fase 1):</strong> resposta uniforme ou delay constante.</p>
+      </article>
+
+      <article class="finding med" id="sec-008">
+        <h3>SEC-008 — Webhook Stripe sem idempotência <span class="badge med">Médio</span></h3>
+        <p>Signature OK; falta persistir <code>event.id</code>.</p>
+        <p><strong>Correção (Fase 2):</strong> tabela/unique + skip se já processado.</p>
+      </article>
+
+      <article class="finding med" id="sec-009">
+        <h3>SEC-009 — Swagger sempre público <span class="badge med">Médio</span></h3>
+        <p><strong>Correção (Fase 1):</strong> montar <code>/api/docs</code> só fora de production.</p>
+      </article>
+
+      <article class="finding med">
+        <h3>SEC-010 a SEC-013 <span class="badge med">Médios</span></h3>
+        <ul>
+          <li><strong>SEC-010</strong> — getCurrent expõe Stripe IDs → select mínimo (Fase 2).</li>
+          <li><strong>SEC-011</strong> — <code>href={lead.website}</code> → allowlist http(s) (Fase 2).</li>
+          <li><strong>SEC-012</strong> — <code>location.assign</code> → allowlist hosts Stripe (Fase 2).</li>
+          <li><strong>SEC-013</strong> — compose ports/defaults → documentar + defaults seguros (Fase 2).</li>
+        </ul>
+      </article>
+
+      <article class="finding low">
+        <h3>SEC-014 a SEC-019 <span class="badge low">Baixos</span></h3>
+        <ul>
+          <li>SEC-014 — não logar reset token</li>
+          <li>SEC-015 — JWT secret min ≥ 32</li>
+          <li>SEC-016 — validar <code>from</code> no login</li>
+          <li>SEC-017 — emailVerified (Fase 3)</li>
+          <li>SEC-018 — redact password/refreshToken no Pino</li>
+          <li>SEC-019 — headers na landing</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="solidos">
+      <h2>5. Controles sólidos (manter)</h2>
+      <ul>
+        <li>JwtAuthGuard global + membership na strategy</li>
+        <li>CurrentOrg do token</li>
+        <li>Argon2 passwords + refresh hashes; lockout 5/15min</li>
+        <li>ValidationPipe whitelist + forbidNonWhitelisted</li>
+        <li>Stripe constructEvent + Price IDs no servidor</li>
+        <li>CSV size/rows; erros sanitizados</li>
+        <li>$queryRaw parametrizado</li>
+        <li>.env não versionado no Git</li>
+      </ul>
+    </section>
+
+    <section id="segredos">
+      <h2>6. Segredos (valores omitidos)</h2>
+      <table>
+        <thead><tr><th>Arquivo</th><th>Tipo</th><th>Risco</th><th>Nota</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono">apps/api/.env</td>
+            <td>Env runtime (JWT, DB, Stripe…)</td>
+            <td><span class="badge high">Alto se vazado</span></td>
+            <td>Presente localmente; <strong>não</strong> no Git</td>
+          </tr>
+          <tr>
+            <td class="mono">apps/web/.env</td>
+            <td>Env Vite (URLs públicas)</td>
+            <td><span class="badge low">Baixo–médio</span></td>
+            <td>Presente localmente; <strong>não</strong> no Git</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="plano">
+      <h2>7. Plano em 4 fases</h2>
+
+      <div class="phase" id="fase-1">
+        <h3>Fase 1 — Correções imediatas <span class="badge doing">Em execução</span></h3>
+        <p>Sem grande mudança arquitetural. Prioridade máxima.</p>
+        <table>
+          <thead><tr><th>Item</th><th>SEC</th><th>Esforço</th><th>Regressão</th><th>Arquivos</th></tr></thead>
+          <tbody>
+            <tr><td>Bloquear ADMIN→OWNER</td><td>002</td><td>Baixo</td><td>Baixo</td><td>organizations.*</td></tr>
+            <tr><td>Throttle refresh/reset</td><td>006</td><td>Baixo</td><td>Baixo</td><td>auth.controller.ts</td></tr>
+            <tr><td>Reuse detection refresh</td><td>005</td><td>Médio</td><td>Médio</td><td>auth.service.ts</td></tr>
+            <tr><td>Swagger só non-prod</td><td>009</td><td>Baixo</td><td>Baixo</td><td>main.ts</td></tr>
+            <tr><td>Enumeração register</td><td>007</td><td>Baixo</td><td>Baixo</td><td>auth.service.ts</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="phase" id="fase-2">
+        <h3>Fase 2 — Hardening <span class="badge todo">Pendente</span></h3>
+        <table>
+          <thead><tr><th>Item</th><th>SEC</th><th>Esforço</th><th>Arquivos</th></tr></thead>
+          <tbody>
+            <tr><td>CSP nginx + Next headers</td><td>003, 019</td><td>Médio</td><td>nginx.conf, next.config.ts, index.html</td></tr>
+            <tr><td>Redact Pino</td><td>018</td><td>Baixo</td><td>app.module.ts</td></tr>
+            <tr><td>Allowlist Stripe host</td><td>012</td><td>Baixo</td><td>settings/login/register</td></tr>
+            <tr><td>Sanitizar lead.website</td><td>011</td><td>Baixo</td><td>lead-detail + util</td></tr>
+            <tr><td>Idempotência webhook</td><td>008</td><td>Médio</td><td>billing + migration</td></tr>
+            <tr><td>Org select mínimo</td><td>010</td><td>Baixo</td><td>organizations.service.ts</td></tr>
+            <tr><td>from allowlist + JWT min + no log token</td><td>014–016, 015</td><td>Baixo</td><td>login, validation, auth</td></tr>
+            <tr><td>Compose docs/defaults</td><td>013</td><td>Baixo</td><td>docker-compose.yml / README</td></tr>
+            <tr><td>CI audit blocking (com critério)</td><td>004</td><td>Baixo</td><td>ci.yml</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="phase" id="fase-3">
+        <h3>Fase 3 — Arquitetura <span class="badge todo">Pendente</span></h3>
+        <ul>
+          <li>SEC-001 — sessão cookie HttpOnly / BFF (esforço alto)</li>
+          <li>Ownership transfer flow explícito</li>
+          <li>SEC-017 — enforce email verification (opcional por flag)</li>
+        </ul>
+      </div>
+
+      <div class="phase" id="fase-4">
+        <h3>Fase 4 — Testes e monitoramento <span class="badge todo">Pendente</span></h3>
+        <ul>
+          <li>Specs: ADMIN→OWNER 403; refresh reuse → logoutAll; webhook replay</li>
+          <li>Expandir IDOR cross-org</li>
+          <li>Deps: atualizar highs de runtime; documentar exceptions de toolchain</li>
+          <li>Alertas ops: auth fail spike, webhook signature fail</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="execucao">
+      <h2>8. O que será executado nesta rodada</h2>
+      <div class="note">
+        Ordem: <strong>Fase 1 → Fase 2 → Fase 3 → Fase 4</strong>, com commits por fase na branch
+        <code>cursor/security-hardening</code> (a partir de <code>main</code>).
+        Este HTML é a fonte de verdade do plano.
+      </div>
+      <ol>
+        <li>Criar branch de hardening.</li>
+        <li>Implementar Fase 1 completa + testes.</li>
+        <li>Implementar Fase 2 (hardening HTTP, URLs, webhook idemp, logs, CI).</li>
+        <li>Implementar o que for viável da Fase 3 (cookies) ou documentar spike se escopo crescer demais.</li>
+        <li>Fase 4: testes de regressão de segurança + ajuste CI audit.</li>
+        <li>Atualizar este HTML com status <span class="badge done">Feito</span> por item.</li>
+      </ol>
+    </section>
+
+    <section id="checklist">
+      <h2>9. Checklist de execução</h2>
+      <ul class="checklist">
+        <li><span class="id">SEC-002</span> <span class="badge todo" id="st-002">Pendente</span> Bloquear promoção a OWNER por ADMIN</li>
+        <li><span class="id">SEC-006</span> <span class="badge todo" id="st-006">Pendente</span> Throttle refresh + reset-password</li>
+        <li><span class="id">SEC-005</span> <span class="badge todo" id="st-005">Pendente</span> Refresh reuse → logoutAll</li>
+        <li><span class="id">SEC-009</span> <span class="badge todo" id="st-009">Pendente</span> Swagger só non-production</li>
+        <li><span class="id">SEC-007</span> <span class="badge todo" id="st-007">Pendente</span> Register sem enumeração</li>
+        <li><span class="id">SEC-003</span> <span class="badge todo" id="st-003">Pendente</span> CSP / headers</li>
+        <li><span class="id">SEC-018</span> <span class="badge todo" id="st-018">Pendente</span> Pino redact</li>
+        <li><span class="id">SEC-012</span> <span class="badge todo" id="st-012">Pendente</span> Allowlist Stripe URL</li>
+        <li><span class="id">SEC-011</span> <span class="badge todo" id="st-011">Pendente</span> Sanitizar website href</li>
+        <li><span class="id">SEC-008</span> <span class="badge todo" id="st-008">Pendente</span> Idempotência webhook</li>
+        <li><span class="id">SEC-010</span> <span class="badge todo" id="st-010">Pendente</span> Org billing fields por role</li>
+        <li><span class="id">SEC-014</span> <span class="badge todo" id="st-014">Pendente</span> Remover log de reset token</li>
+        <li><span class="id">SEC-015</span> <span class="badge todo" id="st-015">Pendente</span> JWT secret min length</li>
+        <li><span class="id">SEC-016</span> <span class="badge todo" id="st-016">Pendente</span> Allowlist from no login</li>
+        <li><span class="id">SEC-019</span> <span class="badge todo" id="st-019">Pendente</span> Landing security headers</li>
+        <li><span class="id">SEC-013</span> <span class="badge todo" id="st-013">Pendente</span> Compose / docs defaults</li>
+        <li><span class="id">SEC-004</span> <span class="badge todo" id="st-004">Pendente</span> CI audit + patches</li>
+        <li><span class="id">SEC-001</span> <span class="badge todo" id="st-001">Pendente</span> Cookies HttpOnly (Fase 3)</li>
+        <li><span class="id">SEC-017</span> <span class="badge todo" id="st-017">Pendente</span> Email verification gate (Fase 3)</li>
+        <li><span class="id">FASE-4</span> <span class="badge todo" id="st-f4">Pendente</span> Testes de segurança + monitoramento</li>
+      </ul>
+    </section>
+
+    <section id="propostos">
+      <h2>10. Arquivos, riscos e testes</h2>
+      <h3>Arquivos principais</h3>
+      <pre>apps/api/src/modules/organizations/*
+apps/api/src/modules/auth/*
+apps/api/src/main.ts
+apps/api/src/app.module.ts
+apps/api/src/config/validation.ts
+apps/api/src/modules/billing/*
+apps/api/prisma/schema.prisma (+ migration)
+apps/web/src/stores/auth.store.ts
+apps/web/src/lib/api.ts
+apps/web/src/pages/auth/*
+apps/web/src/pages/settings-page.tsx
+apps/web/src/pages/leads/lead-detail-page.tsx
+apps/web/nginx.conf
+apps/web/index.html
+apps/landing/next.config.ts
+docker-compose.yml
+.github/workflows/ci.yml
+docs/security/auditoria-2026-07-25.html (este arquivo)</pre>
+
+      <h3>Riscos das mudanças</h3>
+      <ul>
+        <li>Cookie auth: CSRF e CORS credentials</li>
+        <li>CSP: pode quebrar fonts se mal calibrada</li>
+        <li>CI audit blocking: pipeline vermelho até patch</li>
+        <li>Register sem Conflict: UX muda (mensagem genérica)</li>
+      </ul>
+
+      <h3>Testes por correção</h3>
+      <ul>
+        <li>Unit: organizations role update 403</li>
+        <li>Unit: refresh reuse → logoutAll</li>
+        <li>Unit: billing webhook duplicate event</li>
+        <li>Smoke: login, register, checkout redirect allowlist</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>
+        Documento gerado na auditoria de 2026-07-25. Não contém valores de segredos.
+        Atualizar o checklist conforme cada SEC for concluído.
+      </p>
+      <p>Prospectly · Security Hardening Plan</p>
+    </footer>
+  </div>
+</body>
+</html>
