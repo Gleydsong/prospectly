@@ -4,7 +4,7 @@ import { SiteFooter, SiteHeader } from '@/components/site-chrome';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Prospectly — Local lead prospecting for agencies',
+    default: 'Prospectly - Local lead prospecting for agencies',
     template: '%s | Prospectly',
   },
   description:
@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 
 export default function EnLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div lang="en">
       <SiteHeader locale="en" />
       <main>{children}</main>
       <SiteFooter locale="en" />
       <CookieBanner locale="en" />
-    </>
+    </div>
   );
 }

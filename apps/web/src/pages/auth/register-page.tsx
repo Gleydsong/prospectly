@@ -120,7 +120,10 @@ export function RegisterPage() {
             <input
               type="checkbox"
               className="mt-1"
-              {...register('acceptTerms')}
+              value="true"
+              {...register('acceptTerms', {
+                setValueAs: (value) => value === true || value === 'true' || value === 'on',
+              })}
             />
             <span>
               Li e aceito os{' '}

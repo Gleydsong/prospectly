@@ -1,22 +1,40 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
+  darkMode: 'media',
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          900: '#312e81',
+        ink: {
+          DEFAULT: '#18181b',
+          muted: '#52525b',
+          soft: '#71717a',
+        },
+        surface: {
+          DEFAULT: '#fafafa',
+          raised: '#ffffff',
+          sunken: '#f4f4f5',
+        },
+        accent: {
+          DEFAULT: '#059669',
+          hover: '#047857',
+          soft: '#d1fae5',
+          ink: '#064e3b',
         },
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Georgia', 'serif'],
+        sans: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains)', 'ui-monospace', 'monospace'],
+      },
+      maxWidth: {
+        shell: '1400px',
+      },
+      borderRadius: {
+        control: '12px',
+      },
+      boxShadow: {
+        soft: '0 18px 50px -28px rgb(24 24 27 / 0.35)',
       },
     },
   },

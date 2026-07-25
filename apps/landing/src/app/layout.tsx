@@ -1,11 +1,24 @@
 import type { Metadata } from 'next';
+import { JetBrains_Mono, Outfit } from 'next/font/google';
 import { DISPLAY_PRICES } from '@/lib/pricing';
 import './globals.css';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001'),
   title: {
-    default: 'Prospectly — Prospecção de leads locais para agências',
+    default: 'Prospectly - Prospecção de leads locais para agências',
     template: '%s | Prospectly',
   },
   description:
@@ -44,7 +57,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={`${outfit.variable} ${jetbrains.variable}`}>
       <body className="font-sans antialiased">
         <script
           type="application/ld+json"

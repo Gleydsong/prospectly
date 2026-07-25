@@ -1,5 +1,6 @@
 'use client';
 
+import { Check } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { t, type Locale } from '@/lib/i18n';
 import {
@@ -12,20 +13,27 @@ import {
 
 const CURRENCY_KEY = 'prospectly_currency';
 
-function detectCurrency(): Currency {
-  if (typeof navigator === 'undefined') return 'BRL';
+function detectCurrency(locale: Locale): Currency {
+  if (typeof navigator === 'undefined') return locale === 'pt' ? 'BRL' : 'EUR';
   const lang = navigator.language?.toLowerCase() ?? '';
   if (lang.includes('pt-br') || lang.includes('pt_br')) return 'BRL';
-  if (lang.startsWith('pt') || lang.startsWith('es') || lang.startsWith('de') || lang.startsWith('fr') || lang.startsWith('it') || lang.startsWith('nl')) {
+  if (
+    lang.startsWith('pt') ||
+    lang.startsWith('es') ||
+    lang.startsWith('de') ||
+    lang.startsWith('fr') ||
+    lang.startsWith('it') ||
+    lang.startsWith('nl')
+  ) {
     return 'EUR';
   }
   if (lang.startsWith('en-us')) return 'USD';
-  return 'EUR';
+  return locale === 'pt' ? 'BRL' : 'EUR';
 }
 
 export function PricingCard({ locale }: { locale: Locale }) {
   const [interval, setInterval] = useState<BillingInterval>('monthly');
-  const [currency, setCurrency] = useState<Currency>('BRL');
+  const [currency, setCurrency] = useState<Currency>(locale === 'pt' ? 'BRL' : 'EUR');
 
   useEffect(() => {
     const saved = localStorage.getItem(CURRENCY_KEY) as Currency | null;
@@ -33,22 +41,24 @@ export function PricingCard({ locale }: { locale: Locale }) {
       setCurrency(saved);
       return;
     }
-    setCurrency(detectCurrency());
-  }, []);
+    setCurrency(detectCurrency(locale));
+  }, [locale]);
 
   const price = DISPLAY_PRICES[interval][currency];
   const features = t(locale, 'planFeatures').split('|');
 
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-      <div className="mb-6 flex gap-2 rounded-lg bg-slate-100 p-1">
+    <div className="surface-raised mx-auto max-w-xl rounded-control p-8 shadow-soft sm:p-10">
+      <div className="flex gap-1 rounded-control bg-[color:var(--bg-sunken)] p-1">
         {(['monthly', 'lifetime'] as const).map((value) => (
           <button
             key={value}
             type="button"
             onClick={() => setInterval(value)}
-            className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${
-              interval === value ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600'
+            className={`focus-ring flex-1 rounded-[10px] px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.99] ${
+              interval === value
+                ? 'bg-[color:var(--bg-raised)] text-[color:var(--ink)] shadow-sm'
+                : 'text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
             }`}
           >
             {t(locale, value)}
@@ -56,10 +66,10 @@ export function PricingCard({ locale }: { locale: Locale }) {
         ))}
       </div>
 
-      <label className="mb-4 block text-sm text-slate-600">
+      <label className="mt-6 block text-sm text-[color:var(--ink-muted)]">
         {t(locale, 'currency')}
         <select
-          className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900"
+          className="focus-ring mt-2 w-full rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-2.5 text-[color:var(--ink)]"
           value={currency}
           onChange={(e) => {
             const next = e.target.value as Currency;
@@ -75,28 +85,28 @@ export function PricingCard({ locale }: { locale: Locale }) {
         </select>
       </label>
 
-      <p className="text-sm font-medium uppercase tracking-wide text-brand-600">
+      <p className="mt-8 font-mono text-xs uppercase tracking-[0.16em] text-accent">
         {t(locale, 'planName')}
       </p>
-      <p className="mt-2 text-4xl font-semibold tracking-tight text-slate-900">
+      <p className="mt-3 text-5xl font-semibold tracking-tighter text-[color:var(--ink)]">
         {price.formatted}
-        <span className="ml-2 text-base font-normal text-slate-500">
+        <span className="ml-2 text-base font-normal tracking-normal text-[color:var(--ink-muted)]">
           {interval === 'monthly' ? t(locale, 'perMonth') : t(locale, 'oneTime')}
         </span>
       </p>
 
-      <ul className="mt-6 space-y-2 text-sm text-slate-700">
-        {features.map((f) => (
-          <li key={f} className="flex gap-2">
-            <span className="text-teal-600">✓</span>
-            <span>{f}</span>
+      <ul className="mt-8 space-y-3 text-sm text-[color:var(--ink)]">
+        {features.map((feature) => (
+          <li key={feature} className="flex gap-3">
+            <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+            <span>{feature}</span>
           </li>
         ))}
       </ul>
 
       <a
         href={appRegisterUrl(interval, currency)}
-        className="mt-8 block rounded-md bg-brand-600 px-4 py-3 text-center font-medium text-white hover:bg-brand-700"
+        className="focus-ring mt-10 flex h-12 items-center justify-center rounded-control bg-accent text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
       >
         {interval === 'monthly' ? t(locale, 'ctaMonthly') : t(locale, 'ctaLifetime')}
       </a>

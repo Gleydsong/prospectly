@@ -9,22 +9,21 @@ export function CookieBanner({ locale }: { locale: Locale }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
     if (!localStorage.getItem(KEY)) setVisible(true);
   }, []);
 
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
-      <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--border)] bg-[color:var(--bg-raised)]/95 p-4 shadow-soft backdrop-blur-md">
+      <div className="mx-auto flex max-w-shell flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-medium text-slate-900">{t(locale, 'cookieTitle')}</p>
-          <p className="text-sm text-slate-600">{t(locale, 'cookieBody')}</p>
+          <p className="font-medium text-[color:var(--ink)]">{t(locale, 'cookieTitle')}</p>
+          <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{t(locale, 'cookieBody')}</p>
         </div>
         <button
           type="button"
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          className="focus-ring shrink-0 rounded-control bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
           onClick={() => {
             localStorage.setItem(KEY, 'essential');
             setVisible(false);
