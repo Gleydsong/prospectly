@@ -17,6 +17,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         </Link>
         <nav className="flex items-center gap-1 text-sm sm:gap-2">
           <Link
+            href={`${p}/faq`}
+            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
+          >
+            {t(locale, 'navFaq')}
+          </Link>
+          <Link
             href={`${p}/pricing`}
             className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
           >
@@ -53,6 +59,9 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[color:var(--ink-muted)]">
+          <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/faq`}>
+            {t(locale, 'footerFaq')}
+          </Link>
           <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/privacy`}>
             {t(locale, 'footerPrivacy')}
           </Link>

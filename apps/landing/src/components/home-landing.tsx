@@ -5,13 +5,13 @@ import { FaqSection } from '@/components/faq-section';
 import { LeadCaptureGuide } from '@/components/lead-capture-guide';
 import { Reveal } from '@/components/motion';
 import { TrustStrip } from '@/components/trust-strip';
-import { getFaqItems, t, type Locale } from '@/lib/i18n';
+import { getHomeFaqItems, t, type Locale } from '@/lib/i18n';
 
 export function HomeLanding({ locale }: { locale: Locale }) {
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: getFaqItems(locale).map((item) => ({
+    mainEntity: getHomeFaqItems(locale).map((item) => ({
       '@type': 'Question',
       name: item.question,
       acceptedAnswer: {

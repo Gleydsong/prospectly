@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next';
 const base = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const paths = ['', '/pricing', '/privacy', '/terms', '/cookies'];
+  const paths = ['', '/pricing', '/faq', '/privacy', '/terms', '/cookies'];
   const locales = ['', '/en'];
   const entries: MetadataRoute.Sitemap = [];
   for (const locale of locales) {

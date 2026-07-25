@@ -47,6 +47,16 @@ const pt: Dict = {
   ctaSignal4: '3 buscas grátis para validar',
   faqTitle: 'Perguntas frequentes',
   faqSubtitle: 'Respostas diretas sobre busca, planos, filtro sem site e privacidade.',
+  faqPageTitle: 'Dúvidas sobre o Prospectly',
+  faqPageSubtitle:
+    'Produto, uso, preços, origem dos dados e privacidade. Se faltar algo, escreva para hello@prospectly.dev.',
+  faqAllLink: 'Ver FAQ completo',
+  faqStillTitle: 'Ainda com dúvida?',
+  faqStillBody: 'Abra a conta Free, rode as 3 buscas no seu nicho e veja se a lista faz sentido.',
+  faqStillCta: 'Começar grátis',
+  faqStillSecondary: 'Ver preços',
+  navFaq: 'FAQ',
+  footerFaq: 'FAQ',
   pricingTitle: 'Um plano. Mensal ou vitalício.',
   pricingSubtitle: 'Starter com BRL, EUR ou USD. Troque a moeda antes do checkout.',
   pricingCta: 'Ir para preços',
@@ -115,6 +125,16 @@ const en: Dict = {
   ctaSignal4: '3 free searches to validate',
   faqTitle: 'Frequently asked questions',
   faqSubtitle: 'Straight answers on search, plans, the no-website filter, and privacy.',
+  faqPageTitle: 'Questions about Prospectly',
+  faqPageSubtitle:
+    'Product, usage, pricing, data sources, and privacy. If something is missing, email hello@prospectly.dev.',
+  faqAllLink: 'See full FAQ',
+  faqStillTitle: 'Still unsure?',
+  faqStillBody: 'Open a Free account, run the 3 searches in your niche, and see if the list fits.',
+  faqStillCta: 'Start free',
+  faqStillSecondary: 'See pricing',
+  navFaq: 'FAQ',
+  footerFaq: 'FAQ',
   pricingTitle: 'One plan. Monthly or lifetime.',
   pricingSubtitle: 'Starter in BRL, EUR, or USD. Switch currency before checkout.',
   pricingCta: 'Go to pricing',
@@ -140,93 +160,7 @@ const en: Dict = {
 
 const dictionaries: Record<Locale, Dict> = { pt, en };
 
-export type FaqItem = {
-  id: string;
-  question: string;
-  answer: string;
-};
-
-const faqPt: FaqItem[] = [
-  {
-    id: 'what',
-    question: 'O que o Prospectly faz?',
-    answer:
-      'Busca negócios locais por categoria e cidade (OpenStreetMap e Google Places), destaca quem não tem website reportado e organiza leads no pipeline com importação CSV.',
-  },
-  {
-    id: 'free',
-    question: 'Posso testar sem pagar?',
-    answer:
-      'Sim. O plano Free permite até 3 buscas para validar o fluxo. Depois, assine o Starter mensal ou compre o acesso vitalício.',
-  },
-  {
-    id: 'filter',
-    question: 'Como funciona o filtro sem website?',
-    answer:
-      'Nas buscas você pode priorizar negócios sem website reportado pelos provedores de mapas. Isso ajuda a focar em quem mais precisa de site, SEO ou presença digital.',
-  },
-  {
-    id: 'sources',
-    question: 'De onde vêm os dados?',
-    answer:
-      'De fontes de mapas: OpenStreetMap (via Nominatim/Overpass) e Google Places, quando a chave estiver configurada. A cobertura varia por cidade e categoria.',
-  },
-  {
-    id: 'plans',
-    question: 'Qual a diferença entre mensal e vitalício?',
-    answer:
-      'Mensal é assinatura recorrente via Stripe, cancelável no Customer Portal. Vitalício é pagamento único, sem renovação automática.',
-  },
-  {
-    id: 'lgpd',
-    question: 'E a LGPD?',
-    answer:
-      'Conta, consentimento de termos e páginas legais fazem parte do MVP. Dados públicos de mapas ainda exigem uso responsável no seu outreach. Solicitações de exclusão podem ser feitas pelo app ou por privacy@prospectly.dev.',
-  },
-];
-
-const faqEn: FaqItem[] = [
-  {
-    id: 'what',
-    question: 'What does Prospectly do?',
-    answer:
-      'It searches local businesses by category and city (OpenStreetMap and Google Places), highlights those with no reported website, and organizes leads in a pipeline with CSV import.',
-  },
-  {
-    id: 'free',
-    question: 'Can I try it without paying?',
-    answer:
-      'Yes. The Free plan allows up to 3 searches so you can validate the flow. Then subscribe to Starter monthly or buy lifetime access.',
-  },
-  {
-    id: 'filter',
-    question: 'How does the no-website filter work?',
-    answer:
-      'In searches you can prioritize businesses with no website reported by map providers. That helps you focus on leads who need a site, SEO, or digital presence.',
-  },
-  {
-    id: 'sources',
-    question: 'Where does the data come from?',
-    answer:
-      'From map sources: OpenStreetMap (Nominatim/Overpass) and Google Places when an API key is configured. Coverage varies by city and category.',
-  },
-  {
-    id: 'plans',
-    question: 'Monthly vs lifetime?',
-    answer:
-      'Monthly is a recurring Stripe subscription you can cancel in the Customer Portal. Lifetime is a one-time payment with no automatic renewal.',
-  },
-  {
-    id: 'lgpd',
-    question: 'What about privacy / LGPD?',
-    answer:
-      'Account consent, legal pages, and a data-request stub ship in the MVP. Public map data still requires responsible outreach. Deletion requests can go through the app or privacy@prospectly.dev.',
-  },
-];
-
-export function getFaqItems(locale: Locale): FaqItem[] {
-  return locale === 'en' ? faqEn : faqPt;
-}
+export { getFaqItems, getHomeFaqItems, type FaqItem } from '@/lib/faq-content';
 
 export type CaptureStep = {
   id: string;
