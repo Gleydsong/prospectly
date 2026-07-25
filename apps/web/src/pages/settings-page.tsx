@@ -18,6 +18,7 @@ import {
 import { setAppLocale } from '@/i18n';
 import { api, getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
+import { assignStripeRedirect } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface Member {
@@ -78,7 +79,7 @@ export function SettingsPage() {
   const checkout = useMutation({
     mutationFn: createCheckoutSession,
     onSuccess: (data) => {
-      window.location.assign(data.url);
+      assignStripeRedirect(data.url);
     },
     onError: (err) => setBillingError(getApiErrorMessage(err)),
   });
@@ -86,7 +87,7 @@ export function SettingsPage() {
   const portal = useMutation({
     mutationFn: createBillingPortal,
     onSuccess: (data) => {
-      window.location.assign(data.url);
+      assignStripeRedirect(data.url);
     },
     onError: (err) => setBillingError(getApiErrorMessage(err)),
   });

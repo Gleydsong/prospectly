@@ -229,10 +229,8 @@ export class AuthService {
         resetTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
-    // TODO(phase-6): send via SMTP provider. Logged in non-production only.
-    if (this.config.get<string>('nodeEnv') !== 'production') {
-      this.logger.log(`Password reset token for ${user.email}: ${token}`);
-    }
+    // TODO(phase-6): send via SMTP provider. Never log the raw token.
+    this.logger.log(`Password reset requested for ${user.email}`);
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

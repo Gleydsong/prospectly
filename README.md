@@ -31,6 +31,13 @@ prospectly/
 - pnpm >= 9
 - Docker + Docker Compose
 
+## Segurança (local)
+
+- Postgres/Redis no `docker-compose` escutam em `127.0.0.1` (não na interface pública).
+- Credenciais default (`prospectly`/`prospectly`) são **somente para desenvolvimento local**.
+- Em qualquer ambiente compartilhado ou produção: defina senhas fortes via `.env`, não exponha portas de DB/Redis publicamente e use secrets gerenciados.
+- JWT secrets devem ter no mínimo **32 caracteres** (`JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`).
+
 ## Setup
 
 ```bash

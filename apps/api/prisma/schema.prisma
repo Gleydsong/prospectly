@@ -729,3 +729,12 @@ model AuditLog {
   @@index([organizationId, createdAt])
   @@index([entity, entityId])
 }
+
+/// Stripe event.id used for webhook idempotency (replay-safe).
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+}

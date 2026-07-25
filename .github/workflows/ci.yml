@@ -38,5 +38,11 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Audit dependencies
-        run: pnpm audit --audit-level=high || true
+      - name: Audit dependencies (critical)
+        run: pnpm audit --audit-level=critical
+
+      - name: Audit dependencies (high report)
+        # High advisories are tracked in docs/security/audit-exceptions.md (mostly toolchain).
+        # Criticals already fail the job above; this step surfaces highs without soft-masking.
+        run: pnpm audit --audit-level=high
+        continue-on-error: true

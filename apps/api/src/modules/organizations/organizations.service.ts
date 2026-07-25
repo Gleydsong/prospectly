@@ -18,7 +18,18 @@ export class OrganizationsService {
   async getCurrent(organizationId: string) {
     const organization = await this.prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
-      include: { _count: { select: { members: true, leads: true } } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        plan: true,
+        planStatus: true,
+        planCurrency: true,
+        currentPeriodEnd: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { members: true, leads: true } },
+      },
     });
     if (!organization) {
       throw new NotFoundException('Organization not found');
