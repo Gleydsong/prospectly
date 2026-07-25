@@ -32,6 +32,7 @@ export function useCreateTaskForLead(leadId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['leads', leadId] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

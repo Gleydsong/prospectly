@@ -10,18 +10,26 @@ export class ActivitiesService {
 
   async listForLead(organizationId: string, leadId: string, page = 1, pageSize = 50) {
     await this.assertLead(organizationId, leadId);
+
+    const safePage = Number.isFinite(Number(page)) && Number(page) > 0 ? Math.floor(Number(page)) : 1;
+    const safePageSize = Math.min(
+      100,
+      Number.isFinite(Number(pageSize)) && Number(pageSize) > 0 ? Math.floor(Number(pageSize)) : 50,
+    );
     const where = { organizationId, leadId };
-    const [total, activities] = await this.prisma.$transaction([
+
+    // Promise.all (not $transaction batch): Prisma batch can mis-validate count() when paired with findMany({ take }).
+    const [total, activities] = await Promise.all([
       this.prisma.leadActivity.count({ where }),
       this.prisma.leadActivity.findMany({
         where,
         include: { user: { select: { id: true, name: true } } },
         orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip: (safePage - 1) * safePageSize,
+        take: safePageSize,
       }),
     ]);
-    return paginate(activities, total, page, pageSize);
+    return paginate(activities, total, safePage, safePageSize);
   }
 
   async createForLead(
