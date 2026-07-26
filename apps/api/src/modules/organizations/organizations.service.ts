@@ -156,12 +156,21 @@ export class OrganizationsService {
     return updated;
   }
 
-  async removeMember(organizationId: string, memberId: string, actingUserId: string) {
+  async removeMember(
+    organizationId: string,
+    memberId: string,
+    actingUserId: string,
+    actingRole: Role,
+  ) {
     const member = await this.prisma.organizationMember.findFirst({
       where: { id: memberId, organizationId },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
+    }
+    // Mirror updateMemberRole: only OWNER may remove an OWNER (blocks ADMIN privilege escalation).
+    if (actingRole !== 'OWNER' && member.role === 'OWNER') {
+      throw new ForbiddenException('Only OWNER can remove an OWNER');
     }
     if (member.role === 'OWNER') {
       const owners = await this.prisma.organizationMember.count({
