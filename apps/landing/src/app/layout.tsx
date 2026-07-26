@@ -17,6 +17,10 @@ const jetbrains = JetBrains_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001'),
+  icons: {
+    icon: [{ url: '/brand/prospectly-mark.png', type: 'image/png' }],
+    apple: [{ url: '/brand/prospectly-mark.png', type: 'image/png' }],
+  },
   title: {
     default: 'Prospectly - Prospecção de leads locais para agências',
     template: '%s | Prospectly',

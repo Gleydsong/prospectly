@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { List, X } from '@phosphor-icons/react';
+import { BrandLogo } from '@/components/brand-logo';
 import { prefix, t, type Locale } from '@/lib/i18n';
 import { appLoginUrl, appRegisterUrl } from '@/lib/pricing';
 
@@ -31,10 +32,11 @@ export function SiteHeader({ locale }: { locale: Locale }) {
       <div className="mx-auto flex h-16 max-w-shell items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href={p || '/'}
-          className="focus-ring text-lg font-semibold tracking-tight text-[color:var(--ink)]"
+          className="focus-ring rounded-control"
           onClick={close}
+          aria-label={t(locale, 'brand')}
         >
-          {t(locale, 'brand')}
+          <BrandLogo locale={locale} priority />
         </Link>
 
         <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
@@ -138,7 +140,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
     <footer className="mt-16 border-t border-[color:var(--border)]">
       <div className="mx-auto flex max-w-shell flex-col gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
         <div>
-          <p className="text-lg font-semibold tracking-tight">{t(locale, 'brand')}</p>
+          <BrandLogo locale={locale} />
           <p className="mt-2 max-w-sm text-sm text-[color:var(--ink-muted)]">
             {t(locale, 'footerTagline')}
           </p>
