@@ -11,7 +11,6 @@ export {
 
 export interface AuthResponse {
   accessToken: string;
-  refreshToken: string;
   user: AuthUser;
 }
 
@@ -58,6 +57,35 @@ export async function updateProfile(input: {
   return data;
 }
 
+export async function changeEmail(input: {
+  newEmail: string;
+  currentPassword: string;
+}): Promise<{ message: string }> {
+  const { data } = await api.patch<{ message: string }>('/users/me/email', input);
+  return data;
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post('/auth/verify-email', { token });
+}
+
+export async function resendVerification(): Promise<{ message: string }> {
+  const { data } = await api.post<{ message: string }>('/auth/resend-verification');
+  return data;
+}
+
+export async function getProfile(): Promise<{
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  locale: 'pt' | 'en';
+  emailVerifiedAt?: string | null;
+}> {
+  const { data } = await api.get('/users/me');
+  return data;
+}
+
 export async function requestDataDeletion(notes?: string): Promise<{ id: string; status: string }> {
   const { data } = await api.post<{ id: string; status: string }>('/users/me/data-requests', {
     type: 'DELETE',
@@ -74,6 +102,6 @@ export async function requestDataExport(notes?: string): Promise<{ id: string; s
   return data;
 }
 
-export async function logout(refreshToken: string): Promise<void> {
-  await api.post('/auth/logout', { refreshToken });
+export async function logout(): Promise<void> {
+  await api.post('/auth/logout', {});
 }

@@ -162,6 +162,24 @@ describe('AbacatePaymentProvider', () => {
     expect(parsed.eventId).toBe('log_1');
   });
 
+  it('accepts webhook secret from header (preferred over query)', async () => {
+    const raw = Buffer.from(
+      JSON.stringify({ id: 'log_2', event: 'transparent.completed', data: {} }),
+      'utf8',
+    );
+    const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
+
+    const parsed = await provider.verifyAndParseWebhook(
+      raw,
+      {
+        'x-webhook-signature': signature,
+        'x-abacate-webhook-secret': 'whsec_test',
+      },
+      { webhookSecret: 'wrong-query-ignored' },
+    );
+    expect(parsed.eventId).toBe('log_2');
+  });
+
   it('rejects bad webhook signature', async () => {
     const raw = Buffer.from(JSON.stringify({ id: 'log_1', event: 'x', data: {} }), 'utf8');
     await expect(

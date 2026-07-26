@@ -119,6 +119,14 @@ export class WebsiteAnalysisService {
   }
 
   async processAnalysis(job: AnalyzeWebsiteJobData): Promise<void> {
+    const lead = await this.prisma.lead.findFirst({
+      where: { id: job.leadId, organizationId: job.organizationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!lead) {
+      return;
+    }
+
     const analysis = await this.prisma.websiteAnalysis.findUnique({
       where: { id: job.analysisId },
     });

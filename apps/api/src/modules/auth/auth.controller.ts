@@ -1,9 +1,34 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Param, Post, Headers } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Ip,
+  Param,
+  Post,
+  Headers,
+  Req,
+  Res,
+  UnauthorizedException,
+  type RawBodyRequest,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Request, Response } from 'express';
 
+import {
+  clearRefreshCookie,
+  hasCsrfHeader,
+  parseExpiresInToSeconds,
+  readCookie,
+  REFRESH_COOKIE_NAME,
+  setRefreshCookie,
+} from '../../common/auth/refresh-cookie';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { AuthService, type AuthResponse, type AuthTokens } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -14,51 +39,99 @@ import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 
+type PublicAuthResponse = Omit<AuthResponse, 'refreshToken'>;
+type PublicAuthTokens = Omit<AuthTokens, 'refreshToken'>;
+
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly config: ConfigService,
+  ) {}
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @Post('register')
-  register(@Body() dto: RegisterDto): Promise<AuthResponse> {
-    return this.auth.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PublicAuthResponse> {
+    const result = await this.auth.register(dto);
+    this.attachRefreshCookie(res, result.refreshToken);
+    return this.toPublicAuth(result);
   }
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  login(@Body() dto: LoginDto): Promise<AuthResponse> {
-    return this.auth.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PublicAuthResponse> {
+    const result = await this.auth.login(dto);
+    this.attachRefreshCookie(res, result.refreshToken);
+    return this.toPublicAuth(result);
   }
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @HttpCode(HttpStatus.OK)
   @Post('google')
-  googleAuth(@Body() dto: GoogleAuthDto): Promise<AuthResponse> {
-    return this.auth.googleAuth(dto);
+  async googleAuth(
+    @Body() dto: GoogleAuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PublicAuthResponse> {
+    const result = await this.auth.googleAuth(dto);
+    this.attachRefreshCookie(res, result.refreshToken);
+    return this.toPublicAuth(result);
   }
 
   @Public()
   @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @HttpCode(HttpStatus.OK)
   @Post('refresh')
-  refresh(
+  async refresh(
+    @Req() req: RawBodyRequest<Request>,
     @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
     @Ip() ip: string,
     @Headers('user-agent') userAgent?: string,
-  ): Promise<AuthTokens> {
-    return this.auth.refresh(dto.refreshToken, { ip, userAgent });
+  ): Promise<PublicAuthTokens> {
+    const cookieToken = readCookie(req, REFRESH_COOKIE_NAME);
+    const bodyToken = dto.refreshToken;
+    const token = cookieToken ?? bodyToken;
+    if (!token) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    if (cookieToken && !hasCsrfHeader(req)) {
+      throw new UnauthorizedException('Missing CSRF header');
+    }
+
+    const result = await this.auth.refresh(token, { ip, userAgent });
+    this.attachRefreshCookie(res, result.refreshToken);
+    return { accessToken: result.accessToken };
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('logout')
-  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
-    await this.auth.logout(dto.refreshToken);
+  async logout(
+    @Req() req: RawBodyRequest<Request>,
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
+    const cookieToken = readCookie(req, REFRESH_COOKIE_NAME);
+    const token = cookieToken ?? dto.refreshToken;
+    if (cookieToken && !hasCsrfHeader(req)) {
+      throw new UnauthorizedException('Missing CSRF header');
+    }
+    if (token) {
+      await this.auth.logout(token);
+    }
+    this.clearCookie(res);
   }
 
   @Public()
@@ -79,13 +152,27 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('verify-email')
-  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
-    await this.auth.verifyEmail(dto.token);
+  async verifyEmail(@Body() dto: VerifyEmailDto, @Ip() ip: string): Promise<void> {
+    await this.auth.verifyEmail(dto.token, { ip });
   }
 
   @ApiBearerAuth()
+  @Throttle({ default: { ttl: 60_000, limit: 3 } })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Post('resend-verification')
+  async resendVerification(
+    @CurrentUser() user: AuthenticatedUser,
+    @Ip() ip: string,
+  ): Promise<{ message: string }> {
+    return this.auth.resendVerification(user.id, { ip });
+  }
+
+  @ApiBearerAuth()
+  @RequireEmailVerified()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('change-password')
   async changePassword(
@@ -98,16 +185,41 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @Post('organizations/:organizationId/switch')
-  switchOrganization(
+  async switchOrganization(
     @CurrentUser() user: AuthenticatedUser,
     @Param('organizationId') organizationId: string,
-  ): Promise<AuthTokens> {
-    return this.auth.switchOrganization(user.id, organizationId);
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<PublicAuthTokens> {
+    const result = await this.auth.switchOrganization(user.id, organizationId);
+    this.attachRefreshCookie(res, result.refreshToken);
+    return { accessToken: result.accessToken };
   }
 
   @ApiBearerAuth()
   @Get('me')
   me(@CurrentUser() user: AuthenticatedUser): AuthenticatedUser {
     return user;
+  }
+
+  private toPublicAuth(result: AuthResponse): PublicAuthResponse {
+    return {
+      accessToken: result.accessToken,
+      user: result.user,
+    };
+  }
+
+  private attachRefreshCookie(res: Response, refreshToken: string): void {
+    const maxAge = parseExpiresInToSeconds(this.config.get<string>('jwt.refreshExpiresIn'));
+    const secure = this.isSecureCookie();
+    setRefreshCookie(res, refreshToken, maxAge, secure);
+  }
+
+  private clearCookie(res: Response): void {
+    clearRefreshCookie(res, this.isSecureCookie());
+  }
+
+  private isSecureCookie(): boolean {
+    const env = this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+    return env === 'production' || env === 'staging';
   }
 }

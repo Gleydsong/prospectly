@@ -3,11 +3,13 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationsService } from './organizations.service';
+
 
 @ApiTags('organizations')
 @ApiBearerAuth()
@@ -20,6 +22,7 @@ export class OrganizationsController {
     return this.organizations.getCurrent(organizationId);
   }
 
+  @RequireEmailVerified()
   @Patch('current')
   @Roles('OWNER', 'ADMIN')
   update(@CurrentOrg() organizationId: string, @Body() dto: UpdateOrganizationDto) {
@@ -31,12 +34,14 @@ export class OrganizationsController {
     return this.organizations.listMembers(organizationId);
   }
 
+  @RequireEmailVerified()
   @Post('members')
   @Roles('OWNER', 'ADMIN')
   inviteMember(@CurrentOrg() organizationId: string, @Body() dto: InviteMemberDto) {
     return this.organizations.inviteMember(organizationId, dto);
   }
 
+  @RequireEmailVerified()
   @Patch('members/:memberId')
   @Roles('OWNER', 'ADMIN')
   updateMemberRole(
@@ -54,6 +59,7 @@ export class OrganizationsController {
     );
   }
 
+  @RequireEmailVerified()
   @Delete('members/:memberId')
   @Roles('OWNER', 'ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)

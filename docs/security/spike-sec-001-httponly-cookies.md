@@ -1,8 +1,8 @@
 # Spike SEC-001 — Sessão com cookies HttpOnly
 
-**Status:** documentado (não implementado nesta rodada)  
-**Data:** 2026-07-25  
-**Branch:** `cursor/security-hardening`
+**Status:** implemented on `feat/security-hardening-fixes` (Option A)  
+**Data:** 2026-07-26  
+**Branch:** `feat/security-hardening-fixes`
 
 ## Problema
 
@@ -67,19 +67,13 @@ Hoje o web app persiste `accessToken` + `refreshToken` em `localStorage` via Zus
 
 ## SEC-017 — Email verification gate
 
-Endpoint `verifyEmail` já existe; campo `emailVerifiedAt` no User.
-
-**Proposta:** flag `REQUIRE_EMAIL_VERIFICATION=false` (default). Quando `true`:
-
-- bloquear login/ações se `emailVerifiedAt` for null (exceto rotas de verify/forgot);
-- reenviar token com throttle.
-
-Produto precisa decidir se free tier exige verificação antes de habilitar o gate. **Adiado** junto com este spike.
+Implemented on the same branch: login allowed without verify; `@RequireEmailVerified()` on critical mutations; full verify/resend/change-email flow. See `docs/superpowers/specs/2026-07-26-security-hardening-design.md`.
 
 ## Critério de pronto (quando implementar)
 
-- [ ] Tokens não aparecem em Application → Local Storage
-- [ ] DevTools → Cookies mostra refresh HttpOnly
-- [ ] XSS simulado no console não lê refresh
-- [ ] Refresh reuse ainda revoga família
-- [ ] E2E: login → F5 → sessão restaura; logout → cookie limpo
+- [x] Tokens não aparecem em Application → Local Storage (só `user` no persist)
+- [x] DevTools → Cookies mostra refresh HttpOnly (`Path=/api/v1/auth`)
+- [x] XSS simulado no console não lê refresh
+- [x] Refresh reuse ainda revoga família
+- [x] Bootstrap: login → F5 → `POST /auth/refresh` com cookie; logout → cookie limpo
+- [x] CSRF: `X-Requested-With: XMLHttpRequest` em refresh/logout cookie-auth

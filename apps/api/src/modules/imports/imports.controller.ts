@@ -18,10 +18,12 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CorrelationId } from '../../common/decorators/correlation-id.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateCsvImportDto } from './dto/create-csv-import.dto';
 import { QueryImportsDto } from './dto/query-imports.dto';
 import { ImportsService } from './imports.service';
+
 
 interface UploadedCsvFile {
   originalname: string;
@@ -47,6 +49,7 @@ export class ImportsController {
     return this.imports.preview(uploaded.originalname, uploaded.buffer);
   }
 
+  @RequireEmailVerified()
   @Post('csv')
   @HttpCode(HttpStatus.ACCEPTED)
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')

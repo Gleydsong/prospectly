@@ -37,7 +37,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
 7. Point Stripe webhook to `https://<api>/api/v1/billing/webhook/stripe`.
-8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate?webhookSecret=<ABACATE_WEBHOOK_SECRET>`.
+8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release).
 9. Confirm migrate ran on API boot (`prisma migrate deploy` in Docker `CMD`).
 
 ## Local Dockerfiles (optional)
@@ -48,21 +48,26 @@ API health check: `GET /health/ready` (Postgres + Redis).
 
 ## Ops notes
 
-- **JWT secrets** are `generateValue` on first create; rotate via Dashboard if needed.
-- **Redis** must stay `noeviction` for BullMQ.
+- **JWT secrets** are `generateValue` on first create; rotate via Dashboard if needed. Production/staging refuse `change-me-*` placeholders.
+- **Redis** must stay `noeviction` for BullMQ (also used for distributed rate limiting).
 - **Free web spin-down** does not apply to `starter` plans used here; free Postgres expiry still matters if you downgrade DB plan.
 - Custom domains: attach in Dashboard, then update CORS / frontend URLs / webhook endpoints.
 - `autoDeployTrigger: checksPass` waits for GitHub CI on `main`.
+- **SEC-001:** deploy API + web together (refresh cookie + `withCredentials`). Do not ship one without the other.
+- **SEC-017:** configure SMTP so verification emails leave the no-op queue; critical mutations require `emailVerifiedAt`.
 
 ## Post-deploy checklist
 
-- [ ] `GET https://<api>/health/ready` → ready
-- [ ] Register + login on web
+- [ ] `GET https://<api>/health/ready` → ready (no DB/Redis details in public body)
+- [ ] Register + login on web (refresh cookie HttpOnly; access only in memory)
+- [ ] F5 restores session via cookie refresh; logout clears cookie
+- [ ] Unverified email: banner shown; checkout/invite return 403 `EMAIL_NOT_VERIFIED`
 - [ ] Landing CTAs open app with correct plan/currency query
 - [ ] Stripe EUR checkout (test then live)
 - [ ] Abacate BRL lifetime PIX + monthly CARD (see `docs/billing/dual-gateways.md`)
-- [ ] Forgot-password e-mail once SMTP is wired
+- [ ] Verification + forgot-password e-mail once SMTP is wired
+- [ ] Seed never run in production (`prisma/seed.ts` throws)
 
 ## Out of scope here
 
-SEC-001 cookies, Sentry SDK wiring, OSM self-host, automated DB backups (configure in Render Dashboard / snapshots).
+Sentry SDK wiring, OSM self-host, automated DB backups (configure in Render Dashboard / snapshots), magic-link invites, access JWT in cookie (spike Option C).

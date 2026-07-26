@@ -8,15 +8,13 @@ import { useAuthStore } from '@/stores/auth.store';
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, refreshToken, clear } = useAuthStore();
+  const { user, clear } = useAuthStore();
 
   const handleLogout = async () => {
-    if (refreshToken) {
-      try {
-        await logout(refreshToken);
-      } catch {
-        // Session cleanup proceeds even if server call fails.
-      }
+    try {
+      await logout();
+    } catch {
+      // Session cleanup proceeds even if server call fails.
     }
     clear();
     navigate('/login', { replace: true });

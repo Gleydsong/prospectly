@@ -6,9 +6,10 @@ import type { AuthUser } from '@/types';
 interface AuthState {
   user: AuthUser | null;
   accessToken: string | null;
-  refreshToken: string | null;
-  setAuth: (payload: { user: AuthUser; accessToken: string; refreshToken: string }) => void;
-  setTokens: (payload: { accessToken: string; refreshToken: string }) => void;
+  bootstrapped: boolean;
+  setAuth: (payload: { user: AuthUser; accessToken: string }) => void;
+  setAccessToken: (accessToken: string) => void;
+  setBootstrapped: (bootstrapped: boolean) => void;
   updateUser: (patch: Partial<AuthUser>) => void;
   clear: () => void;
 }
@@ -18,14 +19,17 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
-      refreshToken: null,
-      setAuth: ({ user, accessToken, refreshToken }) =>
-        set({ user, accessToken, refreshToken }),
-      setTokens: ({ accessToken, refreshToken }) => set({ accessToken, refreshToken }),
+      bootstrapped: false,
+      setAuth: ({ user, accessToken }) => set({ user, accessToken }),
+      setAccessToken: (accessToken) => set({ accessToken }),
+      setBootstrapped: (bootstrapped) => set({ bootstrapped }),
       updateUser: (patch) =>
         set((state) => (state.user ? { user: { ...state.user, ...patch } } : state)),
-      clear: () => set({ user: null, accessToken: null, refreshToken: null }),
+      clear: () => set({ user: null, accessToken: null }),
     }),
-    { name: 'prospectly-auth' },
+    {
+      name: 'prospectly-auth',
+      partialize: (state) => ({ user: state.user }),
+    },
   ),
 );

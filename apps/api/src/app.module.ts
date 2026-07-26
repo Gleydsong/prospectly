@@ -10,8 +10,11 @@ import { validateEnv } from './config/validation';
 import { parseRedisConnection } from './config/redis';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { HealthModule } from './common/health/health.module';
+import { MailModule } from './common/mail/mail.module';
+import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { EmailVerifiedGuard } from './common/guards/email-verified.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
@@ -68,7 +71,13 @@ import { WebsiteAnalysisModule } from './modules/website-analysis/website-analys
         },
       }),
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [{ ttl: 60_000, limit: 120 }],
+        storage: new RedisThrottlerStorage(config),
+      }),
+    }),
     BullModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -77,6 +86,7 @@ import { WebsiteAnalysisModule } from './modules/website-analysis/website-analys
     }),
     PrismaModule,
     HealthModule,
+    MailModule,
     AuthModule,
     UsersModule,
     OrganizationsModule,
@@ -95,6 +105,7 @@ import { WebsiteAnalysisModule } from './modules/website-analysis/website-analys
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: EmailVerifiedGuard },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

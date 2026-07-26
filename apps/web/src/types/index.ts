@@ -21,6 +21,7 @@ export interface AuthUser {
   avatarUrl?: string | null;
   /** Present after login/register; may be missing in older persisted sessions. */
   locale?: AppLocale;
+  emailVerifiedAt?: string | null;
 }
 
 export interface Tag {

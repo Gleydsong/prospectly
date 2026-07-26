@@ -13,9 +13,12 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   cancelBillingSubscription,
+  changeEmail,
   createBillingPortal,
   createCheckoutSession,
   getBillingStatus,
+  getProfile,
+  logout,
   requestDataDeletion,
   requestDataExport,
   updateProfile,
@@ -34,7 +37,7 @@ import {
 import { fetchScoreConfig, updateScoreRules, type ScoreRule } from '@/features/scoring/api';
 import { setAppLocale } from '@/i18n';
 import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
-import { api, getApiErrorMessage } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
 import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn, formatDate } from '@/lib/utils';
@@ -60,6 +63,7 @@ function initials(name: string): string {
 function ScoringSettingsCard() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const emailVerified = Boolean(useAuthStore((s) => s.user?.emailVerifiedAt));
   const [draft, setDraft] = useState<ScoreRule[] | null>(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -147,10 +151,13 @@ function ScoringSettingsCard() {
               </p>
             ) : null}
             {saveMessage ? <p className="text-sm text-brand-300">{saveMessage}</p> : null}
+            {!emailVerified ? (
+              <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
+            ) : null}
             <Button
               type="button"
               loading={saveMutation.isPending}
-              disabled={!draft}
+              disabled={!draft || !emailVerified}
               onClick={() => saveMutation.mutate()}
             >
               {t('settings.scoringSave')}
@@ -315,8 +322,13 @@ export function SettingsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [dsrMessage, setDsrMessage] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const manage = canManageOrg(user?.role);
+  const emailVerified = Boolean(user?.emailVerifiedAt);
 
   useEffect(() => {
     setName(user?.name ?? '');
@@ -324,6 +336,20 @@ export function SettingsPage() {
     setAvatarPreview(user?.avatarUrl ?? null);
     setOrgName(user?.organizationName ?? '');
   }, [user?.name, user?.locale, user?.avatarUrl, user?.organizationName]);
+
+  useEffect(() => {
+    void getProfile()
+      .then((profile) => {
+        updateUser({
+          email: profile.email,
+          emailVerifiedAt: profile.emailVerifiedAt ?? null,
+          name: profile.name,
+          locale: profile.locale,
+          avatarUrl: profile.avatarUrl,
+        });
+      })
+      .catch(() => undefined);
+  }, [updateUser]);
 
   const orgQuery = useQuery({
     queryKey: ['organizations', 'current'],
@@ -378,8 +404,26 @@ export function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: ['organizations', 'current'] });
     },
     onError: (err) => {
+      const msg = getApiErrorMessage(err);
       setOrgMessage(null);
-      setOrgError(getApiErrorMessage(err) || t('settings.orgError'));
+      setOrgError(
+        msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'),
+      );
+    },
+  });
+
+  const changeEmailMutation = useMutation({
+    mutationFn: () =>
+      changeEmail({ newEmail: newEmail.trim(), currentPassword: emailPassword }),
+    onSuccess: (data) => {
+      setEmailMessage(data.message || t('settings.emailChangeSuccess'));
+      setEmailError(null);
+      setEmailPassword('');
+      updateUser({ email: newEmail.trim().toLowerCase(), emailVerifiedAt: null });
+    },
+    onError: (err) => {
+      setEmailMessage(null);
+      setEmailError(getApiErrorMessage(err) || t('settings.emailChangeError'));
     },
   });
 
@@ -418,15 +462,17 @@ export function SettingsPage() {
       setDsrMessage(t('settings.deleteSuccess'));
       setDeleteOpen(false);
       try {
-        const refresh = useAuthStore.getState().refreshToken;
-        if (refresh) await api.post('/auth/logout', { refreshToken: refresh });
+        await logout();
       } catch {
         /* ignore */
       }
       clearAuth();
       window.location.assign('/login');
     },
-    onError: (err) => setDsrMessage(getApiErrorMessage(err)),
+    onError: (err) => {
+      const msg = getApiErrorMessage(err);
+      setDsrMessage(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg);
+    },
   });
 
   const updateRole = useMutation({
@@ -546,6 +592,43 @@ export function SettingsPage() {
       </Card>
 
       <Card>
+        <CardHeader title={t('settings.emailTitle')} description={t('settings.emailDesc')} />
+        <CardContent className="space-y-3" id="email">
+          <p className="text-sm text-zinc-400">
+            {emailVerified ? t('settings.emailVerified') : t('settings.emailUnverified')}
+            {user?.email ? ` · ${user.email}` : null}
+          </p>
+          <Input
+            label={t('settings.emailNew')}
+            type="email"
+            value={newEmail}
+            onChange={(event) => setNewEmail(event.target.value)}
+            autoComplete="email"
+          />
+          <Input
+            label={t('settings.emailCurrentPassword')}
+            type="password"
+            value={emailPassword}
+            onChange={(event) => setEmailPassword(event.target.value)}
+            autoComplete="current-password"
+          />
+          {emailMessage ? <p className="text-sm text-brand-300">{emailMessage}</p> : null}
+          {emailError ? (
+            <p className="text-sm text-red-400" role="alert">
+              {emailError}
+            </p>
+          ) : null}
+          <Button
+            loading={changeEmailMutation.isPending}
+            disabled={!newEmail.trim() || !emailPassword}
+            onClick={() => changeEmailMutation.mutate()}
+          >
+            {t('settings.emailChangeSubmit')}
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader title={t('settings.orgTitle')} description={t('settings.orgDesc')} />
         <CardContent className="space-y-3">
           {orgQuery.isLoading ? (
@@ -568,7 +651,7 @@ export function SettingsPage() {
           {manage ? (
             <Button
               loading={saveOrg.isPending}
-              disabled={!orgDirty || !orgName.trim()}
+              disabled={!orgDirty || !orgName.trim() || !emailVerified}
               onClick={() => saveOrg.mutate()}
             >
               {t('common.save')}
@@ -576,6 +659,9 @@ export function SettingsPage() {
           ) : (
             <p className="text-xs text-zinc-500">{t('settings.orgReadOnly')}</p>
           )}
+          {manage && !emailVerified ? (
+            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -643,7 +729,12 @@ export function SettingsPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {!isActive ? (
-              <Button type="button" loading={checkout.isPending} onClick={() => checkout.mutate()}>
+              <Button
+                type="button"
+                loading={checkout.isPending}
+                disabled={!emailVerified}
+                onClick={() => checkout.mutate()}
+              >
                 {subscribeLabel}
               </Button>
             ) : null}
@@ -652,6 +743,7 @@ export function SettingsPage() {
                 type="button"
                 variant="secondary"
                 loading={portal.isPending}
+                disabled={!emailVerified}
                 onClick={() => portal.mutate()}
               >
                 {t('settings.stripePortal')}
@@ -662,6 +754,7 @@ export function SettingsPage() {
                 type="button"
                 variant="outline"
                 loading={cancelSub.isPending}
+                disabled={!emailVerified}
                 onClick={() => cancelSub.mutate()}
               >
                 {t('settings.cancelSubscription')}
@@ -676,6 +769,9 @@ export function SettingsPage() {
               {t('settings.viewPricing')}
             </a>
           </div>
+          {!emailVerified ? (
+            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -685,7 +781,12 @@ export function SettingsPage() {
           description={t('settings.membersDesc')}
           action={
             manage ? (
-              <Button type="button" size="sm" onClick={() => setInviteOpen(true)}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!emailVerified}
+                onClick={() => setInviteOpen(true)}
+              >
                 <UserPlus className="h-4 w-4" />
                 {t('settings.inviteButton')}
               </Button>
@@ -765,14 +866,23 @@ export function SettingsPage() {
               type="button"
               variant="outline"
               loading={exportData.isPending}
+              disabled={!emailVerified}
               onClick={() => exportData.mutate()}
             >
               {t('settings.requestExport')}
             </Button>
-            <Button type="button" variant="danger" onClick={() => setDeleteOpen(true)}>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={!emailVerified}
+              onClick={() => setDeleteOpen(true)}
+            >
               {t('settings.deleteAccount')}
             </Button>
           </div>
+          {!emailVerified ? (
+            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
+          ) : null}
           {dsrMessage ? <p className="text-sm text-zinc-200">{dsrMessage}</p> : null}
         </CardContent>
       </Card>

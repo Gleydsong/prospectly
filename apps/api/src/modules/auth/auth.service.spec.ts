@@ -3,6 +3,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 
+import type { MailService } from '../../common/mail/mail.service';
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import { AuthService } from './auth.service';
 
@@ -74,13 +75,18 @@ const makeJwt = () =>
     decode: jest.fn().mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 600, jti: 'jti-1' }),
   }) as unknown as JwtService;
 
+const makeMail = () =>
+  ({
+    send: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as MailService;
+
 describe('AuthService', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('register rejects duplicated email with generic message', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue({ id: 'existing' });
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
 
     await expect(
       service.register({
@@ -134,7 +140,7 @@ describe('AuthService', () => {
       .mockResolvedValue(createdUser);
     (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
 
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.register({
       name: 'Ana',
       email: 'ana@agency.dev',
@@ -155,7 +161,7 @@ describe('AuthService', () => {
   it('login fails with unknown email using generic message', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue(null);
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
 
     await expect(
       service.login({ email: 'no@user.dev', password: 'whatever1' }),
@@ -173,7 +179,7 @@ describe('AuthService', () => {
       lockedUntil: null,
       memberships: [{ organizationId: 'org1', role: 'OWNER' }],
     });
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
 
     await expect(service.login({ email: 'a@b.dev', password: 'wrong1' })).rejects.toBeInstanceOf(
       UnauthorizedException,
@@ -204,7 +210,7 @@ describe('AuthService', () => {
       .fn()
       .mockResolvedValue({ id: 'u1', email: 'a@b.dev', locale: 'pt' });
 
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.login({ email: 'a@b.dev', password: 'RightPass1' });
 
     expect(result.user.organizationId).toBe('org1');
@@ -227,7 +233,7 @@ describe('AuthService', () => {
       replacedById: null,
     });
 
-    const service = new AuthService(prisma, jwt, makeConfig());
+    const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
     await expect(service.refresh('stale-token')).rejects.toBeInstanceOf(UnauthorizedException);
     expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
   });
@@ -245,7 +251,7 @@ describe('AuthService', () => {
     });
     prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 2 });
 
-    const service = new AuthService(prisma, jwt, makeConfig());
+    const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
     await expect(service.refresh('reused-token')).rejects.toBeInstanceOf(UnauthorizedException);
     expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -306,7 +312,7 @@ describe('AuthService', () => {
       .mockResolvedValue(createdUser);
     (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
 
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.googleAuth({
       idToken: 'valid-id-token',
       organizationName: 'Agency G',
@@ -353,7 +359,7 @@ describe('AuthService', () => {
       .mockResolvedValue({ id: 'u1', email: 'ana@agency.dev', locale: 'pt' });
     prisma.refreshToken.create = jest.fn().mockResolvedValue({});
 
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.googleAuth({ idToken: 'valid-id-token' });
     expect(result.user.organizationId).toBe('org1');
     expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -392,7 +398,7 @@ describe('AuthService', () => {
       .mockResolvedValue({ id: 'u1', email: 'ana@agency.dev', locale: 'pt' });
     prisma.refreshToken.create = jest.fn().mockResolvedValue({});
 
-    const service = new AuthService(prisma, makeJwt(), makeConfig());
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.googleAuth({ accessToken: 'ya29.access-token' });
     expect(result.user.organizationId).toBe('org1');
     expect(verifyIdToken).not.toHaveBeenCalled();

@@ -28,7 +28,12 @@ async function bootstrap() {
     origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Correlation-Id',
+      'X-Requested-With',
+    ],
   });
 
   app.setGlobalPrefix('api', {
@@ -60,6 +65,10 @@ async function bootstrap() {
   }
 
   const port = config.get<number>('port') ?? parseInt(process.env.PORT ?? '3000', 10);
+  // Render / reverse proxies — needed for accurate @Ip() and rate limiting.
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.getInstance()?.set?.('trust proxy', 1);
+
   await app.listen(port, '0.0.0.0');
 }
 
