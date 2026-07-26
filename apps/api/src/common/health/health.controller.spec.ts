@@ -8,7 +8,7 @@ describe('HealthController readiness', () => {
     const controller = new HealthController(prisma as never, queue as never);
 
     await expect(controller.readiness()).resolves.toEqual(
-      expect.objectContaining({ status: 'ready', database: 'up', redis: 'up' }),
+      expect.objectContaining({ status: 'ready' }),
     );
     expect(redis.ping).toHaveBeenCalledTimes(1);
   });
@@ -19,7 +19,7 @@ describe('HealthController readiness', () => {
     const controller = new HealthController(prisma as never, { client: Promise.resolve(redis) } as never);
 
     await expect(controller.readiness()).rejects.toMatchObject({
-      response: { status: 'not_ready', database: 'up', redis: 'down' },
+      response: { status: 'not_ready' },
     });
   });
 });

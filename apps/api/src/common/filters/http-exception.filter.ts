@@ -5,6 +5,7 @@ interface ErrorResponseBody {
   statusCode: number;
   message: string | string[];
   error: string;
+  code?: string;
   timestamp: string;
   path: string;
   correlationId?: string;
@@ -22,6 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Internal server error';
     let error = 'Internal Server Error';
+    let code: string | undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
@@ -29,9 +31,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       if (typeof body === 'string') {
         message = body;
       } else if (typeof body === 'object' && body !== null) {
-        const payload = body as { message?: string | string[]; error?: string };
+        const payload = body as { message?: string | string[]; error?: string; code?: string };
         message = payload.message ?? exception.message;
         error = payload.error ?? exception.name;
+        code = payload.code;
       }
     } else {
       this.logger.error(
@@ -44,6 +47,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       statusCode: status,
       message,
       error,
+      ...(code ? { code } : {}),
       timestamp: new Date().toISOString(),
       path: request.url,
       correlationId: request.id,

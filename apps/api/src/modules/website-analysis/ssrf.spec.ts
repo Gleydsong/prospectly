@@ -20,4 +20,13 @@ describe('ssrf guards', () => {
     await expect(assertSafePublicUrl('ftp://example.com')).rejects.toBeInstanceOf(SsrfBlockedError);
     await expect(assertSafePublicUrl('http://127.0.0.1/')).rejects.toBeInstanceOf(SsrfBlockedError);
   });
+
+  it('rejects cloud metadata hostnames', async () => {
+    await expect(assertSafePublicUrl('http://metadata.google.internal/')).rejects.toBeInstanceOf(
+      SsrfBlockedError,
+    );
+    await expect(assertSafePublicUrl('http://169.254.169.254/latest')).rejects.toBeInstanceOf(
+      SsrfBlockedError,
+    );
+  });
 });

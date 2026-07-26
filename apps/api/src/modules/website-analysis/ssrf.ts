@@ -2,6 +2,13 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 
 const BLOCKED_HOSTNAME_SUFFIXES = ['.localhost', '.local', '.internal'];
+const BLOCKED_METADATA_HOSTNAMES = new Set([
+  'metadata.google.internal',
+  'metadata.goog',
+  'metadata',
+  'instance-data',
+  'instance-data.ec2.internal',
+]);
 
 export class SsrfBlockedError extends Error {
   constructor(message: string) {
@@ -29,7 +36,7 @@ export function isBlockedIp(ip: string): boolean {
   if (a === 10) return true;
   if (a === 127) return true;
   if (a === 0) return true;
-  if (a === 169 && b === 254) return true;
+  if (a === 169 && b === 254) return true; // link-local / cloud metadata
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
@@ -54,6 +61,7 @@ export async function assertSafePublicUrl(rawUrl: string): Promise<URL> {
   const hostname = parsed.hostname.toLowerCase();
   if (
     hostname === 'localhost' ||
+    BLOCKED_METADATA_HOSTNAMES.has(hostname) ||
     BLOCKED_HOSTNAME_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
   ) {
     throw new SsrfBlockedError('Private hostnames are not allowed');
@@ -66,6 +74,7 @@ export async function assertSafePublicUrl(rawUrl: string): Promise<URL> {
     return parsed;
   }
 
+  // Resolve DNS on every call (including redirects) so TOCTOU / DNS rebinding is re-checked.
   let records: Array<{ address: string }>;
   try {
     records = await lookup(hostname, { all: true, verbatim: true });

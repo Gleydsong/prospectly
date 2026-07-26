@@ -36,12 +36,12 @@ describe('CreateLeadDto / UpdateLeadDto identity fields', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('rejects client-supplied source and externalId on update', async () => {
+  it('rejects client-supplied ownerId on update (mass assignment)', async () => {
     await expect(
       pipe.transform(
         {
-          source: 'OPENSTREETMAP',
-          externalId: 'node/42',
+          companyName: 'Loja',
+          ownerId: 'someone-else',
         },
         { type: 'body', metatype: UpdateLeadDto },
       ),

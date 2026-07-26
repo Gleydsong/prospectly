@@ -5,7 +5,11 @@ import { useAuthStore } from '@/stores/auth.store';
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
   timeout: 20_000,
-  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  },
 });
 
 api.interceptors.request.use((config) => {
@@ -19,17 +23,17 @@ api.interceptors.request.use((config) => {
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const { refreshToken, setTokens, clear } = useAuthStore.getState();
-  if (!refreshToken) {
-    clear();
-    throw new Error('No refresh token');
-  }
+  const { setAccessToken, clear } = useAuthStore.getState();
   try {
-    const response = await axios.post<{ accessToken: string; refreshToken: string }>(
+    const response = await axios.post<{ accessToken: string }>(
       `${api.defaults.baseURL}/auth/refresh`,
-      { refreshToken },
+      {},
+      {
+        withCredentials: true,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      },
     );
-    setTokens(response.data);
+    setAccessToken(response.data.accessToken);
     return response.data.accessToken;
   } catch (error) {
     clear();
@@ -57,7 +61,12 @@ api.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { message?: string | string[] } | undefined;
+    const data = error.response?.data as
+      | { message?: string | string[]; code?: string; error?: { code?: string } }
+      | undefined;
+    if (data?.code === 'EMAIL_NOT_VERIFIED' || data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+      return 'EMAIL_NOT_VERIFIED';
+    }
     if (data?.message) {
       return Array.isArray(data.message) ? data.message.join(', ') : data.message;
     }
@@ -66,4 +75,33 @@ export function getApiErrorMessage(error: unknown): string {
     }
   }
   return 'Ocorreu um erro inesperado.';
+}
+
+export async function bootstrapSession(): Promise<boolean> {
+  const { accessToken, user, setAuth, setBootstrapped, clear } = useAuthStore.getState();
+  if (accessToken) {
+    setBootstrapped(true);
+    return true;
+  }
+  if (!user) {
+    setBootstrapped(true);
+    return false;
+  }
+  try {
+    const response = await axios.post<{ accessToken: string }>(
+      `${api.defaults.baseURL}/auth/refresh`,
+      {},
+      {
+        withCredentials: true,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      },
+    );
+    setAuth({ user, accessToken: response.data.accessToken });
+    setBootstrapped(true);
+    return true;
+  } catch {
+    clear();
+    setBootstrapped(true);
+    return false;
+  }
 }

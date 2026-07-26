@@ -384,6 +384,10 @@ const TEMPLATES = [
 ];
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing to run demo seed in production (contains known Demo123! passwords)');
+  }
+
   const passwordHash = await argon2.hash('Demo123!');
 
   const organization = await prisma.organization.upsert({

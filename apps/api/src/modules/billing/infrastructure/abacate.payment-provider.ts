@@ -24,6 +24,13 @@ import { AbacateClient } from './abacate.client';
  * Public HMAC key documented by AbacatePay for `X-Webhook-Signature` verification.
  * Override via `abacate.webhookHmacKey` if Abacate rotates the key.
  */
+
+function equalSecrets(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 const DEFAULT_ABACATE_HMAC_PUBLIC_KEY =
   't9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9';
 
@@ -79,9 +86,17 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       throw new ServiceUnavailableException('Abacate webhook secret is not configured');
     }
 
+    const headerSecretRaw =
+      headers['x-abacate-webhook-secret'] ??
+      headers['X-Abacate-Webhook-Secret'] ??
+      headers['x-webhook-secret'];
+    const headerSecret = Array.isArray(headerSecretRaw) ? headerSecretRaw[0] : headerSecretRaw;
+
+    // Prefer header secret; query `webhookSecret`/`secret` is fallback for one release.
     const querySecretRaw = query?.webhookSecret ?? query?.secret;
     const querySecret = Array.isArray(querySecretRaw) ? querySecretRaw[0] : querySecretRaw;
-    if (!querySecret || querySecret !== expectedSecret) {
+    const providedSecret = headerSecret ?? querySecret;
+    if (!providedSecret || !equalSecrets(providedSecret, expectedSecret)) {
       throw new UnauthorizedException('Invalid Abacate webhook secret');
     }
 

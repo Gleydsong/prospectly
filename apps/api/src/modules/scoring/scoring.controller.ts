@@ -2,9 +2,11 @@ import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
+import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UpdateScoreRulesDto } from './dto/update-score-rules.dto';
 import { ScoringService } from './scoring.service';
+
 
 @ApiTags('scoring')
 @ApiBearerAuth()
@@ -18,6 +20,7 @@ export class ScoringController {
     return this.scoring.getConfig(organizationId);
   }
 
+  @RequireEmailVerified()
   @Patch('config/rules')
   @Roles('OWNER', 'ADMIN')
   updateRules(@CurrentOrg() organizationId: string, @Body() dto: UpdateScoreRulesDto) {

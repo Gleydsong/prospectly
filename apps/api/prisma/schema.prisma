@@ -148,6 +148,7 @@ model User {
   githubId             String?   @unique
   emailVerifiedAt      DateTime?
   emailVerifyTokenHash String?
+  emailVerifyTokenExpiresAt DateTime?
   resetTokenHash       String?
   resetTokenExpiresAt  DateTime?
   failedLoginAttempts  Int       @default(0)
@@ -244,19 +245,21 @@ model OrganizationMember {
 }
 
 model RefreshToken {
-  id           String    @id @default(uuid())
-  userId       String
-  tokenHash    String    @unique
-  userAgent    String?
-  ip           String?
-  expiresAt    DateTime
-  revokedAt    DateTime?
-  replacedById String?
-  createdAt    DateTime  @default(now())
+  id             String    @id @default(uuid())
+  userId         String
+  organizationId String?
+  tokenHash      String    @unique
+  userAgent      String?
+  ip             String?
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedById   String?
+  createdAt      DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([organizationId])
   @@index([expiresAt])
 }
 

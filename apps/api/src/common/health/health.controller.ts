@@ -34,16 +34,16 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch {
-      throw new ServiceUnavailableException({ status: 'not_ready', database: 'down', redis: 'unknown' });
+      throw new ServiceUnavailableException({ status: 'not_ready' });
     }
 
     try {
       const redis = (await this.queue.client) as unknown as { ping(): Promise<string> };
       await redis.ping();
     } catch {
-      throw new ServiceUnavailableException({ status: 'not_ready', database: 'up', redis: 'down' });
+      throw new ServiceUnavailableException({ status: 'not_ready' });
     }
 
-    return { status: 'ready', database: 'up', redis: 'up', timestamp: new Date().toISOString() };
+    return { status: 'ready', timestamp: new Date().toISOString() };
   }
 }

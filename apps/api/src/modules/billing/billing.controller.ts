@@ -15,9 +15,11 @@ import type { Request } from 'express';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+
 
 @ApiTags('billing')
 @Controller({ path: 'billing', version: '1' })
@@ -31,6 +33,7 @@ export class BillingController {
   }
 
   @ApiBearerAuth()
+  @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
   @Post('checkout')
   createCheckout(
@@ -47,6 +50,7 @@ export class BillingController {
   }
 
   @ApiBearerAuth()
+  @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
   @Post('portal')
   createPortal(@CurrentOrg() organizationId: string) {
@@ -54,6 +58,7 @@ export class BillingController {
   }
 
   @ApiBearerAuth()
+  @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
   @Post('cancel')
   cancelSubscription(@CurrentOrg() organizationId: string) {

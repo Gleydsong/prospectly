@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
-import { IsEmail, IsEnum, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class InviteMemberDto {
   @ApiProperty({ example: 'member@agency.dev' })
@@ -21,5 +21,8 @@ export class InviteMemberDto {
   @IsString()
   @MinLength(8)
   @MaxLength(72)
+  @Matches(/^(?=.*[A-Za-z])(?=.*\d).+$/, {
+    message: 'temporaryPassword must contain at least one letter and one number',
+  })
   temporaryPassword!: string;
 }

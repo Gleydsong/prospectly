@@ -1,5 +1,22 @@
 const REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
 
+const WEAK_JWT_PATTERNS = [/change-me/i, /changeme/i, /secret-min-32/i, /your[_-]?secret/i, /example/i];
+
+function assertStrongJwtSecret(key: string, value: string, nodeEnv: string): void {
+  if (value.length < 32) {
+    throw new Error(`${key} must have at least 32 characters`);
+  }
+  const isProdLike = nodeEnv === 'production' || nodeEnv === 'staging';
+  if (!isProdLike) return;
+  if (WEAK_JWT_PATTERNS.some((re) => re.test(value))) {
+    throw new Error(`${key} looks like a placeholder and is not allowed in ${nodeEnv}`);
+  }
+  const unique = new Set(value).size;
+  if (unique < 10) {
+    throw new Error(`${key} has insufficient entropy for ${nodeEnv}`);
+  }
+}
+
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
   const missing = REQUIRED_VARS.filter((key) => {
     const value = config[key];
@@ -10,10 +27,13 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  const nodeEnv =
+    typeof config.NODE_ENV === 'string' ? config.NODE_ENV : process.env.NODE_ENV ?? 'development';
+
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
     const value = config[key];
-    if (typeof value === 'string' && value.length < 32) {
-      throw new Error(`${key} must have at least 32 characters`);
+    if (typeof value === 'string') {
+      assertStrongJwtSecret(key, value, nodeEnv);
     }
   }
 
