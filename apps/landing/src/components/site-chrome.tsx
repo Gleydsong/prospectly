@@ -39,6 +39,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
 
         <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
           <Link
+            href={p || '/'}
+            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
+          >
+            {t(locale, 'navHome')}
+          </Link>
+          <Link
             href={`${p}/faq`}
             className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
           >
@@ -91,6 +97,13 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         >
           <nav className="mx-auto flex max-w-shell flex-col gap-1 px-4 py-3 text-sm sm:px-6">
             <Link
+              href={p || '/'}
+              onClick={close}
+              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
+            >
+              {t(locale, 'navHome')}
+            </Link>
+            <Link
               href={`${p}/faq`}
               onClick={close}
               className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
@@ -122,8 +135,8 @@ export function SiteFooter({ locale }: { locale: Locale }) {
   const p = prefix(locale);
 
   return (
-    <footer className="mt-24 border-t border-[color:var(--border)]">
-      <div className="mx-auto flex max-w-shell flex-col gap-6 px-4 py-12 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
+    <footer className="mt-16 border-t border-[color:var(--border)]">
+      <div className="mx-auto flex max-w-shell flex-col gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
         <div>
           <p className="text-lg font-semibold tracking-tight">{t(locale, 'brand')}</p>
           <p className="mt-2 max-w-sm text-sm text-[color:var(--ink-muted)]">

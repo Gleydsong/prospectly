@@ -12,7 +12,7 @@ export function ConversionBand({ locale }: { locale: Locale }) {
 
   return (
     <section className="relative isolate overflow-hidden hero-wash">
-      <div className="mx-auto grid min-h-0 max-w-shell items-center gap-8 px-4 py-10 sm:px-6 lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-12 lg:gap-8 lg:px-8 lg:py-16">
+      <div className="mx-auto grid max-w-shell items-center gap-6 px-4 py-8 sm:px-6 sm:py-10 lg:grid-cols-12 lg:gap-8 lg:px-8 lg:py-12">
         <HeroMotion className="text-center lg:col-span-6">
           <p className="text-sm font-semibold tracking-tight text-accent">{t(locale, 'brand')}</p>
           <h1 className="mx-auto mt-4 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl lg:text-5xl">

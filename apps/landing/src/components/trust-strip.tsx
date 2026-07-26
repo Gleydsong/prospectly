@@ -66,9 +66,9 @@ const MARKS = [
 export function TrustStrip({ locale }: { locale: Locale }) {
   return (
     <section className="border-y border-[color:var(--border)] bg-[color:var(--bg-sunken)]">
-      <div className="mx-auto max-w-shell px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
         <p className="text-center text-sm text-[color:var(--ink-muted)]">{t(locale, 'trustLabel')}</p>
-        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 opacity-70">
+        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 opacity-70">
           {MARKS.map((mark) => (
             <li key={mark.label} className="text-[color:var(--ink)]">
               {mark.svg}

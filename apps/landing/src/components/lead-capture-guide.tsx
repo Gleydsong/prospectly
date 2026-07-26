@@ -21,20 +21,20 @@ export function LeadCaptureGuide({ locale }: { locale: Locale }) {
       className="scroll-mt-20 bg-[color:var(--bg-sunken)]"
       aria-labelledby="capture-guide-title"
     >
-      <div className="mx-auto max-w-shell px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <Reveal>
+      <div className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+        <Reveal className="mx-auto max-w-3xl text-center">
           <h2
             id="capture-guide-title"
-            className="max-w-[20ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl"
+            className="mx-auto max-w-[20ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl"
           >
             {t(locale, 'captureTitle')}
           </h2>
-          <p className="mt-4 max-w-[55ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
+          <p className="mx-auto mt-4 max-w-[55ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
             {t(locale, 'captureSubtitle')}
           </p>
         </Reveal>
 
-        <ol className="relative mt-14 max-w-3xl">
+        <ol className="relative mx-auto mt-10 max-w-3xl">
           <div
             className="absolute bottom-6 left-[1.15rem] top-6 w-px bg-[color:var(--border)] md:left-[1.4rem]"
             aria-hidden
@@ -43,7 +43,7 @@ export function LeadCaptureGuide({ locale }: { locale: Locale }) {
             const Icon = ICONS[index] ?? ListChecks;
             return (
               <Reveal key={step.id} delay={index * 0.05}>
-                <li className="relative flex gap-5 pb-8 last:pb-0 md:gap-6">
+                <li className="relative flex gap-5 pb-6 last:pb-0 md:gap-6">
                   <div className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color:var(--bg-raised)] font-mono text-xs font-semibold text-accent md:h-11 md:w-11 md:text-sm">
                     {String(index + 1).padStart(2, '0')}
                   </div>

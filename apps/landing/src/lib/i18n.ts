@@ -4,6 +4,7 @@ type Dict = Record<string, string>;
 
 const pt: Dict = {
   brand: 'Prospectly',
+  navHome: 'Início',
   navPricing: 'Preços',
   navLogin: 'Entrar',
   navCta: 'Começar grátis',
@@ -82,6 +83,7 @@ const pt: Dict = {
 
 const en: Dict = {
   brand: 'Prospectly',
+  navHome: 'Home',
   navPricing: 'Pricing',
   navLogin: 'Log in',
   navCta: 'Start free',
