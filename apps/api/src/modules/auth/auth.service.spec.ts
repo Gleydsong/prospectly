@@ -37,6 +37,7 @@ const makePrisma = () => {
       create: jest.fn(),
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     pipeline: { create: jest.fn() },
     pipelineStage: { createMany: jest.fn() },
@@ -231,25 +232,29 @@ describe('AuthService', () => {
       revokedAt: new Date(),
       expiresAt: new Date(Date.now() + 10000),
       replacedById: null,
+      organizationId: 'org1',
     });
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
 
     const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
     await expect(service.refresh('stale-token')).rejects.toBeInstanceOf(UnauthorizedException);
     expect(prisma.refreshToken.updateMany).not.toHaveBeenCalled();
   });
 
-  it('refresh reuse of rotated token revokes all sessions', async () => {
+  it('refresh reuse of rotated token outside grace revokes all sessions', async () => {
     const jwt = makeJwt();
     (jwt.verifyAsync as jest.Mock).mockResolvedValue({ sub: 'u1', jti: 'jti-1' });
     const prisma = makePrisma();
     prisma.refreshToken.findUnique = jest.fn().mockResolvedValue({
       id: 'jti-1',
       tokenHash: 'hash',
-      revokedAt: new Date(),
+      revokedAt: new Date(Date.now() - 120_000),
       expiresAt: new Date(Date.now() + 10000),
       replacedById: 'jti-2',
+      organizationId: 'org1',
     });
     prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 2 });
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
 
     const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
     await expect(service.refresh('reused-token')).rejects.toBeInstanceOf(UnauthorizedException);
@@ -259,6 +264,74 @@ describe('AuthService', () => {
         data: { revokedAt: expect.any(Date) },
       }),
     );
+  });
+
+  it('refresh concurrent reuse within grace issues tokens without logoutAll', async () => {
+    const jwt = makeJwt();
+    (jwt.verifyAsync as jest.Mock).mockResolvedValue({ sub: 'u1', jti: 'jti-1' });
+    (jwt.signAsync as jest.Mock)
+      .mockResolvedValueOnce('access-token')
+      .mockResolvedValueOnce('refresh-token-new');
+    (jwt.decode as jest.Mock).mockReturnValue({
+      exp: Math.floor(Date.now() / 1000) + 600,
+      jti: 'jti-3',
+    });
+    const prisma = makePrisma();
+    prisma.refreshToken.findUnique = jest.fn().mockResolvedValue({
+      id: 'jti-1',
+      tokenHash: 'hash',
+      revokedAt: new Date(),
+      expiresAt: new Date(Date.now() + 10000),
+      replacedById: 'jti-2',
+      organizationId: 'org1',
+    });
+    prisma.organizationMember.findUnique = jest.fn().mockResolvedValue({
+      userId: 'u1',
+      organizationId: 'org1',
+      role: 'OWNER',
+    });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'u1', email: 'a@b.dev' });
+    prisma.refreshToken.create = jest.fn().mockResolvedValue({});
+    prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 0 });
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
+
+    const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
+    const tokens = await service.refresh('concurrent-token');
+
+    expect(tokens.accessToken).toBe('access-token');
+    expect(tokens.refreshToken).toBe('refresh-token-new');
+    expect(prisma.refreshToken.updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', revokedAt: null },
+      }),
+    );
+  });
+
+  it('refresh rejects legacy null organizationId when user has multiple orgs', async () => {
+    const jwt = makeJwt();
+    (jwt.verifyAsync as jest.Mock).mockResolvedValue({ sub: 'u1', jti: 'jti-1' });
+    const prisma = makePrisma();
+    prisma.refreshToken.findUnique = jest.fn().mockResolvedValue({
+      id: 'jti-1',
+      tokenHash: 'hash',
+      revokedAt: null,
+      expiresAt: new Date(Date.now() + 10000),
+      replacedById: null,
+      organizationId: null,
+    });
+    (prisma.organizationMember as unknown as { findMany: jest.Mock }).findMany = jest
+      .fn()
+      .mockResolvedValue([
+        { userId: 'u1', organizationId: 'org-a', role: 'OWNER' },
+        { userId: 'u1', organizationId: 'org-b', role: 'MEMBER' },
+      ]);
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
+
+    const service = new AuthService(prisma, jwt, makeConfig(), makeMail());
+    await expect(service.refresh('legacy-token')).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(prisma.refreshToken.create).not.toHaveBeenCalled();
   });
 
   it('googleAuth creates owner account like register when new Google user', async () => {
