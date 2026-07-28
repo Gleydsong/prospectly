@@ -140,7 +140,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
         return { handled: true, eventId, type };
       case 'transparent.refunded':
       case 'transparent.lost':
-        this.logger.warn(`Abacate transparent non-success event: ${type}`);
+        await this.onTransparentRevoked(data, type);
         return { handled: true, eventId, type };
       case 'subscription.completed':
       case 'subscription.renewed':
@@ -233,6 +233,35 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     await this.activation.activateLifetime({
       organizationId,
       currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: paymentId,
+    });
+  }
+
+  private async onTransparentRevoked(
+    data: Record<string, unknown>,
+    type: string,
+  ): Promise<void> {
+    const paymentId = typeof data.id === 'string' ? data.id : undefined;
+    let organizationId = this.resolveOrganizationId(data);
+
+    if (!organizationId && paymentId) {
+      const byPayment = await this.prisma.organization.findFirst({
+        where: { abacatePaymentId: paymentId },
+      });
+      organizationId = byPayment?.id;
+    }
+
+    if (!organizationId) {
+      this.logger.warn(`Abacate ${type} without organization mapping`);
+      return;
+    }
+
+    this.logger.warn(
+      `Revoking lifetime entitlement for org ${organizationId} after Abacate ${type}`,
+    );
+    await this.activation.revokeLifetime({
+      organizationId,
       provider: PaymentProvider.ABACATE,
       abacatePaymentId: paymentId,
     });
