@@ -35,6 +35,58 @@ export class BillingActivationService {
     });
   }
 
+  /**
+   * Revoke a one-time (lifetime) entitlement after refund / payment loss.
+   * Only downgrades when the org is still on LIFETIME for the same provider
+   * (and matching payment id when available).
+   */
+  async revokeLifetime(input: {
+    organizationId: string;
+    provider: PaymentProvider;
+    abacatePaymentId?: string | null;
+    stripeCustomerId?: string | null;
+  }): Promise<void> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: input.organizationId },
+    });
+    if (!org) {
+      this.logger.warn(`revokeLifetime: org ${input.organizationId} not found`);
+      return;
+    }
+    if (org.plan !== OrgPlan.LIFETIME || org.paymentProvider !== input.provider) {
+      return;
+    }
+    if (
+      input.abacatePaymentId &&
+      org.abacatePaymentId &&
+      org.abacatePaymentId !== input.abacatePaymentId
+    ) {
+      this.logger.warn(
+        `revokeLifetime: payment ${input.abacatePaymentId} does not match org ${org.id}`,
+      );
+      return;
+    }
+    if (
+      input.stripeCustomerId &&
+      org.stripeCustomerId &&
+      org.stripeCustomerId !== input.stripeCustomerId
+    ) {
+      this.logger.warn(
+        `revokeLifetime: stripe customer ${input.stripeCustomerId} does not match org ${org.id}`,
+      );
+      return;
+    }
+
+    await this.prisma.organization.update({
+      where: { id: org.id },
+      data: {
+        plan: OrgPlan.FREE,
+        planStatus: PlanStatus.CANCELED,
+        ...(input.provider === PaymentProvider.ABACATE ? { abacatePaymentId: null } : {}),
+      },
+    });
+  }
+
   async activateMonthly(input: {
     organizationId: string;
     currency: BillingCurrency;
