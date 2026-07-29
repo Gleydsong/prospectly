@@ -32,7 +32,7 @@ export function HomeLanding({ locale }: { locale: Locale }) {
       <TrustStrip locale={locale} />
 
       <section className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-        <Reveal className="max-w-3xl">
+        <Reveal className="mx-auto flex max-w-3xl flex-col items-center text-center">
           <h2 className="max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
             {t(locale, 'problemTitle')}
           </h2>
@@ -44,7 +44,7 @@ export function HomeLanding({ locale }: { locale: Locale }) {
 
       <section className="bg-[color:var(--bg)]">
         <div className="mx-auto grid max-w-shell items-center gap-8 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:py-20">
-          <Reveal className="lg:col-span-5">
+          <Reveal className="mx-auto flex max-w-xl flex-col items-center text-center lg:col-span-5 lg:mx-0 lg:max-w-none">
             <h2 className="max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
               {t(locale, 'filterTitle')}
             </h2>

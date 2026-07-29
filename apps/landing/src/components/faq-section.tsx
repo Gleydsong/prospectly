@@ -84,8 +84,8 @@ export function FaqSection({ locale }: { locale: Locale }) {
     <section className="bg-[color:var(--bg-sunken)]" aria-labelledby={`${baseId}-title`}>
       <div className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <Reveal>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+          <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 text-center">
+            <div className="flex flex-col items-center">
               <h2
                 id={`${baseId}-title`}
                 className="max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl"
@@ -105,7 +105,7 @@ export function FaqSection({ locale }: { locale: Locale }) {
           </div>
         </Reveal>
 
-        <div className="mt-10">
+        <div className="mx-auto mt-10 max-w-3xl">
           <FaqAccordion items={items} baseId={baseId} />
         </div>
       </div>

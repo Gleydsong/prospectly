@@ -138,14 +138,14 @@ export function SiteFooter({ locale }: { locale: Locale }) {
 
   return (
     <footer className="mt-16 border-t border-[color:var(--border)]">
-      <div className="mx-auto flex max-w-shell flex-col gap-6 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
-        <div>
+      <div className="mx-auto flex max-w-shell flex-col items-center gap-6 px-4 py-10 text-center sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center">
           <BrandLogo locale={locale} />
           <p className="mt-2 max-w-sm text-sm text-[color:var(--ink-muted)]">
             {t(locale, 'footerTagline')}
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-[color:var(--ink-muted)]">
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-[color:var(--ink-muted)]">
           <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/faq`}>
             {t(locale, 'footerFaq')}
           </Link>
@@ -164,7 +164,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
         </div>
       </div>
       <div className="border-t border-[color:var(--border)]">
-        <p className="mx-auto max-w-shell px-4 py-4 text-xs text-[color:var(--ink-muted)] sm:px-6 lg:px-8">
+        <p className="mx-auto max-w-shell px-4 py-4 text-center text-xs text-[color:var(--ink-muted)] sm:px-6 lg:px-8">
           © {new Date().getFullYear()} Prospectly
         </p>
       </div>
