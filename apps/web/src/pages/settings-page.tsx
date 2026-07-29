@@ -419,7 +419,8 @@ export function SettingsPage() {
       setEmailMessage(data.message || t('settings.emailChangeSuccess'));
       setEmailError(null);
       setEmailPassword('');
-      updateUser({ email: newEmail.trim().toLowerCase(), emailVerifiedAt: null });
+      setNewEmail('');
+      // Canonical email stays until the new address is verified — do not squat it client-side.
     },
     onError: (err) => {
       setEmailMessage(null);

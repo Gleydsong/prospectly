@@ -364,27 +364,57 @@ export class AuthService {
       this.logger.warn({ outcome: 'verify_email_failed', ip: meta?.ip }, 'email verification failed');
       throw new BadRequestException(GENERIC_VERIFY_FAIL);
     }
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerifiedAt: new Date(),
-        emailVerifyTokenHash: null,
-        emailVerifyTokenExpiresAt: null,
-      },
-    });
+
+    if (user.pendingEmail) {
+      const taken = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: user.pendingEmail }, { pendingEmail: user.pendingEmail }],
+          NOT: { id: user.id },
+        },
+      });
+      if (taken) {
+        this.logger.warn(
+          { outcome: 'verify_email_pending_taken', userId: user.id, ip: meta?.ip },
+          'pending email no longer available',
+        );
+        throw new BadRequestException(GENERIC_VERIFY_FAIL);
+      }
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.pendingEmail,
+          pendingEmail: null,
+          emailVerifiedAt: new Date(),
+          emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
+        },
+      });
+    } else {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedAt: new Date(),
+          emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
+        },
+      });
+    }
+
     this.logger.log({ outcome: 'verify_email_ok', userId: user.id, ip: meta?.ip }, 'email verified');
   }
 
   async resendVerification(userId: string, meta?: { ip?: string }): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.emailVerifiedAt) {
+    const targetEmail = user?.pendingEmail ?? user?.email;
+    if (!user || (!user.pendingEmail && user.emailVerifiedAt) || !targetEmail) {
       this.logger.log(
         { outcome: 'resend_verification_noop', userId, ip: meta?.ip },
         'resend verification',
       );
       return { message: 'If verification is required, an email was sent.' };
     }
-    await this.issueEmailVerification(user.id, user.email, user.locale);
+    await this.issueEmailVerification(user.id, targetEmail, user.locale);
     this.logger.log(
       { outcome: 'resend_verification_sent', userId, ip: meta?.ip },
       'resend verification',
@@ -412,7 +442,14 @@ export class AuthService {
       return { message: 'If the change is allowed, a verification email was sent.' };
     }
 
-    const taken = await this.prisma.user.findUnique({ where: { email } });
+    // Do not claim the address on User.email until verified — otherwise an attacker can
+    // pre-hijack org invites and Google account linking for that inbox.
+    const taken = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { pendingEmail: email }],
+        NOT: { id: userId },
+      },
+    });
     if (taken) {
       // Anti-enumeration: same response, no change
       this.logger.warn({ outcome: 'change_email_taken', userId, ip: meta?.ip });
@@ -422,14 +459,13 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        email,
-        emailVerifiedAt: null,
+        pendingEmail: email,
         emailVerifyTokenHash: null,
         emailVerifyTokenExpiresAt: null,
       },
     });
     await this.issueEmailVerification(userId, email, user.locale);
-    this.logger.log({ outcome: 'change_email_ok', userId, ip: meta?.ip }, 'email changed');
+    this.logger.log({ outcome: 'change_email_ok', userId, ip: meta?.ip }, 'email change pending');
     return { message: 'If the change is allowed, a verification email was sent.' };
   }
 
