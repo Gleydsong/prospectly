@@ -102,6 +102,11 @@ export class BillingService {
     currency: BillingCurrency,
   ): Promise<CheckoutResult> {
     const org = await this.requireOrg(organizationId);
+    if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
+      throw new BadRequestException(
+        'Organization already has an active lifetime plan. Further checkouts are not allowed.',
+      );
+    }
     const providerId = resolvePaymentProviderId(currency);
     this.assertProviderCompatible(org, providerId);
 

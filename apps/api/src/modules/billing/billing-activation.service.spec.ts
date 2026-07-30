@@ -25,12 +25,21 @@ describe('BillingActivationService', () => {
   });
 
   it('activates lifetime plan', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      stripeSubscriptionId: null,
+      abacateSubscriptionId: null,
+    });
     prisma.organization.update.mockResolvedValue({});
-    await service.activateLifetime({
+    const previous = await service.activateLifetime({
       organizationId: 'org1',
       currency: 'BRL',
       provider: PaymentProvider.ABACATE,
       abacatePaymentId: 'pix_1',
+    });
+    expect(previous).toEqual({
+      previousStripeSubscriptionId: null,
+      previousAbacateSubscriptionId: null,
     });
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
@@ -43,7 +52,34 @@ describe('BillingActivationService', () => {
     });
   });
 
+  it('returns prior monthly subscription ids when upgrading to lifetime', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      stripeSubscriptionId: null,
+      abacateSubscriptionId: 'subs_old',
+    });
+    prisma.organization.update.mockResolvedValue({});
+    const previous = await service.activateLifetime({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_2',
+    });
+    expect(previous.previousAbacateSubscriptionId).toBe('subs_old');
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({
+        plan: OrgPlan.LIFETIME,
+        abacateSubscriptionId: null,
+      }),
+    });
+  });
+
   it('activates monthly plan', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+    });
     prisma.organization.update.mockResolvedValue({});
     await service.activateMonthly({
       organizationId: 'org1',
@@ -60,6 +96,20 @@ describe('BillingActivationService', () => {
         stripeSubscriptionId: 'sub_1',
       }),
     });
+  });
+
+  it('does not overwrite lifetime with monthly activation', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.LIFETIME,
+    });
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'EUR',
+      provider: PaymentProvider.STRIPE,
+      stripeSubscriptionId: 'sub_attack',
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 
   it('does not downgrade lifetime on cancel sync', async () => {

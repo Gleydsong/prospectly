@@ -197,12 +197,23 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
     const customerId = typeof session.customer === 'string' ? session.customer : undefined;
 
     if (interval === 'lifetime' || session.mode === 'payment') {
-      await this.activation.activateLifetime({
+      const previous = await this.activation.activateLifetime({
         organizationId,
         currency,
         provider: PaymentProvider.STRIPE,
         stripeCustomerId: customerId,
       });
+
+      if (previous.previousStripeSubscriptionId) {
+        try {
+          const stripe = this.requireStripe();
+          await stripe.subscriptions.cancel(previous.previousStripeSubscriptionId);
+        } catch (error) {
+          this.logger.error(
+            `Failed to cancel prior Stripe subscription ${previous.previousStripeSubscriptionId} after lifetime upgrade for org ${organizationId}: ${(error as Error).message}`,
+          );
+        }
+      }
       return;
     }
 

@@ -186,6 +186,21 @@ describe('BillingService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('rejects checkout when organization already has active lifetime', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.LIFETIME,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: 'ABACATE',
+      deletedAt: null,
+    });
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid Stripe webhook signature', async () => {
     stripeProvider.verifyAndParseWebhook.mockRejectedValue(new BadRequestException('bad sig'));
     await expect(

@@ -230,12 +230,25 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     }
 
     const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    await this.activation.activateLifetime({
+    const previous = await this.activation.activateLifetime({
       organizationId,
       currency: 'BRL',
       provider: PaymentProvider.ABACATE,
       abacatePaymentId: paymentId,
     });
+
+    if (previous.previousAbacateSubscriptionId) {
+      try {
+        await this.cancelSubscription({
+          organizationId,
+          externalSubscriptionId: previous.previousAbacateSubscriptionId,
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed to cancel prior Abacate subscription ${previous.previousAbacateSubscriptionId} after lifetime upgrade for org ${organizationId}: ${(error as Error).message}`,
+        );
+      }
+    }
   }
 
   private async onTransparentRevoked(
