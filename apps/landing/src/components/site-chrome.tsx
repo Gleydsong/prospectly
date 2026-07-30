@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
 import { prefix, t, type Locale } from '@/lib/i18n';
-import { appLoginUrl, appRegisterUrl } from '@/lib/pricing';
+import { appRegisterUrl, enterExplainerUrl } from '@/lib/pricing';
 
 export function SiteHeader({ locale }: { locale: Locale }) {
   const p = prefix(locale);
@@ -58,12 +58,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           >
             {t(locale, 'navPricing')}
           </Link>
-          <a
-            href={appLoginUrl()}
+          <Link
+            href={enterExplainerUrl(locale)}
             className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
           >
             {t(locale, 'navLogin')}
-          </a>
+          </Link>
           <a
             href={appRegisterUrl('monthly', defaultCurrency)}
             className="focus-ring ml-1 rounded-control bg-accent px-3.5 py-2 font-medium text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
@@ -119,13 +119,13 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             >
               {t(locale, 'navPricing')}
             </Link>
-            <a
-              href={appLoginUrl()}
+            <Link
+              href={enterExplainerUrl(locale)}
               onClick={close}
               className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
             >
               {t(locale, 'navLogin')}
-            </a>
+            </Link>
           </nav>
         </div>
       ) : null}

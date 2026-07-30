@@ -33,3 +33,8 @@ export function appRegisterUrl(plan: BillingInterval, currency: Currency): strin
 export function appLoginUrl(): string {
   return `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:5173'}/login`;
 }
+
+/** Temporary “Entrar” destination while the app is not live. */
+export function enterExplainerUrl(locale: Locale): string {
+  return locale === 'en' ? '/en/enter' : '/entrar';
+}

@@ -89,6 +89,30 @@ const pt: Dict = {
   waitlistSuccess: 'Você entrou na lista de espera. Confira seu e-mail.',
   waitlistError: 'Não foi possível cadastrar agora. Tente de novo em instantes.',
   waitlistHint: 'Usamos o e-mail só para avisar sobre o acesso.',
+  enterBadge: 'App em preparação',
+  enterTitle: 'O login ainda não está aberto',
+  enterLead:
+    'Estamos finalizando o Prospectly para agências e freelancers. Enquanto isso, veja o fluxo em motion e entre na lista — avisamos quando liberar o acesso.',
+  enterCtaWaitlist: 'Entrar na lista de espera',
+  enterCtaHome: 'Voltar ao início',
+  enterHowTitle: 'Como o Prospectly funciona',
+  enterHowBody:
+    'Do mapa ao pipeline, sem planilha. Três passos para achar negócios locais que precisam de site.',
+  enterStep1Title: 'Nicho e cidade',
+  enterStep1Body: 'Escolha categoria e local. Buscamos no OpenStreetMap e no Google Places.',
+  enterStep2Title: 'Filtro sem website',
+  enterStep2Body: 'Cortamos quem já tem presença digital reportada. Sobram os que precisam da sua oferta.',
+  enterStep3Title: 'Pipeline pronto',
+  enterStep3Body: 'Leads no funil, com tarefas e export CSV — sem copiar telefone do Maps.',
+  enterWhyTitle: 'Por que esperar vale a pena',
+  enterWhyBody:
+    'Não é mais uma planilha. É um fluxo de prospecção local pensado para quem vende site e presença digital.',
+  enterWhy1: 'Busca local com filtro “sem website” de verdade',
+  enterWhy2: 'Pipeline e tarefas no mesmo lugar',
+  enterWhy3: 'Começo com lista de espera — sem spam, só o aviso de acesso',
+  enterWaitlistTitle: 'Garanta seu lugar na fila',
+  enterWaitlistBody:
+    'Deixe o e-mail. Quando o app abrir, você recebe o convite antes da abertura ampla.',
 };
 
 const en: Dict = {
@@ -178,6 +202,30 @@ const en: Dict = {
   waitlistSuccess: 'You’re on the waitlist. Check your email.',
   waitlistError: 'Could not join right now. Please try again in a moment.',
   waitlistHint: 'We only use your email to notify you about access.',
+  enterBadge: 'App in preparation',
+  enterTitle: 'Login is not open yet',
+  enterLead:
+    'We’re finishing Prospectly for agencies and freelancers. Meanwhile, watch the motion walkthrough and join the waitlist — we’ll email you when access opens.',
+  enterCtaWaitlist: 'Join the waitlist',
+  enterCtaHome: 'Back to home',
+  enterHowTitle: 'How Prospectly works',
+  enterHowBody:
+    'From map to pipeline, without a spreadsheet. Three steps to find local businesses that need a website.',
+  enterStep1Title: 'Niche and city',
+  enterStep1Body: 'Pick a category and place. We search OpenStreetMap and Google Places.',
+  enterStep2Title: 'No-website filter',
+  enterStep2Body: 'We drop businesses that already have reported digital presence. What’s left needs what you sell.',
+  enterStep3Title: 'Pipeline ready',
+  enterStep3Body: 'Leads in the funnel, with tasks and CSV export — no copying phones from Maps.',
+  enterWhyTitle: 'Why the wait is worth it',
+  enterWhyBody:
+    'Not another spreadsheet. A local prospecting flow built for people who sell websites and digital presence.',
+  enterWhy1: 'Local search with a real “no website” filter',
+  enterWhy2: 'Pipeline and tasks in one place',
+  enterWhy3: 'Waitlist first — no spam, just the access notice',
+  enterWaitlistTitle: 'Save your spot',
+  enterWaitlistBody:
+    'Leave your email. When the app opens, you get the invite before the wider launch.',
 };
 
 const dictionaries: Record<Locale, Dict> = { pt, en };
