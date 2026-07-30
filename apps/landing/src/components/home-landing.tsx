@@ -5,6 +5,7 @@ import { LeadCaptureGuide } from '@/components/lead-capture-guide';
 import { Reveal } from '@/components/motion';
 import { ProductDemoVideo } from '@/components/product-demo-video';
 import { TrustStrip } from '@/components/trust-strip';
+import { WaitlistSection } from '@/components/waitlist-section';
 import { getHomeFaqItems, t, type Locale } from '@/lib/i18n';
 
 export function HomeLanding({ locale }: { locale: Locale }) {
@@ -66,6 +67,8 @@ export function HomeLanding({ locale }: { locale: Locale }) {
       </section>
 
       <LeadCaptureGuide locale={locale} />
+
+      <WaitlistSection locale={locale} />
 
       <FaqSection locale={locale} />
     </>

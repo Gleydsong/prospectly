@@ -43,6 +43,13 @@ export const configuration = () => ({
     password: process.env.SMTP_PASSWORD,
     from: process.env.SMTP_FROM ?? 'no-reply@prospectly.dev',
   },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY ?? '',
+    from: process.env.RESEND_FROM ?? process.env.SMTP_FROM ?? 'no-reply@prospectly.dev',
+  },
+  waitlist: {
+    notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
+  },
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY ?? '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',

@@ -113,6 +113,12 @@ projects:
                 sync: false
               - key: SMTP_FROM
                 sync: false
+              - key: RESEND_API_KEY
+                sync: false
+              - key: RESEND_FROM
+                sync: false
+              - key: WAITLIST_NOTIFY_TO
+                sync: false
               - key: SENTRY_DSN
                 sync: false
               - key: LOG_LEVEL
@@ -195,4 +201,10 @@ projects:
               - key: NEXT_PUBLIC_LANDING_URL
                 sync: false
               - key: NEXT_PUBLIC_API_URL
+                sync: false
+              - key: RESEND_API_KEY
+                sync: false
+              - key: RESEND_FROM
+                sync: false
+              - key: WAITLIST_NOTIFY_TO
                 sync: false

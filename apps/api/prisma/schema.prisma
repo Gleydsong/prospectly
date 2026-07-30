@@ -755,3 +755,15 @@ model BillingWebhookEvent {
   @@unique([provider, eventId])
   @@index([processedAt])
 }
+
+/// Public product waitlist (landing signup — not org CRM leads).
+model WaitlistEntry {
+  id         String    @id @default(cuid())
+  email      String    @unique
+  locale     AppLocale @default(pt)
+  source     String?
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  @@index([createdAt])
+}

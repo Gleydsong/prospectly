@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 export interface MailMessage {
   to: string;
@@ -16,12 +17,32 @@ export class MailService {
   constructor(private readonly config: ConfigService) {}
 
   async send(message: MailMessage): Promise<void> {
-    const host = this.config.get<string>('smtp.host');
-    const from = this.config.get<string>('smtp.from') ?? 'no-reply@prospectly.dev';
+    const resendKey = this.config.get<string>('resend.apiKey');
+    const from =
+      this.config.get<string>('resend.from') ??
+      this.config.get<string>('smtp.from') ??
+      'no-reply@prospectly.dev';
 
+    if (resendKey) {
+      const resend = new Resend(resendKey);
+      const { error } = await resend.emails.send({
+        from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+      if (error) {
+        this.logger.error(`Resend failed for ${message.to}: ${error.message}`);
+        throw new Error(`Resend send failed: ${error.message}`);
+      }
+      return;
+    }
+
+    const host = this.config.get<string>('smtp.host');
     if (!host) {
       this.logger.log(
-        `SMTP not configured — verification/reset email queued for ${message.to} (token not logged)`,
+        `Mail not configured — email queued for ${message.to} (token not logged)`,
       );
       return;
     }

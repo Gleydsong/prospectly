@@ -79,6 +79,16 @@ const pt: Dict = {
   cookieBody:
     'Usamos apenas cookies essenciais para o site funcionar. Analytics fica desligado por padrão.',
   cookieAccept: 'Entendi',
+  waitlistTitle: 'Entre na lista de espera',
+  waitlistBody:
+    'Deixe seu e-mail e avisamos quando liberar acesso. Sem spam — só o essencial para começar a prospectar.',
+  waitlistEmailLabel: 'E-mail',
+  waitlistEmailPlaceholder: 'seu@email.com',
+  waitlistSubmit: 'Entrar na lista',
+  waitlistSubmitting: 'Enviando…',
+  waitlistSuccess: 'Você entrou na lista de espera. Confira seu e-mail.',
+  waitlistError: 'Não foi possível cadastrar agora. Tente de novo em instantes.',
+  waitlistHint: 'Usamos o e-mail só para avisar sobre o acesso.',
 };
 
 const en: Dict = {
@@ -158,6 +168,16 @@ const en: Dict = {
   cookieBody:
     'We only use essential cookies to run the site. Analytics is off by default.',
   cookieAccept: 'Got it',
+  waitlistTitle: 'Join the waitlist',
+  waitlistBody:
+    'Leave your email and we’ll tell you when access opens. No spam — just what you need to start prospecting.',
+  waitlistEmailLabel: 'Email',
+  waitlistEmailPlaceholder: 'you@email.com',
+  waitlistSubmit: 'Join waitlist',
+  waitlistSubmitting: 'Sending…',
+  waitlistSuccess: 'You’re on the waitlist. Check your email.',
+  waitlistError: 'Could not join right now. Please try again in a moment.',
+  waitlistHint: 'We only use your email to notify you about access.',
 };
 
 const dictionaries: Record<Locale, Dict> = { pt, en };

@@ -29,6 +29,7 @@ import { GeoModule } from './modules/geo/geo.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { ScoringModule } from './modules/scoring/scoring.module';
 import { WebsiteAnalysisModule } from './modules/website-analysis/website-analysis.module';
+import { WaitlistModule } from './modules/waitlist/waitlist.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { WebsiteAnalysisModule } from './modules/website-analysis/website-analys
     BillingModule,
     ScoringModule,
     WebsiteAnalysisModule,
+    WaitlistModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
