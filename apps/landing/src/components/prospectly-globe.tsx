@@ -1,89 +1,130 @@
 'use client';
 
-import createGlobe, { type Arc } from 'cobe';
+import gsap from 'gsap';
 import { useReducedMotion } from 'motion/react';
 import { useEffect, useRef } from 'react';
+import {
+  AmbientLight,
+  BufferGeometry,
+  Color,
+  DirectionalLight,
+  Float32BufferAttribute,
+  Group,
+  Line,
+  LineBasicMaterial,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  Scene,
+  SphereGeometry,
+  SRGBColorSpace,
+  Vector3,
+  WebGLRenderer,
+} from 'three';
+import { CITIES, MARKER_CITIES, PERSISTENT_LINKS, ROUTE_CHAIN, type CityId } from '@/components/globe/cities';
+import {
+  createEarth,
+  EARTH_RADIUS,
+  loadEarthTextures,
+  setEarthTheme,
+  type EarthBundle,
+} from '@/components/globe/create-earth';
+import { greatCirclePoints, latLonToVector3 } from '@/components/globe/geo';
 
-const CITIES = {
-  saoPaulo: [-23.5505, -46.6333],
-  mexicoCity: [19.4326, -99.1332],
-  newYork: [40.7128, -74.006],
-  toronto: [43.6532, -79.3832],
-  losAngeles: [34.0522, -118.2437],
-  lisbon: [38.7223, -9.1393],
-  london: [51.5074, -0.1278],
-  paris: [48.8566, 2.3522],
-  madrid: [40.4168, -3.7038],
-  lagos: [6.5244, 3.3792],
-  dubai: [25.2048, 55.2708],
-  mumbai: [19.076, 72.8777],
-  singapore: [1.3521, 103.8198],
-  tokyo: [35.6762, 139.6503],
-  sydney: [-33.8688, 151.2093],
-  capeTown: [-33.9249, 18.4241],
-} as const satisfies Record<string, readonly [number, number]>;
-
-const MARKERS = (Object.values(CITIES) as [number, number][]).map((location, i) => ({
-  location,
-  size: i % 4 === 0 ? 0.038 : 0.03,
-}));
-
-function arc(from: readonly [number, number], to: readonly [number, number]): Arc {
-  return { from: [from[0], from[1]], to: [to[0], to[1]] };
-}
-
-/** Intercontinental arcs cycled while the globe rotates. */
-const ARC_POOL: Arc[] = [
-  arc(CITIES.saoPaulo, CITIES.lisbon),
-  arc(CITIES.lisbon, CITIES.london),
-  arc(CITIES.london, CITIES.newYork),
-  arc(CITIES.newYork, CITIES.tokyo),
-  arc(CITIES.tokyo, CITIES.sydney),
-  arc(CITIES.sydney, CITIES.singapore),
-  arc(CITIES.singapore, CITIES.dubai),
-  arc(CITIES.dubai, CITIES.mumbai),
-  arc(CITIES.mumbai, CITIES.paris),
-  arc(CITIES.paris, CITIES.lagos),
-  arc(CITIES.lagos, CITIES.capeTown),
-  arc(CITIES.capeTown, CITIES.saoPaulo),
-  arc(CITIES.mexicoCity, CITIES.madrid),
-  arc(CITIES.toronto, CITIES.london),
-  arc(CITIES.newYork, CITIES.paris),
-  arc(CITIES.saoPaulo, CITIES.newYork),
-  arc(CITIES.tokyo, CITIES.london),
-  arc(CITIES.singapore, CITIES.sydney),
-  arc(CITIES.dubai, CITIES.london),
-  arc(CITIES.mexicoCity, CITIES.saoPaulo),
-  arc(CITIES.tokyo, CITIES.saoPaulo),
-  arc(CITIES.sydney, CITIES.losAngeles),
-  arc(CITIES.losAngeles, CITIES.tokyo),
-  arc(CITIES.madrid, CITIES.dubai),
-  arc(CITIES.lagos, CITIES.london),
-  arc(CITIES.mumbai, CITIES.singapore),
-];
-
-/** How many concurrent links stay visible. */
-const VISIBLE_ARCS = 3;
-/** Radians of rotation before the next link fires. */
-const ARC_STEP = 0.42;
-
-const COBALT: [number, number, number] = [0.145, 0.388, 0.922];
+const COBALT = '#2563eb';
+const COBALT_DARK = '#60a5fa';
+const ARC_SEGMENTS = 128;
+const ARC_HEIGHT = 0.36;
+const TRAIL = 3;
+const MARKER_RADIUS = 0.014;
+/** Dot product threshold: only show when hemisphere faces the camera. */
+const FACING_EPS = 0.06;
 
 function isDarkMode() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-function arcsForPhi(phi: number, animate: boolean): Arc[] {
-  if (!animate) {
-    return ARC_POOL.slice(0, VISIBLE_ARCS);
+type ActiveArc = {
+  geometry: BufferGeometry;
+  material: LineBasicMaterial;
+  line: Line;
+  vertexCount: number;
+  /** How many vertices the animation has revealed (from the start city). */
+  progressCount: number;
+  /** Local-space sample points (spin group space). */
+  points: Vector3[];
+  baseOpacity: number;
+};
+
+function buildArcLine(from: CityId, to: CityId, color: string, baseOpacity = 0.95): ActiveArc {
+  const fromV = latLonToVector3(CITIES[from], EARTH_RADIUS);
+  const toV = latLonToVector3(CITIES[to], EARTH_RADIUS);
+  const points = greatCirclePoints(fromV, toV, EARTH_RADIUS, ARC_SEGMENTS, ARC_HEIGHT);
+  const positions = new Float32Array(points.length * 3);
+  points.forEach((p, i) => {
+    positions[i * 3] = p.x;
+    positions[i * 3 + 1] = p.y;
+    positions[i * 3 + 2] = p.z;
+  });
+
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setDrawRange(0, 0);
+
+  const material = new LineBasicMaterial({
+    color: new Color(color),
+    transparent: true,
+    opacity: baseOpacity,
+    depthTest: true,
+    depthWrite: false,
+  });
+
+  const line = new Line(geometry, material);
+  line.frustumCulled = false;
+  return {
+    line,
+    geometry,
+    material,
+    vertexCount: points.length,
+    progressCount: 0,
+    points,
+    baseOpacity,
+  };
+}
+
+function createMarkers(color: string): {
+  group: Group;
+  meshes: Map<CityId, Mesh>;
+  dispose: () => void;
+} {
+  const group = new Group();
+  const meshes = new Map<CityId, Mesh>();
+  const geo = new SphereGeometry(MARKER_RADIUS, 12, 12);
+  const sharedMat = new MeshBasicMaterial({
+    color: new Color(color),
+    depthTest: true,
+    depthWrite: false,
+    transparent: true,
+  });
+
+  for (const id of MARKER_CITIES) {
+    const mesh = new Mesh(geo, sharedMat.clone());
+    latLonToVector3(CITIES[id], EARTH_RADIUS + 0.018, mesh.position);
+    mesh.scale.setScalar(0.55);
+    group.add(mesh);
+    meshes.set(id, mesh);
   }
-  const tick = Math.floor(((phi % (ARC_STEP * ARC_POOL.length)) + ARC_STEP * ARC_POOL.length) / ARC_STEP);
-  const active: Arc[] = [];
-  for (let i = 0; i < VISIBLE_ARCS; i += 1) {
-    const idx = (tick - i + ARC_POOL.length * 8) % ARC_POOL.length;
-    active.push(ARC_POOL[idx]!);
-  }
-  return active;
+
+  return {
+    group,
+    meshes,
+    dispose: () => {
+      geo.dispose();
+      sharedMat.dispose();
+      meshes.forEach((m) => (m.material as MeshBasicMaterial).dispose());
+    },
+  };
 }
 
 export function ProspectlyGlobe({ className }: { className?: string }) {
@@ -94,102 +135,324 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let width = 0;
-    let phi = 0;
-    let frame = 0;
-    let lastArcKey = '';
-    let globe: ReturnType<typeof createGlobe> | undefined;
     let destroyed = false;
+    let cancelled = false;
+    let renderer: WebGLRenderer | undefined;
+    let earth: EarthBundle | undefined;
+    let markersRef: ReturnType<typeof createMarkers> | undefined;
+    let markersDispose: (() => void) | undefined;
+    let dayTextureDispose: (() => void) | undefined;
+    let cloudsTextureDispose: (() => void) | undefined;
+    const trackedArcs: ActiveArc[] = [];
+    const arcDisposables: Array<() => void> = [];
+    const themeMq = window.matchMedia('(prefers-color-scheme: dark)');
+    const ctx = gsap.context(() => {});
 
-    const dark = isDarkMode() ? 1 : 0;
-    const animateArcs = !reduceMotion;
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 0.15, 3.05);
+    camera.lookAt(0, -0.05, 0);
+
+    const ambient = new AmbientLight(0xffffff, 0.55);
+    const key = new DirectionalLight(0xffffff, 1.35);
+    key.position.set(-4, 5, 3);
+    const fill = new DirectionalLight(0xbdd6ff, 0.35);
+    fill.position.set(3, -1, 2);
+    scene.add(ambient, key, fill);
+
+    const arcsGroup = new Group();
+    const animate = !reduceMotion;
+
+    const worldPos = new Vector3();
+    const globeCenter = new Vector3();
+    const camDir = new Vector3();
+    const radial = new Vector3();
+
+    const facingOfLocalPoint = (local: Vector3): number => {
+      if (!earth) return 1;
+      worldPos.copy(local).applyMatrix4(earth.spin.matrixWorld);
+      earth.root.getWorldPosition(globeCenter);
+      camDir.copy(camera.position).sub(globeCenter).normalize();
+      radial.copy(worldPos).sub(globeCenter).normalize();
+      return radial.dot(camDir);
+    };
+
+    /** Hide back-hemisphere markers; fade near the limb. */
+    const updateMarkerFacing = () => {
+      if (!earth || !markersRef) return;
+      earth.spin.updateWorldMatrix(true, false);
+      earth.root.getWorldPosition(globeCenter);
+      camDir.copy(camera.position).sub(globeCenter).normalize();
+
+      markersRef.meshes.forEach((mesh) => {
+        mesh.getWorldPosition(worldPos);
+        radial.copy(worldPos).sub(globeCenter).normalize();
+        const facing = radial.dot(camDir);
+        const mat = mesh.material as MeshBasicMaterial;
+        if (facing <= FACING_EPS) {
+          mesh.visible = false;
+        } else {
+          mesh.visible = true;
+          // Soft fade as the point rolls toward the horizon
+          mat.opacity = Math.min(1, (facing - FACING_EPS) / 0.25);
+        }
+      });
+    };
+
+    /**
+     * Only keep the front-facing stretch of each arc visible.
+     * Back-side vertices are dropped so links never show through the globe.
+     */
+    const updateArcFacing = () => {
+      if (!earth) return;
+      earth.spin.updateWorldMatrix(true, false);
+
+      for (const arc of trackedArcs) {
+        const limit = Math.min(arc.progressCount, arc.points.length);
+        if (limit < 2) {
+          arc.line.visible = false;
+          continue;
+        }
+
+        let first = -1;
+        let last = -1;
+        for (let i = 0; i < limit; i += 1) {
+          const facing = facingOfLocalPoint(arc.points[i]!);
+          if (facing > FACING_EPS) {
+            if (first < 0) first = i;
+            last = i;
+          } else if (first >= 0) {
+            // Stop at the first back-facing gap so we don't bridge through the planet
+            break;
+          }
+        }
+
+        if (first < 0 || last <= first) {
+          arc.line.visible = false;
+          continue;
+        }
+
+        arc.line.visible = true;
+        arc.geometry.setDrawRange(first, last - first + 1);
+
+        const mid = arc.points[Math.floor((first + last) / 2)]!;
+        const midFacing = facingOfLocalPoint(mid);
+        arc.material.opacity = arc.baseOpacity * Math.min(1, 0.35 + midFacing * 0.9);
+      }
+    };
 
     const onResize = () => {
-      width = canvas.offsetWidth;
+      if (!renderer) return;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight || w;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      renderer.setPixelRatio(dpr);
+      renderer.setSize(w, h, false);
+      camera.aspect = w / Math.max(h, 1);
+      camera.updateProjectionMatrix();
     };
-    window.addEventListener('resize', onResize);
-    onResize();
-
-    try {
-      globe = createGlobe(canvas, {
-        devicePixelRatio: Math.min(window.devicePixelRatio || 2, 2),
-        width: width * 2,
-        height: width * 2,
-        phi: 0,
-        theta: 0.22,
-        dark,
-        diffuse: 1.25,
-        mapSamples: 16000,
-        mapBrightness: dark ? 4.5 : 8,
-        mapBaseBrightness: dark ? 0.08 : 0.02,
-        baseColor: dark
-          ? ([0.12, 0.14, 0.2] as [number, number, number])
-          : ([0.96, 0.97, 1] as [number, number, number]),
-        markerColor: COBALT,
-        glowColor: dark
-          ? ([0.12, 0.16, 0.28] as [number, number, number])
-          : ([0.9, 0.93, 1] as [number, number, number]),
-        markers: [...MARKERS],
-        arcs: arcsForPhi(0, animateArcs),
-        arcColor: COBALT,
-        arcWidth: 0.55,
-        arcHeight: 0.32,
-        markerElevation: 0.01,
-        scale: 1.05,
-      });
-    } catch {
-      return () => {
-        window.removeEventListener('resize', onResize);
-      };
-    }
 
     const render = () => {
-      if (destroyed || !globe) return;
-      if (!reduceMotion) {
-        phi += 0.0028;
-      }
-
-      const nextArcs = arcsForPhi(phi, animateArcs);
-      const arcKey = nextArcs.map((a) => `${a.from[0]},${a.from[1]}>${a.to[0]},${a.to[1]}`).join('|');
-      const patch: Parameters<typeof globe.update>[0] = {
-        width: width * 2,
-        height: width * 2,
-        phi,
-      };
-      if (arcKey !== lastArcKey) {
-        lastArcKey = arcKey;
-        patch.arcs = nextArcs;
-      }
-
-      globe.update(patch);
-      frame = requestAnimationFrame(render);
+      if (destroyed || !renderer) return;
+      updateMarkerFacing();
+      updateArcFacing();
+      renderer.render(scene, camera);
     };
-    frame = requestAnimationFrame(render);
 
-    const themeMq = window.matchMedia('(prefers-color-scheme: dark)');
     const onTheme = () => {
-      if (!globe) return;
-      const nextDark = themeMq.matches ? 1 : 0;
-      globe.update({
-        dark: nextDark,
-        mapBrightness: nextDark ? 4.5 : 8,
-        mapBaseBrightness: nextDark ? 0.08 : 0.02,
-        baseColor: nextDark
-          ? ([0.12, 0.14, 0.2] as [number, number, number])
-          : ([0.96, 0.97, 1] as [number, number, number]),
-        glowColor: nextDark
-          ? ([0.12, 0.16, 0.28] as [number, number, number])
-          : ([0.9, 0.93, 1] as [number, number, number]),
+      if (!earth) return;
+      const nextDark = themeMq.matches;
+      setEarthTheme(earth, nextDark);
+      ambient.intensity = nextDark ? 0.4 : 0.55;
+      key.intensity = nextDark ? 1.15 : 1.35;
+    };
+
+    const registerArc = (arc: ActiveArc) => {
+      trackedArcs.push(arc);
+      arcsGroup.add(arc.line);
+      arcDisposables.push(() => {
+        const idx = trackedArcs.indexOf(arc);
+        if (idx >= 0) trackedArcs.splice(idx, 1);
+        arcsGroup.remove(arc.line);
+        arc.geometry.dispose();
+        arc.material.dispose();
       });
     };
-    themeMq.addEventListener('change', onTheme);
+
+    (async () => {
+      try {
+        const textures = await loadEarthTextures();
+        if (cancelled || destroyed) {
+          textures.day.dispose();
+          textures.clouds.dispose();
+          return;
+        }
+
+        dayTextureDispose = () => textures.day.dispose();
+        cloudsTextureDispose = () => textures.clouds.dispose();
+
+        const dark = isDarkMode();
+        const accent = dark ? COBALT_DARK : COBALT;
+        earth = createEarth(textures, dark);
+        // Earth must write depth so back-side arcs/markers are occluded
+        (earth.earth.material as MeshStandardMaterial).depthWrite = true;
+        scene.add(earth.root);
+
+        const markers = createMarkers(accent);
+        markersRef = markers;
+        markersDispose = markers.dispose;
+        earth.spin.add(markers.group);
+        earth.spin.add(arcsGroup);
+
+        for (const [from, to] of PERSISTENT_LINKS) {
+          const persistent = buildArcLine(from, to, accent, 0.85);
+          persistent.progressCount = persistent.vertexCount;
+          registerArc(persistent);
+        }
+
+        renderer = new WebGLRenderer({
+          canvas,
+          alpha: true,
+          antialias: true,
+          powerPreference: 'high-performance',
+        });
+        renderer.setClearColor(0x000000, 0);
+        renderer.outputColorSpace = SRGBColorSpace;
+        onResize();
+
+        const activeArcs: ActiveArc[] = [];
+
+        const pulseMarker = (id: CityId) => {
+          const mesh = markers.meshes.get(id);
+          if (!mesh || !mesh.visible) return;
+          gsap.killTweensOf(mesh.scale);
+          gsap.fromTo(
+            mesh.scale,
+            { x: 0.55, y: 0.55, z: 0.55 },
+            {
+              x: 1.35,
+              y: 1.35,
+              z: 1.35,
+              duration: 0.35,
+              yoyo: true,
+              repeat: 1,
+              ease: 'power2.out',
+            },
+          );
+        };
+
+        const pruneTrail = () => {
+          while (activeArcs.length > TRAIL) {
+            const old = activeArcs.shift();
+            if (!old) break;
+            const idx = trackedArcs.indexOf(old);
+            if (idx >= 0) trackedArcs.splice(idx, 1);
+            arcsGroup.remove(old.line);
+            old.geometry.dispose();
+            old.material.dispose();
+          }
+        };
+
+        const buildRouteTimeline = () => {
+          const tl = gsap.timeline({ repeat: -1 });
+
+          for (let i = 0; i < ROUTE_CHAIN.length - 1; i += 1) {
+            const from = ROUTE_CHAIN[i]!;
+            const to = ROUTE_CHAIN[i + 1]!;
+            const state = { draw: 0 };
+            let arc: ActiveArc | undefined;
+
+            tl.call(() => {
+              pulseMarker(from);
+              arc = buildArcLine(from, to, accent, 0.95);
+              registerArc(arc);
+              activeArcs.push(arc);
+              pruneTrail();
+              state.draw = 0;
+
+              if (activeArcs.length > 1) {
+                const prev = activeArcs[0];
+                if (prev) {
+                  prev.baseOpacity = 0.35;
+                  gsap.to(prev.material, { opacity: 0.35, duration: 0.6, overwrite: 'auto' });
+                }
+              }
+            });
+
+            tl.to(state, {
+              draw: 1,
+              duration: 1.55,
+              ease: 'sine.inOut',
+              onUpdate: () => {
+                if (!arc) return;
+                arc.progressCount = Math.max(
+                  2,
+                  Math.ceil(state.draw * (arc.vertexCount - 1)) + 1,
+                );
+              },
+              onComplete: () => pulseMarker(to),
+            });
+
+            tl.to({}, { duration: 0.35 });
+          }
+
+          return tl;
+        };
+
+        if (animate) {
+          ctx.add(() => {
+            gsap.to(earth!.spin.rotation, {
+              y: earth!.spin.rotation.y + Math.PI * 2,
+              duration: 48,
+              ease: 'none',
+              repeat: -1,
+            });
+            gsap.to(earth!.clouds.rotation, {
+              y: `+=${Math.PI * 2}`,
+              duration: 90,
+              ease: 'none',
+              repeat: -1,
+            });
+            buildRouteTimeline();
+          });
+        } else {
+          for (let i = 0; i < Math.min(TRAIL, ROUTE_CHAIN.length - 1); i += 1) {
+            const from = ROUTE_CHAIN[i]!;
+            const to = ROUTE_CHAIN[i + 1]!;
+            const arc = buildArcLine(from, to, accent, 0.95);
+            arc.progressCount = arc.vertexCount;
+            registerArc(arc);
+            activeArcs.push(arc);
+          }
+        }
+
+        gsap.ticker.add(render);
+        themeMq.addEventListener('change', onTheme);
+        window.addEventListener('resize', onResize);
+      } catch {
+        // WebGL / texture failure — leave canvas empty rather than crash the hero
+      }
+    })();
 
     return () => {
+      cancelled = true;
       destroyed = true;
-      cancelAnimationFrame(frame);
-      window.removeEventListener('resize', onResize);
+      gsap.ticker.remove(render);
+      ctx.revert();
       themeMq.removeEventListener('change', onTheme);
-      globe?.destroy();
+      window.removeEventListener('resize', onResize);
+      arcDisposables.forEach((d) => d());
+      markersDispose?.();
+      if (earth) {
+        const earthMat = earth.earth.material as MeshStandardMaterial;
+        const cloudMat = earth.clouds.material as MeshStandardMaterial;
+        earthMat.map = null;
+        cloudMat.map = null;
+        earth.dispose();
+      }
+      dayTextureDispose?.();
+      cloudsTextureDispose?.();
+      renderer?.dispose();
     };
   }, [reduceMotion]);
 
