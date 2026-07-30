@@ -184,7 +184,7 @@ projects:
             plan: starter
             branch: main
             autoDeployTrigger: checksPass
-            buildCommand: corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile --filter @prospectly/landing... && pnpm --filter @prospectly/landing run build
+            buildCommand: pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build
             startCommand: pnpm --filter @prospectly/landing start
             healthCheckPath: /
             buildFilter:
