@@ -1,0 +1,2056 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Mapa interativo da arquitetura atual do Prospectly, gerado a partir do checkout c34369f."
+    />
+    <title>Prospectly · Mapa de arquitetura</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07101d;
+        --panel: #0b1525;
+        --panel-2: #101c2d;
+        --panel-3: #142238;
+        --line: #24344d;
+        --line-strong: #3e5475;
+        --text: #e8eef8;
+        --muted: #8fa0b8;
+        --faint: #60718a;
+        --accent: #f4c430;
+        --accent-soft: rgba(244, 196, 48, 0.13);
+        --blue: #5ea7ff;
+        --cyan: #5fe1d2;
+        --violet: #b79cff;
+        --green: #6bda91;
+        --orange: #ffad66;
+        --pink: #f28cb1;
+        --red: #ff7f83;
+        --radius: 11px;
+        --shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 50% -20%, rgba(52, 93, 154, 0.2), transparent 40rem), var(--bg);
+        color: var(--text);
+        overflow: hidden;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .topbar {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 0 22px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(7, 16, 29, 0.9);
+        backdrop-filter: blur(18px);
+        position: relative;
+        z-index: 20;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid rgba(244, 196, 48, 0.55);
+        border-radius: 10px;
+        background: linear-gradient(145deg, rgba(244, 196, 48, 0.17), rgba(244, 196, 48, 0.03));
+        color: var(--accent);
+        font-weight: 850;
+        box-shadow: inset 0 0 24px rgba(244, 196, 48, 0.07);
+      }
+
+      .eyebrow {
+        color: var(--accent);
+        font:
+          700 10px/1.2 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 4px 0 0;
+        font-size: 17px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+      }
+
+      .snapshot {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .snapshot code {
+        color: #bfd0e8;
+        padding: 5px 8px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel);
+      }
+
+      .json-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--text);
+        text-decoration: none;
+        padding: 8px 11px;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        background: var(--panel-2);
+      }
+
+      .json-link:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .shell {
+        height: calc(100vh - 76px);
+        display: grid;
+        grid-template-columns: 238px minmax(0, 1fr) 326px;
+        min-width: 980px;
+      }
+
+      .sidebar,
+      .inspector {
+        background: rgba(11, 21, 37, 0.95);
+        overflow-y: auto;
+        scrollbar-color: var(--line-strong) transparent;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--line);
+        padding: 18px 14px;
+      }
+      .inspector {
+        border-left: 1px solid var(--line);
+      }
+
+      .side-label {
+        margin: 0 7px 9px;
+        color: var(--faint);
+        font:
+          700 10px/1.2 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .view-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .view-button {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 28px 1fr auto;
+        align-items: center;
+        gap: 9px;
+        padding: 9px;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .view-button:hover {
+        color: var(--text);
+        background: var(--panel-2);
+      }
+
+      .view-button.active {
+        color: var(--text);
+        border-color: rgba(244, 196, 48, 0.45);
+        background: var(--accent-soft);
+      }
+
+      .view-icon {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel-2);
+        color: var(--blue);
+        font:
+          750 11px/1 ui-monospace,
+          monospace;
+      }
+
+      .view-button.active .view-icon {
+        color: var(--accent);
+        border-color: rgba(244, 196, 48, 0.45);
+      }
+      .view-name {
+        font-size: 12px;
+        font-weight: 680;
+      }
+      .view-count {
+        color: var(--faint);
+        font:
+          600 10px/1 ui-monospace,
+          monospace;
+      }
+
+      .search-wrap {
+        margin: 20px 0 18px;
+      }
+
+      .search {
+        width: 100%;
+        color: var(--text);
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #07111f;
+        font-size: 12px;
+      }
+
+      .search::placeholder {
+        color: var(--faint);
+      }
+
+      .legend {
+        display: grid;
+        gap: 8px;
+        padding: 0 7px;
+      }
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: 0 0 12px currentColor;
+      }
+
+      .read-guide {
+        margin-top: 20px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        color: var(--muted);
+        background: rgba(16, 28, 45, 0.52);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .workspace {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: #07101c;
+      }
+
+      .workspace-toolbar {
+        height: 55px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 0 15px 0 18px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(9, 18, 32, 0.88);
+      }
+
+      .view-heading {
+        min-width: 0;
+      }
+      .view-heading strong {
+        display: block;
+        font-size: 13px;
+      }
+      .view-heading span {
+        display: block;
+        max-width: 68ch;
+        margin-top: 3px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--muted);
+        font-size: 10px;
+      }
+
+      .tools {
+        display: flex;
+        gap: 6px;
+      }
+
+      .tool-button {
+        width: 31px;
+        height: 31px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--panel-2);
+        cursor: pointer;
+      }
+
+      .tool-button:hover {
+        color: var(--accent);
+        border-color: rgba(244, 196, 48, 0.5);
+      }
+
+      .viewport {
+        flex: 1;
+        position: relative;
+        overflow: auto;
+        scrollbar-color: var(--line-strong) #08111f;
+        background-image:
+          linear-gradient(rgba(111, 140, 181, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(111, 140, 181, 0.045) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
+
+      .board-wrap {
+        width: max-content;
+        min-width: 100%;
+        padding: 30px;
+        transform-origin: 0 0;
+      }
+
+      .board {
+        width: max-content;
+        min-width: 100%;
+        min-height: 610px;
+        position: relative;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 222px;
+        align-items: stretch;
+        gap: 22px;
+        padding: 0 8px 26px;
+      }
+
+      .edge-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: visible;
+        z-index: 0;
+      }
+
+      .edge {
+        fill: none;
+        stroke: #31445f;
+        stroke-width: 1.4;
+        opacity: 0.78;
+        vector-effect: non-scaling-stroke;
+        transition:
+          stroke 160ms ease,
+          opacity 160ms ease,
+          stroke-width 160ms ease;
+      }
+
+      .edge.dimmed {
+        opacity: 0.08;
+      }
+      .edge.active {
+        stroke: var(--accent);
+        stroke-width: 2.4;
+        opacity: 1;
+        filter: drop-shadow(0 0 5px rgba(244, 196, 48, 0.46));
+      }
+      .edge.dashed {
+        stroke-dasharray: 5 5;
+      }
+
+      .lane {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+        min-height: 540px;
+        padding: 13px;
+        border: 1px solid rgba(36, 52, 77, 0.75);
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(16, 28, 45, 0.78), rgba(9, 18, 31, 0.56));
+      }
+
+      .lane-title {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding-bottom: 9px;
+        border-bottom: 1px solid var(--line);
+        color: #c6d3e6;
+        font:
+          750 10px/1.2 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .lane-index {
+        color: var(--accent);
+      }
+
+      .node {
+        width: 100%;
+        position: relative;
+        display: block;
+        padding: 11px 11px 10px 13px;
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--node-color, var(--blue));
+        border-radius: 8px;
+        background: linear-gradient(145deg, rgba(20, 34, 56, 0.98), rgba(12, 23, 40, 0.98));
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        color: var(--text);
+        text-align: left;
+        cursor: pointer;
+        transition:
+          transform 140ms ease,
+          border-color 140ms ease,
+          opacity 140ms ease,
+          box-shadow 140ms ease;
+      }
+
+      .node:hover {
+        transform: translateY(-1px);
+        border-color: var(--node-color, var(--blue));
+      }
+      .node.selected {
+        border-color: var(--accent);
+        border-left-color: var(--accent);
+        box-shadow:
+          0 0 0 1px var(--accent),
+          0 8px 28px rgba(244, 196, 48, 0.14);
+      }
+      .node.related {
+        border-color: rgba(244, 196, 48, 0.55);
+      }
+      .node.dimmed {
+        opacity: 0.23;
+      }
+      .node.filtered {
+        display: none;
+      }
+
+      .node-kicker {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        margin-bottom: 5px;
+        color: var(--node-color, var(--blue));
+        font:
+          700 8px/1 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 8px currentColor;
+      }
+      .node-title {
+        font-size: 12px;
+        font-weight: 740;
+        line-height: 1.25;
+      }
+      .node-subtitle {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 9.5px;
+        line-height: 1.35;
+      }
+
+      .mini-note {
+        position: absolute;
+        z-index: 3;
+        right: 18px;
+        bottom: 17px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 9px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: rgba(7, 16, 29, 0.88);
+        color: var(--muted);
+        font-size: 9px;
+      }
+
+      .inspector-head {
+        padding: 18px;
+        border-bottom: 1px solid var(--line);
+      }
+      .inspector-head .eyebrow {
+        color: var(--blue);
+      }
+      .inspector-title {
+        margin: 6px 0 4px;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+      }
+      .inspector-kind {
+        color: var(--muted);
+        font:
+          600 10px/1.4 ui-monospace,
+          monospace;
+      }
+
+      .inspector-body {
+        padding: 17px 18px 28px;
+      }
+
+      .detail-section {
+        margin-top: 20px;
+      }
+      .detail-section:first-child {
+        margin-top: 0;
+      }
+      .detail-section h3 {
+        margin: 0 0 8px;
+        color: var(--faint);
+        font:
+          750 9px/1.2 ui-monospace,
+          monospace;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .detail-section p {
+        margin: 0;
+        color: #c6d2e3;
+        font-size: 11.5px;
+        line-height: 1.62;
+      }
+
+      .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .tag {
+        padding: 5px 7px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--panel-2);
+        color: var(--muted);
+        font:
+          600 9px/1 ui-monospace,
+          monospace;
+      }
+
+      .evidence-list,
+      .connection-list {
+        display: grid;
+        gap: 7px;
+      }
+      .evidence-link,
+      .connection-item {
+        display: block;
+        padding: 8px 9px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: rgba(16, 28, 45, 0.58);
+        font:
+          500 9.5px/1.45 ui-monospace,
+          monospace;
+      }
+      .evidence-link {
+        color: #a9cfff;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+      }
+      .evidence-link:hover {
+        border-color: var(--blue);
+      }
+      .connection-item {
+        color: var(--muted);
+      }
+      .connection-item strong {
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .callout {
+        padding: 10px 11px;
+        border: 1px solid rgba(244, 196, 48, 0.34);
+        border-radius: 8px;
+        background: var(--accent-soft);
+        color: #e9d783;
+        font-size: 10.5px;
+        line-height: 1.5;
+      }
+
+      .empty-state {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .color-actor {
+        --node-color: var(--accent);
+      }
+      .color-frontend {
+        --node-color: var(--blue);
+      }
+      .color-backend {
+        --node-color: var(--cyan);
+      }
+      .color-async {
+        --node-color: var(--violet);
+      }
+      .color-data {
+        --node-color: var(--green);
+      }
+      .color-external {
+        --node-color: var(--orange);
+      }
+      .color-security {
+        --node-color: var(--red);
+      }
+      .color-delivery {
+        --node-color: var(--pink);
+      }
+      .color-contract {
+        --node-color: #8bb5ff;
+      }
+      .color-future {
+        --node-color: var(--faint);
+      }
+      .color-media {
+        --node-color: #df8eff;
+      }
+
+      @media (max-width: 1100px) {
+        body {
+          overflow: auto;
+        }
+        .topbar {
+          height: auto;
+          min-height: 70px;
+          flex-wrap: wrap;
+          padding-block: 14px;
+        }
+        .snapshot {
+          flex-wrap: wrap;
+        }
+        .shell {
+          height: auto;
+          min-width: 0;
+          grid-template-columns: 200px minmax(700px, 1fr);
+        }
+        .inspector {
+          grid-column: 1 / -1;
+          min-height: 320px;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+        .workspace {
+          min-height: 720px;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .snapshot > span {
+          display: none;
+        }
+        .shell {
+          display: block;
+        }
+        .sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+        .view-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .legend,
+        .read-guide {
+          display: none;
+        }
+        .workspace {
+          min-height: 720px;
+        }
+      }
+
+      @media print {
+        body {
+          overflow: visible;
+          background: white;
+          color: black;
+        }
+        .topbar {
+          color: black;
+          background: white;
+        }
+        .shell {
+          display: block;
+          height: auto;
+          min-width: 0;
+        }
+        .sidebar,
+        .inspector,
+        .tools,
+        .mini-note,
+        .json-link {
+          display: none;
+        }
+        .workspace,
+        .viewport {
+          overflow: visible;
+          background: white;
+        }
+        .board {
+          transform: scale(0.72);
+          transform-origin: top left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">P</div>
+        <div>
+          <div class="eyebrow">Architecture atlas</div>
+          <h1>Prospectly · mapa do codebase</h1>
+        </div>
+      </div>
+      <div class="snapshot">
+        <span>checkout atual</span>
+        <code>main · c34369f</code>
+        <a
+          class="json-link"
+          href="./prospectly-architecture.json"
+          title="Abrir mapa estruturado em JSON"
+        >
+          <span aria-hidden="true">{ }</span> JSON para agentes
+        </a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <aside class="sidebar" aria-label="Perspectivas do mapa">
+        <p class="side-label">Perspectivas</p>
+        <nav class="view-list" id="view-list"></nav>
+
+        <div class="search-wrap">
+          <label class="side-label" for="search">Localizar no mapa</label>
+          <input
+            class="search"
+            id="search"
+            type="search"
+            placeholder="módulo, fila, serviço…"
+            autocomplete="off"
+          />
+        </div>
+
+        <p class="side-label">Legenda</p>
+        <div class="legend">
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--blue); background: var(--blue)"></span>
+            Front-end
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--cyan); background: var(--cyan)"></span> API
+            / aplicação
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--violet); background: var(--violet)"></span>
+            Assíncrono
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--green); background: var(--green)"></span>
+            Dados
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--orange); background: var(--orange)"></span>
+            Serviço externo
+          </div>
+          <div class="legend-row">
+            <span class="legend-dot" style="color: var(--red); background: var(--red)"></span>
+            Segurança
+          </div>
+        </div>
+
+        <div class="read-guide">
+          <strong style="color: var(--text)">Como ler</strong><br />
+          Escolha uma perspectiva e clique em um bloco. O caminho relacionado fica amarelo; o painel
+          à direita mostra responsabilidade, evidências e conexões.
+        </div>
+      </aside>
+
+      <section class="workspace" aria-label="Diagrama de arquitetura">
+        <div class="workspace-toolbar">
+          <div class="view-heading">
+            <strong id="view-title"></strong>
+            <span id="view-description"></span>
+          </div>
+          <div class="tools" aria-label="Controles de zoom">
+            <button
+              class="tool-button"
+              id="zoom-out"
+              type="button"
+              title="Diminuir zoom"
+              aria-label="Diminuir zoom"
+            >
+              −
+            </button>
+            <button
+              class="tool-button"
+              id="zoom-reset"
+              type="button"
+              title="Ajustar"
+              aria-label="Restaurar zoom"
+            >
+              1:1
+            </button>
+            <button
+              class="tool-button"
+              id="zoom-in"
+              type="button"
+              title="Aumentar zoom"
+              aria-label="Aumentar zoom"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <div class="viewport" id="viewport">
+          <div class="board-wrap" id="board-wrap">
+            <div class="board" id="board"></div>
+          </div>
+          <div class="mini-note">
+            <span style="color: var(--accent)">●</span> clique em um nó para seguir o fluxo
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-live="polite">
+        <div class="inspector-head">
+          <div class="eyebrow">Inspector</div>
+          <h2 class="inspector-title" id="detail-title">Visão sistêmica</h2>
+          <div class="inspector-kind" id="detail-kind">Selecione um componente</div>
+        </div>
+        <div class="inspector-body" id="detail-body"></div>
+      </aside>
+    </main>
+
+    <script>
+      const nodes = {
+        visitor: n(
+          'Visitante',
+          'Pessoa',
+          'actor',
+          'Descobre o produto, compara preços e entra no fluxo de cadastro ou login.',
+          ['apps/landing/src/components/home-landing.tsx'],
+          ['aquisição', 'SEO'],
+        ),
+        member: n(
+          'Membro da organização',
+          'OWNER · ADMIN · SALES · MEMBER · VIEWER',
+          'actor',
+          'Opera dentro do tenant e das permissões derivadas da sessão.',
+          ['apps/api/prisma/schema.prisma', 'apps/api/src/common/guards/roles.guard.ts'],
+          ['RBAC', 'multi-tenant'],
+        ),
+        landing: n(
+          'Landing pública',
+          'Next.js 15 · :3001',
+          'frontend',
+          'Aquisição, SEO, preços, FAQ e páginas legais em PT/EN. Envia plan e currency para o cadastro.',
+          ['apps/landing/src/app', 'apps/landing/src/lib/pricing.ts'],
+          ['Next.js', 'i18n', 'SEO'],
+        ),
+        web: n(
+          'App autenticado',
+          'React 18 + Vite 6 · :5173',
+          'frontend',
+          'SPA do produto com rotas públicas de autenticação e área protegida.',
+          ['apps/web/src/App.tsx', 'apps/web/src/main.tsx'],
+          ['React Router', 'SPA'],
+        ),
+        promo: n(
+          'Promo Video',
+          'Remotion 4 · suporte',
+          'media',
+          'Gera vídeos promocionais, tutoriais de cadastro, pricing e stills usando capturas do produto.',
+          ['promo-video/src/Root.tsx', 'promo-video/package.json'],
+          ['fora do pnpm workspace', 'mídia'],
+        ),
+        api: n(
+          'API REST',
+          'NestJS 10 · /api/v1 · :3000',
+          'backend',
+          'Composition root HTTP, regras de aplicação, filas, integrações e persistência.',
+          ['apps/api/src/app.module.ts', 'apps/api/src/main.ts'],
+          ['NestJS', '72 handlers'],
+        ),
+        shared: n(
+          'shared-types',
+          'ESM para Web · CJS para API',
+          'contract',
+          'Contrato compartilhado de tipos e enums. Precisa ser compilado antes do runtime das apps.',
+          ['packages/shared-types/src/index.ts', 'packages/shared-types/package.json'],
+          ['TypeScript', 'dual build'],
+        ),
+        postgres: n(
+          'PostgreSQL',
+          'Prisma · fonte de verdade',
+          'data',
+          'Persiste identidade, tenant, CRM, jobs, análise, billing e auditoria em 29 modelos.',
+          ['apps/api/prisma/schema.prisma', 'apps/api/prisma/migrations'],
+          ['PostgreSQL 16', '29 modelos'],
+        ),
+        redis: n(
+          'Redis',
+          'BullMQ · throttling · rate limit',
+          'data',
+          'Coordena quatro filas, limita requests e serializa chamadas Nominatim. Usa AOF local.',
+          ['docker-compose.yml', 'apps/api/src/app.module.ts'],
+          ['Redis 7', 'AOF'],
+        ),
+        osm: n(
+          'OpenStreetMap',
+          'Nominatim + Overpass',
+          'external',
+          'Geocodifica município/UF e pesquisa estabelecimentos. Ausência de website é apenas NO_WEBSITE_REPORTED.',
+          ['apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.ts'],
+          ['HTTP', '1 req/s Nominatim'],
+        ),
+        gplaces: n(
+          'Google Places',
+          'Provider opcional',
+          'external',
+          'Pesquisa negócios quando GOOGLE_PLACES_API_KEY está configurada; participa do registry de providers.',
+          ['apps/api/src/modules/prospecting/infrastructure/google-places.provider.ts'],
+          ['API key', 'HTTP'],
+        ),
+        gauth: n(
+          'Google Identity',
+          'OAuth',
+          'external',
+          'Valida ID token ou access token no fluxo de login/cadastro Google.',
+          ['apps/api/src/modules/auth/auth.service.ts'],
+          ['OAuth 2.0'],
+        ),
+        payments: n(
+          'Stripe + AbacatePay',
+          'EUR/USD + BRL/Pix',
+          'external',
+          'Checkout, portal/cancelamento e webhooks assinados/idempotentes.',
+          ['apps/api/src/modules/billing', 'docs/billing/dual-gateways.md'],
+          ['webhooks', 'idempotência'],
+        ),
+        smtp: n(
+          'SMTP',
+          'Nodemailer',
+          'external',
+          'Entrega verificação de e-mail e recuperação de senha.',
+          ['apps/api/src/common/mail/mail.service.ts'],
+          ['e-mail'],
+        ),
+        sites: n(
+          'Websites públicos',
+          'Análise HTTP protegida',
+          'external',
+          'Fontes da análise de qualidade/presença, acessadas após validação SSRF e de redirects.',
+          [
+            'apps/api/src/modules/website-analysis/http-website-analyzer.ts',
+            'apps/api/src/modules/website-analysis/ssrf.ts',
+          ],
+          ['SSRF boundary'],
+        ),
+        ci: n(
+          'GitHub Actions',
+          'Quality gate',
+          'delivery',
+          'Executa install, Prisma generate, lint, typecheck, tests, build e audit.',
+          ['.github/workflows/ci.yml'],
+          ['CI'],
+        ),
+        render: n(
+          'Render Blueprint',
+          'Produção · Frankfurt',
+          'delivery',
+          'Hospeda landing Node, Web estática, API Docker, PostgreSQL e Redis gerenciados.',
+          ['render.yaml', 'docs/deploy/render.md'],
+          ['checksPass'],
+        ),
+        docker: n(
+          'Docker Compose',
+          'Ambiente local',
+          'delivery',
+          'Sobe PostgreSQL e Redis; o profile full também sobe API e Web. Landing roda separada.',
+          ['docker-compose.yml'],
+          ['localhost'],
+        ),
+
+        routes: n(
+          'React Router',
+          '16 rotas + fallback',
+          'frontend',
+          'Organiza páginas públicas, ProtectedRoute, AppLayout e navegação da SPA.',
+          ['apps/web/src/App.tsx'],
+          ['routing'],
+        ),
+        publicRoutes: n(
+          'Rotas públicas',
+          '/login · /register · verify · billing result',
+          'frontend',
+          'Entrada, cadastro, confirmação de e-mail e retorno do pagamento.',
+          ['apps/web/src/App.tsx', 'apps/web/src/pages/auth'],
+          ['5 rotas'],
+        ),
+        protectedRoutes: n(
+          'Área protegida',
+          'dashboard · search · imports · CRM · settings',
+          'frontend',
+          'Dez destinos protegidos, em sua maioria sob AppLayout.',
+          ['apps/web/src/App.tsx', 'apps/web/src/components/protected-route.tsx'],
+          ['10 rotas'],
+        ),
+        authStore: n(
+          'Auth store',
+          'Zustand persist',
+          'frontend',
+          'Mantém usuário e access token. O refresh token permanece em cookie HttpOnly.',
+          ['apps/web/src/stores/auth.store.ts'],
+          ['client state'],
+        ),
+        query: n(
+          'Server state',
+          'TanStack Query',
+          'frontend',
+          'Centraliza cache, queries, mutations, invalidação e polling dos jobs.',
+          ['apps/web/src/main.tsx', 'apps/web/src/features'],
+          ['cache', 'polling'],
+        ),
+        forms: n(
+          'Formulários',
+          'React Hook Form + Zod',
+          'frontend',
+          'Valida e controla entradas nas telas antes do boundary da API.',
+          ['apps/web/src/pages', 'apps/web/src/features'],
+          ['UX validation'],
+        ),
+        apiClient: n(
+          'Cliente HTTP',
+          'Axios · /api/v1',
+          'frontend',
+          'Injeta Bearer, usa withCredentials, coordena um refresh concorrente e repete a chamada uma vez.',
+          ['apps/web/src/lib/api.ts'],
+          ['401 retry', 'cookie'],
+        ),
+        i18n: n(
+          'i18n da aplicação',
+          'i18next PT/EN',
+          'frontend',
+          'Sincroniza locale do usuário e textos da SPA.',
+          ['apps/web/src/i18n.ts', 'apps/web/src/components/locale-sync.tsx'],
+          ['PT', 'EN'],
+        ),
+        webAuth: n(
+          'Auth UI',
+          'login · cadastro · verificação',
+          'frontend',
+          'Formulários de identidade e integração Google; inicia checkout quando aplicável.',
+          ['apps/web/src/pages/auth', 'apps/web/src/features/auth'],
+          ['public'],
+        ),
+        webAcquire: n(
+          'Prospecção + CSV',
+          'search · imports',
+          'frontend',
+          'Cria pesquisas, acompanha processamento, revisa/importa resultados e importa CSV.',
+          ['apps/web/src/features/prospecting', 'apps/web/src/features/imports'],
+          ['async UX'],
+        ),
+        webCrm: n(
+          'CRM UI',
+          'leads · pipeline · tarefas',
+          'frontend',
+          'Opera leads, detalhe, atividades, análise, estágio e follow-up.',
+          [
+            'apps/web/src/pages/leads',
+            'apps/web/src/pages/pipeline-page.tsx',
+            'apps/web/src/pages/tasks-page.tsx',
+          ],
+          ['partial CRM'],
+        ),
+        webSettings: n(
+          'Settings + Billing',
+          'perfil · org · score · privacidade',
+          'frontend',
+          'Administra usuário, membros, organização, scoring, direitos de dados e plano.',
+          ['apps/web/src/pages/settings-page.tsx', 'apps/web/src/pages/settings-privacy-page.tsx'],
+          ['admin'],
+        ),
+        webDashboard: n(
+          'Dashboard UI',
+          'resumo + gráficos',
+          'frontend',
+          'Apresenta KPIs, charts, leads e atividades recentes.',
+          ['apps/web/src/pages/dashboard-page.tsx'],
+          ['Recharts'],
+        ),
+
+        http: n(
+          'Boundary HTTP global',
+          'Helmet · CORS · versioning · validation',
+          'backend',
+          'Aplica prefixo /api, versão v1, ValidationPipe, exception filter, raw body e trust proxy.',
+          ['apps/api/src/main.ts'],
+          ['transport'],
+        ),
+        guards: n(
+          'Guards globais',
+          'JWT · roles · e-mail · throttler',
+          'security',
+          'Protege tudo por padrão; rotas públicas exigem decorator explícito.',
+          ['apps/api/src/app.module.ts', 'apps/api/src/common/guards'],
+          ['APP_GUARD'],
+        ),
+        auth: n(
+          'Auth',
+          'Identity module',
+          'backend',
+          'Cadastro, login, Google, refresh rotation, reset, verificação, lockout e troca de tenant.',
+          ['apps/api/src/modules/auth'],
+          ['12 operações'],
+        ),
+        usersOrgs: n(
+          'Users + Organizations',
+          'Tenant administration',
+          'backend',
+          'Perfil, locale, solicitações de dados, organização, members e roles.',
+          ['apps/api/src/modules/users', 'apps/api/src/modules/organizations'],
+          ['10 operações'],
+        ),
+        billing: n(
+          'Billing',
+          'Commerce module',
+          'backend',
+          'Roteia pagamentos por moeda, controla plano e processa webhooks.',
+          ['apps/api/src/modules/billing'],
+          ['7 operações'],
+        ),
+        leads: n(
+          'Leads + Ingestion',
+          'CRM core',
+          'backend',
+          'CRUD, filtros, tags, owner, soft delete, normalização e deduplicação multi-tenant.',
+          ['apps/api/src/modules/leads'],
+          ['11 operações'],
+        ),
+        crm: n(
+          'Activities + Tasks + Pipeline',
+          'CRM workflow',
+          'backend',
+          'Histórico, tarefas e quadro por estágio. Campanhas completas ainda não existem no runtime.',
+          [
+            'apps/api/src/modules/activities',
+            'apps/api/src/modules/tasks',
+            'apps/api/src/modules/pipelines',
+          ],
+          ['11 operações', 'partial'],
+        ),
+        dashboard: n(
+          'Dashboard',
+          'Reporting module',
+          'backend',
+          'Executa agregações tenant-aware de resumo e gráficos.',
+          ['apps/api/src/modules/dashboard'],
+          ['2 operações'],
+        ),
+        geo: n(
+          'Geo',
+          'Support module',
+          'backend',
+          'Fornece regiões e cidades para os seletores de prospecção.',
+          ['apps/api/src/modules/geo'],
+          ['2 operações'],
+        ),
+        prospecting: n(
+          'Prospecting',
+          'Acquisition module',
+          'backend',
+          'Providers, Search, resultados, quota, dispatch recuperável e importação seletiva.',
+          ['apps/api/src/modules/prospecting'],
+          ['7 operações'],
+        ),
+        imports: n(
+          'CSV Imports',
+          'Acquisition module',
+          'backend',
+          'Preview, parsing, staging, mapping, importação parcial e erros por linha.',
+          ['apps/api/src/modules/imports'],
+          ['5 operações'],
+        ),
+        analysis: n(
+          'Website Analysis',
+          'Analysis module',
+          'backend',
+          'Orquestra análise HTTP protegida, status, métricas e issues.',
+          ['apps/api/src/modules/website-analysis'],
+          ['SSRF'],
+        ),
+        scoring: n(
+          'Scoring',
+          'Analysis module',
+          'backend',
+          'Mantém regras por organização e calcula LeadScore/Lead.score.',
+          ['apps/api/src/modules/scoring'],
+          ['2 operações'],
+        ),
+        prisma: n(
+          'Prisma global',
+          'Data access',
+          'backend',
+          'PrismaService global conecta todos os services ao PostgreSQL.',
+          ['apps/api/src/common/prisma/prisma.module.ts'],
+          ['ORM'],
+        ),
+        pino: n(
+          'Observabilidade base',
+          'Pino + correlation ID',
+          'backend',
+          'Logs estruturados, reqId e redação de dados sensíveis. Métricas distribuídas não foram localizadas.',
+          ['apps/api/src/app.module.ts'],
+          ['logs', 'partial'],
+        ),
+
+        searchRequest: n(
+          'POST /searches',
+          '202 · persist first',
+          'backend',
+          'Valida DTO/tenant/plano, cria Search PENDING com payload durável e tenta publicar.',
+          ['apps/api/src/modules/prospecting/prospecting.service.ts'],
+          ['recoverable dispatch'],
+        ),
+        searchQueue: n(
+          'prospecting queue',
+          'Search.id = jobId',
+          'async',
+          'Processor consulta provider e persiste SearchResult; reconciliador recupera PENDING não publicados.',
+          [
+            'apps/api/src/modules/prospecting/prospecting.processor.ts',
+            'apps/api/src/modules/prospecting/prospecting-dispatch.reconciler.ts',
+          ],
+          ['BullMQ'],
+        ),
+        selectImport: n(
+          'Importação seletiva',
+          'SearchResult → Lead',
+          'backend',
+          'Somente resultados escolhidos passam pelo serviço de ingestão compartilhado.',
+          ['apps/api/src/modules/prospecting/prospecting.service.ts'],
+          ['idempotent'],
+        ),
+        csvRequest: n(
+          'POST /imports/csv',
+          'multipart · persist first',
+          'backend',
+          'Valida arquivo/mapping, cria Import e staging antes de publicar o job.',
+          ['apps/api/src/modules/imports/imports.service.ts'],
+          ['recoverable dispatch'],
+        ),
+        importQueue: n(
+          'imports queue',
+          'Import.id = jobId',
+          'async',
+          'Processor valida cada linha; erros não impedem importação parcial. Staging é limpo no terminal.',
+          ['apps/api/src/modules/imports/imports.processor.ts'],
+          ['BullMQ'],
+        ),
+        ingestion: n(
+          'LeadIngestionService',
+          'Boundary de entrada comum',
+          'backend',
+          'Normaliza telefone/e-mail/domínio, aplica tenant e deduplica manual, OSM, Google ou CSV.',
+          ['apps/api/src/modules/leads/lead-ingestion.service.ts'],
+          ['E.164', 'constraints'],
+        ),
+        analyzeRequest: n(
+          'POST /leads/:id/analyze',
+          'Async command',
+          'backend',
+          'Cria ou retoma WebsiteAnalysis e publica processamento.',
+          [
+            'apps/api/src/modules/leads/leads.controller.ts',
+            'apps/api/src/modules/website-analysis/website-analysis.service.ts',
+          ],
+          ['command'],
+        ),
+        analysisQueue: n(
+          'website-analysis queue',
+          'Guarded HTTP',
+          'async',
+          'Busca página com timeout/body/redirect limits e persiste sinais/issues.',
+          ['apps/api/src/modules/website-analysis/website-analysis.processor.ts'],
+          ['BullMQ', 'SSRF'],
+        ),
+        scoringQueue: n(
+          'scoring queue',
+          'Rules → score',
+          'async',
+          'Aplica regras da organização após análise e atualiza o score atual do lead.',
+          ['apps/api/src/modules/scoring/scoring.processor.ts'],
+          ['BullMQ'],
+        ),
+        reconciler: n(
+          'Dispatch reconcilers',
+          'Repair window',
+          'async',
+          'Re-publicam Search/Import PENDING caso o commit no banco ocorra antes de uma falha de enqueue.',
+          [
+            'apps/api/src/modules/prospecting/prospecting-dispatch.reconciler.ts',
+            'apps/api/src/modules/imports/imports-dispatch.reconciler.ts',
+          ],
+          ['recovery'],
+        ),
+
+        dataIdentity: n(
+          'Identity & tenancy',
+          '5 modelos',
+          'data',
+          'User, Organization, OrganizationMember, RefreshToken e DataSubjectRequest.',
+          ['apps/api/prisma/schema.prisma'],
+          ['tenant root'],
+        ),
+        dataCrm: n(
+          'CRM core',
+          '8 modelos',
+          'data',
+          'Lead, LeadContact, Tag, LeadTag, LeadActivity, Task, Pipeline e PipelineStage.',
+          ['apps/api/prisma/schema.prisma'],
+          ['Lead root'],
+        ),
+        dataAnalysis: n(
+          'Analysis & scoring',
+          '6 modelos',
+          'data',
+          'Website, WebsiteAnalysis, WebsiteAnalysisIssue, ScoreConfiguration, ScoreRule e LeadScore.',
+          ['apps/api/prisma/schema.prisma'],
+          ['history'],
+        ),
+        dataAcquisition: n(
+          'Prospecting & imports',
+          '4 modelos',
+          'data',
+          'Search, SearchResult, Import e ImportError preservam estado assíncrono.',
+          ['apps/api/prisma/schema.prisma'],
+          ['durable jobs'],
+        ),
+        dataFuture: n(
+          'Campaign surface',
+          '4 modelos · schema only',
+          'future',
+          'Campaign, CampaignLead, MessageTemplate e Integration não possuem módulos/telas atuais.',
+          ['apps/api/prisma/schema.prisma'],
+          ['não implementado'],
+        ),
+        dataAudit: n(
+          'Audit + billing events',
+          '2 modelos',
+          'data',
+          'AuditLog e BillingWebhookEvent; eventos de pagamento têm unique(provider,eventId).',
+          ['apps/api/prisma/schema.prisma'],
+          ['idempotency'],
+        ),
+        enums: n(
+          'Enums de domínio',
+          '16 enums',
+          'contract',
+          'Roles, estados de lead/task/search/import/analysis, planos e providers.',
+          ['apps/api/prisma/schema.prisma', 'packages/shared-types/src/index.ts'],
+          ['state machines'],
+        ),
+        constraints: n(
+          'Constraints tenant-aware',
+          'Integridade concorrente',
+          'security',
+          'Uniques e índices evitam duplicidade por tenant, incluindo source/externalId, domain, phone, email e probableDuplicateKey.',
+          ['apps/api/prisma/schema.prisma'],
+          ['database safety'],
+        ),
+
+        browserBoundary: n(
+          'Browser → API',
+          'Trust boundary',
+          'security',
+          'TLS em produção, CORS, JWT, DTO validation e throttling controlam entrada.',
+          ['apps/api/src/main.ts', 'apps/api/src/app.module.ts'],
+          ['untrusted input'],
+        ),
+        tenantBoundary: n(
+          'Sessão → dados do tenant',
+          'Authorization boundary',
+          'security',
+          'organizationId/role vêm do JWT; queries precisam aplicar o tenant e ocultar recursos externos com 404.',
+          ['apps/api/src/common/decorators/current-user.decorator.ts', 'apps/api/src/modules'],
+          ['BOLA defense'],
+        ),
+        refreshBoundary: n(
+          'Refresh session',
+          'HttpOnly + rotation',
+          'security',
+          'Cookie SameSite=Lax/Secure e header anti-CSRF; tokens são hasheados, rotacionados e revogáveis.',
+          [
+            'apps/api/src/common/auth/refresh-cookie.ts',
+            'apps/api/src/modules/auth/auth.service.ts',
+          ],
+          ['CSRF', 'token theft'],
+        ),
+        validationBoundary: n(
+          'Input validation',
+          'ValidationPipe + DTOs',
+          'security',
+          'Whitelist, transformação e forbidNonWhitelisted reduzem massa de entrada inesperada.',
+          ['apps/api/src/main.ts', 'apps/api/src/modules'],
+          ['class-validator'],
+        ),
+        ssrfBoundary: n(
+          'API → web pública',
+          'SSRF boundary',
+          'security',
+          'Permite HTTP(S), bloqueia destinos privados/reservados e revalida redirects.',
+          [
+            'apps/api/src/modules/website-analysis/ssrf.ts',
+            'apps/api/src/modules/website-analysis/http-website-analyzer.ts',
+          ],
+          ['DNS/IP validation'],
+        ),
+        webhookBoundary: n(
+          'Providers → webhooks',
+          'Signature + idempotency',
+          'security',
+          'Raw body, assinatura/HMAC e provider+eventId protegem ativação de planos.',
+          ['apps/api/src/modules/billing/billing.controller.ts', 'apps/api/prisma/schema.prisma'],
+          ['replay defense'],
+        ),
+        secretsBoundary: n(
+          'Configuração → runtime',
+          'Environment boundary',
+          'security',
+          'Variáveis obrigatórias, segredos JWT fortes e sync:false no Render.',
+          ['apps/api/src/config/validation.ts', 'render.yaml'],
+          ['secrets'],
+        ),
+        logsBoundary: n(
+          'Logs estruturados',
+          'Redaction + correlation',
+          'security',
+          'Pino remove authorization, cookies, tokens e senhas e propaga correlation ID.',
+          ['apps/api/src/app.module.ts'],
+          ['PII hygiene'],
+        ),
+
+        repo: n(
+          'pnpm monorepo',
+          'apps/* + packages/*',
+          'delivery',
+          'Scripts raiz coordenam build, lint, test e typecheck; shared-types é compilado antes do dev.',
+          ['package.json', 'pnpm-workspace.yaml'],
+          ['pnpm 9'],
+        ),
+        apiImage: n(
+          'API image',
+          'Node 20 Alpine',
+          'delivery',
+          'Build multi-stage, Prisma generate e startup com migrate deploy antes do Nest.',
+          ['apps/api/Dockerfile'],
+          ['Docker'],
+        ),
+        webImage: n(
+          'Web image',
+          'Nginx static',
+          'delivery',
+          'Build Vite multi-stage; Nginx entrega SPA e proxy/deploy injeta VITE_API_URL.',
+          ['apps/web/Dockerfile', 'apps/web/nginx.conf'],
+          ['Docker'],
+        ),
+        landingService: n(
+          'Landing service',
+          'Render Node',
+          'delivery',
+          'Next build/start como serviço web próprio, com URLs públicas via env.',
+          ['render.yaml', 'apps/landing/package.json'],
+          ['Next runtime'],
+        ),
+        webService: n(
+          'Web static',
+          'Render static site',
+          'delivery',
+          'Publica apps/web/dist, reescreve rotas para index.html e aplica security headers.',
+          ['render.yaml'],
+          ['CDN/static'],
+        ),
+        apiService: n(
+          'API service',
+          'Render Docker',
+          'delivery',
+          'Serviço único hospeda HTTP e processors; health check exige DB e Redis.',
+          ['render.yaml', 'apps/api/src/common/health/health.controller.ts'],
+          ['in-process worker'],
+        ),
+        managedData: n(
+          'Managed data',
+          'PostgreSQL + Redis',
+          'delivery',
+          'Banco e key-value ficam na mesma região; Redis usa noeviction.',
+          ['render.yaml'],
+          ['Frankfurt'],
+        ),
+        health: n(
+          'Health probes',
+          '/health · /live · /ready',
+          'backend',
+          'Readiness executa SELECT 1 e Redis PING, retornando 503 se uma dependência falha.',
+          ['apps/api/src/common/health/health.controller.ts'],
+          ['operations'],
+        ),
+      };
+
+      function n(label, subtitle, color, description, evidence = [], tags = []) {
+        return { label, subtitle, color, description, evidence, tags };
+      }
+
+      const views = [
+        {
+          id: 'system',
+          icon: '01',
+          name: 'Sistema',
+          title: 'Visão sistêmica · do visitante à infraestrutura',
+          description:
+            'As superfícies implantáveis, dados, integrações e canais de entrega atuais.',
+          note: 'Três apps implantáveis: landing, Web e API. Promo Video é suporte e fica fora do pnpm workspace.',
+          lanes: [
+            ['Pessoas', ['visitor', 'member']],
+            ['Experiência', ['landing', 'web', 'promo']],
+            ['Aplicação', ['api', 'shared']],
+            ['Estado', ['postgres', 'redis']],
+            ['Integrações', ['osm', 'gplaces', 'gauth', 'payments', 'smtp', 'sites']],
+            ['Entrega', ['ci', 'render', 'docker']],
+          ],
+          edges: [
+            ['visitor', 'landing', 'uses'],
+            ['landing', 'web', 'login / cadastro'],
+            ['member', 'web', 'uses'],
+            ['web', 'api', 'REST'],
+            ['shared', 'web', 'ESM'],
+            ['shared', 'api', 'CJS'],
+            ['api', 'postgres', 'Prisma'],
+            ['api', 'redis', 'BullMQ'],
+            ['api', 'osm', 'HTTP'],
+            ['api', 'gplaces', 'HTTP'],
+            ['api', 'gauth', 'OAuth'],
+            ['api', 'payments', 'webhooks'],
+            ['api', 'smtp', 'SMTP'],
+            ['api', 'sites', 'guarded HTTP'],
+            ['ci', 'render', 'checksPass'],
+            ['render', 'landing', 'deploy'],
+            ['render', 'web', 'deploy'],
+            ['render', 'api', 'deploy'],
+            ['docker', 'web', 'local', true],
+            ['docker', 'api', 'local', true],
+            ['promo', 'web', 'captures', true],
+          ],
+        },
+        {
+          id: 'frontends',
+          icon: '02',
+          name: 'Front-ends',
+          title: 'Front-ends · aquisição, sessão e produto',
+          description:
+            'A landing converte; a SPA separa roteamento, features, server state, client state e transporte.',
+          note: 'O access token vive no store; o refresh token fica em cookie HttpOnly e nunca precisa ser lido pelo JavaScript.',
+          lanes: [
+            ['Entrada', ['visitor', 'landing']],
+            ['Rotas', ['routes', 'publicRoutes', 'protectedRoutes']],
+            ['Features', ['webAuth', 'webAcquire', 'webCrm', 'webDashboard', 'webSettings']],
+            ['Estado & forms', ['authStore', 'query', 'forms', 'i18n']],
+            ['Transporte', ['apiClient', 'shared']],
+            ['Backend', ['api']],
+          ],
+          edges: [
+            ['visitor', 'landing', 'browse'],
+            ['landing', 'publicRoutes', 'login/register'],
+            ['routes', 'publicRoutes', 'maps'],
+            ['routes', 'protectedRoutes', 'maps'],
+            ['publicRoutes', 'webAuth', 'renders'],
+            ['protectedRoutes', 'webAcquire', 'renders'],
+            ['protectedRoutes', 'webCrm', 'renders'],
+            ['protectedRoutes', 'webDashboard', 'renders'],
+            ['protectedRoutes', 'webSettings', 'renders'],
+            ['webAuth', 'authStore', 'session'],
+            ['webAcquire', 'query', 'queries'],
+            ['webCrm', 'query', 'queries'],
+            ['webDashboard', 'query', 'queries'],
+            ['webSettings', 'query', 'queries'],
+            ['forms', 'webAuth', 'validates', true],
+            ['forms', 'webAcquire', 'validates', true],
+            ['i18n', 'webSettings', 'sync', true],
+            ['authStore', 'apiClient', 'Bearer'],
+            ['query', 'apiClient', 'calls'],
+            ['shared', 'apiClient', 'contracts'],
+            ['apiClient', 'api', 'REST'],
+          ],
+        },
+        {
+          id: 'api-modules',
+          icon: '03',
+          name: 'API',
+          title: 'API modular · composition root e domínios',
+          description:
+            'Os 14 módulos funcionais compartilham Prisma global, guards e infraestrutura transversal.',
+          note: 'Controllers expõem 72 handlers. Regras e orquestração ficam nos services/processors de cada feature.',
+          lanes: [
+            ['Transport', ['api', 'http', 'health']],
+            ['Cross-cutting', ['guards', 'pino', 'prisma']],
+            ['Identity', ['auth', 'usersOrgs']],
+            ['Business', ['billing', 'leads', 'crm', 'dashboard']],
+            ['Acquisition', ['geo', 'prospecting', 'imports']],
+            ['Analysis', ['analysis', 'scoring']],
+            ['State', ['postgres', 'redis']],
+          ],
+          edges: [
+            ['api', 'http', 'bootstrap'],
+            ['http', 'guards', 'enforce'],
+            ['http', 'pino', 'logs'],
+            ['api', 'health', 'exposes'],
+            ['guards', 'auth', 'protects'],
+            ['auth', 'usersOrgs', 'membership'],
+            ['auth', 'billing', 'terms'],
+            ['billing', 'prospecting', 'quota'],
+            ['leads', 'crm', 'aggregate'],
+            ['leads', 'analysis', 'analyze'],
+            ['analysis', 'scoring', 'enqueue'],
+            ['geo', 'prospecting', 'location'],
+            ['prospecting', 'leads', 'ingest'],
+            ['imports', 'leads', 'ingest'],
+            ['prisma', 'postgres', 'SQL'],
+            ['auth', 'prisma', 'uses'],
+            ['usersOrgs', 'prisma', 'uses'],
+            ['billing', 'prisma', 'uses'],
+            ['leads', 'prisma', 'uses'],
+            ['crm', 'prisma', 'uses'],
+            ['dashboard', 'prisma', 'uses'],
+            ['prospecting', 'prisma', 'uses'],
+            ['imports', 'prisma', 'uses'],
+            ['analysis', 'prisma', 'uses'],
+            ['scoring', 'prisma', 'uses'],
+            ['prospecting', 'redis', 'queue'],
+            ['imports', 'redis', 'queue'],
+            ['analysis', 'redis', 'queue'],
+            ['scoring', 'redis', 'queue'],
+          ],
+        },
+        {
+          id: 'async',
+          icon: '04',
+          name: 'Assíncrono',
+          title: 'Processamento assíncrono · estado durável antes da fila',
+          description:
+            'Pesquisa, CSV e análise persistem o estado no PostgreSQL; Redis/BullMQ coordena o trabalho.',
+          note: 'Os quatro consumers rodam dentro da API. Search e Import possuem reconciliadores para reparar a janela commit/enqueue.',
+          lanes: [
+            ['Commands', ['searchRequest', 'csvRequest', 'analyzeRequest']],
+            ['Durabilidade', ['postgres', 'reconciler']],
+            ['Filas', ['searchQueue', 'importQueue', 'analysisQueue', 'scoringQueue']],
+            ['Integrações', ['osm', 'gplaces', 'sites']],
+            ['Ingestão & regras', ['selectImport', 'ingestion', 'scoring']],
+            ['Resultados', ['dataAcquisition', 'dataCrm', 'dataAnalysis']],
+          ],
+          edges: [
+            ['searchRequest', 'postgres', 'Search PENDING'],
+            ['csvRequest', 'postgres', 'Import + staging'],
+            ['analyzeRequest', 'postgres', 'Analysis PENDING'],
+            ['postgres', 'reconciler', 'scan PENDING', true],
+            ['reconciler', 'searchQueue', 'republish', true],
+            ['reconciler', 'importQueue', 'republish', true],
+            ['searchRequest', 'searchQueue', 'jobId=Search.id'],
+            ['csvRequest', 'importQueue', 'jobId=Import.id'],
+            ['analyzeRequest', 'analysisQueue', 'enqueue'],
+            ['searchQueue', 'osm', 'provider'],
+            ['searchQueue', 'gplaces', 'optional'],
+            ['searchQueue', 'dataAcquisition', 'SearchResult'],
+            ['dataAcquisition', 'selectImport', 'selection'],
+            ['selectImport', 'ingestion', 'normalize'],
+            ['importQueue', 'ingestion', 'each row'],
+            ['ingestion', 'dataCrm', 'upsert'],
+            ['analysisQueue', 'sites', 'guarded HTTP'],
+            ['analysisQueue', 'dataAnalysis', 'metrics/issues'],
+            ['analysisQueue', 'scoringQueue', 'next job'],
+            ['scoringQueue', 'scoring', 'apply rules'],
+            ['scoring', 'dataAnalysis', 'LeadScore'],
+          ],
+        },
+        {
+          id: 'data',
+          icon: '05',
+          name: 'Dados',
+          title: 'Modelo de dados · 29 modelos Prisma em seis contextos',
+          description:
+            'Organization é a principal fronteira multi-tenant; Lead é o centro do CRM e da análise.',
+          note: 'Campaign, CampaignLead, MessageTemplate e Integration são reserva de schema: não há módulos HTTP/Web correspondentes hoje.',
+          lanes: [
+            ['Identity', ['dataIdentity']],
+            ['CRM', ['dataCrm']],
+            ['Analysis', ['dataAnalysis']],
+            ['Acquisition', ['dataAcquisition']],
+            ['Future', ['dataFuture']],
+            ['Control', ['dataAudit', 'enums', 'constraints']],
+          ],
+          edges: [
+            ['dataIdentity', 'dataCrm', 'Organization/User'],
+            ['dataIdentity', 'dataAnalysis', 'Organization'],
+            ['dataIdentity', 'dataAcquisition', 'Organization/User'],
+            ['dataIdentity', 'dataFuture', 'Organization/User'],
+            ['dataIdentity', 'dataAudit', 'tenant/actor'],
+            ['dataCrm', 'dataAnalysis', 'Lead'],
+            ['dataCrm', 'dataAcquisition', 'imported Lead'],
+            ['dataCrm', 'dataFuture', 'CampaignLead'],
+            ['enums', 'dataIdentity', 'Role/Locale', true],
+            ['enums', 'dataCrm', 'statuses', true],
+            ['enums', 'dataAnalysis', 'statuses', true],
+            ['enums', 'dataAcquisition', 'statuses', true],
+            ['constraints', 'dataCrm', 'uniques/indexes'],
+            ['constraints', 'dataAcquisition', 'idempotency'],
+          ],
+        },
+        {
+          id: 'security',
+          icon: '06',
+          name: 'Segurança',
+          title: 'Segurança · boundaries e controles concretos',
+          description:
+            'Controles transversais aplicados no HTTP, sessão, tenant, web externa, webhooks, configuração e logs.',
+          note: 'O mapa descreve controles encontrados no código; ele não substitui teste de segurança ou prova de cobertura em todas as queries.',
+          lanes: [
+            ['Origem', ['visitor', 'member']],
+            ['Browser boundary', ['browserBoundary', 'refreshBoundary', 'validationBoundary']],
+            ['Policy', ['guards', 'tenantBoundary']],
+            ['External boundaries', ['ssrfBoundary', 'webhookBoundary']],
+            ['Runtime', ['secretsBoundary', 'logsBoundary']],
+            ['Resources', ['api', 'postgres', 'redis']],
+          ],
+          edges: [
+            ['visitor', 'browserBoundary', 'untrusted'],
+            ['member', 'browserBoundary', 'requests'],
+            ['browserBoundary', 'validationBoundary', 'DTOs'],
+            ['browserBoundary', 'refreshBoundary', 'session'],
+            ['validationBoundary', 'guards', 'then authorize'],
+            ['refreshBoundary', 'guards', 'JWT'],
+            ['guards', 'tenantBoundary', 'claims'],
+            ['tenantBoundary', 'api', 'scoped calls'],
+            ['api', 'ssrfBoundary', 'outbound web'],
+            ['api', 'webhookBoundary', 'payment events'],
+            ['secretsBoundary', 'api', 'config'],
+            ['api', 'logsBoundary', 'events'],
+            ['tenantBoundary', 'postgres', 'scoped SQL'],
+            ['guards', 'redis', 'distributed limit'],
+            ['webhookBoundary', 'postgres', 'idempotency'],
+          ],
+        },
+        {
+          id: 'delivery',
+          icon: '07',
+          name: 'Deploy',
+          title: 'Entrega · monorepo, CI, imagens e Render',
+          description:
+            'O pipeline valida o monorepo; Render faz deploy seletivo das três superfícies e dados gerenciados.',
+          note: 'A API e os processors são uma única unidade de deploy. A landing não participa do Docker Compose local.',
+          lanes: [
+            ['Source', ['repo', 'shared', 'promo']],
+            ['Quality gate', ['ci']],
+            ['Build units', ['apiImage', 'webImage', 'landingService']],
+            ['Production', ['apiService', 'webService', 'landing']],
+            ['Managed state', ['managedData']],
+            ['Operations', ['health', 'render', 'docker']],
+          ],
+          edges: [
+            ['repo', 'ci', 'push / PR'],
+            ['shared', 'ci', 'build first'],
+            ['ci', 'apiImage', 'checks'],
+            ['ci', 'webImage', 'checks'],
+            ['ci', 'landingService', 'checks'],
+            ['apiImage', 'apiService', 'deploy'],
+            ['webImage', 'webService', 'publish'],
+            ['landingService', 'landing', 'runs'],
+            ['apiService', 'managedData', 'DB + Redis'],
+            ['health', 'apiService', 'probe'],
+            ['health', 'managedData', 'SELECT 1 + PING'],
+            ['render', 'apiService', 'orchestrates'],
+            ['render', 'webService', 'orchestrates'],
+            ['render', 'landingService', 'orchestrates'],
+            ['docker', 'apiImage', 'local full', true],
+            ['docker', 'webImage', 'local full', true],
+            ['promo', 'repo', 'separate npm', true],
+          ],
+        },
+      ];
+
+      const state = { view: views[0], selected: null, zoom: 1, query: '' };
+      const board = document.getElementById('board');
+      const boardWrap = document.getElementById('board-wrap');
+      const viewport = document.getElementById('viewport');
+      const viewList = document.getElementById('view-list');
+      const search = document.getElementById('search');
+
+      function renderViewList() {
+        viewList.innerHTML = views
+          .map(
+            (view) => `
+          <button class="view-button ${view.id === state.view.id ? 'active' : ''}" type="button" data-view="${view.id}">
+            <span class="view-icon">${view.icon}</span>
+            <span class="view-name">${view.name}</span>
+            <span class="view-count">${view.lanes.reduce((sum, lane) => sum + lane[1].length, 0)}</span>
+          </button>`,
+          )
+          .join('');
+        viewList.querySelectorAll('[data-view]').forEach((button) => {
+          button.addEventListener('click', () => selectView(button.dataset.view));
+        });
+      }
+
+      function selectView(id) {
+        state.view = views.find((view) => view.id === id) || views[0];
+        state.selected = null;
+        state.query = '';
+        search.value = '';
+        document.getElementById('view-title').textContent = state.view.title;
+        document.getElementById('view-description').textContent = state.view.description;
+        renderViewList();
+        renderBoard();
+        renderOverview();
+        viewport.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      }
+
+      function renderBoard() {
+        board.innerHTML =
+          '<svg class="edge-layer" aria-hidden="true"></svg>' +
+          state.view.lanes
+            .map(
+              (lane, index) => `
+          <section class="lane">
+            <div class="lane-title"><span class="lane-index">0${index + 1}</span>${lane[0]}</div>
+            ${lane[1].map((id) => renderNode(id)).join('')}
+          </section>`,
+            )
+            .join('');
+
+        board.querySelectorAll('.node').forEach((button) => {
+          button.addEventListener('click', () => selectNode(button.dataset.node));
+        });
+        requestAnimationFrame(() => requestAnimationFrame(drawEdges));
+      }
+
+      function renderNode(id) {
+        const node = nodes[id];
+        if (!node) return '';
+        const haystack =
+          `${node.label} ${node.subtitle} ${node.description} ${node.tags.join(' ')}`.toLowerCase();
+        const filtered = state.query && !haystack.includes(state.query.toLowerCase());
+        return `<button type="button" class="node color-${node.color}${filtered ? ' filtered' : ''}" data-node="${id}">
+          <span class="node-kicker"><span>${node.color}</span><span class="status-dot"></span></span>
+          <span class="node-title">${node.label}</span>
+          <span class="node-subtitle">${node.subtitle}</span>
+        </button>`;
+      }
+
+      function drawEdges() {
+        const svg = board.querySelector('.edge-layer');
+        if (!svg) return;
+        const rect = board.getBoundingClientRect();
+        svg.setAttribute('viewBox', `0 0 ${board.offsetWidth} ${board.offsetHeight}`);
+        svg.innerHTML = state.view.edges
+          .map((edge, index) => {
+            const from = board.querySelector(`[data-node="${edge[0]}"]`);
+            const to = board.querySelector(`[data-node="${edge[1]}"]`);
+            if (
+              !from ||
+              !to ||
+              from.classList.contains('filtered') ||
+              to.classList.contains('filtered')
+            )
+              return '';
+            const a = from.getBoundingClientRect();
+            const b = to.getBoundingClientRect();
+            const forward = b.left >= a.right;
+            const x1 = (forward ? a.right : a.left) - rect.left;
+            const y1 = a.top + a.height / 2 - rect.top;
+            const x2 = (forward ? b.left : b.right) - rect.left;
+            const y2 = b.top + b.height / 2 - rect.top;
+            const bend = Math.max(30, Math.abs(x2 - x1) * 0.48);
+            const c1 = forward ? x1 + bend : x1 - bend;
+            const c2 = forward ? x2 - bend : x2 + bend;
+            const active =
+              state.selected && (edge[0] === state.selected || edge[1] === state.selected);
+            const dimmed = state.selected && !active;
+            return `<path class="edge${active ? ' active' : ''}${dimmed ? ' dimmed' : ''}${edge[3] ? ' dashed' : ''}" data-edge="${index}" d="M ${x1} ${y1} C ${c1} ${y1}, ${c2} ${y2}, ${x2} ${y2}" />`;
+          })
+          .join('');
+      }
+
+      function selectNode(id) {
+        state.selected = state.selected === id ? null : id;
+        const related = new Set();
+        if (state.selected) {
+          state.view.edges.forEach((edge) => {
+            if (edge[0] === state.selected) related.add(edge[1]);
+            if (edge[1] === state.selected) related.add(edge[0]);
+          });
+        }
+        board.querySelectorAll('.node').forEach((el) => {
+          const current = el.dataset.node;
+          el.classList.toggle('selected', current === state.selected);
+          el.classList.toggle('related', related.has(current));
+          el.classList.toggle(
+            'dimmed',
+            Boolean(state.selected) && current !== state.selected && !related.has(current),
+          );
+        });
+        drawEdges();
+        state.selected ? renderDetail(state.selected) : renderOverview();
+      }
+
+      function renderOverview() {
+        document.getElementById('detail-title').textContent = state.view.name;
+        document.getElementById('detail-kind').textContent = 'PERSPECTIVA ATUAL';
+        document.getElementById('detail-body').innerHTML = `
+          <div class="detail-section"><h3>O que este recorte explica</h3><p>${state.view.description}</p></div>
+          <div class="detail-section"><div class="callout">${state.view.note}</div></div>
+          <div class="detail-section"><h3>Números do checkout</h3><div class="tag-list">
+            <span class="tag">3 apps implantáveis</span><span class="tag">14 módulos API</span><span class="tag">72 handlers</span>
+            <span class="tag">29 modelos</span><span class="tag">4 filas</span><span class="tag">10 features Web</span>
+          </div></div>
+          <div class="detail-section"><h3>Regra de leitura</h3><p>As linhas contínuas mostram dependência ou fluxo direto. Linhas tracejadas indicam suporte, recuperação, contrato ou vínculo operacional indireto.</p></div>
+          <div class="detail-section"><h3>Próximo agente</h3><p>Comece pelo JSON companion para obter inventário de rotas, modelo de dados, fluxos críticos, gaps e ordem de leitura por arquivo.</p></div>`;
+      }
+
+      function renderDetail(id) {
+        const node = nodes[id];
+        const connections = state.view.edges.filter((edge) => edge[0] === id || edge[1] === id);
+        document.getElementById('detail-title').textContent = node.label;
+        document.getElementById('detail-kind').textContent =
+          `${node.color.toUpperCase()} · ${node.subtitle}`;
+        document.getElementById('detail-body').innerHTML = `
+          <div class="detail-section"><h3>Responsabilidade</h3><p>${node.description}</p></div>
+          ${node.tags.length ? `<div class="detail-section"><h3>Marcadores</h3><div class="tag-list">${node.tags.map((tag) => `<span class="tag">${tag}</span>`).join('')}</div></div>` : ''}
+          <div class="detail-section"><h3>Conexões neste recorte</h3><div class="connection-list">
+            ${
+              connections.length
+                ? connections
+                    .map((edge) => {
+                      const outgoing = edge[0] === id;
+                      const other = nodes[outgoing ? edge[1] : edge[0]];
+                      return `<div class="connection-item">${outgoing ? '→' : '←'} <strong>${edge[2]}</strong> · ${other?.label || 'componente'}</div>`;
+                    })
+                    .join('')
+                : '<p class="empty-state">Sem conexões visíveis nesta perspectiva.</p>'
+            }
+          </div></div>
+          <div class="detail-section"><h3>Evidências no codebase</h3><div class="evidence-list">
+            ${node.evidence.map((path) => `<a class="evidence-link" href="../../${path}">${path}</a>`).join('')}
+          </div></div>`;
+      }
+
+      search.addEventListener('input', (event) => {
+        state.query = event.target.value.trim();
+        state.selected = null;
+        renderBoard();
+        renderOverview();
+      });
+
+      function setZoom(next) {
+        state.zoom = Math.min(1.25, Math.max(0.65, next));
+        boardWrap.style.transform = `scale(${state.zoom})`;
+        boardWrap.style.marginRight = `${boardWrap.offsetWidth * (state.zoom - 1)}px`;
+        boardWrap.style.marginBottom = `${boardWrap.offsetHeight * (state.zoom - 1)}px`;
+      }
+
+      document.getElementById('zoom-in').addEventListener('click', () => setZoom(state.zoom + 0.1));
+      document
+        .getElementById('zoom-out')
+        .addEventListener('click', () => setZoom(state.zoom - 0.1));
+      document.getElementById('zoom-reset').addEventListener('click', () => setZoom(1));
+      window.addEventListener('resize', () => requestAnimationFrame(drawEdges));
+
+      selectView('system');
+    </script>
+  </body>
+</html>

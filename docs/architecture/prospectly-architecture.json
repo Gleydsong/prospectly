@@ -1,0 +1,1286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "schemaVersion": "1.0.0",
+  "documentType": "codebase-architecture-map",
+  "generatedAt": "2026-07-27",
+  "language": "pt-BR",
+  "repository": {
+    "name": "Prospectly",
+    "root": "/Users/guidev/www/projetosnovos/prospecting",
+    "branch": "main",
+    "commit": "c34369f",
+    "packageManager": "pnpm@9.15.0",
+    "workspaceDefinition": "pnpm-workspace.yaml",
+    "sourceOfTruth": "Código e configuração presentes no checkout na data de geração",
+    "initialWorktreeState": "clean"
+  },
+  "purpose": [
+    "Explicar rapidamente o sistema completo para pessoas e agentes",
+    "Relacionar superfícies, módulos, persistência, integrações e deploy",
+    "Separar comportamento implementado de modelos reservados para evolução",
+    "Fornecer caminhos de evidência para validação no código"
+  ],
+  "executiveSummary": {
+    "product": "SaaS B2B multi-tenant para encontrar, analisar e organizar oportunidades comerciais locais, com foco em negócios sem website reportado.",
+    "architectureStyle": "Monorepo pnpm com três aplicações implantáveis, uma ferramenta de mídia e pacotes compartilhados; a API NestJS é modular e usa Prisma/PostgreSQL, Redis e BullMQ.",
+    "runtimeShape": "A landing Next.js direciona para a SPA React/Vite. A SPA consome uma API REST NestJS. A API persiste estado no PostgreSQL e executa produtores e processadores BullMQ no mesmo processo, usando Redis para filas e throttling distribuído.",
+    "tenancyBoundary": "organizationId é derivado do JWT e aplicado nas operações da API; o cliente não deve fornecê-lo como autoridade.",
+    "importantCurrentConstraint": "Não existe processo worker separado nesta versão. Os processors de prospecção, CSV, análise de website e scoring vivem no mesmo processo da API.",
+    "counts": {
+      "deployableApps": 3,
+      "supportingMediaApps": 1,
+      "apiDomainModules": 14,
+      "apiControllers": 14,
+      "httpHandlers": 72,
+      "prismaModels": 29,
+      "prismaEnums": 16,
+      "bullMqWorkQueues": 4,
+      "webFeatureFolders": 10
+    }
+  },
+  "statusLegend": {
+    "implemented": "Existe código de execução conectado ao runtime atual",
+    "partial": "Existe uma fatia funcional, mas a capacidade de produto ainda não está completa",
+    "schema-only": "Existe no schema de dados, sem módulo HTTP/aplicação correspondente",
+    "supporting": "Artefato de suporte, documentação, mídia ou infraestrutura"
+  },
+  "repositoryLayout": [
+    {
+      "path": "apps/landing",
+      "type": "deployable-app",
+      "runtime": "Next.js 15 / React 18",
+      "port": 3001,
+      "responsibility": "Aquisição, SEO, preços, FAQ e páginas legais em português e inglês",
+      "status": "implemented"
+    },
+    {
+      "path": "apps/web",
+      "type": "deployable-app",
+      "runtime": "React 18 / Vite 6 SPA",
+      "port": 5173,
+      "responsibility": "Aplicação autenticada: dashboard, busca, importação, leads, pipeline, tarefas, billing e configurações",
+      "status": "implemented"
+    },
+    {
+      "path": "apps/api",
+      "type": "deployable-app",
+      "runtime": "NestJS 10 / Node.js 20",
+      "port": 3000,
+      "responsibility": "API REST, autenticação, regras de aplicação, filas, integrações e persistência",
+      "status": "implemented"
+    },
+    {
+      "path": "promo-video",
+      "type": "supporting-media-app",
+      "runtime": "Remotion 4 / React 19",
+      "responsibility": "Composições e renderização de vídeos promocionais e tutoriais",
+      "status": "supporting",
+      "workspaceNote": "Possui package-lock próprio e não está incluído em pnpm-workspace.yaml"
+    },
+    {
+      "path": "packages/shared-types",
+      "type": "shared-package",
+      "runtime": "TypeScript ESM + CommonJS",
+      "responsibility": "Contratos, enums e tipos compartilhados entre Vite e NestJS",
+      "status": "implemented",
+      "buildBoundary": "Publica dist/esm para import e dist/cjs para require"
+    },
+    {
+      "path": "packages/eslint-config",
+      "type": "shared-config",
+      "responsibility": "Configuração ESLint reutilizável",
+      "status": "supporting"
+    },
+    {
+      "path": "packages/tsconfig",
+      "type": "shared-config",
+      "responsibility": "Configuração TypeScript base",
+      "status": "supporting"
+    },
+    {
+      "path": "docs",
+      "type": "documentation",
+      "responsibility": "Deploy, billing, segurança, requisitos e este mapa de arquitetura",
+      "status": "supporting"
+    }
+  ],
+  "technologyStack": {
+    "landing": ["Next.js 15", "React 18", "TypeScript", "Tailwind CSS", "Motion", "Cobe"],
+    "web": [
+      "React 18",
+      "TypeScript",
+      "Vite 6",
+      "React Router 7",
+      "TanStack Query 5",
+      "Zustand 5",
+      "Axios",
+      "React Hook Form",
+      "Zod",
+      "Recharts",
+      "i18next"
+    ],
+    "api": [
+      "Node.js 20",
+      "NestJS 10",
+      "TypeScript",
+      "Prisma 6",
+      "BullMQ 5",
+      "Passport JWT",
+      "Argon2",
+      "Pino",
+      "Swagger"
+    ],
+    "data": ["PostgreSQL 16", "Redis 7 AOF"],
+    "integrations": [
+      "OpenStreetMap Nominatim",
+      "OpenStreetMap Overpass",
+      "Google Places",
+      "Google OAuth",
+      "Stripe",
+      "AbacatePay",
+      "SMTP",
+      "sites públicos para análise"
+    ],
+    "delivery": [
+      "Docker multi-stage",
+      "Nginx",
+      "Render Blueprint",
+      "GitHub Actions",
+      "pnpm workspaces"
+    ],
+    "media": ["Remotion 4", "Playwright para capturas"]
+  },
+  "components": [
+    {
+      "id": "actor-visitor",
+      "name": "Visitante",
+      "kind": "actor",
+      "layer": "experience",
+      "status": "implemented",
+      "responsibility": "Descobre o produto, compara preço e entra no fluxo de cadastro/login.",
+      "evidence": [
+        "apps/landing/src/components/home-landing.tsx",
+        "apps/landing/src/components/site-chrome.tsx"
+      ]
+    },
+    {
+      "id": "actor-member",
+      "name": "Membro da organização",
+      "kind": "actor",
+      "layer": "experience",
+      "status": "implemented",
+      "responsibility": "Usa o produto conforme papel OWNER, ADMIN, SALES, MEMBER ou VIEWER.",
+      "evidence": ["apps/api/prisma/schema.prisma", "apps/api/src/common/guards/roles.guard.ts"]
+    },
+    {
+      "id": "landing",
+      "name": "Landing pública",
+      "kind": "application",
+      "layer": "frontend",
+      "status": "implemented",
+      "technology": "Next.js App Router",
+      "responsibility": "SEO, conteúdo comercial, preços, FAQ, páginas legais, i18n PT/EN e links para o app.",
+      "interfaces": ["/", "/pricing", "/faq", "/privacy", "/terms", "/cookies", "/en/*"],
+      "evidence": [
+        "apps/landing/src/app",
+        "apps/landing/src/components",
+        "apps/landing/src/lib/pricing.ts"
+      ]
+    },
+    {
+      "id": "web",
+      "name": "Aplicação autenticada",
+      "kind": "application",
+      "layer": "frontend",
+      "status": "implemented",
+      "technology": "React SPA + Vite",
+      "responsibility": "Interface do produto, rotas públicas de autenticação e área protegida.",
+      "evidence": ["apps/web/src/App.tsx", "apps/web/src/main.tsx"]
+    },
+    {
+      "id": "web-auth",
+      "name": "Sessão e autenticação Web",
+      "kind": "frontend-feature",
+      "layer": "frontend",
+      "status": "implemented",
+      "responsibility": "Login, cadastro, Google Sign-In, verificação de e-mail, bootstrap da sessão e proteção de rotas.",
+      "evidence": [
+        "apps/web/src/features/auth",
+        "apps/web/src/stores/auth.store.ts",
+        "apps/web/src/components/protected-route.tsx"
+      ]
+    },
+    {
+      "id": "web-crm",
+      "name": "CRM Web",
+      "kind": "frontend-feature-group",
+      "layer": "frontend",
+      "status": "partial",
+      "responsibility": "Dashboard, leads, detalhe, atividades, pipeline e tarefas. Campanhas e templates ainda não possuem interface/módulo de aplicação.",
+      "evidence": [
+        "apps/web/src/pages/dashboard-page.tsx",
+        "apps/web/src/pages/leads",
+        "apps/web/src/pages/pipeline-page.tsx",
+        "apps/web/src/pages/tasks-page.tsx"
+      ]
+    },
+    {
+      "id": "web-acquisition",
+      "name": "Aquisição de leads Web",
+      "kind": "frontend-feature-group",
+      "layer": "frontend",
+      "status": "implemented",
+      "responsibility": "Pesquisa por provedor/localidade, polling de jobs, revisão/importação seletiva e importação CSV.",
+      "evidence": [
+        "apps/web/src/pages/search-page.tsx",
+        "apps/web/src/pages/imports-page.tsx",
+        "apps/web/src/features/prospecting",
+        "apps/web/src/features/imports"
+      ]
+    },
+    {
+      "id": "web-settings",
+      "name": "Configurações e billing Web",
+      "kind": "frontend-feature-group",
+      "layer": "frontend",
+      "status": "implemented",
+      "responsibility": "Perfil, organização, membros, locale, privacidade, regras de scoring, checkout e portal.",
+      "evidence": [
+        "apps/web/src/pages/settings-page.tsx",
+        "apps/web/src/pages/settings-privacy-page.tsx",
+        "apps/web/src/features/billing",
+        "apps/web/src/features/organizations"
+      ]
+    },
+    {
+      "id": "web-query",
+      "name": "Server state",
+      "kind": "frontend-infrastructure",
+      "layer": "frontend",
+      "status": "implemented",
+      "technology": "TanStack Query",
+      "responsibility": "Cache, fetching, mutations, invalidação e polling dos recursos da API.",
+      "evidence": ["apps/web/src/main.tsx", "apps/web/src/features"]
+    },
+    {
+      "id": "web-api-client",
+      "name": "Cliente HTTP",
+      "kind": "frontend-infrastructure",
+      "layer": "frontend",
+      "status": "implemented",
+      "technology": "Axios",
+      "responsibility": "Base URL /api/v1, Bearer access token, refresh cookie HttpOnly, retry único e normalização de erro.",
+      "evidence": ["apps/web/src/lib/api.ts"]
+    },
+    {
+      "id": "web-auth-store",
+      "name": "Auth store",
+      "kind": "frontend-state",
+      "layer": "frontend",
+      "status": "implemented",
+      "technology": "Zustand persist",
+      "responsibility": "Mantém usuário e access token no cliente; o refresh token permanece em cookie HttpOnly.",
+      "evidence": [
+        "apps/web/src/stores/auth.store.ts",
+        "apps/api/src/common/auth/refresh-cookie.ts"
+      ]
+    },
+    {
+      "id": "shared-types",
+      "name": "@prospectly/shared-types",
+      "kind": "shared-package",
+      "layer": "contract",
+      "status": "implemented",
+      "responsibility": "Contrato compartilhado entre Web e API, com saídas ESM e CJS.",
+      "evidence": ["packages/shared-types/src/index.ts", "packages/shared-types/package.json"]
+    },
+    {
+      "id": "api",
+      "name": "API NestJS",
+      "kind": "application",
+      "layer": "backend",
+      "status": "implemented",
+      "technology": "NestJS REST /api/v1",
+      "responsibility": "Composição modular, HTTP, regras de aplicação, filas, integrações e acesso a dados.",
+      "interfaces": [
+        "/api/v1/*",
+        "/health",
+        "/health/live",
+        "/health/ready",
+        "/api/docs em não-produção"
+      ],
+      "evidence": ["apps/api/src/main.ts", "apps/api/src/app.module.ts"]
+    },
+    {
+      "id": "api-http-boundary",
+      "name": "Boundary HTTP global",
+      "kind": "backend-infrastructure",
+      "layer": "backend",
+      "status": "implemented",
+      "responsibility": "Helmet, CORS allowlist, versionamento URI, ValidationPipe whitelist, filtro de exceções e correlation ID.",
+      "evidence": ["apps/api/src/main.ts", "apps/api/src/common/filters/http-exception.filter.ts"]
+    },
+    {
+      "id": "api-guards",
+      "name": "Guards globais",
+      "kind": "security-control",
+      "layer": "security",
+      "status": "implemented",
+      "responsibility": "JWT, papéis, verificação de e-mail e rate limiting Redis-backed; rotas públicas usam decorator explícito.",
+      "evidence": [
+        "apps/api/src/app.module.ts",
+        "apps/api/src/common/guards",
+        "apps/api/src/common/decorators/public.decorator.ts"
+      ]
+    },
+    {
+      "id": "module-auth",
+      "name": "Auth",
+      "kind": "backend-module",
+      "layer": "identity",
+      "status": "implemented",
+      "responsibility": "Cadastro, login, Google OAuth, rotação/revogação de refresh, verificação de e-mail, reset, lockout e troca de organização.",
+      "evidence": ["apps/api/src/modules/auth"]
+    },
+    {
+      "id": "module-users-orgs",
+      "name": "Users + Organizations",
+      "kind": "backend-module-group",
+      "layer": "identity",
+      "status": "implemented",
+      "responsibility": "Perfil, locale, mudança de e-mail, solicitações LGPD, organização atual, membros e papéis.",
+      "evidence": ["apps/api/src/modules/users", "apps/api/src/modules/organizations"]
+    },
+    {
+      "id": "module-billing",
+      "name": "Billing",
+      "kind": "backend-module",
+      "layer": "commerce",
+      "status": "implemented",
+      "responsibility": "Status do plano, checkout/portal/cancelamento, roteamento por moeda e webhooks idempotentes Stripe/Abacate.",
+      "evidence": ["apps/api/src/modules/billing", "docs/billing/dual-gateways.md"]
+    },
+    {
+      "id": "module-leads",
+      "name": "Leads + ingestão",
+      "kind": "backend-module",
+      "layer": "crm",
+      "status": "implemented",
+      "responsibility": "CRUD, filtros, tags, owner, soft delete/restore, normalização e deduplicação multi-tenant compartilhada.",
+      "evidence": ["apps/api/src/modules/leads"]
+    },
+    {
+      "id": "module-crm",
+      "name": "Activities + Tasks + Pipelines",
+      "kind": "backend-module-group",
+      "layer": "crm",
+      "status": "partial",
+      "responsibility": "Histórico de atividades, tarefas e quadro/estágios. A fase ampla de campanhas ainda não está implementada.",
+      "evidence": [
+        "apps/api/src/modules/activities",
+        "apps/api/src/modules/tasks",
+        "apps/api/src/modules/pipelines"
+      ]
+    },
+    {
+      "id": "module-dashboard",
+      "name": "Dashboard",
+      "kind": "backend-module",
+      "layer": "reporting",
+      "status": "implemented",
+      "responsibility": "Agregações de resumo e gráficos da organização.",
+      "evidence": ["apps/api/src/modules/dashboard"]
+    },
+    {
+      "id": "module-geo",
+      "name": "Geo",
+      "kind": "backend-module",
+      "layer": "support",
+      "status": "implemented",
+      "responsibility": "Regiões e cidades por país/UF para seletores da busca.",
+      "evidence": ["apps/api/src/modules/geo"]
+    },
+    {
+      "id": "module-prospecting",
+      "name": "Prospecting",
+      "kind": "backend-module",
+      "layer": "acquisition",
+      "status": "implemented",
+      "responsibility": "Criação/histórico de pesquisas, registro de providers, dispatch recuperável, resultados e importação seletiva.",
+      "evidence": ["apps/api/src/modules/prospecting"]
+    },
+    {
+      "id": "module-imports",
+      "name": "CSV Imports",
+      "kind": "backend-module",
+      "layer": "acquisition",
+      "status": "implemented",
+      "responsibility": "Preview, parsing seguro, mapping, staging, dispatch recuperável, processamento parcial e erros por linha.",
+      "evidence": ["apps/api/src/modules/imports"]
+    },
+    {
+      "id": "module-analysis",
+      "name": "Website Analysis + Scoring",
+      "kind": "backend-module-group",
+      "layer": "analysis",
+      "status": "implemented",
+      "responsibility": "Análise HTTP protegida contra SSRF, persistência de issues e cálculo assíncrono configurável de score.",
+      "evidence": ["apps/api/src/modules/website-analysis", "apps/api/src/modules/scoring"]
+    },
+    {
+      "id": "queue-prospecting",
+      "name": "Fila prospecting",
+      "kind": "queue",
+      "layer": "async",
+      "status": "implemented",
+      "responsibility": "Executa buscas externas e persiste resultados; usa Search.id como jobId.",
+      "evidence": [
+        "apps/api/src/modules/prospecting/prospecting.constants.ts",
+        "apps/api/src/modules/prospecting/prospecting.processor.ts"
+      ]
+    },
+    {
+      "id": "queue-imports",
+      "name": "Fila imports",
+      "kind": "queue",
+      "layer": "async",
+      "status": "implemented",
+      "responsibility": "Processa staging CSV e ingere linhas válidas; usa Import.id como jobId.",
+      "evidence": [
+        "apps/api/src/modules/imports/imports.constants.ts",
+        "apps/api/src/modules/imports/imports.processor.ts"
+      ]
+    },
+    {
+      "id": "queue-analysis",
+      "name": "Fila website-analysis",
+      "kind": "queue",
+      "layer": "async",
+      "status": "implemented",
+      "responsibility": "Busca e analisa páginas públicas com limites de tamanho, redirects e tempo.",
+      "evidence": [
+        "apps/api/src/modules/website-analysis/website-analysis.constants.ts",
+        "apps/api/src/modules/website-analysis/website-analysis.processor.ts"
+      ]
+    },
+    {
+      "id": "queue-scoring",
+      "name": "Fila scoring",
+      "kind": "queue",
+      "layer": "async",
+      "status": "implemented",
+      "responsibility": "Calcula o score final a partir das regras da organização e evidências do lead/análise.",
+      "evidence": [
+        "apps/api/src/modules/scoring/scoring.constants.ts",
+        "apps/api/src/modules/scoring/scoring.processor.ts"
+      ]
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL",
+      "kind": "database",
+      "layer": "data",
+      "status": "implemented",
+      "technology": "PostgreSQL 16 + Prisma",
+      "responsibility": "Fonte de verdade durável para identidade, tenant, CRM, jobs, análise, billing e auditoria.",
+      "evidence": ["apps/api/prisma/schema.prisma", "apps/api/prisma/migrations"]
+    },
+    {
+      "id": "redis",
+      "name": "Redis",
+      "kind": "database",
+      "layer": "data",
+      "status": "implemented",
+      "technology": "Redis 7 + AOF",
+      "responsibility": "Estado BullMQ, rate limiting HTTP e limitação global do Nominatim.",
+      "evidence": [
+        "docker-compose.yml",
+        "apps/api/src/app.module.ts",
+        "apps/api/src/common/throttler/redis-throttler.storage.ts"
+      ]
+    },
+    {
+      "id": "external-osm",
+      "name": "OpenStreetMap",
+      "kind": "external-service",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Nominatim resolve município/UF; Overpass consulta estabelecimentos.",
+      "evidence": ["apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.ts"]
+    },
+    {
+      "id": "external-google-places",
+      "name": "Google Places",
+      "kind": "external-service",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Provider opcional de busca, ativado quando GOOGLE_PLACES_API_KEY está configurada.",
+      "evidence": [
+        "apps/api/src/modules/prospecting/infrastructure/google-places.provider.ts",
+        "apps/api/src/modules/prospecting/prospecting.module.ts"
+      ]
+    },
+    {
+      "id": "external-google-auth",
+      "name": "Google Identity",
+      "kind": "external-service",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Login/cadastro OAuth com validação de ID token ou access token.",
+      "evidence": [
+        "apps/api/src/modules/auth/auth.service.ts",
+        "apps/web/src/features/auth/google-sign-in-button.tsx"
+      ]
+    },
+    {
+      "id": "external-payments",
+      "name": "Stripe + AbacatePay",
+      "kind": "external-service-group",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Checkout por moeda/região, portal/cancelamento e eventos webhook.",
+      "evidence": [
+        "apps/api/src/modules/billing/infrastructure",
+        "apps/api/src/modules/billing/billing.controller.ts"
+      ]
+    },
+    {
+      "id": "external-mail",
+      "name": "SMTP",
+      "kind": "external-service",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Envio de verificação de e-mail e recuperação de senha.",
+      "evidence": ["apps/api/src/common/mail/mail.service.ts"]
+    },
+    {
+      "id": "external-sites",
+      "name": "Websites públicos",
+      "kind": "external-resource",
+      "layer": "integration",
+      "status": "implemented",
+      "responsibility": "Alvos HTTP(S) de análise de presença/qualidade, validados contra SSRF e redirects perigosos.",
+      "evidence": [
+        "apps/api/src/modules/website-analysis/http-website-analyzer.ts",
+        "apps/api/src/modules/website-analysis/ssrf.ts"
+      ]
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "kind": "deployment-platform",
+      "layer": "delivery",
+      "status": "implemented",
+      "responsibility": "Blueprint de produção para landing Node, Web estática, API Docker, PostgreSQL e Key Value Redis.",
+      "evidence": ["render.yaml", "docs/deploy/render.md"]
+    },
+    {
+      "id": "docker-local",
+      "name": "Docker Compose local",
+      "kind": "development-platform",
+      "layer": "delivery",
+      "status": "implemented",
+      "responsibility": "PostgreSQL, Redis e profile full opcional com API/Web.",
+      "evidence": ["docker-compose.yml", "apps/api/Dockerfile", "apps/web/Dockerfile"]
+    },
+    {
+      "id": "ci",
+      "name": "GitHub Actions CI",
+      "kind": "delivery-pipeline",
+      "layer": "delivery",
+      "status": "implemented",
+      "responsibility": "Install, Prisma generate, lint, typecheck, tests, build e auditoria de dependências.",
+      "evidence": [".github/workflows/ci.yml"]
+    },
+    {
+      "id": "promo",
+      "name": "Promo Video",
+      "kind": "supporting-application",
+      "layer": "media",
+      "status": "supporting",
+      "responsibility": "Gera vídeos ProspectlyPromo, cadastro, conta grátis, pricing e stills; consome capturas do produto como assets.",
+      "evidence": ["promo-video/src/Root.tsx", "promo-video/package.json"]
+    }
+  ],
+  "connections": [
+    { "from": "actor-visitor", "to": "landing", "type": "uses", "protocol": "HTTPS" },
+    {
+      "from": "landing",
+      "to": "web",
+      "type": "redirects-to",
+      "label": "login / register + plan/currency"
+    },
+    { "from": "actor-member", "to": "web", "type": "uses", "protocol": "HTTPS" },
+    { "from": "web", "to": "web-auth", "type": "composes" },
+    { "from": "web", "to": "web-crm", "type": "composes" },
+    { "from": "web", "to": "web-acquisition", "type": "composes" },
+    { "from": "web", "to": "web-settings", "type": "composes" },
+    { "from": "web-auth", "to": "web-auth-store", "type": "state" },
+    { "from": "web-crm", "to": "web-query", "type": "server-state" },
+    { "from": "web-acquisition", "to": "web-query", "type": "server-state" },
+    { "from": "web-settings", "to": "web-query", "type": "server-state" },
+    { "from": "web-query", "to": "web-api-client", "type": "calls" },
+    { "from": "web-auth-store", "to": "web-api-client", "type": "authorizes" },
+    { "from": "web-api-client", "to": "api", "type": "REST", "protocol": "HTTPS JSON/multipart" },
+    { "from": "shared-types", "to": "web", "type": "compile-time-contract" },
+    { "from": "shared-types", "to": "api", "type": "compile-time-contract" },
+    { "from": "api", "to": "api-http-boundary", "type": "wraps" },
+    { "from": "api-http-boundary", "to": "api-guards", "type": "enforces" },
+    { "from": "api", "to": "module-auth", "type": "composes" },
+    { "from": "api", "to": "module-users-orgs", "type": "composes" },
+    { "from": "api", "to": "module-billing", "type": "composes" },
+    { "from": "api", "to": "module-leads", "type": "composes" },
+    { "from": "api", "to": "module-crm", "type": "composes" },
+    { "from": "api", "to": "module-dashboard", "type": "composes" },
+    { "from": "api", "to": "module-geo", "type": "composes" },
+    { "from": "api", "to": "module-prospecting", "type": "composes" },
+    { "from": "api", "to": "module-imports", "type": "composes" },
+    { "from": "api", "to": "module-analysis", "type": "composes" },
+    { "from": "module-prospecting", "to": "module-billing", "type": "quota-check" },
+    {
+      "from": "module-prospecting",
+      "to": "queue-prospecting",
+      "type": "enqueue/process-in-process"
+    },
+    { "from": "queue-prospecting", "to": "external-osm", "type": "HTTP" },
+    { "from": "queue-prospecting", "to": "external-google-places", "type": "HTTP optional" },
+    { "from": "queue-prospecting", "to": "module-leads", "type": "selective-ingestion" },
+    { "from": "module-imports", "to": "queue-imports", "type": "enqueue/process-in-process" },
+    { "from": "queue-imports", "to": "module-leads", "type": "row-ingestion" },
+    { "from": "module-leads", "to": "queue-analysis", "type": "enqueue-via-analysis-service" },
+    { "from": "queue-analysis", "to": "external-sites", "type": "guarded-HTTP" },
+    { "from": "queue-analysis", "to": "queue-scoring", "type": "enqueue" },
+    { "from": "module-analysis", "to": "queue-scoring", "type": "owns" },
+    { "from": "module-auth", "to": "external-google-auth", "type": "OAuth" },
+    { "from": "module-auth", "to": "external-mail", "type": "SMTP" },
+    { "from": "module-billing", "to": "external-payments", "type": "HTTPS + webhooks" },
+    { "from": "api", "to": "postgres", "type": "Prisma SQL" },
+    { "from": "api", "to": "redis", "type": "BullMQ + throttling" },
+    { "from": "queue-prospecting", "to": "redis", "type": "queue-state" },
+    { "from": "queue-imports", "to": "redis", "type": "queue-state" },
+    { "from": "queue-analysis", "to": "redis", "type": "queue-state" },
+    { "from": "queue-scoring", "to": "redis", "type": "queue-state" },
+    { "from": "ci", "to": "render", "type": "checksPass enables deploy" },
+    { "from": "render", "to": "landing", "type": "deploys node service" },
+    { "from": "render", "to": "web", "type": "deploys static service" },
+    { "from": "render", "to": "api", "type": "deploys docker service" },
+    { "from": "docker-local", "to": "api", "type": "optional full profile" },
+    { "from": "docker-local", "to": "web", "type": "optional full profile" },
+    { "from": "promo", "to": "landing", "type": "captures/represents" },
+    { "from": "promo", "to": "web", "type": "captures/represents" }
+  ],
+  "webRoutes": {
+    "source": "apps/web/src/App.tsx",
+    "public": [
+      { "path": "/login", "page": "LoginPage" },
+      { "path": "/register", "page": "RegisterPage" },
+      { "path": "/verify-email", "page": "VerifyEmailPage" },
+      { "path": "/billing/success", "page": "BillingSuccessPage" },
+      { "path": "/billing/cancel", "page": "BillingCancelPage" }
+    ],
+    "protected": [
+      { "path": "/billing/pix", "page": "PixCheckoutPage", "layout": "standalone" },
+      { "path": "/", "page": "DashboardPage", "layout": "AppLayout" },
+      { "path": "/search", "page": "SearchPage", "layout": "AppLayout" },
+      { "path": "/imports", "page": "ImportsPage", "layout": "AppLayout" },
+      { "path": "/leads", "page": "LeadsPage", "layout": "AppLayout" },
+      { "path": "/leads/:id", "page": "LeadDetailPage", "layout": "AppLayout" },
+      { "path": "/pipeline", "page": "PipelinePage", "layout": "AppLayout" },
+      { "path": "/tasks", "page": "TasksPage", "layout": "AppLayout" },
+      { "path": "/settings", "page": "SettingsPage", "layout": "AppLayout" },
+      { "path": "/settings/privacy", "page": "SettingsPrivacyPage", "layout": "AppLayout" }
+    ],
+    "fallback": "* redireciona para /"
+  },
+  "landingRoutes": {
+    "source": "apps/landing/src/app",
+    "locales": ["pt-BR na raiz", "en sob /en"],
+    "pages": ["home", "pricing", "faq", "privacy", "terms", "cookies"],
+    "generated": ["robots.txt", "sitemap.xml"],
+    "conversionBoundary": "NEXT_PUBLIC_APP_URL cria links para /login e /register com plan, currency e acceptTerms"
+  },
+  "httpApi": {
+    "basePath": "/api/v1",
+    "healthPaths": ["GET /health", "GET /health/live", "GET /health/ready"],
+    "swagger": "/api/docs somente fora de production",
+    "defaultAuth": "JWT global; exceções precisam de @Public()",
+    "routeGroups": [
+      {
+        "module": "auth",
+        "controller": "apps/api/src/modules/auth/auth.controller.ts",
+        "operations": [
+          "POST /auth/register",
+          "POST /auth/login",
+          "POST /auth/google",
+          "POST /auth/refresh",
+          "POST /auth/logout",
+          "POST /auth/forgot-password",
+          "POST /auth/reset-password",
+          "POST /auth/verify-email",
+          "POST /auth/resend-verification",
+          "POST /auth/change-password",
+          "POST /auth/organizations/:organizationId/switch",
+          "GET /auth/me"
+        ]
+      },
+      {
+        "module": "users",
+        "controller": "apps/api/src/modules/users/users.controller.ts",
+        "operations": [
+          "GET /users/me",
+          "PATCH /users/me",
+          "PATCH /users/me/email",
+          "POST /users/me/data-requests"
+        ]
+      },
+      {
+        "module": "organizations",
+        "controller": "apps/api/src/modules/organizations/organizations.controller.ts",
+        "operations": [
+          "GET /organizations/current",
+          "PATCH /organizations/current",
+          "GET /organizations/members",
+          "POST /organizations/members",
+          "PATCH /organizations/members/:memberId",
+          "DELETE /organizations/members/:memberId"
+        ]
+      },
+      {
+        "module": "billing",
+        "controller": "apps/api/src/modules/billing/billing.controller.ts",
+        "operations": [
+          "GET /billing/status",
+          "POST /billing/checkout",
+          "POST /billing/portal",
+          "POST /billing/cancel",
+          "POST /billing/webhook/stripe",
+          "POST /billing/webhook/abacate",
+          "POST /billing/webhook (legacy Stripe)"
+        ]
+      },
+      {
+        "module": "leads",
+        "controller": "apps/api/src/modules/leads/leads.controller.ts",
+        "operations": [
+          "GET /leads",
+          "GET /leads/tags",
+          "GET /leads/:id",
+          "POST /leads",
+          "PATCH /leads/:id",
+          "POST /leads/:id/analyze",
+          "DELETE /leads/:id",
+          "POST /leads/:id/restore",
+          "POST /leads/:id/owner",
+          "POST /leads/:id/tags",
+          "DELETE /leads/:id/tags/:tagId"
+        ]
+      },
+      {
+        "module": "activities",
+        "controller": "apps/api/src/modules/activities/activities.controller.ts",
+        "operations": [
+          "GET /activities/recent",
+          "GET /leads/:leadId/activities",
+          "POST /leads/:leadId/activities"
+        ]
+      },
+      {
+        "module": "tasks",
+        "controller": "apps/api/src/modules/tasks/tasks.controller.ts",
+        "operations": [
+          "GET /tasks",
+          "POST /tasks",
+          "POST /leads/:leadId/tasks",
+          "PATCH /tasks/:id",
+          "DELETE /tasks/:id"
+        ]
+      },
+      {
+        "module": "pipelines",
+        "controller": "apps/api/src/modules/pipelines/pipelines.controller.ts",
+        "operations": ["GET /pipelines", "GET /pipelines/board", "PATCH /leads/:id/stage"]
+      },
+      {
+        "module": "dashboard",
+        "controller": "apps/api/src/modules/dashboard/dashboard.controller.ts",
+        "operations": ["GET /dashboard/summary", "GET /dashboard/charts"]
+      },
+      {
+        "module": "prospecting",
+        "controller": "apps/api/src/modules/prospecting/prospecting.controller.ts",
+        "operations": [
+          "POST /searches",
+          "GET /searches/providers",
+          "GET /searches",
+          "GET /searches/:id",
+          "GET /searches/:id/results",
+          "POST /searches/:id/import",
+          "DELETE /searches/:id"
+        ]
+      },
+      {
+        "module": "imports",
+        "controller": "apps/api/src/modules/imports/imports.controller.ts",
+        "operations": [
+          "POST /imports/csv/preview",
+          "POST /imports/csv",
+          "GET /imports",
+          "GET /imports/:id",
+          "GET /imports/:id/errors"
+        ]
+      },
+      {
+        "module": "geo",
+        "controller": "apps/api/src/modules/geo/geo.controller.ts",
+        "operations": ["GET /geo/regions", "GET /geo/cities"]
+      },
+      {
+        "module": "scoring",
+        "controller": "apps/api/src/modules/scoring/scoring.controller.ts",
+        "operations": ["GET /scoring/config", "PATCH /scoring/config/rules"]
+      },
+      {
+        "module": "health",
+        "controller": "apps/api/src/common/health/health.controller.ts",
+        "operations": ["GET /health", "GET /health/live", "GET /health/ready"],
+        "versionNeutral": true
+      }
+    ]
+  },
+  "asyncProcessing": {
+    "deploymentModel": "in-process",
+    "warning": "BullMQ producers and @Processor consumers run inside the API service. Scaling the API also scales consumers; there is no independently deployable worker.",
+    "queues": [
+      {
+        "id": "prospecting",
+        "producer": "ProspectingService",
+        "consumer": "ProspectingProcessor",
+        "aggregate": "Search",
+        "jobId": "Search.id",
+        "recovery": "ProspectingDispatchReconciler republishes eligible PENDING records"
+      },
+      {
+        "id": "imports",
+        "producer": "ImportsService",
+        "consumer": "ImportsProcessor",
+        "aggregate": "Import",
+        "jobId": "Import.id",
+        "recovery": "ImportsDispatchReconciler republishes eligible PENDING records"
+      },
+      {
+        "id": "website-analysis",
+        "producer": "WebsiteAnalysisService",
+        "consumer": "WebsiteAnalysisProcessor",
+        "aggregate": "WebsiteAnalysis",
+        "next": "scoring"
+      },
+      {
+        "id": "scoring",
+        "producer": "WebsiteAnalysisProcessor or ScoringService",
+        "consumer": "ScoringProcessor",
+        "aggregate": "LeadScore"
+      }
+    ]
+  },
+  "runtimeFlows": [
+    {
+      "id": "auth-session",
+      "name": "Login e renovação de sessão",
+      "steps": [
+        "Web envia credenciais para POST /auth/login ou token Google para POST /auth/google",
+        "AuthService valida identidade, membership e lockout no PostgreSQL",
+        "API devolve access token e grava refresh token rotativo em cookie HttpOnly",
+        "Zustand mantém usuário/access token; Axios injeta Bearer",
+        "Em 401, um refresh compartilhado usa cookie + X-Requested-With e repete a requisição uma vez"
+      ],
+      "evidence": [
+        "apps/api/src/modules/auth",
+        "apps/api/src/common/auth/refresh-cookie.ts",
+        "apps/web/src/lib/api.ts",
+        "apps/web/src/stores/auth.store.ts"
+      ]
+    },
+    {
+      "id": "prospecting-search",
+      "name": "Pesquisa de negócios",
+      "steps": [
+        "Web cria Search com provider, categorias, cidade/UF e filtro sem website",
+        "API verifica tenant/plano, persiste Search PENDING e publica job com o mesmo ID",
+        "Processor chama Nominatim+Overpass ou Google Places",
+        "Resultados normalizados são persistidos em SearchResult",
+        "Web faz polling e usuário importa uma seleção",
+        "LeadIngestionService normaliza, deduplica e cria/atualiza Lead dentro do tenant"
+      ],
+      "failureRecovery": "Payload e estado durável precedem enqueue; reconciliador recupera a janela DB-commit/enqueue.",
+      "evidence": [
+        "apps/api/src/modules/prospecting",
+        "apps/api/src/modules/leads/lead-ingestion.service.ts",
+        "apps/web/src/features/prospecting"
+      ]
+    },
+    {
+      "id": "csv-import",
+      "name": "Importação CSV",
+      "steps": [
+        "Web envia arquivo multipart para preview",
+        "Usuário confirma o mapping e reenvia o arquivo",
+        "API valida limites, persiste Import + staging e publica job",
+        "Processor valida cada linha e chama LeadIngestionService",
+        "Erros públicos por linha ficam em ImportError; staging é apagado no estado terminal",
+        "Web acompanha status e erros paginados"
+      ],
+      "evidence": ["apps/api/src/modules/imports", "apps/web/src/features/imports"]
+    },
+    {
+      "id": "website-analysis-scoring",
+      "name": "Análise de website e scoring",
+      "steps": [
+        "Usuário solicita POST /leads/:id/analyze",
+        "API cria/atualiza WebsiteAnalysis e enfileira website-analysis",
+        "Analyzer valida URL/IP/redirects, limita resposta e extrai sinais",
+        "Processor persiste métricas e issues",
+        "Job de scoring aplica ScoreRules da organização e grava LeadScore/Lead.score"
+      ],
+      "evidence": ["apps/api/src/modules/website-analysis", "apps/api/src/modules/scoring"]
+    },
+    {
+      "id": "billing",
+      "name": "Checkout e ativação",
+      "steps": [
+        "Landing envia plan/currency para /register ou Web inicia checkout",
+        "PaymentRouter escolhe Abacate para BRL e Stripe para EUR/USD",
+        "Provider cria checkout/PIX e retorna URL ou dados do pagamento",
+        "Webhook com assinatura validada é deduplicado por provider+eventId",
+        "BillingActivationService atualiza plano/status da organização"
+      ],
+      "evidence": [
+        "apps/landing/src/lib/pricing.ts",
+        "apps/api/src/modules/billing",
+        "apps/web/src/features/billing"
+      ]
+    },
+    {
+      "id": "delivery",
+      "name": "CI e deploy",
+      "steps": [
+        "Push/PR dispara quality no GitHub Actions",
+        "CI instala, gera Prisma, executa lint, typecheck, tests, build e audit",
+        "Render autoDeployTrigger=checksPass seleciona serviços por buildFilter",
+        "API aplica prisma migrate deploy antes de iniciar",
+        "Health check /health/ready exige PostgreSQL e Redis"
+      ],
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "render.yaml",
+        "apps/api/Dockerfile",
+        "apps/api/src/common/health/health.controller.ts"
+      ]
+    }
+  ],
+  "dataModel": {
+    "source": "apps/api/prisma/schema.prisma",
+    "domains": [
+      {
+        "name": "Identity and tenancy",
+        "models": [
+          "User",
+          "Organization",
+          "OrganizationMember",
+          "RefreshToken",
+          "DataSubjectRequest"
+        ],
+        "root": "Organization",
+        "notes": "Membership carrega Role e estabelece o tenant ativo do usuário."
+      },
+      {
+        "name": "CRM core",
+        "models": [
+          "Lead",
+          "LeadContact",
+          "Tag",
+          "LeadTag",
+          "LeadActivity",
+          "Task",
+          "Pipeline",
+          "PipelineStage"
+        ],
+        "root": "Lead",
+        "notes": "Lead possui constraints tenant-aware para source/externalId, domain, phone, email e probableDuplicateKey."
+      },
+      {
+        "name": "Website analysis and scoring",
+        "models": [
+          "Website",
+          "WebsiteAnalysis",
+          "WebsiteAnalysisIssue",
+          "ScoreConfiguration",
+          "ScoreRule",
+          "LeadScore"
+        ],
+        "root": "Lead",
+        "notes": "Histórico de análises e scores é persistido; Lead.score mantém o valor atual."
+      },
+      {
+        "name": "Prospecting and imports",
+        "models": ["Search", "SearchResult", "Import", "ImportError"],
+        "root": "Organization",
+        "notes": "Agregados persistem status e payload suficiente para recuperação de dispatch."
+      },
+      {
+        "name": "Campaign future surface",
+        "models": ["Campaign", "CampaignLead", "MessageTemplate", "Integration"],
+        "root": "Organization",
+        "status": "schema-only",
+        "notes": "Modelos existem, mas não há módulos/controllers Web/API correspondentes no runtime atual."
+      },
+      {
+        "name": "Audit and billing idempotency",
+        "models": ["AuditLog", "BillingWebhookEvent"],
+        "root": "Organization or provider event",
+        "notes": "BillingWebhookEvent possui unique(provider,eventId); AuditLog existe como base de auditoria."
+      }
+    ],
+    "enums": [
+      "Role",
+      "AppLocale",
+      "LeadStatus",
+      "LeadSource",
+      "ActivityType",
+      "TaskPriority",
+      "TaskStatus",
+      "CampaignStatus",
+      "ImportStatus",
+      "SearchStatus",
+      "WebsitePresence",
+      "AnalysisStatus",
+      "IssueSeverity",
+      "OrgPlan",
+      "PlanStatus",
+      "PaymentProvider"
+    ]
+  },
+  "securityArchitecture": {
+    "implementedControls": [
+      "Helmet e CORS allowlist com credentials",
+      "JWT access + refresh rotation e revogação",
+      "Refresh cookie HttpOnly, SameSite=Lax e Secure em production/staging",
+      "Proteção CSRF no refresh/logout via X-Requested-With quando cookie é usado",
+      "Argon2, lockout e mensagens genéricas contra enumeração",
+      "JWT, Roles, EmailVerified e Throttler como APP_GUARD",
+      "ValidationPipe whitelist/forbidNonWhitelisted",
+      "organizationId e role derivados do usuário autenticado",
+      "SSRF guard com validação de destino e revalidação de redirects",
+      "Pino com redação de authorization, cookies, tokens e senhas",
+      "Webhook signatures e tabela de idempotência",
+      "PostgreSQL/Redis locais ligados a 127.0.0.1"
+    ],
+    "trustBoundaries": [
+      {
+        "boundary": "Browser -> API",
+        "controls": ["TLS em produção", "CORS", "JWT", "DTO validation", "rate limiting"]
+      },
+      {
+        "boundary": "API -> tenant data",
+        "controls": [
+          "organizationId da sessão",
+          "predicados tenant-aware",
+          "404 para recurso externo ao tenant"
+        ]
+      },
+      {
+        "boundary": "API -> public web",
+        "controls": [
+          "HTTP(S) only",
+          "bloqueio de IP privado/reservado",
+          "redirect revalidation",
+          "timeouts e body limit"
+        ]
+      },
+      {
+        "boundary": "Payment providers -> webhooks",
+        "controls": ["raw body", "assinatura/HMAC", "event idempotency"]
+      },
+      {
+        "boundary": "Runtime -> secrets",
+        "controls": ["env vars", "validation de JWT secrets", "Render sync:false"]
+      }
+    ],
+    "evidence": [
+      "apps/api/src/main.ts",
+      "apps/api/src/app.module.ts",
+      "apps/api/src/config/validation.ts",
+      "apps/api/src/common/auth/refresh-cookie.ts",
+      "apps/api/src/modules/website-analysis/ssrf.ts",
+      "render.yaml"
+    ]
+  },
+  "deployment": {
+    "local": {
+      "orchestrator": "docker-compose.yml",
+      "services": [
+        "postgres:16-alpine",
+        "redis:7-alpine",
+        "api profile full",
+        "web/nginx profile full"
+      ],
+      "defaultPorts": {
+        "postgres": "127.0.0.1:5432",
+        "redis": "127.0.0.1:6379",
+        "api": "127.0.0.1:3000",
+        "web": "127.0.0.1:5173",
+        "landing": "localhost:3001 fora do Compose"
+      }
+    },
+    "production": {
+      "orchestrator": "render.yaml",
+      "region": "frankfurt",
+      "services": [
+        { "name": "prospectly-landing", "type": "Node web service", "build": "Next build" },
+        {
+          "name": "prospectly-web",
+          "type": "Static site",
+          "build": "Vite build",
+          "routing": "SPA rewrite to /index.html"
+        },
+        {
+          "name": "prospectly-api",
+          "type": "Docker web service",
+          "startup": "prisma migrate deploy && node dist/main.js"
+        },
+        { "name": "prospectly-db", "type": "Managed PostgreSQL 16" },
+        { "name": "prospectly-redis", "type": "Managed key-value Redis compatible" }
+      ],
+      "healthGate": "/health/ready"
+    },
+    "ci": {
+      "source": ".github/workflows/ci.yml",
+      "steps": [
+        "pnpm install --frozen-lockfile",
+        "prisma generate",
+        "lint",
+        "typecheck",
+        "test",
+        "build",
+        "audit critical",
+        "audit high report"
+      ]
+    }
+  },
+  "architecturalDecisions": [
+    {
+      "decision": "REST modular em NestJS",
+      "why": "O produto possui operações e fluxos claros por feature; controllers finos e services por módulo preservam uma estrutura simples para o estágio atual."
+    },
+    {
+      "decision": "PostgreSQL como fonte de verdade e Redis como coordenação",
+      "why": "Status e payloads dos jobs precisam sobreviver a falhas; Redis acelera filas e rate limiting, mas não substitui o estado durável."
+    },
+    {
+      "decision": "Processors no processo da API",
+      "why": "Reduz complexidade operacional da fase atual, com o trade-off de acoplar escala/recursos HTTP e background."
+    },
+    {
+      "decision": "Contrato shared-types com ESM e CJS",
+      "why": "Vite consome ESM enquanto a build Nest atual usa CommonJS."
+    },
+    {
+      "decision": "Provider registry para prospecção",
+      "why": "OpenStreetMap é padrão e Google Places é opcional sem condicionar o fluxo de aplicação a um fornecedor."
+    },
+    {
+      "decision": "Billing roteado por moeda",
+      "why": "Abacate atende BRL/Pix e Stripe atende EUR/USD, preservando uma abstração comum de provider."
+    }
+  ],
+  "knownBoundariesAndGaps": [
+    {
+      "area": "CRM campaigns",
+      "status": "schema-only",
+      "detail": "Campaign, CampaignLead, MessageTemplate e Integration existem no Prisma, mas não possuem módulos/controllers ou telas."
+    },
+    {
+      "area": "Worker isolation",
+      "status": "not-present",
+      "detail": "Filas compartilham CPU/memória/lifecycle com a API; cargas maiores podem justificar worker implantável separado."
+    },
+    {
+      "area": "Observability",
+      "status": "partial",
+      "detail": "Há logs Pino e correlation IDs; não foi localizado endpoint de métricas nem instrumentação distribuída no runtime atual."
+    },
+    {
+      "area": "Landing local orchestration",
+      "status": "separate",
+      "detail": "A landing participa do pnpm workspace e Render, mas não está no docker-compose local."
+    },
+    {
+      "area": "Promo video",
+      "status": "supporting",
+      "detail": "É um projeto auxiliar com npm/package-lock próprio, fora do workspace pnpm e fora do deploy do produto."
+    },
+    {
+      "area": "OSM website signal",
+      "status": "domain-caveat",
+      "detail": "NO_WEBSITE_REPORTED significa ausência de tag nos dados OSM, não prova de que a empresa não possui site."
+    }
+  ],
+  "agentReadingOrder": [
+    {
+      "order": 1,
+      "path": "docs/architecture/prospectly-architecture.json",
+      "reason": "Contexto sistêmico, componentes, conexões, rotas e gaps"
+    },
+    {
+      "order": 2,
+      "path": "README.md",
+      "reason": "Objetivo, setup e fluxos operacionais suportados"
+    },
+    { "order": 3, "path": "package.json", "reason": "Scripts e orquestração do monorepo" },
+    { "order": 4, "path": "apps/web/src/App.tsx", "reason": "Superfície navegável da SPA" },
+    { "order": 5, "path": "apps/api/src/app.module.ts", "reason": "Composition root da API" },
+    {
+      "order": 6,
+      "path": "apps/api/src/main.ts",
+      "reason": "Boundary HTTP e cross-cutting concerns"
+    },
+    {
+      "order": 7,
+      "path": "apps/api/prisma/schema.prisma",
+      "reason": "Modelo de dados e constraints"
+    },
+    {
+      "order": 8,
+      "path": "apps/api/src/modules/<feature>",
+      "reason": "Aprofundar apenas na feature da tarefa"
+    },
+    {
+      "order": 9,
+      "path": "apps/web/src/features/<feature>",
+      "reason": "Cliente, hooks e tipos da mesma feature"
+    },
+    {
+      "order": 10,
+      "path": "render.yaml",
+      "reason": "Topologia e configuração de produção quando relevante"
+    }
+  ],
+  "verificationCommands": [
+    "node -e \"JSON.parse(require('node:fs').readFileSync('docs/architecture/prospectly-architecture.json','utf8')); console.log('JSON OK')\"",
+    "pnpm typecheck",
+    "pnpm test",
+    "pnpm build",
+    "pnpm db:generate"
+  ],
+  "maintenance": {
+    "updateTriggers": [
+      "Novo app ou pacote",
+      "Novo módulo/controller",
+      "Nova fila ou worker",
+      "Mudança de modelo Prisma",
+      "Nova integração externa",
+      "Mudança de deploy ou autenticação"
+    ],
+    "rule": "Atualizar este JSON e o HTML correspondente no mesmo change set; validar caminhos contra o checkout atual.",
+    "htmlCompanion": "docs/architecture/prospectly-architecture.html"
+  }
+}

@@ -12,6 +12,7 @@ import { CreateFreeAccount } from './CreateFreeAccount';
 import { HowToCreateAccount } from './HowToCreateAccount';
 import { PricingPromo } from './PricingPromo';
 import { ProspectlyPromo } from './ProspectlyPromo';
+import { SocialCarousel } from './SocialCarousel';
 import {
   TestDemo,
   TestIntro,
@@ -70,6 +71,15 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{
           productUrl: 'prospectly.dev',
         }}
+      />
+
+      <Composition
+        id="SocialCarousel"
+        component={SocialCarousel}
+        durationInFrames={8}
+        fps={1}
+        width={1080}
+        height={1350}
       />
 
       <Folder name="Test-Scenes">

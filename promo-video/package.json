@@ -38,6 +38,7 @@
     "render:free-account": "npm run validate-assets && remotion render CreateFreeAccount out/criar-conta-gratis.mp4",
     "render:signup": "npm run render:howto-account && npm run render:free-account",
     "render:pricing": "remotion render PricingPromo out/precos.mp4",
+    "render:carousel": "remotion still SocialCarousel out/carousel-prospectly/slide-01.png --frame=0 && remotion still SocialCarousel out/carousel-prospectly/slide-02.png --frame=1 && remotion still SocialCarousel out/carousel-prospectly/slide-03.png --frame=2 && remotion still SocialCarousel out/carousel-prospectly/slide-04.png --frame=3 && remotion still SocialCarousel out/carousel-prospectly/slide-05.png --frame=4 && remotion still SocialCarousel out/carousel-prospectly/slide-06.png --frame=5 && remotion still SocialCarousel out/carousel-prospectly/slide-07.png --frame=6 && remotion still SocialCarousel out/carousel-prospectly/slide-08.png --frame=7",
     "render:still": "remotion still Still-Intro out/still-intro.png"
   },
   "sideEffects": [
