@@ -5,6 +5,7 @@ import { AppLocale } from '@prisma/client';
 import { MailService } from '../../common/mail/mail.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { JoinWaitlistDto } from './dto/join-waitlist.dto';
+import { buildWaitlistConfirmationEmail } from './waitlist-email';
 
 export type JoinWaitlistResult = { message: string };
 
@@ -77,32 +78,12 @@ export class WaitlistService {
   }
 
   private confirmationMail(email: string, locale: AppLocale) {
-    if (locale === AppLocale.en) {
-      return {
-        to: email,
-        subject: 'You’re on the Prospectly waitlist',
-        text: [
-          'Thanks for joining the Prospectly waitlist.',
-          '',
-          'We’ll email you when it’s your turn to get started.',
-          '',
-          '— Prospectly',
-        ].join('\n'),
-        html: `<p>Thanks for joining the <strong>Prospectly</strong> waitlist.</p><p>We’ll email you when it’s your turn to get started.</p><p>— Prospectly</p>`,
-      };
-    }
-
+    const content = buildWaitlistConfirmationEmail(locale);
     return {
       to: email,
-      subject: 'Você entrou na lista de espera do Prospectly',
-      text: [
-        'Obrigado por entrar na lista de espera do Prospectly.',
-        '',
-        'Avisamos por e-mail quando for a sua vez de começar.',
-        '',
-        '— Prospectly',
-      ].join('\n'),
-      html: `<p>Obrigado por entrar na lista de espera do <strong>Prospectly</strong>.</p><p>Avisamos por e-mail quando for a sua vez de começar.</p><p>— Prospectly</p>`,
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
     };
   }
 }

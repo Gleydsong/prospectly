@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { buildWaitlistConfirmationEmail } from '@/lib/waitlist-email';
 
 type Body = {
   email?: string;
@@ -54,19 +55,7 @@ export async function POST(request: Request) {
   const from = process.env.RESEND_FROM ?? 'Prospectly <onboarding@resend.dev>';
   const source = (body.source ?? 'landing-home').slice(0, 80);
   const resend = new Resend(apiKey);
-
-  const confirmation =
-    locale === 'en'
-      ? {
-          subject: 'You’re on the Prospectly waitlist',
-          text: 'Thanks for joining the Prospectly waitlist.\n\nWe’ll email you when it’s your turn to get started.\n\n— Prospectly',
-          html: `<p>Thanks for joining the <strong>Prospectly</strong> waitlist.</p><p>We’ll email you when it’s your turn to get started.</p><p>— Prospectly</p>`,
-        }
-      : {
-          subject: 'Você entrou na lista de espera do Prospectly',
-          text: 'Obrigado por entrar na lista de espera do Prospectly.\n\nAvisamos por e-mail quando for a sua vez de começar.\n\n— Prospectly',
-          html: `<p>Obrigado por entrar na lista de espera do <strong>Prospectly</strong>.</p><p>Avisamos por e-mail quando for a sua vez de começar.</p><p>— Prospectly</p>`,
-        };
+  const confirmation = buildWaitlistConfirmationEmail(locale);
 
   try {
     const { error } = await resend.emails.send({
