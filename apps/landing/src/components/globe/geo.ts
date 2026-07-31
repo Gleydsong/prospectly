@@ -1,4 +1,4 @@
-import { QuadraticBezierCurve3, Vector3 } from 'three';
+import { Vector3 } from 'three';
 import type { LatLon } from './cities';
 
 /** Convert lat/lon (degrees) to a point on a sphere (Three.js Y-up). */
@@ -38,8 +38,8 @@ function slerpUnit(start: Vector3, end: Vector3, t: number, target: Vector3): Ve
 
 /**
  * Raised flight-path arc that always stays outside the sphere.
- * Uses spherical mid control + quadratic Bezier so long "around the world"
- * links bow outward instead of clipping through the globe.
+ * Mid control is pushed higher than a plain great-circle so links match
+ * reference “energy arc” silhouettes (stock globe / connectivity reels).
  */
 export function greatCirclePoints(
   from: Vector3,
@@ -52,9 +52,9 @@ export function greatCirclePoints(
   const endN = to.clone().normalize();
   const angle = startN.angleTo(endN);
 
-  // Longer hops need a taller bow so the curve never skims/cuts the surface
-  const clearance = 0.02;
-  const height = arcHeight * (0.4 + 0.85 * (angle / Math.PI)) + clearance;
+  const clearance = 0.025;
+  // Stronger bow on longer hops — reference arcs peak well above the surface
+  const height = arcHeight * (0.55 + 1.15 * (angle / Math.PI)) + clearance;
 
   const start = startN.clone().multiplyScalar(radius + clearance);
   const end = endN.clone().multiplyScalar(radius + clearance);
@@ -63,6 +63,26 @@ export function greatCirclePoints(
   slerpUnit(startN, endN, 0.5, midN);
   const mid = midN.multiplyScalar(radius + height);
 
-  const curve = new QuadraticBezierCurve3(start, mid, end);
-  return curve.getPoints(segments);
+  // Extra control points near 1/3 and 2/3 keep the silhouette round (not a sharp V)
+  const q1N = new Vector3();
+  const q2N = new Vector3();
+  slerpUnit(startN, endN, 0.33, q1N);
+  slerpUnit(startN, endN, 0.66, q2N);
+  const q1 = q1N.multiplyScalar(radius + height * 0.72);
+  const q2 = q2N.multiplyScalar(radius + height * 0.72);
+
+  const samples: Vector3[] = [];
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments;
+    // Cubic Bezier: start → q1 → q2 → end, with mid bias via averaged controls
+    const c1 = q1.clone().lerp(mid, 0.35);
+    const c2 = q2.clone().lerp(mid, 0.35);
+    const a = start.clone().lerp(c1, t);
+    const b = c1.clone().lerp(c2, t);
+    const c = c2.clone().lerp(end, t);
+    const d = a.lerp(b, t);
+    const e = b.lerp(c, t);
+    samples.push(d.lerp(e, t));
+  }
+  return samples;
 }

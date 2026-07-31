@@ -5,13 +5,10 @@ import { useReducedMotion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import {
   AmbientLight,
-  BufferGeometry,
+  CatmullRomCurve3,
   Color,
   DirectionalLight,
-  Float32BufferAttribute,
   Group,
-  Line,
-  LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -19,10 +16,17 @@ import {
   Scene,
   SphereGeometry,
   SRGBColorSpace,
+  TubeGeometry,
   Vector3,
   WebGLRenderer,
 } from 'three';
-import { CITIES, MARKER_CITIES, PERSISTENT_LINKS, ROUTE_CHAIN, type CityId } from '@/components/globe/cities';
+import {
+  CITIES,
+  MARKER_CITIES,
+  NETWORK_LINKS,
+  ROUTE_CHAIN,
+  type CityId,
+} from '@/components/globe/cities';
 import {
   createEarth,
   EARTH_RADIUS,
@@ -34,63 +38,80 @@ import { greatCirclePoints, latLonToVector3 } from '@/components/globe/geo';
 
 const COBALT = '#2563eb';
 const COBALT_DARK = '#60a5fa';
-const ARC_SEGMENTS = 128;
-const ARC_HEIGHT = 0.36;
-const TRAIL = 3;
+
+const ARC_SEGMENTS = 80;
+const ARC_HEIGHT = 0.62;
+const ARC_TUBE_RADIUS = 0.0045;
+const ARC_RADIAL = 5;
+const ACTIVE_TRAIL = 3;
 const MARKER_RADIUS = 0.014;
-/** Dot product threshold: only show when hemisphere faces the camera. */
-const FACING_EPS = 0.06;
+const FACING_EPS = 0.03;
+const TWO_PI = Math.PI * 2;
+/** Camera pulled back so the full globe + arcs read clearly. */
+const CAMERA_Z = 3.75;
 
 function isDarkMode() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-type ActiveArc = {
-  geometry: BufferGeometry;
-  material: LineBasicMaterial;
-  line: Line;
-  vertexCount: number;
-  /** How many vertices the animation has revealed (from the start city). */
-  progressCount: number;
-  /** Local-space sample points (spin group space). */
+type ArcBundle = {
+  group: Group;
+  geometry: TubeGeometry;
+  material: MeshBasicMaterial;
   points: Vector3[];
+  indexCount: number;
+  progress: number;
   baseOpacity: number;
 };
 
-function buildArcLine(from: CityId, to: CityId, color: string, baseOpacity = 0.95): ActiveArc {
+function buildArc(
+  from: CityId,
+  to: CityId,
+  color: string,
+  opts: { opacity: number; heightScale?: number },
+): ArcBundle {
+  const height = ARC_HEIGHT * (opts.heightScale ?? 1);
   const fromV = latLonToVector3(CITIES[from], EARTH_RADIUS);
   const toV = latLonToVector3(CITIES[to], EARTH_RADIUS);
-  const points = greatCirclePoints(fromV, toV, EARTH_RADIUS, ARC_SEGMENTS, ARC_HEIGHT);
-  const positions = new Float32Array(points.length * 3);
-  points.forEach((p, i) => {
-    positions[i * 3] = p.x;
-    positions[i * 3 + 1] = p.y;
-    positions[i * 3 + 2] = p.z;
-  });
+  const points = greatCirclePoints(fromV, toV, EARTH_RADIUS, ARC_SEGMENTS, height);
+  const curve = new CatmullRomCurve3(points, false, 'centripetal', 0.45);
+  const geometry = new TubeGeometry(curve, ARC_SEGMENTS, ARC_TUBE_RADIUS, ARC_RADIAL, false);
 
-  const geometry = new BufferGeometry();
-  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-  geometry.setDrawRange(0, 0);
-
-  const material = new LineBasicMaterial({
+  const material = new MeshBasicMaterial({
     color: new Color(color),
     transparent: true,
-    opacity: baseOpacity,
+    opacity: opts.opacity,
     depthTest: true,
     depthWrite: false,
   });
 
-  const line = new Line(geometry, material);
-  line.frustumCulled = false;
+  const mesh = new Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 2;
+
+  const group = new Group();
+  group.add(mesh);
+
   return {
-    line,
+    group,
     geometry,
     material,
-    vertexCount: points.length,
-    progressCount: 0,
     points,
-    baseOpacity,
+    indexCount: geometry.getIndex()?.count ?? geometry.attributes.position.count,
+    progress: 0,
+    baseOpacity: opts.opacity,
   };
+}
+
+function applyArcProgress(arc: ArcBundle) {
+  const count = Math.max(0, Math.floor(arc.progress * arc.indexCount));
+  arc.geometry.setDrawRange(0, count);
+  arc.group.visible = count > 30;
+}
+
+function disposeArc(arc: ArcBundle) {
+  arc.geometry.dispose();
+  arc.material.dispose();
 }
 
 function createMarkers(color: string): {
@@ -143,15 +164,14 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
     let markersDispose: (() => void) | undefined;
     let dayTextureDispose: (() => void) | undefined;
     let cloudsTextureDispose: (() => void) | undefined;
-    const trackedArcs: ActiveArc[] = [];
-    const arcDisposables: Array<() => void> = [];
+    const trackedArcs: ArcBundle[] = [];
     const themeMq = window.matchMedia('(prefers-color-scheme: dark)');
     const ctx = gsap.context(() => {});
 
     const scene = new Scene();
-    const camera = new PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 0.15, 3.05);
-    camera.lookAt(0, -0.05, 0);
+    const camera = new PerspectiveCamera(40, 1, 0.1, 100);
+    camera.position.set(0, 0.1, CAMERA_Z);
+    camera.lookAt(0, -0.04, 0);
 
     const ambient = new AmbientLight(0xffffff, 0.55);
     const key = new DirectionalLight(0xffffff, 1.35);
@@ -177,10 +197,9 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
       return radial.dot(camDir);
     };
 
-    /** Hide back-hemisphere markers; fade near the limb. */
     const updateMarkerFacing = () => {
       if (!earth || !markersRef) return;
-      earth.spin.updateWorldMatrix(true, false);
+      earth.spin.updateWorldMatrix(true, true);
       earth.root.getWorldPosition(globeCenter);
       camDir.copy(camera.position).sub(globeCenter).normalize();
 
@@ -193,51 +212,30 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
           mesh.visible = false;
         } else {
           mesh.visible = true;
-          // Soft fade as the point rolls toward the horizon
-          mat.opacity = Math.min(1, (facing - FACING_EPS) / 0.25);
+          mat.opacity = Math.min(1, (facing - FACING_EPS) / 0.2);
         }
       });
     };
 
-    /**
-     * Only keep the front-facing stretch of each arc visible.
-     * Back-side vertices are dropped so links never show through the globe.
-     */
     const updateArcFacing = () => {
       if (!earth) return;
-      earth.spin.updateWorldMatrix(true, false);
+      earth.spin.updateWorldMatrix(true, true);
 
       for (const arc of trackedArcs) {
-        const limit = Math.min(arc.progressCount, arc.points.length);
-        if (limit < 2) {
-          arc.line.visible = false;
+        applyArcProgress(arc);
+        if (!arc.group.visible) continue;
+
+        const midIndex = Math.min(
+          arc.points.length - 1,
+          Math.max(0, Math.floor(arc.progress * (arc.points.length - 1))),
+        );
+        const midFacing = facingOfLocalPoint(arc.points[midIndex]!);
+        if (midFacing < -0.4) {
+          arc.group.visible = false;
           continue;
         }
-
-        let first = -1;
-        let last = -1;
-        for (let i = 0; i < limit; i += 1) {
-          const facing = facingOfLocalPoint(arc.points[i]!);
-          if (facing > FACING_EPS) {
-            if (first < 0) first = i;
-            last = i;
-          } else if (first >= 0) {
-            // Stop at the first back-facing gap so we don't bridge through the planet
-            break;
-          }
-        }
-
-        if (first < 0 || last <= first) {
-          arc.line.visible = false;
-          continue;
-        }
-
-        arc.line.visible = true;
-        arc.geometry.setDrawRange(first, last - first + 1);
-
-        const mid = arc.points[Math.floor((first + last) / 2)]!;
-        const midFacing = facingOfLocalPoint(mid);
-        arc.material.opacity = arc.baseOpacity * Math.min(1, 0.35 + midFacing * 0.9);
+        arc.material.opacity =
+          arc.baseOpacity * Math.min(1, Math.max(0.22, 0.4 + midFacing * 0.85));
       }
     };
 
@@ -267,16 +265,16 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
       key.intensity = nextDark ? 1.15 : 1.35;
     };
 
-    const registerArc = (arc: ActiveArc) => {
+    const registerArc = (arc: ArcBundle) => {
       trackedArcs.push(arc);
-      arcsGroup.add(arc.line);
-      arcDisposables.push(() => {
-        const idx = trackedArcs.indexOf(arc);
-        if (idx >= 0) trackedArcs.splice(idx, 1);
-        arcsGroup.remove(arc.line);
-        arc.geometry.dispose();
-        arc.material.dispose();
-      });
+      arcsGroup.add(arc.group);
+    };
+
+    const unregisterArc = (arc: ArcBundle) => {
+      const idx = trackedArcs.indexOf(arc);
+      if (idx >= 0) trackedArcs.splice(idx, 1);
+      arcsGroup.remove(arc.group);
+      disposeArc(arc);
     };
 
     (async () => {
@@ -294,8 +292,9 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
         const dark = isDarkMode();
         const accent = dark ? COBALT_DARK : COBALT;
         earth = createEarth(textures, dark);
-        // Earth must write depth so back-side arcs/markers are occluded
         (earth.earth.material as MeshStandardMaterial).depthWrite = true;
+        earth.earth.renderOrder = 0;
+        earth.clouds.renderOrder = 1;
         scene.add(earth.root);
 
         const markers = createMarkers(accent);
@@ -304,11 +303,15 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
         earth.spin.add(markers.group);
         earth.spin.add(arcsGroup);
 
-        for (const [from, to] of PERSISTENT_LINKS) {
-          const persistent = buildArcLine(from, to, accent, 0.85);
-          persistent.progressCount = persistent.vertexCount;
-          registerArc(persistent);
-        }
+        NETWORK_LINKS.forEach(([from, to], i) => {
+          const arc = buildArc(from, to, accent, {
+            opacity: i % 4 === 0 ? 0.7 : 0.48,
+            heightScale: 0.78 + (i % 6) * 0.07,
+          });
+          arc.progress = 1;
+          applyArcProgress(arc);
+          registerArc(arc);
+        });
 
         renderer = new WebGLRenderer({
           canvas,
@@ -320,7 +323,7 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
         renderer.outputColorSpace = SRGBColorSpace;
         onResize();
 
-        const activeArcs: ActiveArc[] = [];
+        const activeArcs: ArcBundle[] = [];
 
         const pulseMarker = (id: CityId) => {
           const mesh = markers.meshes.get(id);
@@ -342,14 +345,10 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
         };
 
         const pruneTrail = () => {
-          while (activeArcs.length > TRAIL) {
+          while (activeArcs.length > ACTIVE_TRAIL) {
             const old = activeArcs.shift();
             if (!old) break;
-            const idx = trackedArcs.indexOf(old);
-            if (idx >= 0) trackedArcs.splice(idx, 1);
-            arcsGroup.remove(old.line);
-            old.geometry.dispose();
-            old.material.dispose();
+            unregisterArc(old);
           }
         };
 
@@ -360,11 +359,14 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
             const from = ROUTE_CHAIN[i]!;
             const to = ROUTE_CHAIN[i + 1]!;
             const state = { draw: 0 };
-            let arc: ActiveArc | undefined;
+            let arc: ArcBundle | undefined;
 
             tl.call(() => {
               pulseMarker(from);
-              arc = buildArcLine(from, to, accent, 0.95);
+              arc = buildArc(from, to, accent, {
+                opacity: 0.95,
+                heightScale: 1.08,
+              });
               registerArc(arc);
               activeArcs.push(arc);
               pruneTrail();
@@ -373,27 +375,25 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
               if (activeArcs.length > 1) {
                 const prev = activeArcs[0];
                 if (prev) {
-                  prev.baseOpacity = 0.35;
-                  gsap.to(prev.material, { opacity: 0.35, duration: 0.6, overwrite: 'auto' });
+                  prev.baseOpacity = 0.4;
+                  gsap.to(prev.material, { opacity: 0.4, duration: 0.7, overwrite: 'auto' });
                 }
               }
             });
 
             tl.to(state, {
               draw: 1,
-              duration: 1.55,
+              duration: 1.7,
               ease: 'sine.inOut',
               onUpdate: () => {
                 if (!arc) return;
-                arc.progressCount = Math.max(
-                  2,
-                  Math.ceil(state.draw * (arc.vertexCount - 1)) + 1,
-                );
+                arc.progress = state.draw;
+                applyArcProgress(arc);
               },
               onComplete: () => pulseMarker(to),
             });
 
-            tl.to({}, { duration: 0.35 });
+            tl.to({}, { duration: 0.25 });
           }
 
           return tl;
@@ -402,25 +402,26 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
         if (animate) {
           ctx.add(() => {
             gsap.to(earth!.spin.rotation, {
-              y: earth!.spin.rotation.y + Math.PI * 2,
-              duration: 48,
+              y: `+=${TWO_PI}`,
+              duration: 50,
               ease: 'none',
               repeat: -1,
             });
             gsap.to(earth!.clouds.rotation, {
-              y: `+=${Math.PI * 2}`,
-              duration: 90,
+              y: `+=${TWO_PI}`,
+              duration: 92,
               ease: 'none',
               repeat: -1,
             });
             buildRouteTimeline();
           });
         } else {
-          for (let i = 0; i < Math.min(TRAIL, ROUTE_CHAIN.length - 1); i += 1) {
+          for (let i = 0; i < Math.min(ACTIVE_TRAIL, ROUTE_CHAIN.length - 1); i += 1) {
             const from = ROUTE_CHAIN[i]!;
             const to = ROUTE_CHAIN[i + 1]!;
-            const arc = buildArcLine(from, to, accent, 0.95);
-            arc.progressCount = arc.vertexCount;
+            const arc = buildArc(from, to, accent, { opacity: 0.9, heightScale: 1 });
+            arc.progress = 1;
+            applyArcProgress(arc);
             registerArc(arc);
             activeArcs.push(arc);
           }
@@ -441,7 +442,11 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
       ctx.revert();
       themeMq.removeEventListener('change', onTheme);
       window.removeEventListener('resize', onResize);
-      arcDisposables.forEach((d) => d());
+      trackedArcs.forEach((arc) => {
+        arcsGroup.remove(arc.group);
+        disposeArc(arc);
+      });
+      trackedArcs.length = 0;
       markersDispose?.();
       if (earth) {
         const earthMat = earth.earth.material as MeshStandardMaterial;

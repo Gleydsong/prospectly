@@ -21,12 +21,39 @@ export const CITIES = {
 
 export type CityId = keyof typeof CITIES;
 
-/** Links that stay drawn (not faded by the trail). */
-export const PERSISTENT_LINKS: readonly (readonly [CityId, CityId])[] = [
+/**
+ * Dense network kept on the globe (reference-style connectivity web).
+ * All of these stay drawn and rotate with the earth.
+ */
+export const NETWORK_LINKS: readonly (readonly [CityId, CityId])[] = [
+  ['saoPaulo', 'lisbon'],
+  ['saoPaulo', 'newYork'],
+  ['saoPaulo', 'lagos'],
+  ['mexicoCity', 'newYork'],
+  ['mexicoCity', 'losAngeles'],
+  ['losAngeles', 'tokyo'],
+  ['losAngeles', 'sydney'],
+  ['newYork', 'london'],
+  ['newYork', 'paris'],
+  ['toronto', 'london'],
+  ['lisbon', 'london'],
+  ['lisbon', 'madrid'],
+  ['madrid', 'paris'],
+  ['london', 'dubai'],
+  ['paris', 'dubai'],
+  ['paris', 'lagos'],
+  ['lagos', 'capeTown'],
+  ['capeTown', 'dubai'],
+  ['dubai', 'mumbai'],
+  ['mumbai', 'singapore'],
+  ['mumbai', 'tokyo'],
+  ['singapore', 'tokyo'],
+  ['singapore', 'sydney'],
   ['tokyo', 'sydney'],
+  ['sydney', 'saoPaulo'],
 ] as const;
 
-/** Sequential city-to-city links drawn one at a time. */
+/** Highlighted hops drawn one-by-one on top of the network. */
 export const ROUTE_CHAIN: readonly CityId[] = [
   'saoPaulo',
   'lisbon',
@@ -42,13 +69,8 @@ export const ROUTE_CHAIN: readonly CityId[] = [
   'capeTown',
   'saoPaulo',
   'mexicoCity',
-  'madrid',
-  'toronto',
-  'london',
-  'dubai',
   'losAngeles',
   'tokyo',
-  'saoPaulo',
 ] as const;
 
 export const MARKER_CITIES = Object.keys(CITIES) as CityId[];
