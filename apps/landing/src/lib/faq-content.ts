@@ -123,7 +123,7 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'BRL, EUR e USD. Na página de preços você escolhe a moeda antes do checkout. Exemplos: R$ 97/mês ou R$ 997 vitalício; € 19/mês ou € 197 vitalício; $ 29/mês ou $ 297 vitalício.',
+      'BRL, EUR e USD. Na página de preços você escolhe a moeda antes do checkout. Exemplos: R$ 49/mês ou R$ 399 vitalício; € 10/mês ou € 99 vitalício; $ 10/mês ou $ 99 vitalício.',
   },
   {
     id: 'cancel',
@@ -266,7 +266,7 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'BRL, EUR, and USD. Pick the currency on the pricing page before checkout. Examples: R$97/mo or R$997 lifetime; €19/mo or €197 lifetime; $29/mo or $297 lifetime.',
+      'BRL, EUR, and USD. Pick the currency on the pricing page before checkout. Examples: R$49/mo or R$399 lifetime; €10/mo or €99 lifetime; $10/mo or $99 lifetime.',
   },
   {
     id: 'cancel',

@@ -6,7 +6,7 @@ import { t } from '@/lib/i18n';
 export const metadata: Metadata = {
   title: 'Preços - Starter mensal e vitalício',
   description:
-    'Plano Starter Prospectly: R$ 97/mês ou R$ 997 vitalício. Também em EUR e USD. Prospecção local para agências.',
+    'Plano Starter Prospectly: R$ 49/mês ou R$ 399 vitalício. Também em EUR e USD. Prospecção local para agências.',
 };
 
 export default function PricingPage() {

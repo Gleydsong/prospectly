@@ -40,7 +40,7 @@ Estas entram automaticamente no sync do `render.yaml`:
 | `JWT_ACCESS_EXPIRES_IN` | `15m` |
 | `JWT_REFRESH_EXPIRES_IN` | `7d` |
 | `NODE_ENV` | `production` |
-| `ABACATE_LIFETIME_AMOUNT_CENTAVOS` | `99700` |
+| `ABACATE_LIFETIME_AMOUNT_CENTAVOS` | `39900` |
 | `ABACATE_API_BASE_URL` | `https://api.abacatepay.com/v2` |
 | `OSM_USER_AGENT` | `Prospectly/1.0 (...)` |
 | `SMTP_PORT` | `587` |

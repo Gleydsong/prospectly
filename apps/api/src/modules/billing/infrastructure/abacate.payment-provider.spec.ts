@@ -36,7 +36,7 @@ describe('AbacatePaymentProvider', () => {
   const configGet = jest.fn((key: string) => {
     const map: Record<string, string | number> = {
       'abacate.webhookSecret': 'whsec_test',
-      'abacate.lifetimeAmountCentavos': 99700,
+      'abacate.lifetimeAmountCentavos': 39900,
       'abacate.productMonthlyBrl': 'prod_monthly',
     };
     return map[key];
@@ -59,7 +59,7 @@ describe('AbacatePaymentProvider', () => {
   it('creates lifetime PIX (transparent) and never monthly transparent', async () => {
     client.createTransparentPix.mockResolvedValue({
       id: 'pix_1',
-      amount: 99700,
+      amount: 39900,
       brCode: '000201',
       brCodeBase64: 'data:image/png;base64,abc',
       expiresAt: '2026-07-25T12:00:00.000Z',

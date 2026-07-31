@@ -126,7 +126,7 @@ describe('BillingService', () => {
       brCode: '000201',
       brCodeBase64: 'data:image/png;base64,abc',
       externalPaymentId: 'pix_1',
-      amountCentavos: 99700,
+      amountCentavos: 39900,
     });
 
     const result = await service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL');

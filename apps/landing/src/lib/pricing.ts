@@ -7,14 +7,14 @@ export const DISPLAY_PRICES: Record<
   Record<Currency, { amount: number; formatted: string }>
 > = {
   monthly: {
-    BRL: { amount: 97, formatted: 'R$ 97' },
-    EUR: { amount: 19, formatted: '€ 19' },
-    USD: { amount: 29, formatted: '$ 29' },
+    BRL: { amount: 49, formatted: 'R$ 49' },
+    EUR: { amount: 10, formatted: '€ 10' },
+    USD: { amount: 10, formatted: '$ 10' },
   },
   lifetime: {
-    BRL: { amount: 997, formatted: 'R$ 997' },
-    EUR: { amount: 197, formatted: '€ 197' },
-    USD: { amount: 297, formatted: '$ 297' },
+    BRL: { amount: 399, formatted: 'R$ 399' },
+    EUR: { amount: 99, formatted: '€ 99' },
+    USD: { amount: 99, formatted: '$ 99' },
   },
 };
 

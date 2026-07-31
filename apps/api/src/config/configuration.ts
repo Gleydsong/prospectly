@@ -76,7 +76,7 @@ export const configuration = () => ({
     webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY ?? '',
     productMonthlyBrl: process.env.ABACATE_PRODUCT_MONTHLY_BRL ?? '',
     lifetimeAmountCentavos: parseInt(
-      process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '99700',
+      process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900',
       10,
     ),
     successUrl: process.env.ABACATE_SUCCESS_URL,
