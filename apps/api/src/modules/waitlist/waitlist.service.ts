@@ -42,9 +42,18 @@ export class WaitlistService {
       return ok;
     }
 
-    const entry = await this.prisma.waitlistEntry.create({
-      data: { email, locale, source },
-    });
+    let entry: { id: string };
+    try {
+      entry = await this.prisma.waitlistEntry.create({
+        data: { email, locale, source },
+      });
+    } catch (error) {
+      // Concurrent joins for the same email: treat as idempotent success and do not re-mail.
+      if (this.isUniqueConstraintViolation(error)) {
+        return ok;
+      }
+      throw error;
+    }
 
     try {
       await this.mail.send(this.confirmationMail(email, locale));
@@ -85,5 +94,14 @@ export class WaitlistService {
       text: content.text,
       html: content.html,
     };
+  }
+
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === 'P2002'
+    );
   }
 }

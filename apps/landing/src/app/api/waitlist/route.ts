@@ -1,6 +1,6 @@
-import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
-import { buildWaitlistConfirmationEmail } from '@/lib/waitlist-email';
+
+import { joinWaitlistViaApi, resolveWaitlistApiBase } from '@/lib/waitlist-api';
 
 type Body = {
   email?: string;
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       ? 'You’re on the waitlist. Check your email.'
       : 'Você entrou na lista de espera. Confira seu e-mail.';
 
-  // Honeypot
+  // Honeypot — pretend success without calling the API
   if (body.website && body.website.trim().length > 0) {
     return NextResponse.json({ message: okMessage });
   }
@@ -38,9 +38,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.error('RESEND_API_KEY missing');
+  // Always persist + throttle through Nest. Sending mail directly from the landing
+  // route bypassed WaitlistEntry storage and Redis rate limits (email bomb).
+  const apiBase = resolveWaitlistApiBase();
+  if (!apiBase) {
+    console.error('WAITLIST_API_URL / NEXT_PUBLIC_API_URL missing');
     return NextResponse.json(
       {
         message:
@@ -52,58 +54,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const from = process.env.RESEND_FROM ?? 'Prospectly <onboarding@resend.dev>';
   const source = (body.source ?? 'landing-home').slice(0, 80);
-  const resend = new Resend(apiKey);
-  const confirmation = buildWaitlistConfirmationEmail(locale);
+  const result = await joinWaitlistViaApi(
+    { email, locale, source },
+    { apiBase },
+  );
 
-  try {
-    const { error } = await resend.emails.send({
-      from,
-      to: email,
-      subject: confirmation.subject,
-      text: confirmation.text,
-      html: confirmation.html,
-    });
-    if (error) {
-      console.error('Resend confirmation failed', error);
-      return NextResponse.json(
-        {
-          message:
-            locale === 'en'
-              ? 'Could not join right now. Please try again in a moment.'
-              : 'Não foi possível cadastrar agora. Tente de novo em instantes.',
-        },
-        { status: 502 },
-      );
-    }
-  } catch (err) {
-    console.error('Resend confirmation threw', err);
-    return NextResponse.json(
-      {
-        message:
-          locale === 'en'
-            ? 'Could not join right now. Please try again in a moment.'
-            : 'Não foi possível cadastrar agora. Tente de novo em instantes.',
-      },
-      { status: 502 },
-    );
-  }
-
-  const notifyTo = process.env.WAITLIST_NOTIFY_TO?.trim();
-  if (notifyTo) {
-    try {
-      await resend.emails.send({
-        from,
-        to: notifyTo,
-        subject: `Novo waitlist: ${email}`,
-        text: `Novo cadastro na lista de espera.\n\nE-mail: ${email}\nLocale: ${locale}\nSource: ${source}\n`,
-        html: `<p>Novo cadastro na lista de espera.</p><p><strong>E-mail:</strong> ${email}<br/><strong>Locale:</strong> ${locale}<br/><strong>Source:</strong> ${source}</p>`,
-      });
-    } catch (err) {
-      console.error('Resend notify failed', err);
-    }
-  }
-
-  return NextResponse.json({ message: okMessage });
+  return NextResponse.json({ message: result.message }, { status: result.status });
 }

@@ -17,7 +17,7 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
     setMessage('');
 
     try {
-      // Same-origin Next route — landing works standalone (Resend) without Nest API
+      // Same-origin Next route proxies to Nest (throttle + WaitlistEntry persistence)
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
