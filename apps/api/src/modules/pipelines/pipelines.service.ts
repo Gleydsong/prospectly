@@ -2,6 +2,10 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 
+const leadBoardInclude = {
+  owner: { select: { id: true, name: true } },
+} as const;
+
 @Injectable()
 export class PipelinesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -19,9 +23,15 @@ export class PipelinesService {
     });
   }
 
-  async getBoard(organizationId: string, pipelineId?: string) {
-    const pipeline = pipelineId
-      ? await this.prisma.pipeline.findFirst({ where: { id: pipelineId, organizationId } })
+  async getBoard(
+    organizationId: string,
+    options: { pipelineId?: string; limit?: number; offset?: number } = {},
+  ) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+
+    const pipeline = options.pipelineId
+      ? await this.prisma.pipeline.findFirst({ where: { id: options.pipelineId, organizationId } })
       : await this.prisma.pipeline.findFirst({ where: { organizationId, isDefault: true } });
 
     if (!pipeline) {
@@ -31,17 +41,69 @@ export class PipelinesService {
     const stages = await this.prisma.pipelineStage.findMany({
       where: { pipelineId: pipeline.id },
       orderBy: { order: 'asc' },
-      include: {
-        leads: {
-          where: { deletedAt: null },
-          include: { owner: { select: { id: true, name: true } } },
-          orderBy: { updatedAt: 'desc' },
-          take: 100,
-        },
-      },
     });
 
-    return { pipeline, stages };
+    const stagePages = await Promise.all(
+      stages.map(async (stage) => {
+        const where = { stageId: stage.id, deletedAt: null };
+        const [totalCount, leads] = await Promise.all([
+          this.prisma.lead.count({ where }),
+          this.prisma.lead.findMany({
+            where,
+            include: leadBoardInclude,
+            orderBy: { updatedAt: 'desc' },
+            take: limit,
+            skip: offset,
+          }),
+        ]);
+
+        return {
+          ...stage,
+          leads,
+          totalCount,
+          hasMore: offset + leads.length < totalCount,
+        };
+      }),
+    );
+
+    return { pipeline, stages: stagePages, limit, offset };
+  }
+
+  async listStageLeads(
+    organizationId: string,
+    stageId: string,
+    options: { limit?: number; offset?: number } = {},
+  ) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
+
+    const stage = await this.prisma.pipelineStage.findFirst({
+      where: { id: stageId, pipeline: { organizationId } },
+    });
+    if (!stage) {
+      throw new NotFoundException('Stage not found');
+    }
+
+    const where = { stageId, deletedAt: null };
+    const [totalCount, leads] = await Promise.all([
+      this.prisma.lead.count({ where }),
+      this.prisma.lead.findMany({
+        where,
+        include: leadBoardInclude,
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+    ]);
+
+    return {
+      stage,
+      leads,
+      totalCount,
+      hasMore: offset + leads.length < totalCount,
+      limit,
+      offset,
+    };
   }
 
   async moveLeadToStage(organizationId: string, leadId: string, stageId: string, actorId: string) {

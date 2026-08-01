@@ -261,6 +261,18 @@
     "pipeline": "Pipeline",
     "tasks": "Tarefas"
   },
+  "pipeline": {
+    "subtitle": "{{name}} — arraste ou use Mover para etapa",
+    "stagesLabel": "Etapas do pipeline",
+    "columnCount": "{{shown}} de {{total}} leads",
+    "emptyColumn": "Sem leads nesta etapa",
+    "moveToStage": "Mover para etapa",
+    "moveToStageFor": "Mover {{lead}} para etapa",
+    "chooseStage": "Escolher etapa",
+    "loadMore": "Carregar mais ({{remaining}})",
+    "loadError": "Erro ao carregar pipeline.",
+    "movedAnnouncement": "{{lead}} movido para {{stage}}"
+  },
   "scoreRules": {
     "NO_WEBSITE": "Sem website",
     "NO_HTTPS": "Website sem HTTPS",

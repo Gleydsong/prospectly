@@ -167,9 +167,27 @@ export interface DashboardCharts {
   byScore: Array<{ bucket: string; count: number }>;
 }
 
+export interface PipelineBoardStage extends LeadStage {
+  order: number;
+  leads: LeadListItem[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
 export interface PipelineBoard {
   pipeline: { id: string; name: string };
-  stages: Array<LeadStage & { order: number; leads: LeadListItem[] }>;
+  stages: PipelineBoardStage[];
+  limit: number;
+  offset: number;
+}
+
+export interface PipelineStageLeadsPage {
+  stage: LeadStage;
+  leads: LeadListItem[];
+  totalCount: number;
+  hasMore: boolean;
+  limit: number;
+  offset: number;
 }
 
 export const BRAZILIAN_STATE_CODES = [
