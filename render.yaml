@@ -202,9 +202,6 @@ projects:
                 sync: false
               - key: NEXT_PUBLIC_API_URL
                 sync: false
-              - key: RESEND_API_KEY
-                sync: false
-              - key: RESEND_FROM
-                sync: false
-              - key: WAITLIST_NOTIFY_TO
+              # Server-only Nest base (`.../api/v1`) for waitlist proxy; falls back to NEXT_PUBLIC_API_URL
+              - key: WAITLIST_API_URL
                 sync: false
