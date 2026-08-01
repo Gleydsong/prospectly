@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ListPlus, PlayCircle } from '@phosphor-icons/react';
 import { HeroMotion } from '@/components/motion';
 import { ProductFlowMock } from '@/components/product-flow-mock';
-import { ProspectlyGlobe } from '@/components/prospectly-globe';
+import { ProspectlyGlobeLazy } from '@/components/prospectly-globe-lazy';
 import { t, type Locale } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -15,7 +15,7 @@ export function ConversionBand({ locale }: { locale: Locale }) {
         className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 opacity-[0.18] lg:block"
         aria-hidden
       >
-        <ProspectlyGlobe className="h-full w-full max-w-none translate-x-1/4" />
+        <ProspectlyGlobeLazy className="h-full w-full max-w-none translate-x-1/4" />
       </div>
 
       <div className="relative mx-auto grid max-w-shell items-center gap-8 px-4 py-10 sm:px-6 sm:py-12 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:py-16">

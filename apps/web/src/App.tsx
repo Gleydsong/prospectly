@@ -1,21 +1,43 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppLayout } from '@/components/layout/app-layout';
 import { ProtectedRoute } from '@/components/protected-route';
+import { RouteFallback } from '@/components/route-fallback';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
-import { PixCheckoutPage } from '@/pages/billing/pix-checkout-page';
-import { BillingCancelPage, BillingSuccessPage } from '@/pages/billing-result-page';
-import { DashboardPage } from '@/pages/dashboard-page';
-import { ImportsPage } from '@/pages/imports-page';
 import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
 import { LeadsPage } from '@/pages/leads/leads-page';
 import { PipelinePage } from '@/pages/pipeline-page';
 import { SearchPage } from '@/pages/search-page';
-import { SettingsPage } from '@/pages/settings-page';
-import { SettingsPrivacyPage } from '@/pages/settings-privacy-page';
 import { TasksPage } from '@/pages/tasks-page';
+
+const DashboardPage = lazy(() =>
+  import('@/pages/dashboard-page').then((m) => ({ default: m.DashboardPage })),
+);
+const ImportsPage = lazy(() =>
+  import('@/pages/imports-page').then((m) => ({ default: m.ImportsPage })),
+);
+const SettingsPage = lazy(() =>
+  import('@/pages/settings-page').then((m) => ({ default: m.SettingsPage })),
+);
+const SettingsPrivacyPage = lazy(() =>
+  import('@/pages/settings-privacy-page').then((m) => ({ default: m.SettingsPrivacyPage })),
+);
+const PixCheckoutPage = lazy(() =>
+  import('@/pages/billing/pix-checkout-page').then((m) => ({ default: m.PixCheckoutPage })),
+);
+const BillingSuccessPage = lazy(() =>
+  import('@/pages/billing-result-page').then((m) => ({ default: m.BillingSuccessPage })),
+);
+const BillingCancelPage = lazy(() =>
+  import('@/pages/billing-result-page').then((m) => ({ default: m.BillingCancelPage })),
+);
+
+function LazyPage({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+}
 
 export function App() {
   return (
@@ -23,21 +45,70 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/billing/success" element={<BillingSuccessPage />} />
-      <Route path="/billing/cancel" element={<BillingCancelPage />} />
+      <Route
+        path="/billing/success"
+        element={
+          <LazyPage>
+            <BillingSuccessPage />
+          </LazyPage>
+        }
+      />
+      <Route
+        path="/billing/cancel"
+        element={
+          <LazyPage>
+            <BillingCancelPage />
+          </LazyPage>
+        }
+      />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/billing/pix" element={<PixCheckoutPage />} />
+        <Route
+          path="/billing/pix"
+          element={
+            <LazyPage>
+              <PixCheckoutPage />
+            </LazyPage>
+          }
+        />
         <Route element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
+          <Route
+            index
+            element={
+              <LazyPage>
+                <DashboardPage />
+              </LazyPage>
+            }
+          />
           <Route path="search" element={<SearchPage />} />
-          <Route path="imports" element={<ImportsPage />} />
+          <Route
+            path="imports"
+            element={
+              <LazyPage>
+                <ImportsPage />
+              </LazyPage>
+            }
+          />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
           <Route path="tasks" element={<TasksPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="settings/privacy" element={<SettingsPrivacyPage />} />
+          <Route
+            path="settings"
+            element={
+              <LazyPage>
+                <SettingsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="settings/privacy"
+            element={
+              <LazyPage>
+                <SettingsPrivacyPage />
+              </LazyPage>
+            }
+          />
         </Route>
       </Route>
 
