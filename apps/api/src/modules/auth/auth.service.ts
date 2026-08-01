@@ -19,6 +19,7 @@ import { TERMS_VERSION } from '../billing/billing.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
+import { buildPasswordResetEmail } from './password-reset-email';
 import { RegisterDto } from './dto/register.dto';
 
 export interface AuthTokens {
@@ -44,7 +45,9 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 const INVALID_CREDENTIALS = 'Invalid credentials';
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const GENERIC_VERIFY_FAIL = 'Invalid or expired verification token';
+const GENERIC_RESET_MAIL_FAIL = 'Unable to process password reset right now. Please try again later.';
 
 @Injectable()
 export class AuthService {
@@ -299,21 +302,56 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-    if (!user) {
-      // Do not reveal account existence.
+    const env = this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+    const prodLike = env === 'production' || env === 'staging';
+    if (prodLike && !this.mail.isConfigured()) {
+      this.logger.error('Password reset aborted: mail provider is not configured');
+      throw new ServiceUnavailableException(GENERIC_RESET_MAIL_FAIL);
+    }
+
+    const normalized = email.toLowerCase().trim();
+    const user = await this.prisma.user.findUnique({ where: { email: normalized } });
+    if (!user || !user.passwordHash) {
+      // Do not reveal account existence (or Google-only accounts without password).
       return;
     }
+
     const token = randomBytes(32).toString('hex');
+    const tokenHash = this.sha256(token);
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        resetTokenHash: this.sha256(token),
-        resetTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        resetTokenHash: tokenHash,
+        resetTokenExpiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
       },
     });
-    // TODO(phase-6): send via SMTP provider. Never log the raw token.
-    this.logger.log(`Password reset requested for ${user.email}`);
+
+    const frontend = (this.config.get<string>('frontendUrl') ?? 'http://localhost:5173').replace(
+      /\/$/,
+      '',
+    );
+    const resetUrl = `${frontend}/reset-password?token=${token}`;
+    const locale = user.locale === 'en' ? 'en' : 'pt';
+    const content = buildPasswordResetEmail({ locale, resetUrl, frontendUrl: frontend });
+
+    try {
+      await this.mail.send({
+        to: user.email,
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+      });
+      this.logger.log(`Password reset email dispatched for user ${user.id}`);
+    } catch (err) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { resetTokenHash: null, resetTokenExpiresAt: null },
+      });
+      this.logger.error(
+        `Password reset email failed for user ${user.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw new ServiceUnavailableException(GENERIC_RESET_MAIL_FAIL);
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

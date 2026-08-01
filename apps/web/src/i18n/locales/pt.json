@@ -80,7 +80,22 @@
     "verifySuccess": "E-mail verificado com sucesso.",
     "verifyError": "Token inválido ou expirado.",
     "verifyPending": "A verificar o seu e-mail…",
-    "verifyGoApp": "Ir para o app"
+    "verifyGoApp": "Ir para o app",
+    "forgotLink": "Esqueci a senha",
+    "forgotTitle": "Recuperar senha",
+    "forgotSubtitle": "Enviaremos um link se a conta existir",
+    "forgotSubmit": "Enviar link de redefinição",
+    "forgotSuccess": "Se o e-mail existir, enviamos um link para redefinir a senha.",
+    "backToLogin": "Voltar ao login",
+    "resetTitle": "Nova senha",
+    "resetSubtitle": "Escolha uma senha forte para a sua conta",
+    "resetMissingToken": "Link inválido ou incompleto. Solicite um novo e-mail de recuperação.",
+    "resetSuccess": "Senha redefinida com sucesso. Você já pode entrar.",
+    "resetError": "Token inválido ou expirado. Solicite um novo link.",
+    "resetSubmit": "Salvar nova senha",
+    "newPassword": "Nova senha",
+    "confirmPassword": "Confirmar senha",
+    "passwordMismatch": "As senhas não coincidem"
   },
   "dashboard": {
     "title": "Dashboard",

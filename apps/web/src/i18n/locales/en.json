@@ -80,7 +80,22 @@
     "verifySuccess": "Email verified successfully.",
     "verifyError": "Invalid or expired token.",
     "verifyPending": "Verifying your email…",
-    "verifyGoApp": "Go to app"
+    "verifyGoApp": "Go to app",
+    "forgotLink": "Forgot password",
+    "forgotTitle": "Reset password",
+    "forgotSubtitle": "We'll email a link if the account exists",
+    "forgotSubmit": "Send reset link",
+    "forgotSuccess": "If the email exists, we sent a link to reset your password.",
+    "backToLogin": "Back to sign in",
+    "resetTitle": "New password",
+    "resetSubtitle": "Choose a strong password for your account",
+    "resetMissingToken": "Invalid or incomplete link. Request a new reset email.",
+    "resetSuccess": "Password updated. You can sign in now.",
+    "resetError": "Invalid or expired token. Request a new link.",
+    "resetSubmit": "Save new password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "passwordMismatch": "Passwords do not match"
   },
   "dashboard": {
     "title": "Dashboard",

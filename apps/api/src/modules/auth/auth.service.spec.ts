@@ -1,7 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
+import { createHash } from 'node:crypto';
 
 import type { MailService } from '../../common/mail/mail.service';
 import type { PrismaService } from '../../common/prisma/prisma.service';
@@ -49,8 +50,13 @@ const makePrisma = () => {
     $transaction: jest.fn(),
   };
   return prisma as unknown as PrismaService & {
-    user: { findUnique: jest.Mock; update: jest.Mock };
+    user: {
+      findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+    };
     organizationMember: { findUnique: jest.Mock };
+    refreshToken: { updateMany: jest.Mock; create: jest.Mock; findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
 };
@@ -75,9 +81,10 @@ const makeJwt = () =>
     decode: jest.fn().mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 600, jti: 'jti-1' }),
   }) as unknown as JwtService;
 
-const makeMail = () =>
+const makeMail = (overrides: Partial<{ send: jest.Mock; isConfigured: jest.Mock }> = {}) =>
   ({
-    send: jest.fn().mockResolvedValue(undefined),
+    send: overrides.send ?? jest.fn().mockResolvedValue(undefined),
+    isConfigured: overrides.isConfigured ?? jest.fn().mockReturnValue(true),
   }) as unknown as MailService;
 
 describe('AuthService', () => {
@@ -403,5 +410,189 @@ describe('AuthService', () => {
     expect(result.user.organizationId).toBe('org1');
     expect(verifyIdToken).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('forgotPassword does not send email for unknown account', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const mail = makeMail();
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
+
+    await service.forgotPassword('missing@agency.dev');
+
+    expect(mail.send).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('forgotPassword does not send email for Google-only account without password', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'google@agency.dev',
+      passwordHash: null,
+      locale: 'pt',
+    });
+    const mail = makeMail();
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
+
+    await service.forgotPassword('google@agency.dev');
+
+    expect(mail.send).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('forgotPassword sends reset email without logging the raw token', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      passwordHash: 'hash',
+      locale: 'pt',
+    });
+    prisma.user.update.mockResolvedValue({});
+    const mail = makeMail();
+
+    const service = new AuthService(
+      prisma,
+      makeJwt(),
+      makeConfig({ frontendUrl: 'https://app.prospectly.dev' }),
+      mail,
+    );
+    const loggerLog = jest.spyOn(
+      (service as unknown as { logger: { log: (...args: unknown[]) => void } }).logger,
+      'log',
+    );
+
+    await service.forgotPassword('ana@agency.dev');
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: expect.objectContaining({
+          resetTokenHash: expect.any(String),
+          resetTokenExpiresAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(mail.send).toHaveBeenCalledTimes(1);
+    const payload = (mail.send as jest.Mock).mock.calls[0][0] as {
+      to: string;
+      subject: string;
+      text: string;
+      html: string;
+    };
+    expect(payload.to).toBe('ana@agency.dev');
+    expect(payload.subject).toMatch(/senha|password/i);
+    expect(payload.text).toContain('https://app.prospectly.dev/reset-password?token=');
+    expect(payload.html).toContain('/reset-password?token=');
+
+    const tokenMatch = payload.text.match(/token=([a-f0-9]+)/);
+    expect(tokenMatch?.[1]).toBeTruthy();
+    const rawToken = tokenMatch![1]!;
+    const storedHash = (prisma.user.update as jest.Mock).mock.calls[0][0].data.resetTokenHash as string;
+    expect(storedHash).toBe(createHash('sha256').update(rawToken).digest('hex'));
+
+    for (const call of loggerLog.mock.calls) {
+      const joined = call.map(String).join(' ');
+      expect(joined).not.toContain(rawToken);
+    }
+  });
+
+  it('forgotPassword clears token and fails observably when mail send fails', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      passwordHash: 'hash',
+      locale: 'en',
+    });
+    prisma.user.update.mockResolvedValue({});
+    const mail = makeMail({
+      send: jest.fn().mockRejectedValue(new Error('Resend send failed')),
+    });
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
+
+    await expect(service.forgotPassword('ana@agency.dev')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: { resetTokenHash: null, resetTokenExpiresAt: null },
+      }),
+    );
+  });
+
+  it('forgotPassword fails before lookup when mail is not configured in production', async () => {
+    const prisma = makePrisma();
+    const mail = makeMail({ isConfigured: jest.fn().mockReturnValue(false) });
+    const service = new AuthService(
+      prisma,
+      makeJwt(),
+      makeConfig({ nodeEnv: 'production' }),
+      mail,
+    );
+
+    await expect(service.forgotPassword('ana@agency.dev')).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+    expect(mail.send).not.toHaveBeenCalled();
+  });
+
+  it('resetPassword rejects expired or unknown token', async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue(null);
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+
+    await expect(service.resetPassword('dead-token', 'NewPass1!')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('resetPassword updates password, clears token and revokes sessions', async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({ id: 'u1', email: 'ana@agency.dev' });
+    prisma.user.update.mockResolvedValue({});
+    prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 2 });
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+
+    await service.resetPassword('raw-token-value', 'NewPass1!');
+
+    expect(argon2.hash).toHaveBeenCalledWith('NewPass1!');
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: expect.objectContaining({
+          passwordHash: 'hashed',
+          resetTokenHash: null,
+          resetTokenExpiresAt: null,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        }),
+      }),
+    );
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      }),
+    );
+  });
+
+  it('resetPassword rejects reused token after clearing', async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst
+      .mockResolvedValueOnce({ id: 'u1', email: 'ana@agency.dev' })
+      .mockResolvedValueOnce(null);
+    prisma.user.update.mockResolvedValue({});
+    prisma.refreshToken.updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+
+    await service.resetPassword('one-time-token', 'NewPass1!');
+    await expect(service.resetPassword('one-time-token', 'NewPass2!')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

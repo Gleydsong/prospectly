@@ -2,8 +2,10 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AppLayout } from '@/components/layout/app-layout';
 import { ProtectedRoute } from '@/components/protected-route';
+import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page';
 import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
+import { ResetPasswordPage } from '@/pages/auth/reset-password-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
 import { PixCheckoutPage } from '@/pages/billing/pix-checkout-page';
 import { BillingCancelPage, BillingSuccessPage } from '@/pages/billing-result-page';
@@ -22,6 +24,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/billing/success" element={<BillingSuccessPage />} />
       <Route path="/billing/cancel" element={<BillingCancelPage />} />

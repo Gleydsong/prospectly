@@ -5,34 +5,30 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
-import { LoginPage } from './login-page';
+import { ForgotPasswordPage } from './forgot-password-page';
 
-vi.mock('@/features/auth/google-sign-in-button', () => ({
-  GoogleSignInButton: () => null,
+vi.mock('@/features/auth/api', () => ({
+  forgotPassword: vi.fn().mockResolvedValue({ message: 'ok' }),
 }));
 
 const renderPage = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter>
-        <LoginPage />
+        <ForgotPasswordPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 
-describe('LoginPage', () => {
+describe('ForgotPasswordPage', () => {
   beforeAll(async () => {
     await i18n.changeLanguage('pt');
   });
 
-  it('renders email and password fields', () => {
+  it('renders email field', () => {
     renderPage();
     expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Esqueci a senha' })).toHaveAttribute(
-      'href',
-      '/forgot-password',
-    );
+    expect(screen.getByRole('button', { name: 'Enviar link de redefinição' })).toBeInTheDocument();
   });
 
   it('validates email format before submit', async () => {
@@ -40,19 +36,8 @@ describe('LoginPage', () => {
     renderPage();
 
     await user.type(screen.getByLabelText('E-mail'), 'not-an-email');
-    await user.type(screen.getByLabelText('Senha'), 'secret1');
-    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+    await user.click(screen.getByRole('button', { name: 'Enviar link de redefinição' }));
 
     expect(await screen.findByText('E-mail inválido')).toBeInTheDocument();
-  });
-
-  it('requires password', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
-    await user.click(screen.getByRole('button', { name: 'Entrar' }));
-
-    expect(await screen.findByText('Senha obrigatória')).toBeInTheDocument();
   });
 });
