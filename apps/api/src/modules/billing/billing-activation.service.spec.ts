@@ -74,6 +74,44 @@ describe('BillingActivationService', () => {
     expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 
+  it('revokes lifetime after matching Abacate refund', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.LIFETIME,
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_1',
+    });
+    prisma.organization.update.mockResolvedValue({});
+    await service.revokeLifetime({
+      organizationId: 'org1',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_1',
+    });
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: {
+        plan: OrgPlan.FREE,
+        planStatus: PlanStatus.CANCELED,
+        abacatePaymentId: null,
+      },
+    });
+  });
+
+  it('does not revoke lifetime when payment id mismatches', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.LIFETIME,
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_current',
+    });
+    await service.revokeLifetime({
+      organizationId: 'org1',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_old',
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
   it('cancels monthly to FREE', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',

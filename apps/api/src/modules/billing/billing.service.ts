@@ -182,7 +182,13 @@ export class BillingService {
     if (!firstTime) {
       return { received: true };
     }
-    await this.stripeProvider.applyWebhookEvent(parsed.payload, parsed.type);
+    try {
+      await this.stripeProvider.applyWebhookEvent(parsed.payload, parsed.type);
+    } catch (error) {
+      // Release the claim so provider retries can re-process after a transient failure.
+      await this.releaseWebhookEvent('STRIPE', parsed.eventId);
+      throw error;
+    }
     return { received: true };
   }
 
@@ -201,7 +207,12 @@ export class BillingService {
     if (!firstTime) {
       return { received: true };
     }
-    await this.abacateProvider.applyWebhookEvent(parsed.payload, parsed.type);
+    try {
+      await this.abacateProvider.applyWebhookEvent(parsed.payload, parsed.type);
+    } catch (error) {
+      await this.releaseWebhookEvent('ABACATE', parsed.eventId);
+      throw error;
+    }
     return { received: true };
   }
 
@@ -238,6 +249,26 @@ export class BillingService {
         return false;
       }
       throw error;
+    }
+  }
+
+  private async releaseWebhookEvent(
+    provider: PaymentProviderId,
+    eventId: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.billingWebhookEvent.delete({
+        where: {
+          provider_eventId: {
+            provider: provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+            eventId,
+          },
+        },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to release ${provider} webhook claim ${eventId}: ${(error as Error).message}`,
+      );
     }
   }
 
