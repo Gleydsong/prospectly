@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
+import type { AuditService } from '../audit/audit.service';
 import { PipelinesService } from './pipelines.service';
 
 const makePrisma = () => {
@@ -26,6 +27,11 @@ const makePrisma = () => {
   return prisma as unknown as PrismaService & typeof prisma;
 };
 
+const makeAudit = () =>
+  ({
+    log: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as AuditService;
+
 describe('PipelinesService', () => {
   it('returns totalCount and hasMore when a stage exceeds the page size', async () => {
     const prisma = makePrisma();
@@ -34,7 +40,7 @@ describe('PipelinesService', () => {
     prisma.lead.count.mockResolvedValue(120);
     prisma.lead.findMany.mockResolvedValue(Array.from({ length: 50 }, (_, i) => ({ id: `lead-${i}` })));
 
-    const service = new PipelinesService(prisma);
+    const service = new PipelinesService(prisma, makeAudit());
     const board = await service.getBoard('org-1', { limit: 50, offset: 0 });
     const firstStage = board.stages[0];
     expect(firstStage).toBeDefined();
@@ -52,7 +58,7 @@ describe('PipelinesService', () => {
     prisma.lead.count.mockResolvedValue(150);
     prisma.lead.findMany.mockResolvedValue([{ id: 'lead-101' }]);
 
-    const service = new PipelinesService(prisma);
+    const service = new PipelinesService(prisma, makeAudit());
     const page = await service.listStageLeads('org-1', 'stage-1', { limit: 50, offset: 100 });
 
     expect(page.totalCount).toBe(150);
@@ -71,7 +77,7 @@ describe('PipelinesService', () => {
     });
     prisma.pipelineStage.findFirst.mockResolvedValue(null);
 
-    const service = new PipelinesService(prisma);
+    const service = new PipelinesService(prisma, makeAudit());
     await expect(service.moveLeadToStage('org-1', 'lead-1', 'foreign-stage', 'user-1')).rejects.toBeInstanceOf(
       BadRequestException,
     );
@@ -81,7 +87,7 @@ describe('PipelinesService', () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue(null);
 
-    const service = new PipelinesService(prisma);
+    const service = new PipelinesService(prisma, makeAudit());
     await expect(service.moveLeadToStage('org-1', 'missing', 'stage-1', 'user-1')).rejects.toBeInstanceOf(
       NotFoundException,
     );
@@ -89,6 +95,7 @@ describe('PipelinesService', () => {
 
   it('moves a lead between stages and records activity', async () => {
     const prisma = makePrisma();
+    const audit = makeAudit();
     prisma.lead.findFirst.mockResolvedValue({
       id: 'lead-1',
       stageId: 'stage-a',
@@ -102,7 +109,7 @@ describe('PipelinesService', () => {
     });
     prisma.leadActivity.create.mockResolvedValue({});
 
-    const service = new PipelinesService(prisma);
+    const service = new PipelinesService(prisma, audit);
     const updated = await service.moveLeadToStage('org-1', 'lead-1', 'stage-b', 'user-1');
 
     expect(updated.stageId).toBe('stage-b');
@@ -112,5 +119,6 @@ describe('PipelinesService', () => {
         metadata: { fromStageId: 'stage-a', toStageId: 'stage-b' },
       }),
     });
+    expect(audit.log).toHaveBeenCalled();
   });
 });
