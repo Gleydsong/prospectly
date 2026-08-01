@@ -1,6 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { LeadSource, LeadStatus, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
+import { ConfidenceLevel, LeadSource, LeadStatus, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
 import type { Queue } from 'bullmq';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
@@ -386,6 +386,8 @@ export class ProspectingService {
 
   private toLeadCandidate(business: NormalizedBusiness): LeadIngestionCandidate {
     const isGoogle = business.source === 'GOOGLE_PLACES';
+    const noWebsiteReported = business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED;
+    const websiteFound = business.websitePresence === WebsitePresence.WEBSITE_FOUND;
     return {
       companyName: business.companyName,
       category: business.category,
@@ -405,10 +407,20 @@ export class ProspectingService {
       websitePresence: business.websitePresence,
       websiteCheckedAt: new Date(),
       websiteCheckSource: isGoogle ? 'Google Places' : 'OpenStreetMap',
+      websiteStatusReason: noWebsiteReported
+        ? 'Fonte não reportou website (observação, não confirmação de ausência).'
+        : websiteFound
+          ? 'Website reportado pela fonte; validação recomendada.'
+          : 'Presença de website precisa de revisão.',
+      confidenceLevel: noWebsiteReported
+        ? ConfidenceLevel.LOW
+        : websiteFound
+          ? ConfidenceLevel.MEDIUM
+          : ConfidenceLevel.LOW,
       notes: isGoogle
         ? 'Importado do Google Places. Validação manual de website necessária.'
         : 'Importado do OpenStreetMap. Validação manual de website necessária.',
-      tags: ['sem-site'],
+      tags: noWebsiteReported ? ['sem-site'] : [],
     };
   }
 }

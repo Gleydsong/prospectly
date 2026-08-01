@@ -2,7 +2,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { LeadIngestionService } from './lead-ingestion.service';
-import { LeadsService } from './leads.service';
+import { collectMissingLeadFields, LeadsService } from './leads.service';
 import type { CreateLeadDto } from './dto/create-lead.dto';
 
 const makePrisma = () => {
@@ -223,4 +223,58 @@ describe('LeadsService', () => {
       expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
     );
   });
+
+  it('collectMissingLeadFields lists blank contact and website fields', () => {
+    expect(
+      collectMissingLeadFields({
+        phone: ' ',
+        email: null,
+        website: 'https://ok.example',
+        whatsapp: undefined,
+        address: 'Rua A',
+        city: '',
+        category: 'padaria',
+      }),
+    ).toEqual(['phone', 'email', 'whatsapp', 'city']);
+  });
+
+  it('getById includes provenance missingFields on detailed serialize', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      organizationId: 'org1',
+      companyName: 'Café',
+      phone: null,
+      email: null,
+      website: null,
+      whatsapp: null,
+      address: null,
+      city: 'SP',
+      category: null,
+      source: 'OPENSTREETMAP',
+      websitePresence: 'NO_WEBSITE_REPORTED',
+      dataCollectedAt: new Date('2026-08-01T10:00:00.000Z'),
+      lastVerifiedAt: null,
+      confidenceLevel: 'LOW',
+      websiteStatusReason: 'Fonte não reportou website (observação, não confirmação de ausência).',
+      tags: [],
+      contacts: [],
+      scores: [],
+      websiteRecord: null,
+    });
+    const service = new LeadsService(prisma, makeIngestion());
+
+    const result = await service.getById('org1', 'lead-1');
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        source: 'OPENSTREETMAP',
+        websitePresence: 'NO_WEBSITE_REPORTED',
+        confidenceLevel: 'LOW',
+        missingFields: expect.arrayContaining(['phone', 'email', 'website', 'whatsapp', 'address', 'category']),
+      }),
+    );
+    expect((result as { missingFields: string[] }).missingFields).not.toContain('city');
+  });
+
 });

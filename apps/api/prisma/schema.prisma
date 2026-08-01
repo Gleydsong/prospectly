@@ -105,6 +105,12 @@ enum WebsitePresence {
   NEEDS_REVIEW
 }
 
+enum ConfidenceLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum AnalysisStatus {
   PENDING
   RUNNING
@@ -298,11 +304,14 @@ model Lead {
   source             LeadSource      @default(MANUAL)
   externalId         String?
   status             LeadStatus      @default(NEW)
-  websitePresence    WebsitePresence @default(NEEDS_REVIEW)
-  websiteCheckedAt   DateTime?
-  websiteCheckSource String?
-  score              Int             @default(0)
-  notes              String?
+  websitePresence      WebsitePresence  @default(NEEDS_REVIEW)
+  websiteCheckedAt     DateTime?
+  websiteCheckSource   String?
+  websiteStatusReason  String?
+  confidenceLevel      ConfidenceLevel?
+  lastVerifiedAt       DateTime?
+  score                Int              @default(0)
+  notes                String?
   probableDuplicateKey String?
 
   doNotContact    Boolean   @default(false)

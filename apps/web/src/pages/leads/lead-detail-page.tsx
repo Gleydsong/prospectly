@@ -158,7 +158,7 @@ export function LeadDetailPage() {
                 ) : lead.website ? (
                   lead.website
                 ) : (
-                  'Sem site'
+                  websitePresenceLabel(lead.websitePresence)
                 )
               }
             />
@@ -179,6 +179,67 @@ export function LeadDetailPage() {
                 <p className="whitespace-pre-wrap text-zinc-300">{lead.notes}</p>
               </div>
             ) : null}
+
+            <div className="border-t border-zinc-800 pt-3">
+              <p className="mb-2 text-xs font-medium uppercase text-zinc-400">Proveniência</p>
+              <dl className="space-y-2 text-sm text-zinc-300">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-zinc-500">Fonte</dt>
+                  <dd>{SOURCE_LABEL[lead.source] ?? lead.source}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-zinc-500">Coletado em</dt>
+                  <dd>{lead.dataCollectedAt ? formatDateTime(lead.dataCollectedAt) : '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-zinc-500">Última verificação</dt>
+                  <dd>{lead.lastVerifiedAt ? formatDateTime(lead.lastVerifiedAt) : '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-zinc-500">Confiança</dt>
+                  <dd>{lead.confidenceLevel ? CONFIDENCE_LABEL[lead.confidenceLevel] : '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-zinc-500">Website (fonte)</dt>
+                  <dd>{websitePresenceLabel(lead.websitePresence)}</dd>
+                </div>
+                {lead.websiteStatusReason ? (
+                  <p className="text-xs text-zinc-500">{lead.websiteStatusReason}</p>
+                ) : null}
+              </dl>
+              {lead.missingFields && lead.missingFields.length > 0 ? (
+                <div className="mt-3">
+                  <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Dados ausentes</p>
+                  <div className="flex flex-wrap gap-1">
+                    {lead.missingFields.map((field) => (
+                      <Badge key={field} tone="amber">{MISSING_FIELD_LABEL[field] ?? field}</Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="mt-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  loading={analyzeMutation.isPending || analysisPending}
+                  onClick={() => {
+                    setAnalysisMessage(null);
+                    analyzeMutation.mutate();
+                  }}
+                  disabled={!lead.website}
+                >
+                  <RefreshCw className="h-4 w-4" aria-hidden />
+                  {lead.website ? 'Verificar / enriquecer' : 'Enriquecer (requer website)'}
+                </Button>
+                {!lead.website ? (
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Sem URL cadastrada a análise automática não roda. Confirme manualmente ou importe
+                    detalhes seletivos do provedor.
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -253,7 +314,7 @@ export function LeadDetailPage() {
                 <p className="text-sm text-zinc-500">
                   {lead.website
                     ? 'Ainda sem análise. Use Reanalisar ou aguarde o processamento automático.'
-                    : 'Lead sem website cadastrado.'}
+                    : 'Nenhum website cadastrado para analisar. A ausência na fonte é observação, não prova.'}
                 </p>
               )}
               {latestAnalysis && latestAnalysis.issues.length > 0 ? (
@@ -440,3 +501,43 @@ function boolLabel(value?: boolean | null): string {
   if (value === false) return 'Não';
   return '—';
 }
+
+const SOURCE_LABEL: Record<string, string> = {
+  MANUAL: 'Manual',
+  CSV_IMPORT: 'Importação CSV',
+  GOOGLE_PLACES: 'Google Places',
+  OPENSTREETMAP: 'OpenStreetMap',
+  YELP: 'Yelp',
+  REFERRAL: 'Indicação',
+  OTHER: 'Outro',
+};
+
+const CONFIDENCE_LABEL: Record<string, string> = {
+  LOW: 'Baixa',
+  MEDIUM: 'Média',
+  HIGH: 'Alta',
+};
+
+const MISSING_FIELD_LABEL: Record<string, string> = {
+  phone: 'Telefone',
+  email: 'E-mail',
+  website: 'Website',
+  whatsapp: 'WhatsApp',
+  address: 'Endereço',
+  city: 'Cidade',
+  category: 'Categoria',
+};
+
+function websitePresenceLabel(presence?: string | null): string {
+  switch (presence) {
+    case 'NO_WEBSITE_REPORTED':
+      return 'Fonte não informou site';
+    case 'WEBSITE_FOUND':
+      return 'Site informado pela fonte';
+    case 'NEEDS_REVIEW':
+      return 'Revisão de website necessária';
+    default:
+      return 'Website não cadastrado';
+  }
+}
+

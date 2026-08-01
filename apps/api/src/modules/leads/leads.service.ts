@@ -338,14 +338,35 @@ export class LeadsService {
 
   private serialize(lead: Record<string, unknown>, detailed = false) {
     const { tags, ...rest } = lead as { tags?: Array<{ tag: unknown }> } & Record<string, unknown>;
-    const serialized = {
+    const serialized: Record<string, unknown> = {
       ...rest,
       tags: tags?.map((entry) => entry.tag) ?? [],
     };
     if (!detailed) {
-      delete (serialized as Record<string, unknown>).scores;
-      delete (serialized as Record<string, unknown>).websiteRecord;
+      delete serialized.scores;
+      delete serialized.websiteRecord;
+    } else {
+      serialized.missingFields = collectMissingLeadFields(serialized);
     }
     return serialized;
   }
+}
+
+const PROVENANCE_MISSING_FIELDS = [
+  'phone',
+  'email',
+  'website',
+  'whatsapp',
+  'address',
+  'city',
+  'category',
+] as const;
+
+export function collectMissingLeadFields(lead: Record<string, unknown>): string[] {
+  return PROVENANCE_MISSING_FIELDS.filter((field) => {
+    const value = lead[field];
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string' && value.trim() === '') return true;
+    return false;
+  });
 }

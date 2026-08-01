@@ -247,7 +247,7 @@
     "tasks": "Tarefas"
   },
   "scoreRules": {
-    "NO_WEBSITE": "Sem website",
+    "NO_WEBSITE": "Website não informado",
     "NO_HTTPS": "Website sem HTTPS",
     "NOT_RESPONSIVE": "Website não responsivo",
     "SLOW": "Performance baixa",

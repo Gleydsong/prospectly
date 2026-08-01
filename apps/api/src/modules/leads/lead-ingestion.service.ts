@@ -1,5 +1,5 @@
 import { Injectable, Optional } from '@nestjs/common';
-import { LeadSource, LeadStatus, Prisma, WebsitePresence } from '@prisma/client';
+import { ConfidenceLevel, LeadSource, LeadStatus, Prisma, WebsitePresence } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
@@ -45,6 +45,9 @@ export interface LeadIngestionCandidate {
   websitePresence?: WebsitePresence;
   websiteCheckedAt?: Date;
   websiteCheckSource?: string;
+  websiteStatusReason?: string;
+  confidenceLevel?: ConfidenceLevel;
+  lastVerifiedAt?: Date;
   notes?: string;
   tags?: string[];
 }
@@ -194,6 +197,9 @@ export class LeadIngestionService {
             websitePresence: normalized.websitePresence,
             websiteCheckedAt: normalized.websiteCheckedAt,
             websiteCheckSource: normalized.websiteCheckSource,
+            websiteStatusReason: normalized.websiteStatusReason,
+            confidenceLevel: normalized.confidenceLevel,
+            lastVerifiedAt: normalized.lastVerifiedAt,
             notes: normalized.notes,
             probableDuplicateKey: normalized.probableDuplicateKey,
             dataCollectedAt: new Date(),

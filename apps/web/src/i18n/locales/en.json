@@ -247,7 +247,7 @@
     "tasks": "Tasks"
   },
   "scoreRules": {
-    "NO_WEBSITE": "No website",
+    "NO_WEBSITE": "Website not reported",
     "NO_HTTPS": "Website without HTTPS",
     "NOT_RESPONSIVE": "Website not responsive",
     "SLOW": "Slow performance",

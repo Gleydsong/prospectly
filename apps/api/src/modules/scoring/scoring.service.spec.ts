@@ -1,3 +1,4 @@
+import { DEFAULT_SCORE_RULES } from './scoring.constants';
 import { ScoringService } from './scoring.service';
 
 describe('ScoringService', () => {
@@ -120,4 +121,11 @@ describe('ScoringService', () => {
     expect(queue.add).toHaveBeenCalled();
     expect((prisma.scoreRule as { update: jest.Mock }).update).toHaveBeenCalled();
   });
+
+  it('NO_WEBSITE description avoids definitive absence wording', () => {
+    const rule = DEFAULT_SCORE_RULES.find((item) => item.key === 'NO_WEBSITE');
+    expect(rule?.description.toLowerCase()).not.toContain('sem website');
+    expect(rule?.description.toLowerCase()).toContain('não informado');
+  });
+
 });
