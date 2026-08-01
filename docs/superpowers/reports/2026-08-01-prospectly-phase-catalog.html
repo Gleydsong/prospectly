@@ -6,182 +6,42 @@
   <title>Prospectly — Catálogo de fases do workflow</title>
   <style>
     :root {
-      --ink: #18181b;
-      --muted: #52525b;
-      --bg: #f4f4f5;
-      --card: #ffffff;
-      --border: #e4e4e7;
-      --accent: #2563eb;
-      --ok: #059669;
-      --warn: #d97706;
-      --danger: #dc2626;
-      --purple: #7c3aed;
-      --next: #0284c7;
+      --ink: #18181b; --muted: #52525b; --bg: #f4f4f5; --card: #ffffff;
+      --border: #e4e4e7; --accent: #2563eb; --ok: #059669; --warn: #d97706; --danger: #dc2626;
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: var(--ink);
-      background: var(--bg);
-      line-height: 1.55;
-    }
-    header {
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0f766e 100%);
-      color: #fff;
-      padding: 2.5rem 1.25rem 2rem;
-    }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.55; }
+    header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0f766e 100%); color: #fff; padding: 2.5rem 1.25rem 2rem; }
     header .wrap, main, footer { max-width: 960px; margin: 0 auto; }
     header h1 { margin: 0 0 0.4rem; font-size: 1.75rem; letter-spacing: -0.02em; }
     header p { margin: 0.25rem 0; opacity: 0.92; }
     .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.65rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.14);
-      font-size: 0.78rem;
-      font-weight: 600;
-    }
+    .badge { display: inline-block; padding: 0.25rem 0.65rem; border-radius: 999px; background: rgba(255,255,255,0.14); font-size: 0.78rem; font-weight: 600; }
     main { padding: 1.5rem 1.25rem 3rem; }
-    section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.25rem 1.35rem;
-      margin-bottom: 1rem;
-    }
-    h2 {
-      margin: 0 0 0.85rem;
-      font-size: 1.15rem;
-      letter-spacing: -0.01em;
-    }
-    h3 {
-      margin: 1.15rem 0 0.45rem;
-      font-size: 1rem;
-    }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1.35rem; margin-bottom: 1rem; }
+    h2 { margin: 0 0 0.85rem; font-size: 1.15rem; }
     .muted { color: var(--muted); font-size: 0.92rem; }
     a { color: var(--accent); }
-    code, .path {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.86em;
-      background: #f4f4f5;
-      padding: 0.1em 0.35em;
-      border-radius: 4px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    th, td {
-      text-align: left;
-      padding: 0.55rem 0.45rem;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-    th {
-      color: var(--muted);
-      font-weight: 600;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    ul { padding-left: 1.15rem; margin: 0.4rem 0; }
-    li { margin: 0.3rem 0; }
-    .tag {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.18rem 0.45rem;
-      border-radius: 4px;
-      white-space: nowrap;
-      vertical-align: middle;
-    }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.86em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.55rem 0.45rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .tag { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 0.18rem 0.45rem; border-radius: 4px; white-space: nowrap; }
     .tag-done { background: #d1fae5; color: var(--ok); }
-    .tag-next { background: #e0f2fe; color: var(--next); }
-    .tag-todo { background: #f4f4f5; color: var(--muted); }
     .tag-blocked { background: #fee2e2; color: var(--danger); }
-    .tag-audited { background: #ede9fe; color: var(--purple); }
     .tag-open { background: #fef3c7; color: var(--warn); }
-    .progress {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 0.65rem;
-      margin: 0.75rem 0 0.25rem;
-    }
-    .stat {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 10px;
-      padding: 0.75rem 0.85rem;
-    }
+    .progress { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.65rem; margin: 0.75rem 0 0.25rem; }
+    .stat { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 0.75rem 0.85rem; }
     .stat strong { display: block; font-size: 1.35rem; letter-spacing: -0.02em; }
     .stat span { color: var(--muted); font-size: 0.8rem; }
-    .phase-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1rem 1.05rem;
-      margin: 0.75rem 0;
-      background: #fafafa;
-    }
-    .phase-card.done { border-color: #6ee7b7; background: #ecfdf5; }
-    .phase-card.next { border-color: #7dd3fc; background: #f0f9ff; }
-    .phase-card.audited { border-color: #c4b5fd; background: #f5f3ff; }
+    .phase-card { border: 1px solid #6ee7b7; border-radius: 10px; padding: 1rem 1.05rem; margin: 0.75rem 0; background: #ecfdf5; }
     .phase-card.blocked { border-color: #fca5a5; background: #fef2f2; }
-    .phase-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .phase-head h3 { margin: 0; flex: 1; min-width: 200px; }
-    .kv { font-size: 0.88rem; margin: 0.2rem 0; }
-    .kv b { color: var(--muted); font-weight: 600; }
+    .phase-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+    .phase-head h3 { margin: 0; flex: 1; min-width: 200px; font-size: 1rem; }
     .check { list-style: none; padding-left: 0; }
-    .check li {
-      display: grid;
-      grid-template-columns: 1.5rem 1fr;
-      gap: 0.45rem;
-      padding: 0.4rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.92rem;
-    }
-    .check li:last-child { border-bottom: 0; }
-    .mark {
-      width: 1.15rem;
-      height: 1.15rem;
-      border-radius: 4px;
-      border: 2px solid var(--border);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 0.15rem;
-      font-size: 0.7rem;
-      font-weight: 800;
-    }
-    .mark.on { background: var(--ok); border-color: var(--ok); color: #fff; }
-    .mark.next-mark { background: var(--next); border-color: var(--next); color: #fff; }
-    nav.toc a {
-      display: inline-block;
-      margin: 0.2rem 0.35rem 0.2rem 0;
-      padding: 0.25rem 0.55rem;
-      background: #eff6ff;
-      border-radius: 6px;
-      text-decoration: none;
-      font-size: 0.82rem;
-      font-weight: 600;
-    }
-    footer {
-      padding: 0 1.25rem 2.5rem;
-      color: var(--muted);
-      font-size: 0.85rem;
-    }
-    @media (max-width: 640px) {
-      header h1 { font-size: 1.4rem; }
-      th:nth-child(4), td:nth-child(4) { display: none; }
-    }
+    .check li { display: grid; grid-template-columns: 1.5rem 1fr; gap: 0.45rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+    .mark { width: 1.15rem; height: 1.15rem; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; margin-top: 0.15rem; font-size: 0.7rem; font-weight: 800; background: var(--ok); border: 2px solid var(--ok); color: #fff; }
+    footer { padding: 0 1.25rem 2.5rem; color: var(--muted); font-size: 0.85rem; }
   </style>
 </head>
 <body>
@@ -189,140 +49,75 @@
     <div class="wrap">
       <h1>Prospectly — Catálogo de fases</h1>
       <p>Workflow de melhoria incremental · uma fase por branch/PR</p>
-      <p class="muted" style="opacity:0.85;color:#e2e8f0;">Atualizado em 2026-08-01 · PRs #12–#25 abertos · merge em main pendente</p>
+      <p class="muted" style="opacity:0.85;color:#e2e8f0;">Atualizado em 2026-08-01 · <strong>todos os PRs #12–#25 mergeados em main</strong></p>
       <div class="meta">
-        <span class="badge">14/14 subitens com PR</span>
-        <span class="badge">Próximo: merge ordenado em main</span>
-        <span class="badge">#12→#13→#14→#15→#16→#17→#25→#18→#19→#20→#21→#24→#23→#22</span>
+        <span class="badge">14/14 mergeados</span>
+        <span class="badge">main sincronizado</span>
+        <span class="badge">Pendência: Render worker/migrate</span>
       </div>
     </div>
   </header>
-
   <main>
     <section>
       <h2>Progresso</h2>
       <div class="progress">
-        <div class="stat"><strong>14</strong><span>PRs do workflow abertos</span></div>
-        <div class="stat"><strong>0</strong><span>Mergeados em main (lote)</span></div>
-        <div class="stat"><strong>1</strong><span>Ação: merge ordenado</span></div>
+        <div class="stat"><strong>14</strong><span>PRs workflow mergeados</span></div>
+        <div class="stat"><strong>0</strong><span>PRs workflow abertos</span></div>
+        <div class="stat"><strong>2</strong><span>Bloqueios Render restantes</span></div>
         <div class="stat"><strong>8</strong><span>Bugfix drafts fora do lote</span></div>
       </div>
-    </section>
-
-    <section>
-      <h2>Legenda</h2>
-      <p>
-        <span class="tag tag-open">done_pr_open</span> implementado, PR aberto ·
-        <span class="tag tag-done">done_merged</span> mergeado ·
-        <span class="tag tag-next">next</span> próximo ·
-        <span class="tag tag-todo">todo</span> pendente ·
-        <span class="tag tag-blocked">blocked</span> precisa aprovação ·
-        <span class="tag tag-audited">audited</span> gaps mapeados
-      </p>
-    </section>
-
-    <section>
-      <h2>Navegação</h2>
-      <nav class="toc">
-        <a href="#resumo">Resumo</a>
-        <a href="#fase-0">Fase 0</a>
-        <a href="#fase-1">Fase 1</a>
-        <a href="#fase-2">Fase 2</a>
-        <a href="#fase-3">Fase 3</a>
-        <a href="#fase-4">Fase 4</a>
-        <a href="#fase-5">Fase 5</a>
-        <a href="#checklist">Checklist PRs</a>
-      </nav>
     </section>
 
     <section id="resumo">
       <h2>Resumo executivo</h2>
       <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Fase / subitem</th>
-            <th>Status</th>
-            <th>Branch / PR</th>
-          </tr>
-        </thead>
+        <thead><tr><th>#</th><th>Fase</th><th>Status</th><th>PR</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><strong>0.1</strong> Recuperação de senha</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/12">PR #12</a></td></tr>
-          <tr><td>2</td><td><strong>0.2</strong> CI verde</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/13">PR #13</a></td></tr>
-          <tr><td>3</td><td><strong>0.3</strong> Advisories high + CI</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/15">PR #15</a></td></tr>
-          <tr><td>4</td><td><strong>0.4</strong> Imagem prod + migrations</td><td><span class="tag tag-open">done_pr_open</span> <span class="tag tag-blocked">Render</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/16">PR #16</a></td></tr>
-          <tr><td>5</td><td><strong>1.1</strong> Lazy routes + error boundary</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/17">PR #17</a></td></tr>
-          <tr><td>6</td><td><strong>1.2</strong> Pipeline a11y + paginação</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/25">PR #25</a></td></tr>
-          <tr><td>7</td><td><strong>1.3</strong> Métricas operacionais</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/18">PR #18</a></td></tr>
-          <tr><td>8</td><td><strong>2.1–2.2</strong> Proveniência + enrichment</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/19">PR #19</a></td></tr>
-          <tr><td>9</td><td><strong>2.3</strong> Score explicável</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/20">PR #20</a></td></tr>
-          <tr><td>10</td><td><strong>3.1</strong> Cadências assistidas</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/21">PR #21</a></td></tr>
-          <tr><td>11</td><td><strong>3.2</strong> Integrações / export</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/24">PR #24</a></td></tr>
-          <tr><td>12</td><td><strong>3.3</strong> Painel de decisão</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/24">PR #24</a></td></tr>
-          <tr><td>13</td><td><strong>4.1–4.2</strong> Audit + titulares</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/23">PR #23</a></td></tr>
-          <tr><td>14</td><td><strong>5</strong> Split API / workers</td><td><span class="tag tag-open">done_pr_open</span> <span class="tag tag-blocked">aprovação</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/22">PR #22</a></td></tr>
-          <tr><td>—</td><td>Catálogo docs</td><td><span class="tag tag-open">done_pr_open</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/14">PR #14</a></td></tr>
+          <tr><td>1</td><td><strong>0.1</strong> Recuperação de senha</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/12">#12</a></td></tr>
+          <tr><td>2</td><td><strong>0.2</strong> CI verde</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/13">#13</a></td></tr>
+          <tr><td>3</td><td><strong>0.3</strong> Advisories high</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/15">#15</a></td></tr>
+          <tr><td>4</td><td><strong>0.4</strong> Imagem / migrations</td><td><span class="tag tag-done">done_merged</span> <span class="tag tag-blocked">Render</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/16">#16</a></td></tr>
+          <tr><td>5</td><td><strong>1.1</strong> Lazy routes</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/17">#17</a></td></tr>
+          <tr><td>6</td><td><strong>1.2</strong> Pipeline a11y</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/25">#25</a></td></tr>
+          <tr><td>7</td><td><strong>1.3</strong> Ops metrics</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/18">#18</a></td></tr>
+          <tr><td>8</td><td><strong>2.1–2.2</strong> Proveniência</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/19">#19</a></td></tr>
+          <tr><td>9</td><td><strong>2.3</strong> Score explicável</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/20">#20</a></td></tr>
+          <tr><td>10</td><td><strong>3.1</strong> Campanhas</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/21">#21</a></td></tr>
+          <tr><td>11</td><td><strong>3.2–3.3</strong> Export + dashboard</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/24">#24</a></td></tr>
+          <tr><td>12</td><td><strong>4</strong> Compliance</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/23">#23</a></td></tr>
+          <tr><td>13</td><td><strong>5</strong> Workers</td><td><span class="tag tag-done">done_merged</span> <span class="tag tag-blocked">Render</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/22">#22</a></td></tr>
+          <tr><td>—</td><td>Catálogo docs</td><td><span class="tag tag-done">done_merged</span></td><td><a href="https://github.com/Gleydsong/prospecting/pull/14">#14</a></td></tr>
         </tbody>
       </table>
     </section>
 
-    <section id="fase-0">
-      <h2>Fase 0 — liberar uma entrega segura</h2>
-      <div class="phase-card done"><div class="phase-head"><h3>0.1 — Recuperação de senha</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/12">#12</a> · <code>codex/0.1-password-reset-email</code></p><p class="kv"><b>Checklist:</b> <a href="./2026-08-01-fase-0.1-password-reset-validation.html">HTML validação 0.1</a></p></div>
-      <div class="phase-card done"><div class="phase-head"><h3>0.2 — CI verde</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/13">#13</a> · <code>codex/0.2-restore-ci-coverage</code></p></div>
-      <div class="phase-card done"><div class="phase-head"><h3>0.3 — Advisories runtime + CI</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/15">#15</a> · <code>codex/0.3-runtime-high-advisories</code></p><p><code>audit-runtime.cjs</code> + exceções documentadas; CI falha em high de runtime.</p></div>
-      <div class="phase-card done blocked"><div class="phase-head"><h3>0.4 — Imagem prod + migrations</h3><span class="tag tag-open">done_pr_open</span> <span class="tag tag-blocked">Render</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/16">#16</a> · <code>codex/0.4-prod-image-migrations</code></p><p class="muted">Alteração efetiva de <code>render.yaml</code> exige aprovação.</p></div>
-    </section>
-
-    <section id="fase-1">
-      <h2>Fase 1 — experiência, desempenho e observabilidade</h2>
-      <div class="phase-card done"><div class="phase-head"><h3>1.1 — Lazy routes + error boundary</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/17">#17</a></p></div>
-      <div class="phase-card done"><div class="phase-head"><h3>1.2 — Pipeline a11y + paginação</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/25">#25</a></p><ul><li>Mover para etapa (teclado) + <code>aria-live</code></li><li><code>totalCount</code>/<code>hasMore</code> + <code>GET /pipelines/stages/:id/leads</code></li><li>Testes API + web</li></ul></div>
-      <div class="phase-card done"><div class="phase-head"><h3>1.3 — Métricas operacionais</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/18">#18</a></p></div>
-    </section>
-
-    <section id="fase-2">
-      <h2>Fase 2 — qualidade de dados e priorização</h2>
-      <div class="phase-card done"><div class="phase-head"><h3>2.1–2.2 — Proveniência + enrichment</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/19">#19</a></p></div>
-      <div class="phase-card done"><div class="phase-head"><h3>2.3 — Score explicável</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/20">#20</a></p></div>
-    </section>
-
-    <section id="fase-3">
-      <h2>Fase 3 — ciclo comercial</h2>
-      <div class="phase-card done"><div class="phase-head"><h3>3.1 — Cadências assistidas</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/21">#21</a></p></div>
-      <div class="phase-card done"><div class="phase-head"><h3>3.2–3.3 — Export + dashboard</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/24">#24</a></p><ul><li>Export CSV + audit</li><li>Webhook stub + doc outbox</li><li>Dashboard com filtros e métricas de decisão</li></ul><p class="muted">Riscos: outbox físico ainda documentado; filtro de campanha e timing por estágio omitidos.</p></div>
-    </section>
-
-    <section id="fase-4">
-      <h2>Fase 4 — privacidade, auditoria e confiança</h2>
-      <div class="phase-card done"><div class="phase-head"><h3>4.1–4.2 — Audit + titulares</h3><span class="tag tag-open">done_pr_open</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/23">#23</a></p><ul><li><code>AuditService</code> com redaction</li><li>Hooks em estágio/import/org</li><li>Workflow OWNER de <code>DataSubjectRequest</code></li></ul></div>
-    </section>
-
-    <section id="fase-5">
-      <h2>Fase 5 — separar API e workers</h2>
-      <div class="phase-card done blocked"><div class="phase-head"><h3>5 — Worker BullMQ separado</h3><span class="tag tag-open">done_pr_open</span> <span class="tag tag-blocked">aprovação</span></div><p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/22">#22</a></p><p class="muted">Ativação no Render / evidência de métricas ainda exigem decisão.</p></div>
-    </section>
-
     <section id="checklist">
-      <h2>Ordem canônica de merge (checklist vivo)</h2>
+      <h2>Checklist de merge (concluído)</h2>
       <ul class="check">
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/12">#12</a> password reset <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/13">#13</a> CI coverage <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/14">#14</a> phase catalog <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/15">#15</a> runtime advisories <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/16">#16</a> prod image / migrations <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/17">#17</a> lazy routes <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/25">#25</a> pipeline a11y <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/18">#18</a> ops metrics <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/19">#19</a> provenance <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/20">#20</a> scoring <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/21">#21</a> campaigns <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/24">#24</a> export + dashboard <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/23">#23</a> compliance <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark on">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/22">#22</a> workers <span class="tag tag-open">open</span></div></li>
-        <li><span class="mark next-mark">→</span><div>Merge ordenado em <code>main</code> + sync local <span class="tag tag-next">next</span></div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/12">#12</a> password reset</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/13">#13</a> CI coverage</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/14">#14</a> catalog</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/15">#15</a> advisories</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/16">#16</a> prod image</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/17">#17</a> lazy routes</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/25">#25</a> pipeline a11y</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/18">#18</a> ops metrics</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/19">#19</a> provenance</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/20">#20</a> scoring</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/21">#21</a> campaigns</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/24">#24</a> export + dashboard</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/23">#23</a> compliance</div></li>
+        <li><span class="mark">✓</span><div><a href="https://github.com/Gleydsong/prospecting/pull/22">#22</a> workers</div></li>
       </ul>
-      <p class="muted">Fora do lote: drafts <code>cursor/critical-bug-management-*</code> (#1, #4, #6–#11).</p>
+      <p class="muted">Ordem: #12→#13→#14→#15→#16→#17→#25→#18→#19→#20→#21→#24→#23→#22</p>
+    </section>
+
+    <section>
+      <h2>Pendências operacionais</h2>
+      <div class="phase-card blocked">
+        <div class="phase-head"><h3>Render — migration job + worker service</h3><span class="tag tag-blocked">aprovação</span></div>
+        <p>Código e docs em <code>docs/deploy/migrations.md</code> e <code>docs/deploy/workers.md</code>. Não aplicar <code>render.yaml</code> sem aprovação explícita.</p>
+      </div>
     </section>
 
     <section>
@@ -330,13 +125,12 @@
       <table>
         <thead><tr><th>Data</th><th>Evento</th></tr></thead>
         <tbody>
-          <tr><td>2026-08-01</td><td>Catálogo inicial (PRs #12–#14). Fase 2 auditada. Próximo era 0.3.</td></tr>
-          <tr><td>2026-08-01</td><td>Sessão completa: #15–#25 abertos (0.3→5, 1.2, 3.2/3.3, 4). Catálogo HTML/MD atualizado. Merge em main pendente de confirmação.</td></tr>
+          <tr><td>2026-08-01</td><td>Catálogo inicial e PRs #12–#25 abertos.</td></tr>
+          <tr><td>2026-08-01</td><td><strong>Merge completo</strong> dos PRs #12–#25 em <code>main</code>. Catálogo marcado <code>done_merged</code>.</td></tr>
         </tbody>
       </table>
     </section>
   </main>
-
   <footer>
     Prospectly workflow catalog · espelho de
     <code>docs/superpowers/specs/2026-08-01-prospectly-phase-catalog.md</code>
