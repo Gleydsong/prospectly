@@ -4,6 +4,7 @@ import {
   FileUp,
   KanbanSquare,
   LayoutDashboard,
+  Megaphone,
   Search,
   Settings,
   Users,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/leads', labelKey: 'nav.leads', icon: Users },
   { to: '/pipeline', labelKey: 'nav.pipeline', icon: KanbanSquare },
   { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+  { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ] as const;
 

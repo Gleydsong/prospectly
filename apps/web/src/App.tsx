@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { ResetPasswordPage } from '@/pages/auth/reset-password-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
+import { CampaignsPage } from '@/pages/campaigns-page';
 import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
 import { LeadsPage } from '@/pages/leads/leads-page';
 import { PipelinePage } from '@/pages/pipeline-page';
@@ -97,6 +98,7 @@ export function App() {
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
           <Route
             path="settings"
             element={

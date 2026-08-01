@@ -31,6 +31,7 @@ import { ScoringModule } from './modules/scoring/scoring.module';
 import { WebsiteAnalysisModule } from './modules/website-analysis/website-analysis.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { OpsModule } from './modules/ops/ops.module';
+import { CampaignsModule } from './modules/campaigns/campaigns.module';
 
 @Module({
   imports: [
@@ -105,6 +106,7 @@ import { OpsModule } from './modules/ops/ops.module';
     ScoringModule,
     WebsiteAnalysisModule,
     WaitlistModule,
+    CampaignsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
