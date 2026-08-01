@@ -38,7 +38,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
 7. Point Stripe webhook to `https://<api>/api/v1/billing/webhook/stripe`.
 8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release).
-9. Confirm migrate ran on API boot (`prisma migrate deploy` in Docker `CMD`).
+9. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
 
 ## Local Dockerfiles (optional)
 
