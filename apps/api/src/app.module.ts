@@ -15,6 +15,7 @@ import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storag
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { EmailVerifiedGuard } from './common/guards/email-verified.guard';
+import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
@@ -88,6 +89,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
     PrismaModule,
     HealthModule,
     MailModule,
+    AuditModule,
     AuthModule,
     UsersModule,
     OrganizationsModule,
