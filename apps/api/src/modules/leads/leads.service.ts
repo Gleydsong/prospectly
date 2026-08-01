@@ -16,8 +16,15 @@ import {
   LeadIngestionService,
   normalizeBrazilianPhone,
 } from './lead-ingestion.service';
+import {
+  DEFAULT_EXPORT_COLUMNS,
+  ExportLeadsDto,
+  type ExportableLeadColumn,
+} from './dto/export-leads.dto';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+
+const EXPORT_MAX_ROWS = 10_000;
 
 const LEAD_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -35,37 +42,7 @@ export class LeadsService {
   ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
-    const where: Prisma.LeadWhereInput = {
-      organizationId,
-      deletedAt: null,
-      ...(query.status ? { status: query.status } : {}),
-      ...(query.source ? { source: query.source } : {}),
-      ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),
-      ...(query.segment ? { segment: { equals: query.segment, mode: 'insensitive' } } : {}),
-      ...(query.city ? { city: { equals: query.city, mode: 'insensitive' } } : {}),
-      ...(query.ownerId ? { ownerId: query.ownerId } : {}),
-      ...(query.hasWebsite === true ? { website: { not: null } } : {}),
-      ...(query.hasWebsite === false ? { OR: [{ website: null }, { website: '' }] } : {}),
-      ...(query.minScore !== undefined || query.maxScore !== undefined
-        ? {
-            score: {
-              ...(query.minScore !== undefined ? { gte: query.minScore } : {}),
-              ...(query.maxScore !== undefined ? { lte: query.maxScore } : {}),
-            },
-          }
-        : {}),
-      ...(query.tagId ? { tags: { some: { tagId: query.tagId } } } : {}),
-      ...(query.q
-        ? {
-            OR: [
-              { companyName: { contains: query.q, mode: 'insensitive' } },
-              { tradeName: { contains: query.q, mode: 'insensitive' } },
-              { email: { contains: query.q, mode: 'insensitive' } },
-              { domain: { contains: query.q, mode: 'insensitive' } },
-            ],
-          }
-        : {}),
-    };
+    const where = this.buildListWhere(organizationId, query);
 
     const [total, leads] = await this.prisma.$transaction([
       this.prisma.lead.count({ where }),
@@ -240,6 +217,144 @@ export class LeadsService {
     return this.getById(organizationId, id);
   }
 
+  async exportCsv(organizationId: string, userId: string, dto: ExportLeadsDto) {
+    const columns = (dto.columns?.length ? dto.columns : DEFAULT_EXPORT_COLUMNS) as ExportableLeadColumn[];
+    const where = this.buildListWhere(organizationId, dto);
+
+    const leads = await this.prisma.lead.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: EXPORT_MAX_ROWS,
+      select: {
+        id: true,
+        companyName: true,
+        tradeName: true,
+        category: true,
+        segment: true,
+        email: true,
+        phone: true,
+        whatsapp: true,
+        website: true,
+        domain: true,
+        city: true,
+        state: true,
+        country: true,
+        status: true,
+        source: true,
+        score: true,
+        rating: true,
+        reviewCount: true,
+        ownerId: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        lastContactAt: true,
+        nextContactAt: true,
+      },
+    });
+
+    const csv = this.toCsv(columns, leads);
+    const filename = `leads-export-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    await this.prisma.auditLog.create({
+      data: {
+        organizationId,
+        userId,
+        action: 'leads.export',
+        entity: 'Lead',
+        metadata: {
+          rowCount: leads.length,
+          columns,
+          truncated: leads.length >= EXPORT_MAX_ROWS,
+          filters: {
+            status: dto.status ?? null,
+            source: dto.source ?? null,
+            ownerId: dto.ownerId ?? null,
+            city: dto.city ?? null,
+            segment: dto.segment ?? null,
+            hasWebsite: dto.hasWebsite ?? null,
+            hasQuery: Boolean(dto.q),
+          },
+        },
+      },
+    });
+
+    return {
+      filename,
+      rowCount: leads.length,
+      columns,
+      csv,
+    };
+  }
+
+  private buildListWhere(
+    organizationId: string,
+    query: Pick<
+      QueryLeadsDto,
+      | 'status'
+      | 'source'
+      | 'category'
+      | 'segment'
+      | 'city'
+      | 'ownerId'
+      | 'hasWebsite'
+      | 'minScore'
+      | 'maxScore'
+      | 'tagId'
+      | 'q'
+    >,
+  ): Prisma.LeadWhereInput {
+    return {
+      organizationId,
+      deletedAt: null,
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.source ? { source: query.source } : {}),
+      ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),
+      ...(query.segment ? { segment: { equals: query.segment, mode: 'insensitive' } } : {}),
+      ...(query.city ? { city: { equals: query.city, mode: 'insensitive' } } : {}),
+      ...(query.ownerId ? { ownerId: query.ownerId } : {}),
+      ...(query.hasWebsite === true ? { website: { not: null } } : {}),
+      ...(query.hasWebsite === false ? { OR: [{ website: null }, { website: '' }] } : {}),
+      ...(query.minScore !== undefined || query.maxScore !== undefined
+        ? {
+            score: {
+              ...(query.minScore !== undefined ? { gte: query.minScore } : {}),
+              ...(query.maxScore !== undefined ? { lte: query.maxScore } : {}),
+            },
+          }
+        : {}),
+      ...(query.tagId ? { tags: { some: { tagId: query.tagId } } } : {}),
+      ...(query.q
+        ? {
+            OR: [
+              { companyName: { contains: query.q, mode: 'insensitive' } },
+              { tradeName: { contains: query.q, mode: 'insensitive' } },
+              { email: { contains: query.q, mode: 'insensitive' } },
+              { domain: { contains: query.q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+  }
+
+  private toCsv(
+    columns: ExportableLeadColumn[],
+    rows: Array<Record<string, unknown>>,
+  ): string {
+    const header = columns.map(escapeCsv).join(',');
+    const lines = rows.map((row) =>
+      columns
+        .map((column) => {
+          const value = row[column];
+          if (value == null) return '';
+          if (value instanceof Date) return escapeCsv(value.toISOString());
+          return escapeCsv(String(value));
+        })
+        .join(','),
+    );
+    return [header, ...lines].join('\n');
+  }
+
   async listTags(organizationId: string) {
     return this.prisma.tag.findMany({
       where: { organizationId },
@@ -348,4 +463,11 @@ export class LeadsService {
     }
     return serialized;
   }
+}
+
+function escapeCsv(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
 }

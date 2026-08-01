@@ -19,6 +19,7 @@ import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/cur
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { AssignOwnerDto, ManageTagsDto } from './dto/manage-tags.dto';
+import { ExportLeadsDto } from './dto/export-leads.dto';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { LeadsService } from './leads.service';
@@ -37,6 +38,17 @@ export class LeadsController {
   @Get('tags')
   listTags(@CurrentOrg() organizationId: string) {
     return this.leads.listTags(organizationId);
+  }
+
+  @Post('export')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  exportCsv(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ExportLeadsDto,
+  ) {
+    return this.leads.exportCsv(organizationId, user.id, dto);
   }
 
   @Get(':id')

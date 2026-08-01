@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import {
+  AlertTriangle,
   CalendarClock,
   FileText,
   Handshake,
@@ -7,17 +8,22 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { ScoreBadge } from '@/components/ui/score-badge';
+import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchDashboardCharts, fetchDashboardSummary } from '@/features/dashboard/api';
+import { fetchOrganizationMembers } from '@/features/organizations/api';
 import { getLeadStatusLabel, getLeadStatusShortLabel } from '@/lib/lead-status';
 import { formatDate } from '@/lib/utils';
+import { DashboardPeriod, LeadSource } from '@/types';
 
 const PIE_COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#f59e0b', '#f97316', '#1d4ed8', '#38bdf8'];
 
@@ -58,8 +64,31 @@ function StatCard({
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
-  const summary = useQuery({ queryKey: ['dashboard', 'summary'], queryFn: fetchDashboardSummary });
-  const charts = useQuery({ queryKey: ['dashboard', 'charts'], queryFn: fetchDashboardCharts });
+  const [period, setPeriod] = useState<DashboardPeriod>('30d');
+  const [source, setSource] = useState<LeadSource | ''>('');
+  const [ownerId, setOwnerId] = useState('');
+  const [segment, setSegment] = useState('');
+
+  const filters = {
+    period,
+    ...(source ? { source } : {}),
+    ...(ownerId ? { ownerId } : {}),
+    ...(segment.trim() ? { segment: segment.trim() } : {}),
+  };
+
+  const members = useQuery({
+    queryKey: ['organizations', 'members'],
+    queryFn: fetchOrganizationMembers,
+  });
+
+  const summary = useQuery({
+    queryKey: ['dashboard', 'summary', filters],
+    queryFn: () => fetchDashboardSummary(filters),
+  });
+  const charts = useQuery({
+    queryKey: ['dashboard', 'charts', filters],
+    queryFn: () => fetchDashboardCharts(filters),
+  });
 
   if (summary.isError) {
     return (
@@ -92,9 +121,57 @@ export function DashboardPage() {
         <p className="text-sm text-zinc-500">{t('dashboard.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <Card className="p-4">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-zinc-500">
+          {t('dashboard.filters')}
+        </p>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Select
+            label={t('dashboard.period')}
+            value={period}
+            onChange={(event) => setPeriod(event.target.value as DashboardPeriod)}
+          >
+            <option value="7d">{t('dashboard.period7d')}</option>
+            <option value="30d">{t('dashboard.period30d')}</option>
+            <option value="90d">{t('dashboard.period90d')}</option>
+            <option value="all">{t('dashboard.periodAll')}</option>
+          </Select>
+          <Select
+            label={t('dashboard.source')}
+            value={source}
+            onChange={(event) => setSource(event.target.value as LeadSource | '')}
+          >
+            <option value="">{t('dashboard.allSources')}</option>
+            {Object.values(LeadSource).map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </Select>
+          <Select
+            label={t('dashboard.owner')}
+            value={ownerId}
+            onChange={(event) => setOwnerId(event.target.value)}
+          >
+            <option value="">{t('dashboard.allOwners')}</option>
+            {(members.data ?? []).map((member) => (
+              <option key={member.user.id} value={member.user.id}>
+                {member.user.name}
+              </option>
+            ))}
+          </Select>
+          <Input
+            label={t('dashboard.segment')}
+            placeholder={t('dashboard.allSegments')}
+            value={segment}
+            onChange={(event) => setSegment(event.target.value)}
+          />
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.isLoading || !data ? (
-          Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-20" />)
+          Array.from({ length: 8 }).map((_, index) => <Skeleton key={index} className="h-20" />)
         ) : (
           <>
             <StatCard label={t('dashboard.totalLeads')} value={data.totalLeads} icon={Users} />
@@ -102,7 +179,9 @@ export function DashboardPage() {
             <StatCard label={t('dashboard.meetings')} value={data.meetings} icon={CalendarClock} />
             <StatCard label={t('dashboard.proposals')} value={data.proposals} icon={FileText} />
             <StatCard label={t('dashboard.won')} value={data.won} icon={Handshake} />
+            <StatCard label={t('dashboard.lost')} value={data.lost} icon={AlertTriangle} />
             <StatCard label={t('dashboard.conversion')} value={`${data.conversionRate}%`} icon={Target} />
+            <StatCard label={t('dashboard.overdueTasks')} value={data.overdueTasks} icon={AlertTriangle} />
           </>
         )}
       </div>
@@ -168,7 +247,41 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader title={t('dashboard.conversionBySource')} />
+        <CardContent>
+          {!data || data.conversionBySource.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t('dashboard.noLeads')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+                    <th className="px-3 py-2 font-medium">{t('dashboard.source')}</th>
+                    <th className="px-3 py-2 font-medium">{t('dashboard.sourceTotal')}</th>
+                    <th className="px-3 py-2 font-medium">{t('dashboard.sourceWon')}</th>
+                    <th className="px-3 py-2 font-medium">{t('dashboard.sourceLost')}</th>
+                    <th className="px-3 py-2 font-medium">{t('dashboard.conversion')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.conversionBySource.map((row) => (
+                    <tr key={row.source} className="border-b border-zinc-800">
+                      <td className="px-3 py-2 text-zinc-100">{row.source}</td>
+                      <td className="px-3 py-2 text-zinc-300">{row.total}</td>
+                      <td className="px-3 py-2 text-emerald-400">{row.won}</td>
+                      <td className="px-3 py-2 text-red-400">{row.lost}</td>
+                      <td className="px-3 py-2 text-zinc-300">{row.conversionRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader title={t('dashboard.topOpportunities')} description={t('dashboard.topOpportunitiesDesc')} />
           <CardContent className="space-y-3">
@@ -189,6 +302,26 @@ export function DashboardPage() {
                     <LeadStatusBadge status={lead.status} />
                     <ScoreBadge score={lead.score} />
                   </div>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader title={t('dashboard.overdueFollowUps')} />
+          <CardContent className="space-y-3">
+            {!data || data.overdueFollowUps.length === 0 ? (
+              <p className="text-sm text-zinc-500">{t('dashboard.noOverdue')}</p>
+            ) : (
+              data.overdueFollowUps.map((item) => (
+                <Link
+                  key={item.id}
+                  to={`/leads/${item.id}`}
+                  className="flex items-center justify-between rounded-lg border border-red-900/40 bg-red-500/5 p-3 hover:bg-red-500/10"
+                >
+                  <span className="text-sm font-medium text-zinc-50">{item.companyName}</span>
+                  <span className="text-xs text-red-300">{formatDate(item.nextContactAt)}</span>
                 </Link>
               ))
             )}

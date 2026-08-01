@@ -30,6 +30,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { ScoringModule } from './modules/scoring/scoring.module';
 import { WebsiteAnalysisModule } from './modules/website-analysis/website-analysis.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 
 @Module({
   imports: [
@@ -103,6 +104,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
     ScoringModule,
     WebsiteAnalysisModule,
     WaitlistModule,
+    IntegrationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

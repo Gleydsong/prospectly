@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import type {
   Activity,
   LeadDetail,
+  LeadExportResult,
   LeadListItem,
   LeadStatus,
   PaginatedResult,
@@ -83,4 +84,64 @@ export interface CreateActivityInput {
 export async function createActivity(leadId: string, input: CreateActivityInput): Promise<Activity> {
   const { data } = await api.post<Activity>(`/leads/${leadId}/activities`, input);
   return data;
+}
+
+export const EXPORTABLE_LEAD_COLUMNS = [
+  'id',
+  'companyName',
+  'tradeName',
+  'category',
+  'segment',
+  'email',
+  'phone',
+  'whatsapp',
+  'website',
+  'domain',
+  'city',
+  'state',
+  'country',
+  'status',
+  'source',
+  'score',
+  'rating',
+  'reviewCount',
+  'ownerId',
+  'notes',
+  'createdAt',
+  'updatedAt',
+  'lastContactAt',
+  'nextContactAt',
+] as const;
+
+export type ExportableLeadColumn = (typeof EXPORTABLE_LEAD_COLUMNS)[number];
+
+export const DEFAULT_EXPORT_COLUMNS: ExportableLeadColumn[] = [
+  'companyName',
+  'email',
+  'phone',
+  'website',
+  'city',
+  'status',
+  'source',
+  'score',
+];
+
+export async function exportLeadsCsv(input: {
+  columns: ExportableLeadColumn[];
+  q?: string;
+  status?: LeadStatus;
+  hasWebsite?: boolean;
+}): Promise<LeadExportResult> {
+  const { data } = await api.post<LeadExportResult>('/leads/export', input);
+  return data;
+}
+
+export function downloadCsvFile(filename: string, csv: string): void {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
