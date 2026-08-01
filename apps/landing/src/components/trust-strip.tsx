@@ -1,81 +1,63 @@
 'use client';
 
-import { t, type Locale } from '@/lib/i18n';
+import Link from 'next/link';
+import { EnvelopeSimple, LockKey, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
+import { Reveal } from '@/components/motion';
+import { prefix, t, type Locale } from '@/lib/i18n';
 
-const MARKS = [
-  {
-    label: 'Agência Norte',
-    svg: (
-      <svg viewBox="0 0 120 28" className="h-7 w-auto fill-current" aria-hidden>
-        <path d="M8 22V6h3.2l6.4 11.2L24 6H27v16h-2.8V11.2L18.2 22h-2.4L10.8 11.2V22H8z" />
-        <text x="36" y="19" className="fill-current text-[13px] font-semibold tracking-tight">
-          Agência Norte
-        </text>
-      </svg>
-    ),
-  },
-  {
-    label: 'Studio Atlas',
-    svg: (
-      <svg viewBox="0 0 120 28" className="h-7 w-auto fill-current" aria-hidden>
-        <circle cx="14" cy="14" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-        <path d="M14 6v16M6 14h16" stroke="currentColor" strokeWidth="1.5" />
-        <text x="30" y="19" className="fill-current text-[13px] font-semibold tracking-tight">
-          Studio Atlas
-        </text>
-      </svg>
-    ),
-  },
-  {
-    label: 'Pixel Rua',
-    svg: (
-      <svg viewBox="0 0 110 28" className="h-7 w-auto fill-current" aria-hidden>
-        <rect x="6" y="6" width="16" height="16" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
-        <rect x="10" y="10" width="4" height="4" />
-        <rect x="16" y="14" width="4" height="4" />
-        <text x="30" y="19" className="fill-current text-[13px] font-semibold tracking-tight">
-          Pixel Rua
-        </text>
-      </svg>
-    ),
-  },
-  {
-    label: 'Forma Local',
-    svg: (
-      <svg viewBox="0 0 120 28" className="h-7 w-auto fill-current" aria-hidden>
-        <path d="M14 4l10 18H4L14 4z" fill="none" stroke="currentColor" strokeWidth="2" />
-        <text x="32" y="19" className="fill-current text-[13px] font-semibold tracking-tight">
-          Forma Local
-        </text>
-      </svg>
-    ),
-  },
-  {
-    label: 'Base Digital',
-    svg: (
-      <svg viewBox="0 0 120 28" className="h-7 w-auto fill-current" aria-hidden>
-        <path d="M6 20h16V8H6v12zm3-3h4v3H9v-3zm6 0h4v3h-4v-3z" />
-        <text x="30" y="19" className="fill-current text-[13px] font-semibold tracking-tight">
-          Base Digital
-        </text>
-      </svg>
-    ),
-  },
-];
+const ITEMS = [
+  { title: 'trustItem1Title', body: 'trustItem1Body', Icon: MagnifyingGlass },
+  { title: 'trustItem2Title', body: 'trustItem2Body', Icon: ShieldCheck },
+  { title: 'trustItem3Title', body: 'trustItem3Body', Icon: LockKey },
+  { title: 'trustItem4Title', body: 'trustItem4Body', Icon: EnvelopeSimple },
+] as const;
 
 export function TrustStrip({ locale }: { locale: Locale }) {
+  const p = prefix(locale);
+
   return (
-    <section className="border-y border-[color:var(--border)] bg-[color:var(--bg-sunken)]">
-      <div className="mx-auto max-w-shell px-4 py-8 sm:px-6 lg:px-8">
-        <p className="text-center text-sm text-[color:var(--ink-muted)]">{t(locale, 'trustLabel')}</p>
-        <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 opacity-70">
-          {MARKS.map((mark) => (
-            <li key={mark.label} className="text-[color:var(--ink)]">
-              {mark.svg}
-              <span className="sr-only">{mark.label}</span>
-            </li>
+    <section
+      className="border-y border-[color:var(--border)] bg-[color:var(--bg-sunken)]"
+      aria-labelledby="trust-heading"
+    >
+      <div className="mx-auto max-w-shell px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2
+            id="trust-heading"
+            className="text-2xl font-semibold tracking-tight text-[color:var(--ink)] md:text-3xl"
+          >
+            {t(locale, 'trustLabel')}
+          </h2>
+        </Reveal>
+
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {ITEMS.map(({ title, body, Icon }, index) => (
+            <Reveal key={title} delay={index * 0.04}>
+              <li className="surface-raised h-full rounded-control p-5 text-left">
+                <Icon weight="duotone" className="h-6 w-6 text-accent" aria-hidden />
+                <h3 className="mt-3 text-base font-semibold text-[color:var(--ink)]">{t(locale, title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{t(locale, body)}</p>
+              </li>
+            </Reveal>
           ))}
         </ul>
+
+        <p className="mt-8 text-center text-sm text-[color:var(--ink-muted)]">
+          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/privacy`}>
+            {t(locale, 'footerPrivacy')}
+          </Link>
+          {' · '}
+          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/terms`}>
+            {t(locale, 'footerTerms')}
+          </Link>
+          {' · '}
+          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/cookies`}>
+            {t(locale, 'footerCookies')}
+          </Link>
+        </p>
+        <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-[color:var(--ink-muted)]">
+          {t(locale, 'trustTodoNote')}
+        </p>
       </div>
     </section>
   );

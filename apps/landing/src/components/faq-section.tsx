@@ -13,7 +13,7 @@ import {
   type FaqItem,
 } from '@/lib/faq-content';
 import { prefix, t, type Locale } from '@/lib/i18n';
-import { appRegisterUrl } from '@/lib/pricing';
+import { enterExplainerUrl } from '@/lib/pricing';
 
 function FaqAccordion({
   items,
@@ -117,7 +117,6 @@ export function FaqSection({ locale }: { locale: Locale }) {
 export function FaqPageView({ locale }: { locale: Locale }) {
   const baseId = useId();
   const p = prefix(locale);
-  const currency = locale === 'pt' ? 'BRL' : 'EUR';
   const [category, setCategory] = useState<FaqCategory | 'all'>('all');
 
   const items = useMemo(() => getFaqItemsByCategory(locale, category), [locale, category]);
@@ -184,12 +183,12 @@ export function FaqPageView({ locale }: { locale: Locale }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <a
-              href={appRegisterUrl('monthly', currency)}
-              className="focus-ring inline-flex items-center justify-center rounded-control bg-accent px-5 py-3 text-sm font-medium text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
+            <Link
+              href={enterExplainerUrl(locale)}
+              className="focus-ring inline-flex items-center justify-center rounded-control bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
             >
               {t(locale, 'faqStillCta')}
-            </a>
+            </Link>
             <Link
               href={`${p}/pricing`}
               className="focus-ring inline-flex items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-5 py-3 text-sm font-medium text-[color:var(--ink)]"

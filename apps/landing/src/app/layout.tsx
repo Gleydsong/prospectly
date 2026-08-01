@@ -22,11 +22,11 @@ export const metadata: Metadata = {
     apple: [{ url: '/brand/prospectly-mark.png', type: 'image/png' }],
   },
   title: {
-    default: 'Prospectly - Prospecção de leads locais para agências',
+    default: 'Prospectly | Encontre empresas para prospectar no Brasil',
     template: '%s | Prospectly',
   },
   description:
-    'Encontre empresas sem site com OpenStreetMap e Google Places. SaaS de prospecção para agências digitais e freelancers no Brasil e Europa.',
+    'Crie listas segmentadas de empresas brasileiras para sua prospecção B2B. Encontre oportunidades com mais clareza e menos trabalho manual.',
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
@@ -37,24 +37,40 @@ export const metadata: Metadata = {
   },
 };
 
+const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
+
 const jsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'Prospectly',
-  applicationCategory: 'BusinessApplication',
-  operatingSystem: 'Web',
-  offers: [
+  '@graph': [
     {
-      '@type': 'Offer',
-      price: DISPLAY_PRICES.monthly.BRL.amount,
-      priceCurrency: 'BRL',
-      name: 'Starter mensal',
+      '@type': 'Organization',
+      name: 'Prospectly',
+      url: landingUrl,
+      email: 'hello@prospectly.dev',
+      logo: `${landingUrl}/brand/prospectly-mark.png`,
     },
     {
-      '@type': 'Offer',
-      price: DISPLAY_PRICES.lifetime.BRL.amount,
-      priceCurrency: 'BRL',
-      name: 'Starter vitalício',
+      '@type': 'SoftwareApplication',
+      name: 'Prospectly',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: landingUrl,
+      description:
+        'Ferramenta de prospecção B2B para encontrar empresas e montar listas segmentadas no Brasil.',
+      offers: [
+        {
+          '@type': 'Offer',
+          price: DISPLAY_PRICES.monthly.BRL.amount,
+          priceCurrency: 'BRL',
+          name: 'Starter mensal',
+        },
+        {
+          '@type': 'Offer',
+          price: DISPLAY_PRICES.lifetime.BRL.amount,
+          priceCurrency: 'BRL',
+          name: 'Starter vitalício',
+        },
+      ],
     },
   ],
 };

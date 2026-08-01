@@ -5,11 +5,10 @@ import Link from 'next/link';
 import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
 import { prefix, t, type Locale } from '@/lib/i18n';
-import { appRegisterUrl, enterExplainerUrl } from '@/lib/pricing';
+import { enterExplainerUrl } from '@/lib/pricing';
 
 export function SiteHeader({ locale }: { locale: Locale }) {
   const p = prefix(locale);
-  const defaultCurrency = locale === 'pt' ? 'BRL' : 'EUR';
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -64,21 +63,21 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           >
             {t(locale, 'navLogin')}
           </Link>
-          <a
-            href={appRegisterUrl('monthly', defaultCurrency)}
-            className="focus-ring ml-1 rounded-control bg-accent px-3.5 py-2 font-medium text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
+          <Link
+            href={enterExplainerUrl(locale)}
+            className="focus-ring ml-1 rounded-control bg-accent px-3.5 py-2 font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
           >
             {t(locale, 'navCta')}
-          </a>
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <a
-            href={appRegisterUrl('monthly', defaultCurrency)}
-            className="focus-ring rounded-control bg-accent px-3 py-2 text-sm font-medium text-white dark:text-accent-ink"
+          <Link
+            href={enterExplainerUrl(locale)}
+            className="focus-ring rounded-control bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover dark:text-accent-ink"
           >
             {t(locale, 'navCta')}
-          </a>
+          </Link>
           <button
             type="button"
             className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink)]"

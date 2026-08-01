@@ -2,16 +2,34 @@ import type { Metadata } from 'next';
 import { HomeLanding } from '@/components/home-landing';
 
 export const metadata: Metadata = {
-  title: 'Prospecção de leads Google Maps e OpenStreetMap',
+  title: {
+    absolute: 'Prospectly | Encontre empresas para prospectar no Brasil',
+  },
   description:
-    'Ferramenta para agência digital prospectar clientes locais. Encontre empresas sem site e organize o pipeline.',
+    'Crie listas segmentadas de empresas brasileiras para sua prospecção B2B. Encontre oportunidades com mais clareza e menos trabalho manual.',
   keywords: [
-    'prospecção de leads Google Maps',
+    'prospecção B2B Brasil',
+    'lista de empresas',
+    'prospecção para agências',
+    'encontrar empresas para prospectar',
     'OpenStreetMap leads',
-    'encontrar empresas sem site',
-    'ferramenta para agência digital',
-    'prospecção B2B local',
+    'filtro sem website',
   ],
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Prospectly | Encontre empresas para prospectar no Brasil',
+    description:
+      'Crie listas segmentadas de empresas brasileiras para sua prospecção B2B. Encontre oportunidades com mais clareza e menos trabalho manual.',
+    locale: 'pt_BR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Prospectly | Encontre empresas para prospectar no Brasil',
+    description:
+      'Crie listas segmentadas de empresas brasileiras para sua prospecção B2B.',
+  },
 };
 
 export default function HomePage() {

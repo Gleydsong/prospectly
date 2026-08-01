@@ -1,16 +1,10 @@
 'use client';
 
-import {
-  UserCircle,
-  MapPin,
-  Funnel,
-  ListChecks,
-  Kanban,
-} from '@phosphor-icons/react';
+import { Funnel, ListChecks, Target } from '@phosphor-icons/react';
 import { Reveal } from '@/components/motion';
 import { getCaptureSteps, t, type Locale } from '@/lib/i18n';
 
-const ICONS = [UserCircle, MapPin, Funnel, ListChecks, Kanban] as const;
+const ICONS = [Target, Funnel, ListChecks] as const;
 
 export function LeadCaptureGuide({ locale }: { locale: Locale }) {
   const steps = getCaptureSteps(locale);

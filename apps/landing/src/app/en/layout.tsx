@@ -4,11 +4,11 @@ import { SiteFooter, SiteHeader } from '@/components/site-chrome';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Prospectly - Local lead prospecting for agencies',
+    default: 'Prospectly | Find companies to prospect in Brazil',
     template: '%s | Prospectly',
   },
   description:
-    'Find businesses without a website using OpenStreetMap and Google Places. Prospecting SaaS for digital agencies and freelancers.',
+    'Build segmented lists of Brazilian companies for B2B prospecting. More clarity, less manual work.',
   openGraph: {
     locale: 'en_US',
   },

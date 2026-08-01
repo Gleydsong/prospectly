@@ -102,7 +102,7 @@ const faqPt: FaqItem[] = [
     category: 'usage',
     question: 'O pipeline substitui o meu CRM?',
     answer:
-      'No MVP o pipeline organiza estágios e tarefas dentro do Prospectly. Se a equipa já vive no HubSpot ou Pipedrive, exporte CSV e continue lá. Integrações nativas ficam para depois.',
+      'No MVP o pipeline organiza estágios e tarefas dentro do Prospectly. Integrações nativas com HubSpot ou Pipedrive e exportação CSV ficam para depois — por agora o fluxo fica no app.',
   },
   {
     id: 'free',
@@ -245,7 +245,7 @@ const faqEn: FaqItem[] = [
     category: 'usage',
     question: 'Does the pipeline replace my CRM?',
     answer:
-      'In the MVP, the pipeline handles stages and tasks inside Prospectly. If your team lives in HubSpot or Pipedrive, export CSV and continue there. Native integrations come later.',
+      'In the MVP, the pipeline handles stages and tasks inside Prospectly. Native HubSpot or Pipedrive integrations and CSV export come later — for now the flow stays in the app.',
   },
   {
     id: 'free',
