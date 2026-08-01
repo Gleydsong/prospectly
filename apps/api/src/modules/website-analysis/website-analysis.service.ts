@@ -42,7 +42,7 @@ export class WebsiteAnalysisService {
     private readonly queue: Queue<AnalyzeWebsiteJobData>,
   ) {}
 
-  async enqueueForLead(organizationId: string, leadId: string, force = false) {
+  async enqueueForLead(organizationId: string, leadId: string, force = false, correlationId?: string) {
     const lead = await this.prisma.lead.findFirst({
       where: { id: leadId, organizationId, deletedAt: null },
       select: { id: true, website: true },
@@ -101,6 +101,7 @@ export class WebsiteAnalysisService {
         leadId,
         analysisId: analysis.id,
         url: websiteUrl,
+        ...(correlationId ? { correlationId } : {}),
       },
       {
         jobId: `analyze-${leadId}-${analysis.id}`,
@@ -207,10 +208,10 @@ export class WebsiteAnalysisService {
     await this.scoring.recalculate(job.leadId);
   }
 
-  async onLeadUpsert(organizationId: string, leadId: string, website?: string | null) {
+  async onLeadUpsert(organizationId: string, leadId: string, website?: string | null, correlationId?: string) {
     if (website?.trim()) {
       try {
-        await this.enqueueForLead(organizationId, leadId);
+        await this.enqueueForLead(organizationId, leadId, false, correlationId);
       } catch {
         // Soft-fail enqueue during ingestion — scoring still runs for no-site path elsewhere
       }

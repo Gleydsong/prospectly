@@ -6,6 +6,7 @@ export type AnalyzeWebsiteJobData = {
   leadId: string;
   analysisId: string;
   url: string;
+  correlationId?: string;
 };
 
 export const WEBSITE_ANALYSIS_TIMEOUT_MS = 10_000;

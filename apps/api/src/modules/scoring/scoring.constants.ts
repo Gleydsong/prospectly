@@ -18,7 +18,7 @@ export interface DefaultScoreRule {
 
 /** Catalog of predefined rules — organizations may only toggle/edit points. */
 export const DEFAULT_SCORE_RULES: readonly DefaultScoreRule[] = [
-  { key: 'NO_WEBSITE', points: 30, description: 'Sem website' },
+  { key: 'NO_WEBSITE', points: 30, description: 'Website não informado (oportunidade)' },
   { key: 'NO_HTTPS', points: 15, description: 'Website sem HTTPS' },
   { key: 'NOT_RESPONSIVE', points: 20, description: 'Website não responsivo' },
   { key: 'SLOW', points: 10, description: 'Performance baixa' },
@@ -54,4 +54,5 @@ export const RECALCULATE_ORG_SCORES_JOB = 'recalculate-org-scores';
 
 export type RecalculateOrgScoresJobData = {
   organizationId: string;
+  correlationId?: string;
 };

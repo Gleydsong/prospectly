@@ -14,6 +14,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
+import { CorrelationId } from '../../common/decorators/correlation-id.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -70,8 +71,9 @@ export class LeadsController {
   analyzeWebsite(
     @CurrentOrg() organizationId: string,
     @Param('id', ParseUUIDPipe) id: string,
+    @CorrelationId() correlationId?: string,
   ) {
-    return this.leads.requestWebsiteAnalysis(organizationId, id);
+    return this.leads.requestWebsiteAnalysis(organizationId, id, correlationId);
   }
 
   @Delete(':id')
