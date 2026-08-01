@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prospectly — Catálogo de fases do workflow</title>
+  <style>
+    :root {
+      --ink: #18181b;
+      --muted: #52525b;
+      --bg: #f4f4f5;
+      --card: #ffffff;
+      --border: #e4e4e7;
+      --accent: #2563eb;
+      --ok: #059669;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --purple: #7c3aed;
+      --next: #0284c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #0f766e 100%);
+      color: #fff;
+      padding: 2.5rem 1.25rem 2rem;
+    }
+    header .wrap, main, footer { max-width: 960px; margin: 0 auto; }
+    header h1 { margin: 0 0 0.4rem; font-size: 1.75rem; letter-spacing: -0.02em; }
+    header p { margin: 0.25rem 0; opacity: 0.92; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.14);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    main { padding: 1.5rem 1.25rem 3rem; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1rem;
+    }
+    h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      margin: 1.15rem 0 0.45rem;
+      font-size: 1rem;
+    }
+    .muted { color: var(--muted); font-size: 0.92rem; }
+    a { color: var(--accent); }
+    code, .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86em;
+      background: #f4f4f5;
+      padding: 0.1em 0.35em;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.55rem 0.45rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    ul { padding-left: 1.15rem; margin: 0.4rem 0; }
+    li { margin: 0.3rem 0; }
+    .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.18rem 0.45rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .tag-done { background: #d1fae5; color: var(--ok); }
+    .tag-next { background: #e0f2fe; color: var(--next); }
+    .tag-todo { background: #f4f4f5; color: var(--muted); }
+    .tag-blocked { background: #fee2e2; color: var(--danger); }
+    .tag-audited { background: #ede9fe; color: var(--purple); }
+    .tag-open { background: #fef3c7; color: var(--warn); }
+    .progress {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.65rem;
+      margin: 0.75rem 0 0.25rem;
+    }
+    .stat {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 0.75rem 0.85rem;
+    }
+    .stat strong { display: block; font-size: 1.35rem; letter-spacing: -0.02em; }
+    .stat span { color: var(--muted); font-size: 0.8rem; }
+    .phase-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.05rem;
+      margin: 0.75rem 0;
+      background: #fafafa;
+    }
+    .phase-card.done { border-color: #6ee7b7; background: #ecfdf5; }
+    .phase-card.next { border-color: #7dd3fc; background: #f0f9ff; }
+    .phase-card.audited { border-color: #c4b5fd; background: #f5f3ff; }
+    .phase-card.blocked { border-color: #fca5a5; background: #fef2f2; }
+    .phase-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .phase-head h3 { margin: 0; flex: 1; min-width: 200px; }
+    .kv { font-size: 0.88rem; margin: 0.2rem 0; }
+    .kv b { color: var(--muted); font-weight: 600; }
+    .check { list-style: none; padding-left: 0; }
+    .check li {
+      display: grid;
+      grid-template-columns: 1.5rem 1fr;
+      gap: 0.45rem;
+      padding: 0.4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.92rem;
+    }
+    .check li:last-child { border-bottom: 0; }
+    .mark {
+      width: 1.15rem;
+      height: 1.15rem;
+      border-radius: 4px;
+      border: 2px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.15rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+    .mark.on { background: var(--ok); border-color: var(--ok); color: #fff; }
+    .mark.next-mark { background: var(--next); border-color: var(--next); color: #fff; }
+    nav.toc a {
+      display: inline-block;
+      margin: 0.2rem 0.35rem 0.2rem 0;
+      padding: 0.25rem 0.55rem;
+      background: #eff6ff;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    footer {
+      padding: 0 1.25rem 2.5rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.4rem; }
+      th:nth-child(4), td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Prospectly — Catálogo de fases</h1>
+      <p>Workflow de melhoria incremental · uma fase por branch/PR</p>
+      <p class="muted" style="opacity:0.85;color:#e2e8f0;">Atualizado em 2026-08-01 · Fonte: spec do workflow + PRs #12–#14</p>
+      <div class="meta">
+        <span class="badge">Fase 0: 2/4 feitos</span>
+        <span class="badge">Próximo: 0.3 security(deps)</span>
+        <span class="badge">PRs abertos: #12 · #13 · #14</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <h2>Progresso</h2>
+      <div class="progress">
+        <div class="stat"><strong>2</strong><span>Implementados (PR aberto)</span></div>
+        <div class="stat"><strong>1</strong><span>Próximo (0.3)</span></div>
+        <div class="stat"><strong>1</strong><span>Fase auditada (2.x)</span></div>
+        <div class="stat"><strong>12</strong><span>PRs canônicos no roadmap</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Legenda</h2>
+      <p>
+        <span class="tag tag-done">done_pr_open</span> implementado, PR aberto ·
+        <span class="tag tag-done">done_merged</span> mergeado ·
+        <span class="tag tag-next">next</span> próximo ·
+        <span class="tag tag-todo">todo</span> pendente ·
+        <span class="tag tag-blocked">blocked</span> precisa aprovação ·
+        <span class="tag tag-audited">audited</span> gaps mapeados
+      </p>
+    </section>
+
+    <section>
+      <h2>Navegação</h2>
+      <nav class="toc">
+        <a href="#resumo">Resumo</a>
+        <a href="#fase-0">Fase 0</a>
+        <a href="#fase-1">Fase 1</a>
+        <a href="#fase-2">Fase 2</a>
+        <a href="#fase-3">Fase 3</a>
+        <a href="#fase-4">Fase 4</a>
+        <a href="#fase-5">Fase 5</a>
+        <a href="#checklist">Checklist PRs</a>
+        <a href="#feitos">Já feitos</a>
+      </nav>
+    </section>
+
+    <section id="resumo">
+      <h2>Resumo executivo</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Fase / subitem</th>
+            <th>Status</th>
+            <th>Branch / PR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>0.1</strong> Recuperação de senha</td>
+            <td><span class="tag tag-open">done_pr_open</span></td>
+            <td><a href="https://github.com/Gleydsong/prospecting/pull/12">PR #12</a></td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>0.2</strong> CI verde</td>
+            <td><span class="tag tag-open">done_pr_open</span></td>
+            <td><a href="https://github.com/Gleydsong/prospecting/pull/13">PR #13</a></td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>0.3</strong> Advisories high + CI</td>
+            <td><span class="tag tag-next">next</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>0.4</strong> Imagem prod + migrations</td>
+            <td><span class="tag tag-blocked">blocked</span></td>
+            <td>Aprovação Render</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>1.1</strong> Lazy routes + error boundary</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>1.2</strong> Pipeline a11y + paginação</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>1.3</strong> Métricas operacionais</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>2.1–2.2</strong> Proveniência + enrichment</td>
+            <td><span class="tag tag-audited">audited</span></td>
+            <td>Gaps 2026-08-01</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><strong>2.3</strong> Score explicável</td>
+            <td><span class="tag tag-audited">audited</span></td>
+            <td><code>take: 5000</code> silencioso</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><strong>3.1</strong> Cadências assistidas</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>Prisma sem módulo/UI</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><strong>3.2</strong> Integrações / export</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td><strong>3.3</strong> Painel de decisão</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>13</td>
+            <td><strong>4.1</strong> Audit log em uso</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>Modelo existe; não grava</td>
+          </tr>
+          <tr>
+            <td>14</td>
+            <td><strong>4.2</strong> Titulares / retenção</td>
+            <td><span class="tag tag-todo">todo</span></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>15</td>
+            <td><strong>5</strong> Split API / workers</td>
+            <td><span class="tag tag-blocked">blocked</span></td>
+            <td>Métricas + aprovação</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="feitos">
+      <h2>Já feitos (gravados)</h2>
+
+      <div class="phase-card done" id="fase-0-1">
+        <div class="phase-head">
+          <h3>0.1 — Recuperação de senha funcional</h3>
+          <span class="tag tag-open">done_pr_open</span>
+        </div>
+        <p class="kv"><b>PR sugerido:</b> <code>fix(auth): deliver password reset emails safely</code></p>
+        <p class="kv"><b>Branch:</b> <code>codex/0.1-password-reset-email</code></p>
+        <p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/12">#12</a> · <b>Commit:</b> <code>1f627c7</code></p>
+        <p class="kv"><b>Checklist manual:</b> <a href="./2026-08-01-fase-0.1-password-reset-validation.html">HTML de validação 0.1</a></p>
+        <p><strong>Entregue</strong></p>
+        <ul>
+          <li>Template de e-mail PT/EN + envio via <code>MailService</code></li>
+          <li>Falha observável em prod/staging sem provider (anti-enumeração)</li>
+          <li>Páginas <code>/forgot-password</code> e <code>/reset-password</code> + link no login</li>
+          <li>Testes API (envio, enumeração, expirado, reuse) e Web</li>
+          <li>Invalidação de sessões no reset coberta por testes</li>
+        </ul>
+        <p class="muted">Pendente: review + merge do PR #12 em <code>main</code>.</p>
+      </div>
+
+      <div class="phase-card done" id="fase-0-2">
+        <div class="phase-head">
+          <h3>0.2 — Restaurar CI verde</h3>
+          <span class="tag tag-open">done_pr_open</span>
+        </div>
+        <p class="kv"><b>PR sugerido:</b> <code>test(web): restore complete CI coverage</code></p>
+        <p class="kv"><b>Branch:</b> <code>codex/0.2-restore-ci-coverage</code></p>
+        <p class="kv"><b>PR:</b> <a href="https://github.com/Gleydsong/prospecting/pull/13">#13</a> · <b>Commit:</b> <code>17d07c6</code></p>
+        <p><strong>Entregue</strong></p>
+        <ul>
+          <li>Helper <code>apps/web/src/test/render.tsx</code> (QueryClient + Router + GoogleOAuth)</li>
+          <li>Login page tests usam o helper</li>
+          <li>Search tests toleram markup duplicado mobile/desktop (<code>getAllByRole</code>)</li>
+          <li><code>tsconfig.jest.json</code> com <code>isolatedModules</code> — sem warning TS151002</li>
+          <li>Validação local: <code>pnpm test</code> verde (web 41 + api 232)</li>
+        </ul>
+        <p class="muted">Pendente: review + merge do PR #13 em <code>main</code>.</p>
+      </div>
+
+      <div class="phase-card audited">
+        <div class="phase-head">
+          <h3>Fase 2 — auditoria (sem implementação ainda)</h3>
+          <span class="tag tag-audited">audited</span>
+        </div>
+        <p>Em 2026-08-01: base parcial mapeada; gaps de proveniência, enrichment em 2 etapas e score <code>fit/opportunity/engagement</code>; risco do <code>take: 5000</code> silencioso no recalc.</p>
+      </div>
+
+      <div class="phase-card done">
+        <div class="phase-head">
+          <h3>Catálogo markdown + este HTML</h3>
+          <span class="tag tag-open">done_pr_open</span>
+        </div>
+        <p class="kv"><b>PR docs:</b> <a href="https://github.com/Gleydsong/prospecting/pull/14">#14</a></p>
+        <p class="kv"><b>Markdown:</b> <code>docs/superpowers/specs/2026-08-01-prospectly-phase-catalog.md</code></p>
+      </div>
+    </section>
+
+    <section id="fase-0">
+      <h2>Fase 0 — liberar uma entrega segura</h2>
+
+      <div class="phase-card next" id="fase-0-3">
+        <div class="phase-head">
+          <h3>0.3 — Vulnerabilidades runtime + CI</h3>
+          <span class="tag tag-next">next</span>
+        </div>
+        <p class="kv"><b>PR sugerido:</b> <code>security(deps): remediate runtime high advisories</code></p>
+        <ul>
+          <li>Atualizar Multer / <code>@nestjs/platform-express</code>, Next; avaliar React Router (SPA Vite)</li>
+          <li><code>pnpm.overrides</code> só com justificativa + <code>docs/security/audit-exceptions.md</code></li>
+          <li>CI falha em <code>high</code> de runtime; sem <code>continue-on-error</code> global permanente</li>
+        </ul>
+      </div>
+
+      <div class="phase-card blocked" id="fase-0-4">
+        <div class="phase-head">
+          <h3>0.4 — Imagem de produção e migrations</h3>
+          <span class="tag tag-blocked">blocked</span>
+        </div>
+        <p class="kv"><b>PR sugerido:</b> <code>build(api): minimize production image and isolate migrations</code></p>
+        <p>Runtime mínimo no Docker; migration em etapa única de release; health <code>live</code>/<code>ready</code>.</p>
+        <p class="muted"><strong>Bloqueio:</strong> formato do job de migration e alteração de <code>render.yaml</code> exigem aprovação explícita.</p>
+      </div>
+    </section>
+
+    <section id="fase-1">
+      <h2>Fase 1 — experiência, desempenho e observabilidade</h2>
+
+      <div class="phase-card">
+        <div class="phase-head">
+          <h3>1.1 — App rápido e resiliente</h3>
+          <span class="tag tag-todo">todo</span>
+        </div>
+        <p class="kv"><b>PR:</b> <code>feat(web): add resilient lazy routes and error boundary</code></p>
+        <p><code>React.lazy</code> rotas pesadas; <code>AppErrorBoundary</code>; Sentry condicional; lazy globe na landing.</p>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-head">
+          <h3>1.2 — Pipeline acessível e escalável</h3>
+          <span class="tag tag-todo">todo</span>
+        </div>
+        <p class="kv"><b>PR:</b> <code>feat(pipeline): make stage movement accessible and paginated</code></p>
+        <p>Mover etapa por teclado/touch; <code>aria-live</code>; total + paginação além de 100 leads/coluna.</p>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-head">
+          <h3>1.3 — Operação mensurável</h3>
+          <span class="tag tag-todo">todo</span>
+        </div>
+        <p class="kv"><b>PR:</b> <code>feat(observability): add private operational metrics and runbooks</code></p>
+        <p>Métricas privadas HTTP/jobs/filas; <code>correlationId</code>; runbooks; sem exposição pública.</p>
+      </div>
+    </section>
+
+    <section id="fase-2">
+      <h2>Fase 2 — qualidade de dados e priorização</h2>
+      <p class="muted">Status geral: <span class="tag tag-audited">audited</span> — base parcial existe; nenhum subitem completo.</p>
+
+      <div class="phase-card audited">
+        <div class="phase-head">
+          <h3>2.1 — Proveniência e confiança</h3>
+          <span class="tag tag-audited">audited</span>
+        </div>
+        <p><strong>Já existe:</strong> <code>Lead.source</code>, <code>dataCollectedAt</code>, <code>websitePresence</code>, label “Sem site informado” na busca.</p>
+        <p><strong>Gaps:</strong> <code>lastVerifiedAt</code>, confiança, motivo; detalhe mostra “Sem site”; tag <code>sem-site</code> demais.</p>
+      </div>
+
+      <div class="phase-card audited">
+        <div class="phase-head">
+          <h3>2.2 — Enriquecimento em duas etapas</h3>
+          <span class="tag tag-audited">audited</span>
+        </div>
+        <p><strong>Já existe:</strong> <code>SearchProvider</code> OSM/Google; import seletivo; Field Mask no Text Search.</p>
+        <p><strong>Gaps:</strong> Place Details seletivo; estimate de custo; <code>EnrichmentProvider</code>; rating/reviews.</p>
+      </div>
+
+      <div class="phase-card audited">
+        <div class="phase-head">
+          <h3>2.3 — Score explicável</h3>
+          <span class="tag tag-audited">audited</span>
+        </div>
+        <p><strong>Já existe:</strong> <code>LeadScore.rulesApplied</code>, <code>configVersion</code>, UI de regras.</p>
+        <p><strong>Gaps:</strong> split fit/opportunity/engagement; <strong><code>take: 5000</code> silencioso</strong> em <code>recalculateOrganization</code>.</p>
+        <p class="muted">Ordem interna: fix NO_WEBSITE → proveniência UI → migration → enrichment+custo → score → paginar recalc.</p>
+      </div>
+    </section>
+
+    <section id="fase-3">
+      <h2>Fase 3 — ciclo comercial</h2>
+      <div class="phase-card">
+        <div class="phase-head"><h3>3.1 Cadências assistidas</h3><span class="tag tag-todo">todo</span></div>
+        <p class="kv"><b>PR:</b> <code>feat(campaigns): introduce assisted outreach workflows</code></p>
+        <p>Prisma <code>Campaign</code>/<code>MessageTemplate</code>/<code>Integration</code> existem; sem módulo/UI. Guardrails obrigatórios antes de envio automático.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-head"><h3>3.2 Integrações e exportação</h3><span class="tag tag-todo">todo</span></div>
+        <p>Webhook genérico primeiro; export auditado; HubSpot/Pipedrive depois.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-head"><h3>3.3 Painel orientado à decisão</h3><span class="tag tag-todo">todo</span></div>
+        <p>Filtros + conversão, follow-ups, tempo entre etapas, cadências.</p>
+      </div>
+    </section>
+
+    <section id="fase-4">
+      <h2>Fase 4 — privacidade, auditoria e confiança</h2>
+      <div class="phase-card">
+        <div class="phase-head"><h3>4.1 Audit log em uso</h3><span class="tag tag-todo">todo</span></div>
+        <p class="kv"><b>PR (com 4.2):</b> <code>feat(compliance): operationalize audit and data-subject requests</code></p>
+        <p>Modelo <code>AuditLog</code> existe; ainda não grava eventos.</p>
+      </div>
+      <div class="phase-card">
+        <div class="phase-head"><h3>4.2 Titulares e retenção</h3><span class="tag tag-todo">todo</span></div>
+        <p>Workflow export/delete <code>PENDING</code>; ROPA; retenção por entidade.</p>
+      </div>
+    </section>
+
+    <section id="fase-5">
+      <h2>Fase 5 — separar API e workers</h2>
+      <div class="phase-card blocked">
+        <div class="phase-head">
+          <h3>5 — Worker BullMQ separado</h3>
+          <span class="tag tag-blocked">blocked</span>
+        </div>
+        <p class="kv"><b>PR:</b> <code>infra(workers): split BullMQ processing after metric gate</code></p>
+        <p><strong>Pré-requisitos:</strong> métricas da Fase 1.3 + evidência de carga.</p>
+        <p class="muted"><strong>Bloqueio:</strong> aprovação de infraestrutura / Render.</p>
+      </div>
+    </section>
+
+    <section id="checklist">
+      <h2>Ordem canônica de PRs (checklist vivo)</h2>
+      <ul class="check">
+        <li><span class="mark on">✓</span><div><code>fix(auth): deliver password reset emails safely</code> — <a href="https://github.com/Gleydsong/prospecting/pull/12">PR #12</a> <span class="tag tag-open">done_pr_open</span></div></li>
+        <li><span class="mark on">✓</span><div><code>test(web): restore complete CI coverage</code> — <a href="https://github.com/Gleydsong/prospecting/pull/13">PR #13</a> <span class="tag tag-open">done_pr_open</span></div></li>
+        <li><span class="mark next-mark">→</span><div><code>security(deps): remediate runtime high advisories</code> <span class="tag tag-next">next</span></div></li>
+        <li><span class="mark"></span><div><code>build(api): minimize production image and isolate migrations</code></div></li>
+        <li><span class="mark"></span><div><code>feat(web): add resilient lazy routes and error boundary</code></div></li>
+        <li><span class="mark"></span><div><code>feat(pipeline): make stage movement accessible and paginated</code></div></li>
+        <li><span class="mark"></span><div><code>feat(observability): add private operational metrics and runbooks</code></div></li>
+        <li><span class="mark"></span><div><code>feat(leads): add provenance and selective enrichment</code></div></li>
+        <li><span class="mark"></span><div><code>feat(scoring): add explainable fit and opportunity scoring</code></div></li>
+        <li><span class="mark"></span><div><code>feat(campaigns): introduce assisted outreach workflows</code></div></li>
+        <li><span class="mark"></span><div><code>feat(compliance): operationalize audit and data-subject requests</code></div></li>
+        <li><span class="mark"></span><div><code>infra(workers): split BullMQ processing after metric gate</code></div></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Histórico</h2>
+      <table>
+        <thead><tr><th>Data</th><th>Evento</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>2026-08-01</td>
+            <td>Catálogo markdown + HTML. 0.1 e 0.2 implementados (PRs #12, #13). Fase 2 auditada. Próximo: 0.3. Docs PR #14.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:1rem;">Ao concluir um subitem: atualizar status neste HTML e no markdown irmão; marcar checklist; acrescentar linha no histórico.</p>
+    </section>
+  </main>
+
+  <footer>
+    Prospectly workflow catalog · abrir no navegador · espelho de
+    <code>docs/superpowers/specs/2026-08-01-prospectly-phase-catalog.md</code>
+  </footer>
+</body>
+</html>

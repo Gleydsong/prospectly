@@ -1,6 +1,7 @@
 # Prospectly — catálogo de fases do workflow
 
 > Fonte: [2026-08-01-prospectly-improvement-workflow-for-cursor.md](./2026-08-01-prospectly-improvement-workflow-for-cursor.md)  
+> **HTML (navegável):** [../reports/2026-08-01-prospectly-phase-catalog.html](../reports/2026-08-01-prospectly-phase-catalog.html)  
 > Atualizado: **2026-08-01**  
 > Regra: **uma fase/subitem por branch/PR**. Não misturar segurança, feature comercial e infra no mesmo diff.
 
