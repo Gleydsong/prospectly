@@ -11,7 +11,8 @@ describe('ProspectingProcessor', () => {
       process: jest.fn().mockRejectedValue(new Error('provider secret response')),
       recordFailure: jest.fn().mockResolvedValue(undefined),
     };
-    const processor = new ProspectingProcessor(prospecting as never);
+    const metrics = { recordJob: jest.fn() };
+    const processor = new ProspectingProcessor(prospecting as never, metrics as never);
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
     await expect(
@@ -35,7 +36,8 @@ describe('ProspectingProcessor', () => {
       process: jest.fn().mockRejectedValue(new Error('temporary provider failure')),
       recordFailure: jest.fn(),
     };
-    const processor = new ProspectingProcessor(prospecting as never);
+    const metrics = { recordJob: jest.fn() };
+    const processor = new ProspectingProcessor(prospecting as never, metrics as never);
 
     await expect(
       processor.process({ data: { searchId: 'search-1' }, attemptsMade: 0, opts: { attempts: 3 } } as never),
@@ -59,7 +61,8 @@ describe('ProspectingProcessor', () => {
       ),
       recordFailure: jest.fn().mockResolvedValue(undefined),
     };
-    const processor = new ProspectingProcessor(prospecting as never);
+    const metrics = { recordJob: jest.fn() };
+    const processor = new ProspectingProcessor(prospecting as never, metrics as never);
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
     await expect(

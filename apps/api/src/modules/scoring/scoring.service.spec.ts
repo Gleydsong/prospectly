@@ -1,3 +1,4 @@
+import { DEFAULT_SCORE_RULES } from './scoring.constants';
 import { ScoringService } from './scoring.service';
 
 describe('ScoringService', () => {
@@ -116,8 +117,19 @@ describe('ScoringService', () => {
     (prisma.scoreConfiguration as { update: jest.Mock }).update.mockResolvedValue({});
 
     const service = new ScoringService(prisma as never, queue as never);
-    await service.updateRules('o1', [{ key: 'NO_WEBSITE', points: 25, enabled: false }]);
-    expect(queue.add).toHaveBeenCalled();
+    await service.updateRules('o1', [{ key: 'NO_WEBSITE', points: 25, enabled: false }], 'corr-score-1');
+    expect(queue.add).toHaveBeenCalledWith(
+      'recalculate-org-scores',
+      { organizationId: 'o1', correlationId: 'corr-score-1' },
+      expect.any(Object),
+    );
     expect((prisma.scoreRule as { update: jest.Mock }).update).toHaveBeenCalled();
   });
+
+  it('NO_WEBSITE description avoids definitive absence wording', () => {
+    const rule = DEFAULT_SCORE_RULES.find((item) => item.key === 'NO_WEBSITE');
+    expect(rule?.description.toLowerCase()).not.toContain('sem website');
+    expect(rule?.description.toLowerCase()).toContain('não informado');
+  });
+
 });

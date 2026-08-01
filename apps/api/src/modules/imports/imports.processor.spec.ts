@@ -14,7 +14,8 @@ describe('ImportsProcessor', () => {
       process: jest.fn().mockRejectedValue(new Error('redis password=super-secret')),
       recordFailure: jest.fn().mockResolvedValue(undefined),
     };
-    const processor = new ImportsProcessor(imports as never);
+    const metrics = { recordJob: jest.fn() };
+    const processor = new ImportsProcessor(imports as never, metrics as never);
     const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
 
     await expect(
@@ -38,7 +39,8 @@ describe('ImportsProcessor', () => {
       process: jest.fn().mockRejectedValue(new Error('temporary failure')),
       recordFailure: jest.fn(),
     };
-    const processor = new ImportsProcessor(imports as never);
+    const metrics = { recordJob: jest.fn() };
+    const processor = new ImportsProcessor(imports as never, metrics as never);
 
     await expect(
       processor.process({ data: jobData, attemptsMade: 0, opts: { attempts: 3 } } as never),

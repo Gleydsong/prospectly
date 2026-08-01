@@ -30,6 +30,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { ScoringModule } from './modules/scoring/scoring.module';
 import { WebsiteAnalysisModule } from './modules/website-analysis/website-analysis.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
+import { OpsModule } from './modules/ops/ops.module';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
     }),
     PrismaModule,
     HealthModule,
+    OpsModule,
     MailModule,
     AuthModule,
     UsersModule,

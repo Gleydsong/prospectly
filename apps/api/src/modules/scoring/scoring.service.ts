@@ -80,7 +80,7 @@ export class ScoringService {
     return this.ensureDefaultConfig(organizationId);
   }
 
-  async updateRules(organizationId: string, updates: UpdateScoreRuleItemDto[]) {
+  async updateRules(organizationId: string, updates: UpdateScoreRuleItemDto[], correlationId?: string) {
     const config = await this.ensureDefaultConfig(organizationId);
 
     await this.prisma.$transaction(async (tx) => {
@@ -101,7 +101,10 @@ export class ScoringService {
 
     await this.queue.add(
       RECALCULATE_ORG_SCORES_JOB,
-      { organizationId },
+      {
+        organizationId,
+        ...(correlationId ? { correlationId } : {}),
+      },
       {
         jobId: `recalc-org-${organizationId}-${Date.now()}`,
         removeOnComplete: 100,

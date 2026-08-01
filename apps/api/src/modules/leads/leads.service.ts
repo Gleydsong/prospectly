@@ -171,12 +171,12 @@ export class LeadsService {
     }
   }
 
-  async requestWebsiteAnalysis(organizationId: string, id: string) {
+  async requestWebsiteAnalysis(organizationId: string, id: string, correlationId?: string) {
     await this.ensureLead(organizationId, id);
     if (!this.websiteAnalysis) {
       throw new BadRequestException('Website analysis is not available');
     }
-    return this.websiteAnalysis.enqueueForLead(organizationId, id, true);
+    return this.websiteAnalysis.enqueueForLead(organizationId, id, true, correlationId);
   }
 
   async softDelete(organizationId: string, id: string) {

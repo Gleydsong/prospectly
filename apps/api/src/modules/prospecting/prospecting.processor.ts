@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 
+import { MetricsService } from '../ops/metrics.service';
 import { isSearchProviderError } from './domain/search-provider-error';
 import { PROSPECTING_QUEUE, type RunSearchJobData } from './prospecting.constants';
 import { ProspectingService } from './prospecting.service';
@@ -10,15 +11,20 @@ import { ProspectingService } from './prospecting.service';
 export class ProspectingProcessor extends WorkerHost {
   private readonly logger = new Logger(ProspectingProcessor.name);
 
-  constructor(private readonly prospecting: ProspectingService) {
+  constructor(
+    private readonly prospecting: ProspectingService,
+    private readonly metrics: MetricsService,
+  ) {
     super();
   }
 
   async process(job: Job<RunSearchJobData>): Promise<void> {
     let context: { organizationId: string; correlationId: string | null } | null = null;
+    const started = Date.now();
     try {
       context = await this.prospecting.getJobContext(job.data.searchId);
       await this.prospecting.process(job.data.searchId);
+      this.metrics.recordJob(PROSPECTING_QUEUE, 'completed', Date.now() - started);
     } catch (error) {
       const permanent = isSearchProviderError(error) && !error.retryable;
       const maxAttempts = job.opts.attempts ?? 1;
@@ -30,6 +36,12 @@ export class ProspectingProcessor extends WorkerHost {
           isSearchProviderError(error) ? error.publicMessage : undefined,
         );
       }
+
+      this.metrics.recordJob(
+        PROSPECTING_QUEUE,
+        isFinalAttempt ? 'failed' : 'retry',
+        Date.now() - started,
+      );
 
       this.logger.warn({
         message: 'Search processing failed',

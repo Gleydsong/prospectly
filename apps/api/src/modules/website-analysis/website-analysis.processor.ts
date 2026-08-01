@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import type { Job } from 'bullmq';
 
+import { MetricsService } from '../ops/metrics.service';
 import {
   ANALYZE_WEBSITE_JOB,
   WEBSITE_ANALYSIS_QUEUE,
@@ -13,7 +14,10 @@ import { WebsiteAnalysisService } from './website-analysis.service';
 export class WebsiteAnalysisProcessor extends WorkerHost {
   private readonly logger = new Logger(WebsiteAnalysisProcessor.name);
 
-  constructor(private readonly websiteAnalysis: WebsiteAnalysisService) {
+  constructor(
+    private readonly websiteAnalysis: WebsiteAnalysisService,
+    private readonly metrics: MetricsService,
+  ) {
     super();
   }
 
@@ -22,12 +26,35 @@ export class WebsiteAnalysisProcessor extends WorkerHost {
       this.logger.warn(`Ignoring unknown website analysis job ${job.name}`);
       return;
     }
+
+    const correlationId = job.data.correlationId ?? 'unknown';
+    const started = Date.now();
     try {
       await this.websiteAnalysis.processAnalysis(job.data);
+      this.metrics.recordJob(WEBSITE_ANALYSIS_QUEUE, 'completed', Date.now() - started);
+      this.logger.log({
+        message: 'Website analysis completed',
+        organizationId: job.data.organizationId,
+        leadId: job.data.leadId,
+        analysisId: job.data.analysisId,
+        correlationId,
+      });
     } catch (error) {
-      this.logger.error(
-        `Website analysis failed for lead ${job.data.leadId}: ${(error as Error).message}`,
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isFinalAttempt = job.attemptsMade + 1 >= maxAttempts;
+      this.metrics.recordJob(
+        WEBSITE_ANALYSIS_QUEUE,
+        isFinalAttempt ? 'failed' : 'retry',
+        Date.now() - started,
       );
+      this.logger.error({
+        message: 'Website analysis failed',
+        organizationId: job.data.organizationId,
+        leadId: job.data.leadId,
+        analysisId: job.data.analysisId,
+        correlationId,
+        error: (error as Error).message,
+      });
       throw error;
     }
   }
