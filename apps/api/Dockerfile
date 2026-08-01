@@ -1,6 +1,7 @@
 # Prospectly API — production image
-# Stages: deps → build → pruned → migrate (optional) → runner (default)
+# Stages: deps → build → pruned → migrate (optional) → runner → worker | api (default)
 # Migrations are NOT run on container start. See docs/deploy/migrations.md
+# Workers: docs/deploy/workers.md
 
 FROM node:20-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
@@ -58,5 +59,15 @@ COPY --from=pruned --chown=nestjs:nodejs /prod/api/dist ./dist
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/prisma/schema.prisma ./prisma/schema.prisma
 
 USER nestjs
+
+# Worker target — no HTTP, no migrate (migrations run once on API release).
+# Build: docker build --target worker -f apps/api/Dockerfile .
+FROM runner AS worker
+ENV ROLE=worker
+CMD ["node", "dist/worker.js"]
+
+# Default / API target (last stage) — used by Render when dockerCommand/target unset.
+FROM runner AS api
+ENV ROLE=api
 EXPOSE 3000
 CMD ["node", "dist/main.js"]

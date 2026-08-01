@@ -13,7 +13,10 @@
     "test:e2e": "jest --config test/jest-e2e.json --passWithNoTests",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "start:worker": "node dist/worker.js",
+    "start:worker:prod": "node dist/worker.js",
+    "dev:worker": "nest start --watch --entryFile worker"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

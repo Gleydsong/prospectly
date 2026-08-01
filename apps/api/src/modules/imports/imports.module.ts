@@ -8,7 +8,6 @@ import { CsvParserService } from './csv-parser.service';
 import { IMPORTS_QUEUE } from './imports.constants';
 import { ImportsController } from './imports.controller';
 import { ImportsDispatchReconciler } from './imports-dispatch.reconciler';
-import { ImportsProcessor } from './imports.processor';
 import { ImportsService } from './imports.service';
 
 @Module({
@@ -27,12 +26,12 @@ import { ImportsService } from './imports.service';
   providers: [
     CsvParserService,
     ImportsService,
-    ImportsProcessor,
     {
       provide: ImportsDispatchReconciler,
       inject: [ImportsService],
       useFactory: (service: ImportsService) => new ImportsDispatchReconciler(service),
     },
   ],
+  exports: [ImportsService],
 })
 export class ImportsModule {}

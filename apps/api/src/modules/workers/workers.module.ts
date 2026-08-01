@@ -1,0 +1,25 @@
+import { Module } from '@nestjs/common';
+
+import { ImportsModule } from '../imports/imports.module';
+import { ImportsProcessor } from '../imports/imports.processor';
+import { ProspectingModule } from '../prospecting/prospecting.module';
+import { ProspectingProcessor } from '../prospecting/prospecting.processor';
+import { ScoringModule } from '../scoring/scoring.module';
+import { ScoringProcessor } from '../scoring/scoring.processor';
+import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.module';
+import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.processor';
+
+/**
+ * Registers BullMQ processors. Imported only by WorkerModule — AppModule
+ * keeps feature modules as queue producers without workers.
+ */
+@Module({
+  imports: [ProspectingModule, ImportsModule, ScoringModule, WebsiteAnalysisModule],
+  providers: [
+    ProspectingProcessor,
+    ImportsProcessor,
+    ScoringProcessor,
+    WebsiteAnalysisProcessor,
+  ],
+})
+export class WorkersModule {}

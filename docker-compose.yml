@@ -60,6 +60,29 @@ services:
     profiles:
       - full
 
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: worker
+    container_name: prospectly-worker
+    restart: unless-stopped
+    env_file:
+      - apps/api/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:-prospectly}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
+      REDIS_URL: redis://redis:6379
+      ROLE: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prospectly
+    profiles:
+      - full
+
   web:
     build:
       context: .

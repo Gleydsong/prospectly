@@ -21,7 +21,6 @@ import {
 import { PROSPECTING_QUEUE } from './prospecting.constants';
 import { ProspectingController } from './prospecting.controller';
 import { ProspectingDispatchReconciler } from './prospecting-dispatch.reconciler';
-import { ProspectingProcessor } from './prospecting.processor';
 import { ProspectingService } from './prospecting.service';
 
 @Module({
@@ -29,7 +28,6 @@ import { ProspectingService } from './prospecting.service';
   controllers: [ProspectingController],
   providers: [
     ProspectingService,
-    ProspectingProcessor,
     {
       provide: ProspectingDispatchReconciler,
       inject: [ProspectingService],
@@ -74,5 +72,6 @@ import { ProspectingService } from './prospecting.service';
         ]),
     },
   ],
+  exports: [ProspectingService],
 })
 export class ProspectingModule {}
