@@ -13,6 +13,7 @@ import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
 import { LeadsPage } from '@/pages/leads/leads-page';
 import { PipelinePage } from '@/pages/pipeline-page';
 import { SearchPage } from '@/pages/search-page';
+import { CampaignsPage } from '@/pages/campaigns-page';
 import { SettingsPage } from '@/pages/settings-page';
 import { SettingsPrivacyPage } from '@/pages/settings-privacy-page';
 import { TasksPage } from '@/pages/tasks-page';
@@ -36,6 +37,7 @@ export function App() {
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="settings/privacy" element={<SettingsPrivacyPage />} />
         </Route>

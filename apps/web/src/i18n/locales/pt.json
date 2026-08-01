@@ -19,7 +19,8 @@
     "settings": "Configurações",
     "logout": "Sair",
     "openMenu": "Abrir menu",
-    "closeMenu": "Fechar menu"
+    "closeMenu": "Fechar menu",
+    "campaigns": "Campanhas"
   },
   "auth": {
     "loginTitle": "Entrar no Prospectly",
@@ -257,5 +258,37 @@
     "HAS_PHONE": "Telefone disponível",
     "HAS_EMAIL": "E-mail disponível",
     "HIGH_RATING": "Nota alta"
+  },
+  "campaigns": {
+    "title": "Campanhas assistidas",
+    "subtitle": "Cadências manuais por etapa — sem envio automático nesta fase.",
+    "create": "Nova campanha",
+    "createTitle": "Criar campanha assistida",
+    "createHint": "As etapas padrão geram tarefas manuais (e-mail, ligação, WhatsApp, LinkedIn).",
+    "createError": "Não foi possível criar a campanha.",
+    "assistedNotice": "Modo assistido: a Prospectly não envia e-mails nem mensagens automaticamente. Veja docs/saas-mvp/campaign-guardrails.md antes de qualquer auto-send.",
+    "emptyTitle": "Nenhuma campanha ainda",
+    "emptyDescription": "Crie uma cadência assistida para organizar follow-ups sem disparo automático.",
+    "fields": {
+      "name": "Nome",
+      "segment": "Segmento",
+      "segmentPlaceholder": "Ex.: padarias Lisboa",
+      "description": "Descrição"
+    },
+    "columns": {
+      "name": "Nome",
+      "status": "Estado",
+      "segment": "Segmento",
+      "leads": "Leads",
+      "updated": "Atualizado"
+    },
+    "status": {
+      "DRAFT": "Rascunho",
+      "SCHEDULED": "Agendada",
+      "RUNNING": "Em execução",
+      "PAUSED": "Pausada",
+      "COMPLETED": "Concluída",
+      "CANCELLED": "Cancelada"
+    }
   }
 }
