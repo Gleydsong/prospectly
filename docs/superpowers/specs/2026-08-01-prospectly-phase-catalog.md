@@ -2,14 +2,14 @@
 
 > Fonte: [2026-08-01-prospectly-improvement-workflow-for-cursor.md](./2026-08-01-prospectly-improvement-workflow-for-cursor.md)  
 > **HTML (navegável):** [../reports/2026-08-01-prospectly-phase-catalog.html](../reports/2026-08-01-prospectly-phase-catalog.html)  
-> Atualizado: **2026-08-01**  
+> Atualizado: **2026-08-01** (sessão completa)  
 > Regra: **uma fase/subitem por branch/PR**. Não misturar segurança, feature comercial e infra no mesmo diff.
 
 ## Legenda de status
 
 | Status | Significado |
 |--------|-------------|
-| `done_pr_open` | Implementado nesta sessão; PR aberto, aguardando merge |
+| `done_pr_open` | Implementado; PR aberto, aguardando merge |
 | `done_merged` | Implementado e mergeado em `main` |
 | `in_progress` | Em implementação agora |
 | `next` | Próximo item da ordem sugerida |
@@ -23,215 +23,135 @@
 
 | # | Fase / subitem | Status | Branch / PR |
 |---|----------------|--------|-------------|
-| 1 | **0.1** Recuperação de senha | `done_pr_open` | [`codex/0.1-password-reset-email`](https://github.com/Gleydsong/prospecting/pull/12) · PR **#12** |
-| 2 | **0.2** CI verde | `done_pr_open` | [`codex/0.2-restore-ci-coverage`](https://github.com/Gleydsong/prospecting/pull/13) · PR **#13** |
-| 3 | **0.3** Advisories high + CI | `next` | — |
-| 4 | **0.4** Imagem prod + migrations | `todo` / `blocked` (aprovação Render) | — |
-| 5 | **1.1** Lazy routes + error boundary | `todo` | — |
-| 6 | **1.2** Pipeline a11y + paginação | `todo` | — |
-| 7 | **1.3** Métricas operacionais | `todo` | — |
-| 8 | **2.1–2.2** Proveniência + enrichment | `audited` | gaps mapeados em 2026-08-01 |
-| 9 | **2.3** Score explicável | `audited` | limite silencioso `take: 5000` |
-| 10 | **3.1** Cadências assistidas | `todo` | Prisma existe; sem módulo/UI |
-| 11 | **3.2** Integrações / export | `todo` | — |
-| 12 | **3.3** Painel de decisão | `todo` | — |
-| 13 | **4.1** Audit log em uso | `todo` | modelo existe; não grava |
-| 14 | **4.2** Titulares / retenção | `todo` | — |
-| 15 | **5** Split API / workers | `todo` / `blocked` (métricas + aprovação) | — |
+| 1 | **0.1** Recuperação de senha | `done_pr_open` | [PR #12](https://github.com/Gleydsong/prospecting/pull/12) |
+| 2 | **0.2** CI verde | `done_pr_open` | [PR #13](https://github.com/Gleydsong/prospecting/pull/13) |
+| 3 | **0.3** Advisories high + CI | `done_pr_open` | [PR #15](https://github.com/Gleydsong/prospecting/pull/15) |
+| 4 | **0.4** Imagem prod + migrations | `done_pr_open` / `blocked` (Render) | [PR #16](https://github.com/Gleydsong/prospecting/pull/16) |
+| 5 | **1.1** Lazy routes + error boundary | `done_pr_open` | [PR #17](https://github.com/Gleydsong/prospecting/pull/17) |
+| 6 | **1.2** Pipeline a11y + paginação | `done_pr_open` | [PR #25](https://github.com/Gleydsong/prospecting/pull/25) |
+| 7 | **1.3** Métricas operacionais | `done_pr_open` | [PR #18](https://github.com/Gleydsong/prospecting/pull/18) |
+| 8 | **2.1–2.2** Proveniência + enrichment | `done_pr_open` | [PR #19](https://github.com/Gleydsong/prospecting/pull/19) |
+| 9 | **2.3** Score explicável | `done_pr_open` | [PR #20](https://github.com/Gleydsong/prospecting/pull/20) |
+| 10 | **3.1** Cadências assistidas | `done_pr_open` | [PR #21](https://github.com/Gleydsong/prospecting/pull/21) |
+| 11 | **3.2** Integrações / export | `done_pr_open` | [PR #24](https://github.com/Gleydsong/prospecting/pull/24) |
+| 12 | **3.3** Painel de decisão | `done_pr_open` | [PR #24](https://github.com/Gleydsong/prospecting/pull/24) (com 3.2) |
+| 13 | **4.1–4.2** Audit + titulares | `done_pr_open` | [PR #23](https://github.com/Gleydsong/prospecting/pull/23) |
+| 14 | **5** Split API / workers | `done_pr_open` / `blocked` (aprovação) | [PR #22](https://github.com/Gleydsong/prospecting/pull/22) |
+| — | Catálogo docs | `done_pr_open` | [PR #14](https://github.com/Gleydsong/prospecting/pull/14) |
 
-**Progresso Fase 0:** 2/4 subitens implementados (PRs abertos).  
-**Progresso geral (subitens do catálogo):** 2 feitos · 1 próximo · 1 auditado (Fase 2) · restante pendente.
+**Progresso:** todos os subitens do workflow têm PR aberto (#12–#25, exceto bugfix drafts).  
+**Pendente:** merge ordenado em `main` + sync.
+
+**Ordem de merge sugerida:** #12 → #13 → #14 → #15 → #16 → #17 → #25 → #18 → #19 → #20 → #21 → #24 → #23 → #22.
 
 ---
 
 ## Fase 0 — liberar uma entrega segura
 
-### 0.1 Recuperação de senha funcional — `done_pr_open`
+### 0.1 Recuperação de senha — `done_pr_open`
 
 | Campo | Valor |
 |-------|--------|
-| PR sugerido | `fix(auth): deliver password reset emails safely` |
-| Branch | `codex/0.1-password-reset-email` |
 | PR | https://github.com/Gleydsong/prospecting/pull/12 |
-| Commit | `1f627c7` |
+| Branch | `codex/0.1-password-reset-email` |
 | Checklist | [validation HTML](../reports/2026-08-01-fase-0.1-password-reset-validation.html) |
 
-**Entregue:**
-- Template de e-mail PT/EN + envio via `MailService`
-- Falha observável em prod/staging sem provider (anti-enumeração)
-- Páginas `/forgot-password` e `/reset-password` + link no login
-- Testes API (envio, enumeração, expirado, reuse) e Web
-- Invalidação de sessões no reset (já existia; coberta por testes)
-
-**Pendente de merge:** review + merge do PR #12 em `main`.
-
----
-
-### 0.2 Restaurar CI verde — `done_pr_open`
+### 0.2 CI verde — `done_pr_open`
 
 | Campo | Valor |
 |-------|--------|
-| PR sugerido | `test(web): restore complete CI coverage` |
-| Branch | `codex/0.2-restore-ci-coverage` |
 | PR | https://github.com/Gleydsong/prospecting/pull/13 |
-| Commit | `17d07c6` |
+| Branch | `codex/0.2-restore-ci-coverage` |
 
-**Entregue:**
-- Helper `apps/web/src/test/render.tsx` (QueryClient + Router + GoogleOAuth)
-- Login page tests usam o helper
-- Search tests toleram markup duplicado mobile/desktop (`getAllByRole`)
-- `tsconfig.jest.json` com `isolatedModules` — sem warning TS151002; typecheck CI intacto
-- Validação local: `pnpm test` verde (web 41 + api 232)
-
-**Pendente de merge:** review + merge do PR #13 em `main`.
-
----
-
-### 0.3 Corrigir vulnerabilidades de runtime e endurecer a CI — `next`
+### 0.3 Advisories runtime — `done_pr_open`
 
 | Campo | Valor |
 |-------|--------|
-| PR sugerido | `security(deps): remediate runtime high advisories` |
-| Status | **Próximo a executar** |
+| PR | https://github.com/Gleydsong/prospecting/pull/15 |
+| Branch | `codex/0.3-runtime-high-advisories` |
+| Nota | `scripts/audit-runtime.cjs` + `docs/security/audit-exceptions.md`; CI falha em high de runtime |
 
-**Escopo previsto:**
-- Atualizar Multer / `@nestjs/platform-express`, Next, avaliar React Router (SPA Vite)
-- `pnpm.overrides` só com justificativa + `docs/security/audit-exceptions.md`
-- CI falha em `high` de runtime; sem `continue-on-error` global permanente
-
----
-
-### 0.4 Imagem de produção e migrations controladas — `todo` / `blocked`
+### 0.4 Imagem prod + migrations — `done_pr_open` / `blocked`
 
 | Campo | Valor |
 |-------|--------|
-| PR sugerido | `build(api): minimize production image and isolate migrations` |
-| Bloqueio | Formato do job de migration + alteração de `render.yaml` **exigem aprovação explícita** |
-
-**Escopo previsto:** runtime mínimo no Docker; migration em etapa única de release; health `live`/`ready` com Postgres+Redis.
+| PR | https://github.com/Gleydsong/prospecting/pull/16 |
+| Branch | `codex/0.4-prod-image-migrations` |
+| Bloqueio | alteração efetiva de `render.yaml` exige aprovação |
 
 ---
 
 ## Fase 1 — experiência, desempenho e observabilidade
 
-### 1.1 App rápido e resiliente — `todo`
+### 1.1 Lazy routes + error boundary — `done_pr_open`
 
-| PR sugerido | `feat(web): add resilient lazy routes and error boundary` |
-| Escopo | `React.lazy` rotas pesadas; `AppErrorBoundary`; Sentry condicional; lazy globe na landing |
+| PR | https://github.com/Gleydsong/prospecting/pull/17 · `codex/1.1-lazy-routes-error-boundary` |
 
-### 1.2 Pipeline acessível e escalável — `todo`
+### 1.2 Pipeline a11y + paginação — `done_pr_open`
 
-| PR sugerido | `feat(pipeline): make stage movement accessible and paginated` |
-| Escopo | Mover etapa por teclado/touch; `aria-live`; total + paginação além de 100 leads/coluna |
+| PR | https://github.com/Gleydsong/prospecting/pull/25 · `codex/1.2-pipeline-a11y-pagination` |
 
-### 1.3 Operação mensurável — `todo`
+**Entregue:** Mover para etapa (teclado), `aria-live`, `totalCount`/`hasMore`, `GET /pipelines/stages/:id/leads`, testes API + web.
 
-| PR sugerido | `feat(observability): add private operational metrics and runbooks` |
-| Escopo | Métricas privadas HTTP/jobs/filas; `correlationId`; runbooks; sem exposição pública |
+### 1.3 Métricas operacionais — `done_pr_open`
 
----
-
-## Fase 2 — qualidade de dados e priorização — `audited`
-
-> Auditoria em 2026-08-01 (após PR #12). Base parcial existe; nenhum subitem completo.
-
-### 2.1 Proveniência e confiança do lead — `audited` / `todo`
-
-**Já existe (parcial):** `Lead.source`, `dataCollectedAt`, `websitePresence`, labels “Sem site informado” na busca.
-
-**Gaps:** `lastVerifiedAt`, confiança, motivo do status; detalhe do lead mostra “Sem site”; tag `sem-site` demais; UI de proveniência incompleta.
-
-### 2.2 Enriquecimento em duas etapas — `audited` / `todo`
-
-**Já existe (parcial):** `SearchProvider` OSM/Google; import seletivo; Field Mask no Text Search.
-
-**Gaps:** Place Details seletivo; estimate de custo; `EnrichmentProvider`; rating/reviews no mask.
-
-### 2.3 Score explicável e sem limites silenciosos — `audited` / `todo`
-
-**Já existe (parcial):** `LeadScore.rulesApplied`, `configVersion`, UI de regras no detalhe.
-
-**Gaps críticos:** score monolítico (sem fit/opportunity/engagement); **`take: 5000` silencioso** em `ScoringService.recalculateOrganization`.
-
-| PRs sugeridos (agrupados no workflow) | `feat(leads): add provenance and selective enrichment` · `feat(scoring): add explainable fit and opportunity scoring` |
-
-**Ordem interna recomendada pós-auditoria:**
-1. Fix semântica `NO_WEBSITE` (UI/tags)  
-2. Expor proveniência no detalhe  
-3. Migration confiança / `lastVerifiedAt`  
-4. Enrichment Google + custo  
-5. Score fit/opportunity/engagement  
-6. Paginar recalc > 5k  
+| PR | https://github.com/Gleydsong/prospecting/pull/18 · `codex/1.3-ops-metrics-runbooks` |
 
 ---
 
-## Fase 3 — ciclo comercial que gera resultado — `todo`
+## Fase 2 — qualidade de dados e priorização
 
-### 3.1 Cadências e campanhas (assistidas) — `todo`
+### 2.1–2.2 Proveniência + enrichment — `done_pr_open`
 
-| PR sugerido | `feat(campaigns): introduce assisted outreach workflows` |
-| Nota | Modelos Prisma `Campaign`, `CampaignLead`, `MessageTemplate`, `Integration` existem; sem módulo/controller/tela |
+| PR | https://github.com/Gleydsong/prospecting/pull/19 · `codex/2.1-lead-provenance` |
 
-### 3.2 Integrações e exportação — `todo`
+### 2.3 Score explicável — `done_pr_open`
 
-Webhook genérico primeiro; export auditado; HubSpot/Pipedrive depois.
-
-### 3.3 Painel orientado à decisão — `todo`
-
-Filtros + conversão, follow-ups, tempo entre etapas, cadências.
+| PR | https://github.com/Gleydsong/prospecting/pull/20 · `codex/2.3-explainable-scoring` |
 
 ---
 
-## Fase 4 — privacidade, auditoria e confiança — `todo`
+## Fase 3 — ciclo comercial
 
-### 4.1 Audit log realmente utilizado — `todo`
+### 3.1 Cadências assistidas — `done_pr_open`
 
-| PR sugerido (com 4.2) | `feat(compliance): operationalize audit and data-subject requests` |
-| Nota | Modelo `AuditLog` existe; ainda não grava eventos |
+| PR | https://github.com/Gleydsong/prospecting/pull/21 · `codex/3.1-assisted-campaigns` |
 
-### 4.2 Solicitações de titulares e retenção — `todo`
+### 3.2–3.3 Export + dashboard — `done_pr_open`
 
-Workflow de export/delete `PENDING`; ROPA; retenção por entidade.
+| PR | https://github.com/Gleydsong/prospecting/pull/24 · `codex/3.2-3.3-export-dashboard` |
 
----
+**Entregue:** export CSV + audit; webhook stub + doc outbox; dashboard com filtros e métricas de decisão.
 
-## Fase 5 — separar API e workers — `todo` / `blocked`
-
-| PR sugerido | `infra(workers): split BullMQ processing after metric gate` |
-| Pré-requisitos | Métricas da Fase 1.3 + evidência de carga |
-| Bloqueio | Aprovação de infraestrutura / Render |
+**Riscos:** outbox físico ainda documentado (sem worker); filtro de campanha e timing por estágio omitidos.
 
 ---
 
-## Ordem canônica de PRs (checklist vivo)
+## Fase 4 — privacidade, auditoria e confiança — `done_pr_open`
 
-- [x] 1. `fix(auth): deliver password reset emails safely` — **PR #12** (`done_pr_open`)
-- [x] 2. `test(web): restore complete CI coverage` — **PR #13** (`done_pr_open`)
-- [ ] 3. `security(deps): remediate runtime high advisories` — **next**
-- [ ] 4. `build(api): minimize production image and isolate migrations`
-- [ ] 5. `feat(web): add resilient lazy routes and error boundary`
-- [ ] 6. `feat(pipeline): make stage movement accessible and paginated`
-- [ ] 7. `feat(observability): add private operational metrics and runbooks`
-- [ ] 8. `feat(leads): add provenance and selective enrichment`
-- [ ] 9. `feat(scoring): add explainable fit and opportunity scoring`
-- [ ] 10. `feat(campaigns): introduce assisted outreach workflows`
-- [ ] 11. `feat(compliance): operationalize audit and data-subject requests`
-- [ ] 12. `infra(workers): split BullMQ processing after metric gate`
+| PR | https://github.com/Gleydsong/prospecting/pull/23 · `codex/4-compliance-audit` |
+
+**Entregue:** `AuditService` com redaction; hooks em estágio/import/org; workflow OWNER de `DataSubjectRequest`; migration.
 
 ---
 
-## Histórico de atualizações deste catálogo
+## Fase 5 — separar API e workers — `done_pr_open` / `blocked`
+
+| PR | https://github.com/Gleydsong/prospecting/pull/22 · `codex/5-bullmq-workers` |
+
+**Bloqueio residual:** ativação no Render / evidência de métricas.
+
+---
+
+## Fora do workflow (não mergear neste lote)
+
+PRs draft `cursor/critical-bug-management-*` (#1, #4, #6–#11) — manter separados até pedido explícito.
+
+---
+
+## Histórico
 
 | Data | Evento |
 |------|--------|
-| 2026-08-01 | Catálogo criado. 0.1 e 0.2 implementados (PRs #12, #13). Fase 2 auditada. Próximo: 0.3. |
-
----
-
-## Como atualizar
-
-Ao concluir um subitem:
-1. Marcar status (`done_pr_open` → `done_merged` após merge).
-2. Preencher branch, PR, commit.
-3. Mover o ✓ na checklist canônica.
-4. Acrescentar linha no histórico.
+| 2026-08-01 | Catálogo inicial (PRs #12–#14). |
+| 2026-08-01 | Sessão completa: PRs #15–#25 abertos (0.3→5 + 1.2 + 3.2/3.3). Aguardando merge ordenado em `main`. |
