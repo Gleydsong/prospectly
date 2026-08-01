@@ -9,11 +9,16 @@ import type { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AUDIT_ACTIONS } from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async getCurrent(organizationId: string) {
     const organization = await this.prisma.organization.findFirst({
@@ -37,11 +42,22 @@ export class OrganizationsService {
     return organization;
   }
 
-  async update(organizationId: string, name: string) {
-    return this.prisma.organization.update({
+  async update(organizationId: string, name: string, actorId?: string) {
+    const organization = await this.prisma.organization.update({
       where: { id: organizationId },
       data: { name: name.trim() },
     });
+
+    await this.audit.log({
+      organizationId,
+      userId: actorId,
+      action: AUDIT_ACTIONS.ORG_SETTINGS_UPDATED,
+      entity: 'Organization',
+      entityId: organizationId,
+      metadata: { fields: ['name'] },
+    });
+
+    return organization;
   }
 
   async listMembers(organizationId: string) {
@@ -54,7 +70,7 @@ export class OrganizationsService {
     });
   }
 
-  async inviteMember(organizationId: string, dto: InviteMemberDto) {
+  async inviteMember(organizationId: string, dto: InviteMemberDto, actorId?: string) {
     if (dto.role === 'OWNER') {
       throw new BadRequestException('Cannot invite members as OWNER');
     }
@@ -70,20 +86,31 @@ export class OrganizationsService {
 
     const passwordHash = await argon2.hash(dto.temporaryPassword);
 
-    if (existing) {
-      return this.prisma.organizationMember.create({
-        data: { userId: existing.id, organizationId, role: dto.role },
-        include: { user: { select: { id: true, name: true, email: true } } },
-      });
-    }
+    const member = existing
+      ? await this.prisma.organizationMember.create({
+          data: { userId: existing.id, organizationId, role: dto.role },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        })
+      : await (async () => {
+          const user = await this.prisma.user.create({
+            data: { email, name: dto.name.trim(), passwordHash },
+          });
+          return this.prisma.organizationMember.create({
+            data: { userId: user.id, organizationId, role: dto.role },
+            include: { user: { select: { id: true, name: true, email: true } } },
+          });
+        })();
 
-    const user = await this.prisma.user.create({
-      data: { email, name: dto.name.trim(), passwordHash },
+    await this.audit.log({
+      organizationId,
+      userId: actorId,
+      action: AUDIT_ACTIONS.ORG_MEMBER_INVITED,
+      entity: 'OrganizationMember',
+      entityId: member.id,
+      metadata: { role: dto.role, invitedUserId: member.userId },
     });
-    return this.prisma.organizationMember.create({
-      data: { userId: user.id, organizationId, role: dto.role },
-      include: { user: { select: { id: true, name: true, email: true } } },
-    });
+
+    return member;
   }
 
   async updateMemberRole(
@@ -100,7 +127,6 @@ export class OrganizationsService {
       throw new NotFoundException('Member not found');
     }
 
-    // Only OWNER may assign OWNER or change an existing OWNER (blocks ADMIN privilege escalation).
     if (actingRole !== 'OWNER' && (role === 'OWNER' || member.role === 'OWNER')) {
       throw new ForbiddenException('Only OWNER can assign or change the OWNER role');
     }
@@ -113,7 +139,21 @@ export class OrganizationsService {
         throw new ForbiddenException('Organization must keep at least one OWNER');
       }
     }
-    return this.prisma.organizationMember.update({ where: { id: member.id }, data: { role } });
+    const updated = await this.prisma.organizationMember.update({
+      where: { id: member.id },
+      data: { role },
+    });
+
+    await this.audit.log({
+      organizationId,
+      userId: actingUserId,
+      action: AUDIT_ACTIONS.ORG_MEMBER_ROLE_UPDATED,
+      entity: 'OrganizationMember',
+      entityId: member.id,
+      metadata: { fromRole: member.role, toRole: role, memberUserId: member.userId },
+    });
+
+    return updated;
   }
 
   async removeMember(organizationId: string, memberId: string, actingUserId: string) {
@@ -135,5 +175,14 @@ export class OrganizationsService {
       throw new BadRequestException('Use leave flow instead of removing yourself');
     }
     await this.prisma.organizationMember.delete({ where: { id: member.id } });
+
+    await this.audit.log({
+      organizationId,
+      userId: actingUserId,
+      action: AUDIT_ACTIONS.ORG_MEMBER_REMOVED,
+      entity: 'OrganizationMember',
+      entityId: member.id,
+      metadata: { removedUserId: member.userId, role: member.role },
+    });
   }
 }

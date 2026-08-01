@@ -10,6 +10,8 @@ import type { Queue } from 'bullmq';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AUDIT_ACTIONS } from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
 import { BRAZILIAN_STATE_CODES } from '../prospecting/domain/search-provider';
 import { CsvParserService, type CsvRow } from './csv-parser.service';
@@ -57,6 +59,7 @@ export class ImportsService {
     private readonly leadIngestion: LeadIngestionService,
     private readonly csvParser: CsvParserService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {}
 
   preview(fileName: string, content: Buffer) {
@@ -111,6 +114,19 @@ export class ImportsService {
     } catch {
       // The staged PENDING record is durable and will be retried by reconciliation.
     }
+
+    await this.audit.log({
+      organizationId,
+      userId,
+      action: AUDIT_ACTIONS.IMPORT_STARTED,
+      entity: 'Import',
+      entityId: importRecord.id,
+      metadata: {
+        fileName,
+        totalRows: rows.length,
+        mappedFields: Object.keys(mapping).length,
+      },
+    });
 
     return serializePublicImport(importRecord);
   }

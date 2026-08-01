@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
+import type { AuditService } from '../audit/audit.service';
 import { OrganizationsService } from './organizations.service';
 
 const makePrisma = () => {
@@ -20,6 +21,11 @@ const makePrisma = () => {
   };
 };
 
+const makeAudit = () =>
+  ({
+    log: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as AuditService;
+
 describe('OrganizationsService.updateMemberRole', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -31,7 +37,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       role: 'MEMBER',
       organizationId: 'org1',
     });
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await expect(
       service.updateMemberRole('org1', 'm1', 'OWNER', 'admin-1', 'ADMIN'),
@@ -47,7 +53,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       role: 'OWNER',
       organizationId: 'org1',
     });
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await expect(
       service.updateMemberRole('org1', 'm1', 'ADMIN', 'admin-1', 'ADMIN'),
@@ -63,7 +69,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.update.mockResolvedValue({ id: 'm1', role: 'OWNER' });
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await service.updateMemberRole('org1', 'm1', 'OWNER', 'owner-1', 'OWNER');
     expect(prisma.organizationMember.update).toHaveBeenCalledWith({
@@ -75,7 +81,7 @@ describe('OrganizationsService.updateMemberRole', () => {
   it('throws when member is missing', async () => {
     const prisma = makePrisma();
     prisma.organizationMember.findFirst.mockResolvedValue(null);
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await expect(
       service.updateMemberRole('org1', 'missing', 'ADMIN', 'owner-1', 'OWNER'),

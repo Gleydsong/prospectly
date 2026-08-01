@@ -171,7 +171,8 @@ model User {
   campaigns     Campaign[]
   templates     MessageTemplate[]
   auditLogs     AuditLog[]
-  dataRequests  DataSubjectRequest[]
+  dataRequests          DataSubjectRequest[]
+  reviewedDataRequests  DataSubjectRequest[] @relation("DataSubjectRequestReviewer")
 
   @@index([email])
 }
@@ -215,18 +216,26 @@ model Organization {
 }
 
 model DataSubjectRequest {
-  id          String   @id @default(uuid())
-  userId      String
-  type        String
-  status      String   @default("PENDING")
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  completedAt DateTime?
+  id                   String    @id @default(uuid())
+  userId               String
+  type                 String
+  status               String    @default("PENDING")
+  notes                String?
+  reviewedById         String?
+  reviewedAt           DateTime?
+  approvedAt           DateTime?
+  completedAt          DateTime?
+  confirmationSentAt   DateTime?
+  confirmationChannel  String?
+  confirmationNote     String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("DataSubjectRequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
+  @@index([status, createdAt])
 }
 
 model OrganizationMember {

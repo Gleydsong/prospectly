@@ -25,8 +25,12 @@ export class OrganizationsController {
   @RequireEmailVerified()
   @Patch('current')
   @Roles('OWNER', 'ADMIN')
-  update(@CurrentOrg() organizationId: string, @Body() dto: UpdateOrganizationDto) {
-    return this.organizations.update(organizationId, dto.name);
+  update(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.organizations.update(organizationId, dto.name, user.id);
   }
 
   @Get('members')
@@ -37,8 +41,12 @@ export class OrganizationsController {
   @RequireEmailVerified()
   @Post('members')
   @Roles('OWNER', 'ADMIN')
-  inviteMember(@CurrentOrg() organizationId: string, @Body() dto: InviteMemberDto) {
-    return this.organizations.inviteMember(organizationId, dto);
+  inviteMember(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: InviteMemberDto,
+  ) {
+    return this.organizations.inviteMember(organizationId, dto, user.id);
   }
 
   @RequireEmailVerified()

@@ -49,6 +49,7 @@ function createService(overrides: Record<string, unknown> = {}) {
   const ingestion = { ingest: jest.fn() };
   const parser = { preview: jest.fn(), parse: jest.fn() };
   const config = { get: jest.fn().mockReturnValue(10_000) };
+  const audit = { log: jest.fn().mockResolvedValue(undefined) };
 
   return {
     prisma,
@@ -56,12 +57,14 @@ function createService(overrides: Record<string, unknown> = {}) {
     ingestion,
     parser,
     config,
+    audit,
     service: new ImportsService(
       prisma as never,
       queue as never,
       ingestion as never,
       parser as never,
       config as never,
+      audit as never,
     ),
   };
 }
