@@ -6,7 +6,63 @@ jest.mock('./ssrf', () => {
   };
 });
 
-import { HttpWebsiteAnalyzer, parseHtmlSignals } from './http-website-analyzer';
+import {
+  HttpWebsiteAnalyzer,
+  parseHtmlSignals,
+  readBodyWithLimit,
+} from './http-website-analyzer';
+
+function streamResponse(chunks: Uint8Array[], contentType = 'text/html; charset=utf-8') {
+  let index = 0;
+  let cancelled = false;
+  return {
+    status: 200,
+    ok: true,
+    headers: {
+      get: (name: string) => (name === 'content-type' ? contentType : null),
+    },
+    body: {
+      getReader() {
+        return {
+          async read() {
+            if (cancelled || index >= chunks.length) {
+              return { done: true as const, value: undefined };
+            }
+            const value = chunks[index]!;
+            index += 1;
+            return { done: false as const, value };
+          },
+          async cancel() {
+            cancelled = true;
+          },
+        };
+      },
+      async cancel() {
+        cancelled = true;
+      },
+    },
+    arrayBuffer: async () => {
+      throw new Error('arrayBuffer should not be used when body stream is available');
+    },
+    wasCancelled: () => cancelled,
+  };
+}
+
+describe('readBodyWithLimit', () => {
+  it('stops reading once maxBodyBytes is reached and cancels the stream', async () => {
+    const chunkA = Buffer.alloc(100, 0x61); // 'a'
+    const chunkB = Buffer.alloc(100, 0x62); // 'b'
+    const chunkC = Buffer.alloc(100, 0x63); // 'c'
+    const response = streamResponse([chunkA, chunkB, chunkC]);
+
+    const buffer = await readBodyWithLimit(response, 150);
+
+    expect(buffer.byteLength).toBe(150);
+    expect(buffer.subarray(0, 100).every((byte) => byte === 0x61)).toBe(true);
+    expect(buffer.subarray(100).every((byte) => byte === 0x62)).toBe(true);
+    expect(response.wasCancelled()).toBe(true);
+  });
+});
 
 describe('parseHtmlSignals', () => {
   it('extracts core SEO and contact signals from HTML', () => {
@@ -55,22 +111,37 @@ describe('HttpWebsiteAnalyzer', () => {
   });
 
   it('parses a successful HTML response', async () => {
-    const fetchImpl = jest.fn().mockResolvedValue({
-      status: 200,
-      ok: true,
-      headers: {
-        get: (name: string) => (name === 'content-type' ? 'text/html; charset=utf-8' : null),
-      },
-      arrayBuffer: async () =>
-        Buffer.from(
-          '<html><head><title>Ok</title><meta name="viewport" content="width=device-width" /></head><body></body></html>',
-        ),
-    });
+    const html =
+      '<html><head><title>Ok</title><meta name="viewport" content="width=device-width" /></head><body></body></html>';
+    const fetchImpl = jest.fn().mockResolvedValue(streamResponse([Buffer.from(html)]));
     const analyzer = new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never });
     const result = await analyzer.analyze('https://example.com');
     expect(result.accessible).toBe(true);
     expect(result.https).toBe(true);
     expect(result.title).toBe('Ok');
     expect(result.hasViewport).toBe(true);
+  });
+
+  it('does not buffer an entire oversized HTML body into memory', async () => {
+    const prefix =
+      '<html><head><title>Huge</title><meta name="viewport" content="width=device-width" /></head><body>';
+    const suffix = '</body></html>';
+    const oversized = Buffer.concat([
+      Buffer.from(prefix),
+      Buffer.alloc(2_000_000, 0x58),
+      Buffer.from(suffix),
+    ]);
+    // Deliver as one large chunk — limit must still truncate before keeping the whole payload.
+    const response = streamResponse([oversized]);
+    const fetchImpl = jest.fn().mockResolvedValue(response);
+    const analyzer = new HttpWebsiteAnalyzer({
+      fetchImpl: fetchImpl as never,
+      maxBodyBytes: 8_000,
+    });
+
+    const result = await analyzer.analyze('https://evil.example/huge');
+    expect(result.accessible).toBe(true);
+    expect(result.title).toBe('Huge');
+    expect(response.wasCancelled()).toBe(true);
   });
 });
