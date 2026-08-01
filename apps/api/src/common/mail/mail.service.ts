@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
@@ -16,8 +16,20 @@ export class MailService {
 
   constructor(private readonly config: ConfigService) {}
 
+  isConfigured(): boolean {
+    const resendKey = this.config.get<string>('resend.apiKey')?.trim();
+    if (resendKey) return true;
+    const host = this.config.get<string>('smtp.host')?.trim();
+    return Boolean(host);
+  }
+
+  private isProdLike(): boolean {
+    const env = this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+    return env === 'production' || env === 'staging';
+  }
+
   async send(message: MailMessage): Promise<void> {
-    const resendKey = this.config.get<string>('resend.apiKey');
+    const resendKey = this.config.get<string>('resend.apiKey')?.trim();
     const from =
       this.config.get<string>('resend.from') ??
       this.config.get<string>('smtp.from') ??
@@ -39,8 +51,14 @@ export class MailService {
       return;
     }
 
-    const host = this.config.get<string>('smtp.host');
+    const host = this.config.get<string>('smtp.host')?.trim();
     if (!host) {
+      if (this.isProdLike()) {
+        this.logger.error(
+          `Mail provider not configured — cannot send email to ${message.to} (token not logged)`,
+        );
+        throw new ServiceUnavailableException('Email delivery is temporarily unavailable');
+      }
       this.logger.log(
         `Mail not configured — email queued for ${message.to} (token not logged)`,
       );
