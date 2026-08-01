@@ -49,7 +49,7 @@ const makePrisma = () => {
     $transaction: jest.fn(),
   };
   return prisma as unknown as PrismaService & {
-    user: { findUnique: jest.Mock; update: jest.Mock };
+    user: { findUnique: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
     organizationMember: { findUnique: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -363,6 +363,72 @@ describe('AuthService', () => {
     const result = await service.googleAuth({ idToken: 'valid-id-token' });
     expect(result.user.organizationId).toBe('org1');
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('changeEmail stores pendingEmail without rewriting canonical email', async () => {
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'attacker@evil.dev',
+      passwordHash: 'hash',
+      locale: 'pt',
+      pendingEmail: null,
+    });
+    prisma.user.findFirst = jest.fn().mockResolvedValue(null);
+    prisma.user.update.mockResolvedValue({});
+    const mail = makeMail();
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
+    const result = await service.changeEmail(
+      'u1',
+      { newEmail: 'victim@company.com', currentPassword: 'RightPass1' },
+      { ip: '1.2.3.4' },
+    );
+
+    expect(result.message).toMatch(/verification email/i);
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: expect.objectContaining({
+          pendingEmail: 'victim@company.com',
+        }),
+      }),
+    );
+    const firstUpdate = prisma.user.update.mock.calls[0][0];
+    expect(firstUpdate.data.email).toBeUndefined();
+    expect(firstUpdate.data.emailVerifiedAt).toBeUndefined();
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'victim@company.com' }),
+    );
+  });
+
+  it('verifyEmail applies pendingEmail only after token redeem', async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst
+      .mockResolvedValueOnce({
+        id: 'u1',
+        email: 'attacker@evil.dev',
+        pendingEmail: 'victim@company.com',
+        emailVerifyTokenHash: 'hash',
+        emailVerifyTokenExpiresAt: new Date(Date.now() + 60_000),
+      })
+      .mockResolvedValueOnce(null); // pending email not taken
+    prisma.user.update.mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+    await service.verifyEmail('raw-token');
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: {
+        email: 'victim@company.com',
+        pendingEmail: null,
+        emailVerifiedAt: expect.any(Date),
+        emailVerifyTokenHash: null,
+        emailVerifyTokenExpiresAt: null,
+      },
+    });
   });
 
   it('googleAuth accepts accessToken via Google userinfo', async () => {

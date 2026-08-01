@@ -1,4 +1,9 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+jest.mock('argon2', () => ({
+  hash: jest.fn().mockResolvedValue('hashed'),
+  verify: jest.fn(),
+}));
+
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import { OrganizationsService } from './organizations.service';
@@ -9,6 +14,10 @@ const makePrisma = () => {
       findFirst: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
+      create: jest.fn(),
+    },
+    user: {
+      findUnique: jest.fn(),
     },
   };
   return prisma as unknown as PrismaService & {
@@ -16,7 +25,9 @@ const makePrisma = () => {
       findFirst: jest.Mock;
       count: jest.Mock;
       update: jest.Mock;
+      create: jest.Mock;
     };
+    user: { findUnique: jest.Mock };
   };
 };
 
@@ -80,5 +91,60 @@ describe('OrganizationsService.updateMemberRole', () => {
     await expect(
       service.updateMemberRole('org1', 'missing', 'ADMIN', 'owner-1', 'OWNER'),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+describe('OrganizationsService.inviteMember', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('refuses to auto-attach an existing unverified user', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'attacker',
+      email: 'victim@company.com',
+      emailVerifiedAt: null,
+      memberships: [],
+    });
+    const service = new OrganizationsService(prisma);
+
+    await expect(
+      service.inviteMember('org1', {
+        email: 'victim@company.com',
+        name: 'Victim',
+        role: 'SALES',
+        temporaryPassword: 'TempPass1!',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.organizationMember.create).not.toHaveBeenCalled();
+  });
+
+  it('attaches an existing verified user as a member', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u2',
+      email: 'colleague@company.com',
+      emailVerifiedAt: new Date(),
+      memberships: [],
+    });
+    prisma.organizationMember.create.mockResolvedValue({
+      id: 'm2',
+      userId: 'u2',
+      role: 'SALES',
+      user: { id: 'u2', name: 'Colleague', email: 'colleague@company.com' },
+    });
+    const service = new OrganizationsService(prisma);
+
+    await service.inviteMember('org1', {
+      email: 'colleague@company.com',
+      name: 'Colleague',
+      role: 'SALES',
+      temporaryPassword: 'TempPass1!',
+    });
+
+    expect(prisma.organizationMember.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { userId: 'u2', organizationId: 'org1', role: 'SALES' },
+      }),
+    );
   });
 });

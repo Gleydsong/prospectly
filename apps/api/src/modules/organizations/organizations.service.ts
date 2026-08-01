@@ -71,6 +71,13 @@ export class OrganizationsService {
     const passwordHash = await argon2.hash(dto.temporaryPassword);
 
     if (existing) {
+      // Unverified accounts must not be auto-attached — otherwise anyone who
+      // pre-registered (or staged a pending email claim) the invite address gains org access.
+      if (!existing.emailVerifiedAt) {
+        throw new ConflictException(
+          'A user with this email exists but has not verified it yet. Ask them to verify before inviting.',
+        );
+      }
       return this.prisma.organizationMember.create({
         data: { userId: existing.id, organizationId, role: dto.role },
         include: { user: { select: { id: true, name: true, email: true } } },
