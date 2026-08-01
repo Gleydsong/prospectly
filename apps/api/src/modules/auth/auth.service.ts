@@ -45,6 +45,8 @@ const LOCK_DURATION_MS = 15 * 60 * 1000;
 const INVALID_CREDENTIALS = 'Invalid credentials';
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const GENERIC_VERIFY_FAIL = 'Invalid or expired verification token';
+/** Concurrent multi-tab refresh shares one HttpOnly cookie; reuse within this window is not theft. */
+const REFRESH_REUSE_GRACE_MS = 60_000;
 
 @Injectable()
 export class AuthService {
@@ -232,45 +234,31 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    // Reuse of an already-rotated refresh token → revoke the whole session family.
-    if (stored.revokedAt) {
-      if (stored.replacedById) {
-        await this.logoutAll(payload.sub);
-      }
-      throw new UnauthorizedException('Refresh token expired or revoked');
-    }
-
     const matches = await argon2.verify(stored.tokenHash, refreshToken);
     if (!matches) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const membership = stored.organizationId
-      ? await this.prisma.organizationMember.findUnique({
-          where: {
-            userId_organizationId: {
-              userId: payload.sub,
-              organizationId: stored.organizationId,
-            },
-          },
-        })
-      : await this.prisma.organizationMember.findFirst({
-          where: { userId: payload.sub },
-          orderBy: { createdAt: 'asc' },
-        });
-    if (!membership) {
-      throw new UnauthorizedException('User has no organization');
+    // Reuse of an already-rotated refresh token.
+    // Within a short grace window this is almost always a concurrent multi-tab refresh
+    // (shared HttpOnly cookie) — mint a successor session instead of nuking all devices.
+    if (stored.revokedAt) {
+      if (stored.replacedById) {
+        const rotatedAgoMs = Date.now() - stored.revokedAt.getTime();
+        if (rotatedAgoMs <= REFRESH_REUSE_GRACE_MS) {
+          return this.issueTokensForStoredRefresh(payload.sub, stored, meta);
+        }
+        await this.logoutAll(payload.sub);
+      }
+      throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    const tokens = await this.issueTokens(
-      payload.sub,
-      membership.organizationId,
-      membership.role,
-      meta,
-    );
+    const tokens = await this.issueTokensForStoredRefresh(payload.sub, stored, meta);
 
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
+    // Atomic claim so only one concurrent rotator marks the predecessor.
+    // If count === 0, another tab won the race first; the tokens we issued remain valid.
+    await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date(), replacedById: this.extractJti(tokens.refreshToken) },
     });
 
@@ -621,6 +609,52 @@ export class AuthService {
         : `Abra este link para verificar o seu e-mail (expira em 24h):\n\n${link}\n`;
 
     await this.mail.send({ to: email, subject, text });
+  }
+
+  private async issueTokensForStoredRefresh(
+    userId: string,
+    stored: { organizationId: string | null; replacedById?: string | null },
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<AuthTokens> {
+    let organizationId = stored.organizationId;
+
+    // Legacy rows (pre-hardening) may lack organizationId; prefer the successor's org when present.
+    if (!organizationId && stored.replacedById) {
+      const successor = await this.prisma.refreshToken.findUnique({
+        where: { id: stored.replacedById },
+        select: { organizationId: true },
+      });
+      organizationId = successor?.organizationId ?? null;
+    }
+
+    const membership = await this.resolveRefreshMembership(userId, organizationId);
+    return this.issueTokens(userId, membership.organizationId, membership.role, meta);
+  }
+
+  private async resolveRefreshMembership(userId: string, organizationId: string | null) {
+    if (organizationId) {
+      const membership = await this.prisma.organizationMember.findUnique({
+        where: {
+          userId_organizationId: { userId, organizationId },
+        },
+      });
+      if (!membership) {
+        throw new UnauthorizedException('User has no organization');
+      }
+      return membership;
+    }
+
+    // Null organizationId on a legacy refresh token: safe only when the user has exactly one org.
+    // Picking the first membership for multi-org users would authorize the wrong tenant.
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      take: 2,
+    });
+    if (memberships.length === 1) {
+      return memberships[0]!;
+    }
+    throw new UnauthorizedException('Refresh token expired or revoked');
   }
 
   private async issueTokens(
