@@ -570,13 +570,18 @@ model ScoreRule {
 }
 
 model LeadScore {
-  id            String   @id @default(uuid())
-  leadId        String
-  score         Int
-  tier          String
-  rulesApplied  Json
-  configVersion Int
-  calculatedAt  DateTime @default(now())
+  id                String   @id @default(uuid())
+  leadId            String
+  score             Int
+  fit               Int      @default(0)
+  opportunity       Int      @default(0)
+  engagement        Int      @default(0)
+  tier              String
+  rulesApplied      Json
+  missingData       Json
+  recommendedAction String?
+  configVersion     Int
+  calculatedAt      DateTime @default(now())
 
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 

@@ -251,14 +251,83 @@ export function LeadDetailPage() {
             />
             <CardContent>
               {latestScore ? (
-                <ul className="space-y-1 text-sm text-zinc-300">
-                  {(latestScore.rulesApplied as Array<{ key: string; points: number }>).map((rule) => (
-                    <li key={rule.key} className="flex justify-between gap-3">
-                      <span>{t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}</span>
-                      <span className="font-medium">+{rule.points}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                    <DimensionStat
+                      label={t('scoreExplain.fit', { defaultValue: 'Fit' })}
+                      value={latestScore.fit ?? 0}
+                    />
+                    <DimensionStat
+                      label={t('scoreExplain.opportunity', { defaultValue: 'Oportunidade' })}
+                      value={latestScore.opportunity ?? 0}
+                    />
+                    <DimensionStat
+                      label={t('scoreExplain.engagement', { defaultValue: 'Engajamento' })}
+                      value={latestScore.engagement ?? 0}
+                    />
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase text-zinc-500">
+                        {t('scoreExplain.recommendedAction', { defaultValue: 'Ação recomendada' })}
+                      </p>
+                      <p className="text-sm text-zinc-200">
+                        {t(`scoreExplain.actions.${latestScore.recommendedAction ?? 'NURTURE'}`, {
+                          defaultValue: latestScore.recommendedAction ?? 'NURTURE',
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-xs font-medium uppercase text-zinc-500">
+                        {t('scoreExplain.configVersion', { defaultValue: 'Versão da configuração' })}
+                      </p>
+                      <p className="text-sm text-zinc-200">v{latestScore.configVersion}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase text-zinc-500">
+                      {t('scoreExplain.appliedRules', { defaultValue: 'Regras aplicadas' })}
+                    </p>
+                    <ul className="space-y-1 text-sm text-zinc-300">
+                      {(latestScore.rulesApplied as Array<{
+                        key: string;
+                        points: number;
+                        dimension?: string;
+                      }>).map((rule) => (
+                        <li key={rule.key} className="flex justify-between gap-3">
+                          <span>
+                            {t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}
+                            {rule.dimension ? (
+                              <span className="ml-2 text-xs text-zinc-500">
+                                ({t(`scoreExplain.${rule.dimension}`, { defaultValue: rule.dimension })})
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="font-medium">+{rule.points}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase text-zinc-500">
+                      {t('scoreExplain.missingData', { defaultValue: 'Dados ausentes' })}
+                    </p>
+                    {(latestScore.missingData ?? []).length === 0 ? (
+                      <p className="text-sm text-zinc-500">—</p>
+                    ) : (
+                      <ul className="flex flex-wrap gap-1.5">
+                        {(latestScore.missingData ?? []).map((field) => (
+                          <Badge key={field} tone="amber">
+                            {t(`scoreExplain.missing.${field}`, { defaultValue: field })}
+                          </Badge>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <p className="text-sm text-zinc-500">
                   Score detalhado aparece após a primeira análise ou recálculo.
@@ -461,6 +530,16 @@ export function LeadDetailPage() {
           </div>
         </form>
       </Modal>
+    </div>
+  );
+}
+
+
+function DimensionStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
+      <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-zinc-100">{value}</p>
     </div>
   );
 }
