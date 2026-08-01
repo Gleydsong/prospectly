@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { AUDIT_ACTIONS } from '../audit/audit.constants';
+import { AuditService } from '../audit/audit.service';
 
 const leadBoardInclude = {
   owner: { select: { id: true, name: true } },
@@ -8,7 +10,10 @@ const leadBoardInclude = {
 
 @Injectable()
 export class PipelinesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(organizationId: string) {
     return this.prisma.pipeline.findMany({
@@ -143,6 +148,15 @@ export class PipelinesService {
         },
       }),
     ]);
+
+    await this.audit.log({
+      organizationId,
+      userId: actorId,
+      action: AUDIT_ACTIONS.LEAD_STAGE_CHANGED,
+      entity: 'Lead',
+      entityId: leadId,
+      metadata: { fromStageId: lead.stageId, toStageId: stageId },
+    });
 
     return updated;
   }

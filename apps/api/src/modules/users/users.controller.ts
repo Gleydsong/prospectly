@@ -1,11 +1,25 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Ip, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Ip,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
+import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { AuthService } from '../auth/auth.service';
 import { ChangeEmailDto } from './dto/change-email.dto';
+import { CompleteDataRequestDto } from './dto/complete-data-request.dto';
 import { CreateDataRequestDto } from './dto/create-data-request.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UsersService } from './users.service';
@@ -47,6 +61,44 @@ export class UsersController {
   @RequireEmailVerified()
   @Post('me/data-requests')
   createDataRequest(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateDataRequestDto) {
-    return this.users.createDataSubjectRequest(user.id, dto.type, dto.notes);
+    return this.users.createDataSubjectRequest(
+      user.id,
+      dto.type,
+      dto.notes,
+      user.organizationId,
+    );
+  }
+
+  @RequireEmailVerified()
+  @Get('data-requests')
+  @Roles('OWNER')
+  listDataRequests(@CurrentOrg() organizationId: string) {
+    return this.users.listDataSubjectRequests(organizationId);
+  }
+
+  @RequireEmailVerified()
+  @Post('data-requests/:id/approve')
+  @Roles('OWNER')
+  approveDataRequest(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.users.approveDataSubjectRequest(organizationId, id, user.id);
+  }
+
+  @RequireEmailVerified()
+  @Post('data-requests/:id/complete')
+  @Roles('OWNER')
+  completeDataRequest(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CompleteDataRequestDto,
+  ) {
+    return this.users.completeDataSubjectRequest(organizationId, id, user.id, {
+      confirmationNote: dto.confirmationNote,
+      confirmationChannel: dto.confirmationChannel,
+    });
   }
 }
