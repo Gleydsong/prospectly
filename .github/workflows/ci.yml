@@ -40,8 +40,12 @@ jobs:
       - name: Audit dependencies (critical)
         run: pnpm audit --audit-level=critical
 
-      - name: Audit dependencies (high report)
-        # High advisories are tracked in docs/security/audit-exceptions.md (mostly toolchain).
-        # Criticals already fail the job above; this step surfaces highs without soft-masking.
+      - name: Audit runtime high advisories
+        # Fails on high/critical that affect production dependency paths.
+        # Toolchain exceptions live in docs/security/audit-exceptions.md + scripts/audit-runtime.cjs
+        run: node scripts/audit-runtime.cjs
+
+      - name: Audit dependencies (high report full)
+        # Full high report for visibility; runtime blockers already handled above.
         run: pnpm audit --audit-level=high
         continue-on-error: true
