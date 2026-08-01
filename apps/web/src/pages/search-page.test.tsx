@@ -334,7 +334,14 @@ describe('SearchPage', () => {
 
     const attribution = screen.getByRole('link', { name: 'colaboradores do OpenStreetMap' });
     expect(attribution).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
-    expect(screen.getByRole('checkbox', { name: 'Selecionar Empresa em processamento' })).toBeDisabled();
+    // Mobile list + desktop table both render when CSS is disabled in jsdom.
+    const selectBoxes = screen.getAllByRole('checkbox', {
+      name: 'Selecionar Empresa em processamento',
+    });
+    expect(selectBoxes.length).toBeGreaterThanOrEqual(1);
+    for (const box of selectBoxes) {
+      expect(box).toBeDisabled();
+    }
     expect(screen.getByRole('button', { name: 'Importar selecionados (0)' })).toBeDisabled();
   });
 });

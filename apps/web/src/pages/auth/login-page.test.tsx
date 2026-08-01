@@ -1,20 +1,12 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import i18n from '@/i18n';
+import { renderWithProviders } from '@/test/render';
 import { LoginPage } from './login-page';
 
-const renderPage = () =>
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
-        <LoginPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+const renderPage = () => renderWithProviders(<LoginPage />, { initialEntries: ['/login'] });
 
 describe('LoginPage', () => {
   beforeAll(async () => {
