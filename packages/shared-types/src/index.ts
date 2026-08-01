@@ -264,8 +264,16 @@ export interface ScoreRuleDefinition {
   enabled: boolean;
 }
 
+export type ScoreDimension = 'fit' | 'opportunity' | 'engagement';
+
 export interface ScoreResult {
   score: number;
+  fit: number;
+  opportunity: number;
+  engagement: number;
   tier: 'LOW' | 'MEDIUM' | 'GOOD' | 'HIGH';
-  appliedRules: Array<{ key: string; points: number }>;
+  appliedRules: Array<{ key: string; points: number; dimension: ScoreDimension }>;
+  missingData: string[];
+  recommendedAction: string;
+  configVersion: number;
 }

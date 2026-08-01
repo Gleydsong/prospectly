@@ -93,8 +93,14 @@ export interface LeadDetail extends LeadListItem {
   scores?: Array<{
     id: string;
     score: number;
+    fit: number;
+    opportunity: number;
+    engagement: number;
     tier: string;
-    rulesApplied: Array<{ key: string; points: number }>;
+    rulesApplied: Array<{ key: string; points: number; dimension?: string }>;
+    missingData?: string[];
+    recommendedAction?: string | null;
+    configVersion: number;
     calculatedAt: string;
   }>;
   websiteRecord?: {

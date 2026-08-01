@@ -256,6 +256,39 @@
     "MANY_REVIEWS_BAD_SITE": "Muitas avaliações e site fraco",
     "HAS_PHONE": "Telefone disponível",
     "HAS_EMAIL": "E-mail disponível",
-    "HIGH_RATING": "Nota alta"
+    "HIGH_RATING": "Nota alta",
+    "ENGAGEMENT_CONTACTED": "Lead contactado",
+    "ENGAGEMENT_RESPONDED": "Lead respondeu",
+    "ENGAGEMENT_MEETING": "Reunião agendada",
+    "ENGAGEMENT_PROPOSAL": "Proposta enviada",
+    "ENGAGEMENT_NEGOTIATION": "Em negociação",
+    "ENGAGEMENT_WON": "Lead ganho",
+    "ENGAGEMENT_ACTIVITY": "Atividade comercial registrada"
+  },
+  "scoreExplain": {
+    "fit": "Fit",
+    "opportunity": "Oportunidade",
+    "engagement": "Engajamento",
+    "appliedRules": "Regras aplicadas",
+    "missingData": "Dados ausentes",
+    "configVersion": "Versão da configuração",
+    "recommendedAction": "Ação recomendada",
+    "missing": {
+      "phone": "Telefone",
+      "email": "E-mail",
+      "website": "Website",
+      "segment": "Segmento",
+      "websiteAnalysis": "Análise do website",
+      "rating": "Avaliação"
+    },
+    "actions": {
+      "RESPECT_DNC": "Respeitar não contatar",
+      "ENRICH_CONTACT": "Enriquecer telefone/e-mail",
+      "RUN_WEBSITE_ANALYSIS": "Rodar análise do website",
+      "PRIORITIZE_OUTREACH": "Priorizar contato comercial",
+      "ADVANCE_PIPELINE": "Avançar no pipeline",
+      "ENRICH_PROFILE": "Completar perfil do lead",
+      "NURTURE": "Nutrir relacionamento"
+    }
   }
 }

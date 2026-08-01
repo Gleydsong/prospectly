@@ -1,6 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import type { AnalysisStatus, Lead, WebsiteAnalysis } from '@prisma/client';
+import type {
+  ActivityType,
+  AnalysisStatus,
+  Lead,
+  LeadStatus,
+  WebsiteAnalysis,
+} from '@prisma/client';
 import type { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 
@@ -10,18 +16,34 @@ import {
   HIGH_RATING_THRESHOLD,
   MANY_REVIEWS_THRESHOLD,
   RECALCULATE_ORG_SCORES_JOB,
+  RECALC_BATCH_SIZE,
+  RECALC_CONCURRENCY,
+  RULE_DIMENSION_BY_KEY,
   SCORE_TOTAL_CAP,
   SCORING_QUEUE,
   SLOW_RESPONSE_MS,
   scoreToTier,
+  type AppliedScoreRule,
+  type EvaluateRulesResult,
   type RecalculateOrgScoresJobData,
+  type RecommendedAction,
+  type ScoreDimension,
   type ScoreRuleKey,
 } from './scoring.constants';
 import type { UpdateScoreRuleItemDto } from './dto/update-score-rules.dto';
 
 type LeadForScoring = Pick<
   Lead,
-  'id' | 'organizationId' | 'website' | 'phone' | 'email' | 'rating' | 'reviewCount'
+  | 'id'
+  | 'organizationId'
+  | 'website'
+  | 'phone'
+  | 'email'
+  | 'rating'
+  | 'reviewCount'
+  | 'status'
+  | 'segment'
+  | 'doNotContact'
 >;
 
 type AnalysisForScoring = Pick<
@@ -35,6 +57,58 @@ type AnalysisForScoring = Pick<
   | 'httpStatus'
   | 'error'
 >;
+
+type BehaviorSignals = {
+  activityTypes: ActivityType[];
+};
+
+const OUTREACH_ACTIVITY_TYPES: ReadonlySet<ActivityType> = new Set([
+  'CALL',
+  'EMAIL',
+  'WHATSAPP',
+  'MEETING',
+  'PROPOSAL_SENT',
+]);
+
+const ENGAGEMENT_STATUS_RULES: Array<{ key: ScoreRuleKey; statuses: ReadonlySet<LeadStatus> }> = [
+  {
+    key: 'ENGAGEMENT_CONTACTED',
+    statuses: new Set([
+      'CONTACTED',
+      'RESPONDED',
+      'MEETING_SCHEDULED',
+      'PROPOSAL_SENT',
+      'NEGOTIATION',
+      'WON',
+    ]),
+  },
+  {
+    key: 'ENGAGEMENT_RESPONDED',
+    statuses: new Set([
+      'RESPONDED',
+      'MEETING_SCHEDULED',
+      'PROPOSAL_SENT',
+      'NEGOTIATION',
+      'WON',
+    ]),
+  },
+  {
+    key: 'ENGAGEMENT_MEETING',
+    statuses: new Set(['MEETING_SCHEDULED', 'PROPOSAL_SENT', 'NEGOTIATION', 'WON']),
+  },
+  {
+    key: 'ENGAGEMENT_PROPOSAL',
+    statuses: new Set(['PROPOSAL_SENT', 'NEGOTIATION', 'WON']),
+  },
+  {
+    key: 'ENGAGEMENT_NEGOTIATION',
+    statuses: new Set(['NEGOTIATION', 'WON']),
+  },
+  {
+    key: 'ENGAGEMENT_WON',
+    statuses: new Set(['WON']),
+  },
+];
 
 @Injectable()
 export class ScoringService {
@@ -50,7 +124,10 @@ export class ScoringService {
       include: { rules: { orderBy: { key: 'asc' } } },
     });
     if (existing) {
-      await this.ensureCatalogRules(existing.id, existing.rules.map((rule) => rule.key));
+      await this.ensureCatalogRules(
+        existing.id,
+        existing.rules.map((rule) => rule.key),
+      );
       return this.prisma.scoreConfiguration.findFirstOrThrow({
         where: { id: existing.id },
         include: { rules: { orderBy: { key: 'asc' } } },
@@ -113,16 +190,39 @@ export class ScoringService {
     return this.getConfig(organizationId);
   }
 
-  async recalculateOrganization(organizationId: string): Promise<number> {
-    const leads = await this.prisma.lead.findMany({
-      where: { organizationId, deletedAt: null },
-      select: { id: true },
-      take: 5000,
-    });
-    for (const lead of leads) {
-      await this.recalculate(lead.id);
+  async recalculateOrganization(
+    organizationId: string,
+    options?: { batchSize?: number; concurrency?: number },
+  ): Promise<number> {
+    const batchSize = options?.batchSize ?? RECALC_BATCH_SIZE;
+    const concurrency = options?.concurrency ?? RECALC_CONCURRENCY;
+    let cursor: string | undefined;
+    let processed = 0;
+
+    for (;;) {
+      const batch = await this.prisma.lead.findMany({
+        where: { organizationId, deletedAt: null },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+        take: batchSize,
+        ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+      });
+      if (batch.length === 0) {
+        break;
+      }
+
+      await this.mapWithConcurrency(batch, concurrency, async (lead) => {
+        await this.recalculate(lead.id);
+      });
+
+      processed += batch.length;
+      cursor = batch[batch.length - 1]?.id;
+      if (batch.length < batchSize) {
+        break;
+      }
     }
-    return leads.length;
+
+    return processed;
   }
 
   async recalculate(leadId: string) {
@@ -136,6 +236,14 @@ export class ScoringService {
         email: true,
         rating: true,
         reviewCount: true,
+        status: true,
+        segment: true,
+        doNotContact: true,
+        activities: {
+          select: { type: true },
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+        },
         websiteRecord: {
           include: {
             analyses: {
@@ -153,45 +261,60 @@ export class ScoringService {
 
     const config = await this.ensureDefaultConfig(lead.organizationId);
     const analysis = lead.websiteRecord?.analyses[0] ?? null;
-    const applied = this.evaluateRules(lead, analysis, config.rules);
-
-    const rawScore = applied.reduce((sum, rule) => sum + rule.points, 0);
-    const score = Math.max(0, Math.min(SCORE_TOTAL_CAP, rawScore));
-    const tier = scoreToTier(score);
+    const result = this.evaluateRules(lead, analysis, config.rules, {
+      activityTypes: lead.activities.map((activity) => activity.type),
+    });
 
     await this.prisma.$transaction([
       this.prisma.leadScore.create({
         data: {
           leadId: lead.id,
-          score,
-          tier,
-          rulesApplied: applied as unknown as Prisma.InputJsonValue,
+          score: result.score,
+          fit: result.fit,
+          opportunity: result.opportunity,
+          engagement: result.engagement,
+          tier: result.tier,
+          rulesApplied: result.applied as unknown as Prisma.InputJsonValue,
+          missingData: result.missingData as unknown as Prisma.InputJsonValue,
+          recommendedAction: result.recommendedAction,
           configVersion: config.version,
         },
       }),
       this.prisma.lead.update({
         where: { id: lead.id },
-        data: { score },
+        data: { score: result.score },
       }),
     ]);
 
-    return { score, tier, appliedRules: applied, configVersion: config.version };
+    return {
+      score: result.score,
+      fit: result.fit,
+      opportunity: result.opportunity,
+      engagement: result.engagement,
+      tier: result.tier,
+      appliedRules: result.applied,
+      missingData: result.missingData,
+      recommendedAction: result.recommendedAction,
+      configVersion: config.version,
+    };
   }
 
   evaluateRules(
     lead: LeadForScoring,
     analysis: AnalysisForScoring | null,
     rules: Array<{ key: string; points: number; enabled: boolean }>,
-  ): Array<{ key: string; points: number }> {
+    signals: BehaviorSignals = { activityTypes: [] },
+  ): EvaluateRulesResult {
     const enabled = new Map(
       rules.filter((rule) => rule.enabled).map((rule) => [rule.key as ScoreRuleKey, rule.points]),
     );
-    const applied: Array<{ key: string; points: number }> = [];
+    const applied: AppliedScoreRule[] = [];
 
     const push = (key: ScoreRuleKey) => {
       const points = enabled.get(key);
       if (points === undefined) return;
-      applied.push({ key, points });
+      const dimension = RULE_DIMENSION_BY_KEY[key];
+      applied.push({ key, points, dimension });
     };
 
     const hasWebsite = Boolean(lead.website?.trim());
@@ -229,7 +352,110 @@ export class ScoringService {
       push('HIGH_RATING');
     }
 
-    return applied;
+    for (const rule of ENGAGEMENT_STATUS_RULES) {
+      if (rule.statuses.has(lead.status)) {
+        push(rule.key);
+      }
+    }
+
+    if (signals.activityTypes.some((type) => OUTREACH_ACTIVITY_TYPES.has(type))) {
+      push('ENGAGEMENT_ACTIVITY');
+    }
+
+    const dimensions = this.sumDimensions(applied);
+    const rawScore = dimensions.fit + dimensions.opportunity + dimensions.engagement;
+    const score = Math.max(0, Math.min(SCORE_TOTAL_CAP, rawScore));
+    const missingData = this.collectMissingData(lead, analysis);
+    const recommendedAction = this.recommendAction({
+      doNotContact: lead.doNotContact,
+      missingData,
+      hasWebsite,
+      hasContact: Boolean(lead.phone?.trim() || lead.email?.trim()),
+      fit: dimensions.fit,
+      opportunity: dimensions.opportunity,
+      engagement: dimensions.engagement,
+    });
+
+    return {
+      applied,
+      fit: dimensions.fit,
+      opportunity: dimensions.opportunity,
+      engagement: dimensions.engagement,
+      score,
+      tier: scoreToTier(score),
+      missingData,
+      recommendedAction,
+    };
+  }
+
+  private sumDimensions(applied: AppliedScoreRule[]): Record<ScoreDimension, number> {
+    const totals: Record<ScoreDimension, number> = {
+      fit: 0,
+      opportunity: 0,
+      engagement: 0,
+    };
+    for (const rule of applied) {
+      totals[rule.dimension] += rule.points;
+    }
+    return totals;
+  }
+
+  private collectMissingData(
+    lead: LeadForScoring,
+    analysis: AnalysisForScoring | null,
+  ): string[] {
+    const missing: string[] = [];
+    if (!lead.phone?.trim()) missing.push('phone');
+    if (!lead.email?.trim()) missing.push('email');
+    if (!lead.website?.trim()) missing.push('website');
+    if (!lead.segment?.trim()) missing.push('segment');
+    if (lead.website?.trim() && !analysis) missing.push('websiteAnalysis');
+    if (typeof lead.rating !== 'number') missing.push('rating');
+    return missing;
+  }
+
+  private recommendAction(input: {
+    doNotContact: boolean;
+    missingData: string[];
+    hasWebsite: boolean;
+    hasContact: boolean;
+    fit: number;
+    opportunity: number;
+    engagement: number;
+  }): RecommendedAction {
+    if (input.doNotContact) return 'RESPECT_DNC';
+    if (input.missingData.includes('phone') && input.missingData.includes('email')) {
+      return 'ENRICH_CONTACT';
+    }
+    if (input.engagement >= 12) return 'ADVANCE_PIPELINE';
+    if (input.hasWebsite && input.missingData.includes('websiteAnalysis')) {
+      return 'RUN_WEBSITE_ANALYSIS';
+    }
+    if (input.opportunity >= 30 && input.hasContact) return 'PRIORITIZE_OUTREACH';
+    if (input.fit < 5) return 'ENRICH_PROFILE';
+    return 'NURTURE';
+  }
+
+  private async mapWithConcurrency<T>(
+    items: T[],
+    concurrency: number,
+    worker: (item: T) => Promise<void>,
+  ): Promise<void> {
+    if (items.length === 0) return;
+    const limit = Math.max(1, concurrency);
+    let index = 0;
+
+    const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (index < items.length) {
+        const current = index;
+        index += 1;
+        const item = items[current];
+        if (item === undefined) continue;
+        await worker(item);
+      }
+    });
+
+    await Promise.all(runners);
   }
 
   private async ensureCatalogRules(configId: string, existingKeys: string[]) {

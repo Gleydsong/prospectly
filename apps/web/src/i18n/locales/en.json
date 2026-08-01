@@ -256,6 +256,39 @@
     "MANY_REVIEWS_BAD_SITE": "Many reviews and weak website",
     "HAS_PHONE": "Phone available",
     "HAS_EMAIL": "Email available",
-    "HIGH_RATING": "High rating"
+    "HIGH_RATING": "High rating",
+    "ENGAGEMENT_CONTACTED": "Lead contacted",
+    "ENGAGEMENT_RESPONDED": "Lead responded",
+    "ENGAGEMENT_MEETING": "Meeting scheduled",
+    "ENGAGEMENT_PROPOSAL": "Proposal sent",
+    "ENGAGEMENT_NEGOTIATION": "In negotiation",
+    "ENGAGEMENT_WON": "Lead won",
+    "ENGAGEMENT_ACTIVITY": "Sales activity recorded"
+  },
+  "scoreExplain": {
+    "fit": "Fit",
+    "opportunity": "Opportunity",
+    "engagement": "Engagement",
+    "appliedRules": "Applied rules",
+    "missingData": "Missing data",
+    "configVersion": "Config version",
+    "recommendedAction": "Recommended action",
+    "missing": {
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "segment": "Segment",
+      "websiteAnalysis": "Website analysis",
+      "rating": "Rating"
+    },
+    "actions": {
+      "RESPECT_DNC": "Respect do-not-contact",
+      "ENRICH_CONTACT": "Enrich phone/email",
+      "RUN_WEBSITE_ANALYSIS": "Run website analysis",
+      "PRIORITIZE_OUTREACH": "Prioritize outreach",
+      "ADVANCE_PIPELINE": "Advance in pipeline",
+      "ENRICH_PROFILE": "Complete lead profile",
+      "NURTURE": "Nurture relationship"
+    }
   }
 }
