@@ -246,6 +246,18 @@
     "pipeline": "Pipeline",
     "tasks": "Tasks"
   },
+  "pipeline": {
+    "subtitle": "{{name}} — drag or use Move to stage",
+    "stagesLabel": "Pipeline stages",
+    "columnCount": "{{shown}} of {{total}} leads",
+    "emptyColumn": "No leads in this stage",
+    "moveToStage": "Move to stage",
+    "moveToStageFor": "Move {{lead}} to stage",
+    "chooseStage": "Choose stage",
+    "loadMore": "Load more ({{remaining}})",
+    "loadError": "Failed to load pipeline.",
+    "movedAnnouncement": "{{lead}} moved to {{stage}}"
+  },
   "scoreRules": {
     "NO_WEBSITE": "No website",
     "NO_HTTPS": "Website without HTTPS",

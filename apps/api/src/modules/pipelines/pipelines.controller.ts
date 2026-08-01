@@ -5,6 +5,7 @@ import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MoveLeadStageDto } from './dto/move-lead-stage.dto';
+import { QueryBoardDto, QueryStageLeadsDto } from './dto/query-board.dto';
 import { PipelinesService } from './pipelines.service';
 
 @ApiTags('pipelines')
@@ -19,8 +20,24 @@ export class PipelinesController {
   }
 
   @Get('pipelines/board')
-  getBoard(@CurrentOrg() organizationId: string, @Query('pipelineId') pipelineId?: string) {
-    return this.pipelines.getBoard(organizationId, pipelineId);
+  getBoard(@CurrentOrg() organizationId: string, @Query() query: QueryBoardDto) {
+    return this.pipelines.getBoard(organizationId, {
+      pipelineId: query.pipelineId,
+      limit: query.limit,
+      offset: query.offset,
+    });
+  }
+
+  @Get('pipelines/stages/:stageId/leads')
+  listStageLeads(
+    @CurrentOrg() organizationId: string,
+    @Param('stageId', ParseUUIDPipe) stageId: string,
+    @Query() query: QueryStageLeadsDto,
+  ) {
+    return this.pipelines.listStageLeads(organizationId, stageId, {
+      limit: query.limit,
+      offset: query.offset,
+    });
   }
 
   @Patch('leads/:id/stage')
