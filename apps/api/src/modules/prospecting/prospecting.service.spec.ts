@@ -402,6 +402,45 @@ describe('ProspectingService', () => {
     });
   });
 
+  it('does not tag sem-site when the source reported a website', async () => {
+    const { prisma, ingestion, service } = createService();
+    prisma.search.findFirst.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      status: 'COMPLETED',
+    });
+    prisma.searchResult.findMany.mockResolvedValue([
+      {
+        id: 'result-2',
+        importedLeadId: null,
+        normalizedData: {
+          externalId: 'osm-2',
+          companyName: 'Padaria Com Site',
+          city: 'São Paulo',
+          state: 'SP',
+          country: 'BR',
+          source: 'OPENSTREETMAP',
+          website: 'https://padaria.example',
+          websitePresence: WebsitePresence.WEBSITE_FOUND,
+        },
+      },
+    ]);
+    ingestion.ingest.mockResolvedValue({ status: 'IMPORTED', lead: { id: 'lead-2' } });
+    prisma.searchResult.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.importResults('org-1', 'user-1', 'search-1', ['result-2']);
+
+    expect(ingestion.ingest).toHaveBeenCalledWith(
+      'org-1',
+      'user-1',
+      expect.objectContaining({
+        websitePresence: WebsitePresence.WEBSITE_FOUND,
+        tags: [],
+        confidenceLevel: 'MEDIUM',
+      }),
+    );
+  });
+
   it('rejects imports while the owned search is not completed', async () => {
     const { prisma, ingestion, service } = createService();
     prisma.search.findFirst.mockResolvedValue({

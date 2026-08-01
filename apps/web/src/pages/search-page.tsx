@@ -76,8 +76,8 @@ const STATUS_LABEL: Record<SearchStatus, string> = {
 };
 
 const WEBSITE_LABEL: Record<WebsitePresence, string> = {
-  NO_WEBSITE_REPORTED: 'Sem site informado',
-  WEBSITE_FOUND: 'Site informado',
+  NO_WEBSITE_REPORTED: 'Fonte não informou site',
+  WEBSITE_FOUND: 'Site informado pela fonte',
   NEEDS_REVIEW: 'Rever website',
 };
 

@@ -30,6 +30,9 @@ export interface Tag {
   color?: string | null;
 }
 
+export type WebsitePresence = 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
+export type ConfidenceLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
 export interface LeadOwner {
   id: string;
   name: string;
@@ -87,6 +90,12 @@ export interface LeadDetail extends LeadListItem {
   country?: string | null;
   postalCode?: string | null;
   notes?: string | null;
+  websitePresence?: WebsitePresence;
+  websiteStatusReason?: string | null;
+  confidenceLevel?: ConfidenceLevel | null;
+  dataCollectedAt?: string | null;
+  lastVerifiedAt?: string | null;
+  missingFields?: string[];
   lastContactAt?: string | null;
   nextContactAt?: string | null;
   contacts: LeadContact[];
@@ -259,7 +268,6 @@ export const PROSPECTING_COUNTRIES = [
 ] as const satisfies readonly { value: ProspectingCountryCode; label: string }[];
 
 export type SearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-export type WebsitePresence = 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
 
 export interface SearchInput {
   categories: ProspectingCategory[];

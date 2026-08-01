@@ -201,6 +201,11 @@ export class WebsiteAnalysisService {
           websitePresence: result.accessible ? 'WEBSITE_FOUND' : 'NEEDS_REVIEW',
           websiteCheckedAt: new Date(),
           websiteCheckSource: 'ProspectlyAnalyzer',
+          websiteStatusReason: result.accessible
+            ? 'Website acessível na verificação Prospectly.'
+            : 'Website informado mas inacessível ou inconclusivo na verificação.',
+          confidenceLevel: result.accessible ? 'HIGH' : 'MEDIUM',
+          lastVerifiedAt: new Date(),
         },
       });
     });
