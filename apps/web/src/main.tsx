@@ -3,11 +3,15 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
+import { AppErrorBoundary } from './components/app-error-boundary';
 import { LocaleSync } from './components/locale-sync';
 import { GoogleAuthProvider } from './features/auth/google-auth-provider';
+import { initObservability } from './lib/observability';
 import { App } from './App';
 import './i18n';
 import './index.css';
+
+initObservability();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,13 +30,15 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <GoogleAuthProvider>
-          <LocaleSync />
-          <App />
-        </GoogleAuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <GoogleAuthProvider>
+            <LocaleSync />
+            <App />
+          </GoogleAuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   </StrictMode>,
 );

@@ -35,6 +35,7 @@ import {
   type EarthBundle,
 } from '@/components/globe/create-earth';
 import { greatCirclePoints, latLonToVector3 } from '@/components/globe/geo';
+import { GlobeStaticFallback } from '@/components/globe/globe-static-fallback';
 
 const COBALT = '#2563eb';
 const COBALT_DARK = '#60a5fa';
@@ -153,6 +154,7 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -460,6 +462,10 @@ export function ProspectlyGlobe({ className }: { className?: string }) {
       renderer?.dispose();
     };
   }, [reduceMotion]);
+
+  if (reduceMotion) {
+    return <GlobeStaticFallback className={className} />;
+  }
 
   return (
     <div className={className} aria-hidden>
