@@ -24,5 +24,15 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 WORKDIR /app/apps/api
+
+# Worker target — no HTTP, no migrate (migrations run once on API release).
+# Build: docker build --target worker -f apps/api/Dockerfile .
+FROM runner AS worker
+ENV ROLE=worker
+CMD ["node", "dist/worker.js"]
+
+# Default / API target (last stage) — used by Render when dockerCommand/target unset.
+FROM runner AS api
+ENV ROLE=api
 EXPOSE 3000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

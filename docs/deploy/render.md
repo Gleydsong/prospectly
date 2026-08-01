@@ -10,7 +10,8 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 |----------|------|------|
 | Postgres 16 | `prospectly-db` | Primary database (`basic-256mb`) |
 | Key Value | `prospectly-redis` | BullMQ + readiness (`noeviction`, private) |
-| Web (Docker) | `prospectly-api` | Nest API + in-process workers |
+| Web (Docker) | `prospectly-api` | Nest API + queue producers (HTTP) |
+| Worker (proposed) | `prospectly-worker` | BullMQ processors — see [workers.md](./workers.md) (approval required) |
 | Static | `prospectly-web` | Vite SPA |
 | Web (Node) | `prospectly-landing` | Next.js marketing site |
 

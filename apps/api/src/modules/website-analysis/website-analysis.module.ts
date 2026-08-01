@@ -8,7 +8,6 @@ import {
   WEBSITE_ANALYSIS_QUEUE,
   WEBSITE_ANALYSIS_TIMEOUT_MS,
 } from './website-analysis.constants';
-import { WebsiteAnalysisProcessor } from './website-analysis.processor';
 import { WebsiteAnalysisService } from './website-analysis.service';
 import { WEBSITE_ANALYZER } from './website-analysis.tokens';
 
@@ -19,7 +18,6 @@ import { WEBSITE_ANALYZER } from './website-analysis.tokens';
   ],
   providers: [
     WebsiteAnalysisService,
-    WebsiteAnalysisProcessor,
     {
       provide: WEBSITE_ANALYZER,
       inject: [ConfigService],
