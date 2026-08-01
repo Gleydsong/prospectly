@@ -22,7 +22,10 @@ describe('AbacatePaymentProvider', () => {
   };
 
   const activation = {
-    activateLifetime: jest.fn(),
+    activateLifetime: jest.fn().mockResolvedValue({
+      previousStripeSubscriptionId: null,
+      previousAbacateSubscriptionId: null,
+    }),
     activateMonthly: jest.fn(),
     syncMonthlyStatus: jest.fn(),
   };
@@ -145,6 +148,28 @@ describe('AbacatePaymentProvider', () => {
         abacatePaymentId: 'pix_1',
       }),
     );
+    expect(client.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  it('cancels prior monthly Abacate subscription after lifetime upgrade', async () => {
+    activation.activateLifetime.mockResolvedValue({
+      previousStripeSubscriptionId: null,
+      previousAbacateSubscriptionId: 'subs_old',
+    });
+
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_upgrade',
+        event: 'transparent.completed',
+        data: {
+          id: 'pix_2',
+          metadata: { organizationId: 'org1', interval: 'lifetime' },
+        },
+      },
+      'transparent.completed',
+    );
+
+    expect(client.cancelSubscription).toHaveBeenCalledWith('subs_old');
   });
 
   it('verifies webhook HMAC + secret', async () => {
