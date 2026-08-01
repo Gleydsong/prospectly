@@ -11,14 +11,14 @@ import { t, type Locale } from '@/lib/i18n';
 
 type StepDef = {
   key: string;
-  title: string;
+  label: { pt: string; en: string };
   Icon: typeof FunnelSimple;
 };
 
 const STEPS: StepDef[] = [
-  { key: 'filters', title: 'mockFiltersLabel', Icon: FunnelSimple },
-  { key: 'results', title: 'mockResultsLabel', Icon: Buildings },
-  { key: 'list', title: 'mockListLabel', Icon: CheckCircle },
+  { key: 'filters', label: { pt: 'Defina', en: 'Define' }, Icon: FunnelSimple },
+  { key: 'results', label: { pt: 'Encontre', en: 'Find' }, Icon: Buildings },
+  { key: 'list', label: { pt: 'Organize', en: 'Organize' }, Icon: CheckCircle },
 ];
 
 export function ProductFlowMock({ locale }: { locale: Locale }) {
@@ -27,114 +27,134 @@ export function ProductFlowMock({ locale }: { locale: Locale }) {
     t(locale, 'mockCompany2'),
     t(locale, 'mockCompany3'),
   ];
+  const copy = locale === 'pt'
+    ? {
+        appLabel: 'Busca local',
+        flowLabel: 'Do ICP à lista',
+        define: 'Defina o ICP',
+        find: 'Encontre oportunidades',
+        organize: 'Adicione à sua lista',
+      }
+    : {
+        appLabel: 'Local search',
+        flowLabel: 'From ICP to list',
+        define: 'Define your ICP',
+        find: 'Find opportunities',
+        organize: 'Add to your list',
+      };
 
   return (
     <figure
-      className="w-full max-w-xl overflow-hidden rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] shadow-soft"
+      className="w-full max-w-xl overflow-hidden rounded-control border border-white/15 bg-[#0a1120]/95 shadow-[0_24px_70px_-36px_rgba(0,0,0,0.9)] backdrop-blur"
       aria-label={
         locale === 'pt'
           ? 'Demonstração do fluxo: filtros, empresas encontradas e lista qualificada'
           : 'Flow demo: filters, companies found, and qualified list'
       }
     >
-      <div className="flex items-center justify-between gap-3 border-b border-[color:var(--border)] bg-[color:var(--bg-sunken)] px-4 py-2.5">
-        <span className="text-xs font-semibold tracking-tight text-[color:var(--ink)]">
-          Prospectly · {locale === 'pt' ? 'Busca local' : 'Local search'}
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.035] px-3.5 py-2.5">
+        <span className="text-xs font-semibold tracking-tight text-white">
+          Prospectly <span className="text-white/45">·</span> {copy.appLabel}
         </span>
-        <ol className="hidden items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-[color:var(--ink-muted)] sm:flex">
-          {STEPS.map(({ key, title, Icon }, index) => (
-            <li key={key} className="flex items-center gap-2">
-              {index > 0 ? <ArrowRight weight="bold" className="h-3 w-3 text-accent" aria-hidden /> : null}
-              <span className="flex items-center gap-1">
-                <Icon weight="bold" className="h-3 w-3 text-accent" aria-hidden />
-                {t(locale, title)}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <span className="rounded-full border border-blue-300/20 bg-blue-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-blue-200">
+          {copy.flowLabel}
+        </span>
       </div>
 
-      <div className="grid gap-3 p-4 sm:grid-cols-[1.05fr_1fr_1fr] sm:gap-0 sm:p-0">
-        {/* Filters */}
-        <section className="rounded-control border border-[color:var(--border)] bg-[color:var(--bg)] p-4 sm:rounded-none sm:border-0 sm:border-r">
+      <ol className="grid grid-cols-3 border-b border-white/10 bg-[#0d1627]/80 px-3 py-2 text-[9px] font-semibold uppercase tracking-wide text-white/55">
+          {STEPS.map(({ key, label, Icon }, index) => (
+            <li key={key} className="flex min-w-0 items-center justify-center gap-1.5">
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-blue-300/25 bg-blue-400/10 text-[8px] text-blue-200">
+                {index + 1}
+              </span>
+              <Icon weight="bold" className="h-3 w-3 shrink-0 text-blue-400" aria-hidden />
+              <span className="truncate">{locale === 'pt' ? label.pt : label.en}</span>
+            </li>
+          ))}
+      </ol>
+
+      <div className="grid gap-3 p-3 sm:grid-cols-[0.88fr_1.12fr] sm:gap-0 sm:p-0">
+        <section className="rounded-control border border-white/10 bg-white/[0.03] p-3 sm:rounded-none sm:border-0 sm:border-r sm:p-3.5">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300">
               <FunnelSimple weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              {t(locale, 'mockFiltersLabel')}
+              {copy.define}
             </p>
-            <span className="text-[10px] font-semibold text-accent">01</span>
+            <span className="text-[10px] font-semibold text-blue-400">01</span>
           </div>
 
-          <dl className="mt-3 space-y-2.5 text-sm">
-            <div className="rounded-control bg-[color:var(--bg-sunken)] px-3 py-2">
-              <dt className="text-xs text-[color:var(--ink-muted)]">{t(locale, 'mockCategoryLabel')}</dt>
-              <dd className="mt-0.5 font-medium text-[color:var(--ink)]">{t(locale, 'mockCategoryValue')}</dd>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="rounded-lg border border-white/10 bg-white/[0.055] px-2.5 py-2">
+              <dt className="text-[10px] text-white/45">{t(locale, 'mockCategoryLabel')}</dt>
+              <dd className="mt-0.5 text-xs font-medium leading-snug text-white">{t(locale, 'mockCategoryValue')}</dd>
             </div>
-            <div className="rounded-control bg-[color:var(--bg-sunken)] px-3 py-2">
-              <dt className="flex items-center gap-1 text-xs text-[color:var(--ink-muted)]">
+            <div className="rounded-lg border border-white/10 bg-white/[0.055] px-2.5 py-2">
+              <dt className="flex items-center gap-1 text-[10px] text-white/45">
                 <MapPin weight="bold" className="h-3 w-3" aria-hidden />
                 {t(locale, 'mockCityLabel')}
               </dt>
-              <dd className="mt-0.5 font-medium text-[color:var(--ink)]">{t(locale, 'mockCityValue')}</dd>
+              <dd className="mt-0.5 text-xs font-medium text-white">{t(locale, 'mockCityValue')}</dd>
             </div>
-            <div>
-              <span className="inline-flex w-full items-center justify-between rounded-control border border-accent/25 bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
+            <div className="pt-0.5">
+              <span className="inline-flex w-full items-center justify-between rounded-lg border border-blue-300/25 bg-blue-400/10 px-2.5 py-2 text-[10px] font-medium leading-snug text-blue-200">
                 {t(locale, 'mockFilterChip')}
-                <span aria-hidden className="inline-flex h-4 w-7 items-center rounded-full bg-accent/80 px-0.5">
-                  <span className="ml-auto h-3 w-3 rounded-full bg-white" />
+                <span aria-hidden className="inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-blue-500 px-0.5">
+                  <span className="ml-auto h-3 w-3 rounded-full bg-white shadow-sm" />
                 </span>
               </span>
             </div>
           </dl>
         </section>
 
-        {/* Results */}
-        <section className="rounded-control border border-[color:var(--border)] bg-[color:var(--bg)] p-4 sm:rounded-none sm:border-0 sm:border-r">
+        <section className="rounded-control border border-white/10 bg-[#0e182a] p-3 sm:rounded-none sm:border-0 sm:p-3.5">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300">
               <Buildings weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              {t(locale, 'mockResultsLabel')}
+              {copy.find}
             </p>
-            <span className="text-[10px] font-semibold text-accent">02</span>
+            <span className="text-[10px] font-semibold text-blue-400">02</span>
           </div>
 
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-2.5 space-y-1.5">
             {companies.map((name, index) => (
               <li
                 key={name}
-                className="flex items-center justify-between gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-sunken)] px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.055] px-2.5 py-1.5"
               >
-                <span className="truncate text-sm text-[color:var(--ink)]">{name}</span>
+                <span className="truncate text-xs text-white/90">{name}</span>
                 <span
                   aria-hidden
-                  className={`h-2 w-2 shrink-0 rounded-full ${
-                    index === 0 ? 'bg-accent' : 'bg-[color:var(--border)]'
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    index === 0 ? 'bg-blue-400' : 'bg-white/20'
                   }`}
                 />
               </li>
             ))}
           </ul>
-        </section>
 
-        {/* Qualified list */}
-        <section className="rounded-control border border-[color:var(--border)] bg-[color:var(--bg)] p-4 sm:rounded-none sm:border-0">
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-accent">
-              <CheckCircle weight="bold" className="h-3.5 w-3.5" aria-hidden />
-              {t(locale, 'mockListLabel')}
-            </p>
-            <span className="text-[10px] font-semibold text-accent">03</span>
+          <div className="my-3 flex items-center gap-2 text-[10px] text-blue-300/80" aria-hidden>
+            <span className="h-px flex-1 bg-white/10" />
+            <ArrowRight weight="bold" className="h-3.5 w-3.5 rotate-90" />
+            <span className="h-px flex-1 bg-white/10" />
           </div>
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{t(locale, 'mockListHint')}</p>
 
-          <ul className="mt-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-blue-300">
+              <CheckCircle weight="bold" className="h-3.5 w-3.5" aria-hidden />
+              {copy.organize}
+            </p>
+            <span className="text-[10px] font-semibold text-blue-400">03</span>
+          </div>
+          <p className="mt-1 text-[10px] text-white/45">{t(locale, 'mockListHint')}</p>
+
+          <ul className="mt-2 space-y-1.5">
             {companies.slice(0, 2).map((name) => (
               <li
                 key={`list-${name}`}
-                className="flex items-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-2"
+                className="flex items-center gap-2 rounded-lg border border-blue-300/15 bg-blue-400/[0.08] px-2.5 py-1.5"
               >
-                <CheckCircle weight="fill" className="h-4 w-4 shrink-0 text-accent" aria-hidden />
-                <span className="truncate text-sm font-medium text-[color:var(--ink)]">{name}</span>
+                <CheckCircle weight="fill" className="h-3.5 w-3.5 shrink-0 text-blue-400" aria-hidden />
+                <span className="truncate text-xs font-medium text-white">{name}</span>
               </li>
             ))}
           </ul>

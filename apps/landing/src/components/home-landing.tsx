@@ -61,18 +61,29 @@ export function HomeLanding({ locale }: { locale: Locale }) {
             </li>
           ))}
         </ul>
-        <div className="relative mt-10 aspect-[21/9] overflow-hidden rounded-control border border-[color:var(--border)] bg-[color:var(--bg-sunken)]">
+        <div className="problem-intelligence-visual relative isolate mt-10 aspect-[21/9] overflow-hidden rounded-control">
           <Image
-            src="/images/local-business-prospecting-premium.jpg"
+            src="/images/local-business-intelligence.png"
             alt={
               locale === 'pt'
-                ? 'Fachada de pequeno comércio em rua urbana brasileira'
-                : 'Small business storefront on a Brazilian urban street'
+                ? 'Ilustração de negócios locais conectados por dados de prospecção'
+                : 'Illustration of local businesses connected by prospecting data'
             }
             fill
-            className="object-cover"
+            className="problem-intelligence-image object-cover"
             sizes="(max-width: 1400px) 100vw, 1400px"
           />
+          <div className="problem-intelligence-overlay pointer-events-none absolute inset-0" aria-hidden />
+          <svg
+            className="problem-intelligence-routes pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 1200 500"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <path className="neon-route" d="M 150 370 H 340 V 292 H 485 V 365 H 650" />
+            <path className="neon-route neon-route-delayed" d="M 315 405 V 345 H 495 V 278 H 710 V 352 H 915" />
+            <path className="neon-route neon-route-slow" d="M 490 420 V 365 H 660 V 308 H 830 V 385 H 1050" />
+          </svg>
         </div>
       </section>
 
