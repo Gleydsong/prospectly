@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { Globe, Plus, Trash2 } from 'lucide-react';
+import { Download, Globe, Plus, Trash2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,18 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
+import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import {
+  DEFAULT_EXPORT_COLUMNS,
+  EXPORTABLE_LEAD_COLUMNS,
+  type ExportableLeadColumn,
+  downloadCsvFile,
+  exportLeadsCsv,
+} from '@/features/leads/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { getLeadStatusLabel } from '@/lib/lead-status';
 import { useDeleteLead, useLeads } from '@/features/leads/hooks';
@@ -29,6 +37,10 @@ export function LeadsPage() {
   const [status, setStatus] = useState<LeadStatus | ''>('');
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportColumns, setExportColumns] = useState<ExportableLeadColumn[]>([...DEFAULT_EXPORT_COLUMNS]);
+  const [exporting, setExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const deleteLead = useDeleteLead();
 
@@ -48,6 +60,34 @@ export function LeadsPage() {
   const applySearch = () => {
     setPage(1);
     setSearch(q.trim());
+  };
+
+  const toggleExportColumn = (column: ExportableLeadColumn) => {
+    setExportColumns((current) =>
+      current.includes(column) ? current.filter((value) => value !== column) : [...current, column],
+    );
+  };
+
+  const runExport = async () => {
+    if (!exportColumns.length) return;
+    setExporting(true);
+    setExportMessage(null);
+    setActionError(null);
+    try {
+      const result = await exportLeadsCsv({
+        columns: exportColumns,
+        q: search || undefined,
+        status: status || undefined,
+        hasWebsite: hasWebsite === '' ? undefined : hasWebsite === 'yes',
+      });
+      downloadCsvFile(result.filename, result.csv);
+      setExportMessage(t('leads.exportSuccess', { count: result.rowCount }));
+      setExportOpen(false);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error) || t('leads.exportError'));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const removeLead = async (leadId: string, companyName: string) => {
@@ -70,10 +110,16 @@ export function LeadsPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.title')}</h1>
           <p className="text-sm text-zinc-500">Gerencie e qualifique suas oportunidades</p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="h-4 w-4" aria-hidden />
-          Novo lead
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setExportOpen(true)}>
+            <Download className="h-4 w-4" aria-hidden />
+            {t('leads.export')}
+          </Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4" aria-hidden />
+            Novo lead
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4">
@@ -121,6 +167,10 @@ export function LeadsPage() {
           </Button>
         </div>
       </Card>
+
+      {exportMessage ? (
+        <p className="rounded-lg bg-brand-500/10 p-3 text-sm text-brand-300">{exportMessage}</p>
+      ) : null}
 
       {query.isLoading ? (
         <Card className="p-5">
@@ -264,6 +314,41 @@ export function LeadsPage() {
       )}
 
       <LeadFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
+      <Modal open={exportOpen} onClose={() => setExportOpen(false)} title={t('leads.exportTitle')}>
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">{t('leads.exportColumns')}</p>
+          <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-zinc-800 p-3">
+            {EXPORTABLE_LEAD_COLUMNS.map((column) => (
+              <label key={column} className="flex items-center gap-2 text-sm text-zinc-200">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
+                  checked={exportColumns.includes(column)}
+                  onChange={() => toggleExportColumn(column)}
+                />
+                <span>{column}</span>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-500">
+            Os filtros atuais (busca, status, website) serão aplicados à exportação.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setExportOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              loading={exporting}
+              disabled={!exportColumns.length}
+              onClick={() => void runExport()}
+            >
+              {t('leads.export')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

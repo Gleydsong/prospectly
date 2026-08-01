@@ -1,12 +1,12 @@
 import { api } from '@/lib/api';
-import type { DashboardCharts, DashboardSummary } from '@/types';
+import type { DashboardCharts, DashboardFilters, DashboardSummary } from '@/types';
 
-export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  const { data } = await api.get<DashboardSummary>('/dashboard/summary');
+export async function fetchDashboardSummary(filters: DashboardFilters = {}): Promise<DashboardSummary> {
+  const { data } = await api.get<DashboardSummary>('/dashboard/summary', { params: filters });
   return data;
 }
 
-export async function fetchDashboardCharts(): Promise<DashboardCharts> {
-  const { data } = await api.get<DashboardCharts>('/dashboard/charts');
+export async function fetchDashboardCharts(filters: DashboardFilters = {}): Promise<DashboardCharts> {
+  const { data } = await api.get<DashboardCharts>('/dashboard/charts', { params: filters });
   return data;
 }

@@ -115,7 +115,27 @@
     "noLeads": "Sem leads ainda.",
     "noFollowUps": "Nenhum acompanhamento agendado.",
     "loadError": "Erro ao carregar o dashboard. Tente novamente.",
-    "leadsSeries": "Leads"
+    "leadsSeries": "Leads",
+    "lost": "Perdidos",
+    "overdueFollowUps": "Follow-ups atrasados",
+    "noOverdue": "Nenhum follow-up atrasado.",
+    "conversionBySource": "Conversão por origem",
+    "filters": "Filtros",
+    "period": "Período",
+    "period7d": "7 dias",
+    "period30d": "30 dias",
+    "period90d": "90 dias",
+    "periodAll": "Todo o período",
+    "source": "Origem",
+    "owner": "Responsável",
+    "allSources": "Todas as origens",
+    "allOwners": "Todos os responsáveis",
+    "segment": "Segmento",
+    "allSegments": "Todos os segmentos",
+    "sourceTotal": "Total",
+    "sourceWon": "Ganhos",
+    "sourceLost": "Perdidos",
+    "overdueTasks": "Tarefas atrasadas"
   },
   "settings": {
     "title": "Configurações",
@@ -216,7 +236,17 @@
       "controllerDesc": "Canal dedicado a pedidos de privacidade",
       "contact": "E-mail: privacy@prospectly.dev. Pedidos feitos nesta app criam um ticket interno (status PENDING no MVP).",
       "fullPolicy": "Ver política completa"
-    }
+    },
+    "integrationsTitle": "Integrações",
+    "integrationsDesc": "Webhook genérico para sincronizar eventos com o seu CRM (stub).",
+    "webhookUrl": "URL do webhook",
+    "webhookLabel": "Rótulo (opcional)",
+    "webhookSave": "Guardar webhook",
+    "webhookSaved": "Webhook guardado.",
+    "webhookError": "Não foi possível guardar o webhook.",
+    "webhookEmpty": "Ainda não há webhook configurado.",
+    "webhookEnabled": "Ativo",
+    "webhookDisabled": "Desativo"
   },
   "billing": {
     "pixTitle": "Pague com PIX",
@@ -260,7 +290,12 @@
     "search": "Pesquisa de empresas",
     "imports": "Importar leads por CSV",
     "pipeline": "Pipeline",
-    "tasks": "Tarefas"
+    "tasks": "Tarefas",
+    "export": "Exportar CSV",
+    "exportColumns": "Colunas",
+    "exportSuccess": "Exportação concluída ({{count}} linhas).",
+    "exportError": "Não foi possível exportar os leads.",
+    "exportTitle": "Exportar leads filtrados"
   },
   "pipeline": {
     "subtitle": "{{name}} — arraste ou use Mover para etapa",

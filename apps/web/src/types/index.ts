@@ -162,8 +162,10 @@ export interface DashboardSummary {
   meetings: number;
   proposals: number;
   won: number;
+  lost: number;
   conversionRate: number;
   overdueTasks: number;
+  overdueFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
   upcomingFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
   topOpportunities: Array<{
     id: string;
@@ -172,6 +174,45 @@ export interface DashboardSummary {
     status: LeadStatus;
     city?: string | null;
   }>;
+  conversionBySource: Array<{
+    source: LeadSource;
+    total: number;
+    won: number;
+    lost: number;
+    conversionRate: number;
+  }>;
+  filters?: {
+    period: '7d' | '30d' | '90d' | 'all';
+    source: LeadSource | null;
+    ownerId: string | null;
+    segment: string | null;
+  };
+}
+
+export type DashboardPeriod = '7d' | '30d' | '90d' | 'all';
+
+export interface DashboardFilters {
+  period?: DashboardPeriod;
+  source?: LeadSource;
+  ownerId?: string;
+  segment?: string;
+}
+
+export interface IntegrationWebhook {
+  id: string;
+  provider: string;
+  status: string;
+  url: string | null;
+  label: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadExportResult {
+  filename: string;
+  rowCount: number;
+  columns: string[];
+  csv: string;
 }
 
 export interface DashboardCharts {

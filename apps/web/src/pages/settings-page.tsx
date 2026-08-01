@@ -34,6 +34,7 @@ import {
   type InviteRole,
   type OrgMember,
 } from '@/features/organizations/api';
+import { fetchIntegrations, upsertWebhookIntegration } from '@/features/integrations/api';
 import { fetchScoreConfig, updateScoreRules, type ScoreRule } from '@/features/scoring/api';
 import { setAppLocale } from '@/i18n';
 import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
@@ -286,6 +287,105 @@ function InviteMemberModal({
         </form>
       )}
     </Modal>
+  );
+}
+
+function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [url, setUrl] = useState('');
+  const [label, setLabel] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const integrations = useQuery({
+    queryKey: ['integrations'],
+    queryFn: fetchIntegrations,
+    enabled: canManage,
+  });
+
+  const webhook = integrations.data?.find((row) => row.provider === 'WEBHOOK');
+
+  useEffect(() => {
+    if (!webhook) return;
+    setUrl(webhook.url ?? '');
+    setLabel(webhook.label ?? '');
+    setEnabled(webhook.status === 'ENABLED');
+  }, [webhook?.id, webhook?.url, webhook?.label, webhook?.status]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      upsertWebhookIntegration({
+        url: url.trim(),
+        label: label.trim() || undefined,
+        enabled,
+      }),
+    onSuccess: async () => {
+      setMessage(t('settings.webhookSaved'));
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ['integrations'] });
+    },
+    onError: (err) => {
+      setMessage(null);
+      setError(getApiErrorMessage(err) || t('settings.webhookError'));
+    },
+  });
+
+  if (!canManage) return null;
+
+  return (
+    <Card>
+      <CardHeader title={t('settings.integrationsTitle')} description={t('settings.integrationsDesc')} />
+      <CardContent className="space-y-4">
+        {integrations.isLoading ? (
+          <Skeleton className="h-24" />
+        ) : (
+          <>
+            {!webhook && !url ? (
+              <p className="text-sm text-zinc-500">{t('settings.webhookEmpty')}</p>
+            ) : null}
+            <Input
+              label={t('settings.webhookUrl')}
+              type="url"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://hooks.example.com/prospectly"
+              required
+            />
+            <Input
+              label={t('settings.webhookLabel')}
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              maxLength={120}
+            />
+            <label className="flex items-center gap-2 text-sm text-zinc-200">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
+                checked={enabled}
+                onChange={(event) => setEnabled(event.target.checked)}
+              />
+              {enabled ? t('settings.webhookEnabled') : t('settings.webhookDisabled')}
+            </label>
+            {message ? <p className="text-sm text-brand-300">{message}</p> : null}
+            {error ? (
+              <p className="text-sm text-red-300" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              loading={save.isPending}
+              disabled={!url.trim()}
+              onClick={() => save.mutate()}
+            >
+              {t('settings.webhookSave')}
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -774,6 +874,8 @@ export function SettingsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <IntegrationsSettingsCard canManage={manage} />
 
       <Card>
         <CardHeader

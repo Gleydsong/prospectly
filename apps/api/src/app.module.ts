@@ -32,6 +32,7 @@ import { WebsiteAnalysisModule } from './modules/website-analysis/website-analys
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { OpsModule } from './modules/ops/ops.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 
 @Module({
   imports: [
@@ -107,6 +108,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
     WebsiteAnalysisModule,
     WaitlistModule,
     CampaignsModule,
+    IntegrationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

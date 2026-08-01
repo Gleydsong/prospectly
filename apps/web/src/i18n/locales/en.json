@@ -115,7 +115,27 @@
     "noLeads": "No leads yet.",
     "noFollowUps": "No follow-ups scheduled.",
     "loadError": "Could not load the dashboard. Please try again.",
-    "leadsSeries": "Leads"
+    "leadsSeries": "Leads",
+    "lost": "Lost",
+    "overdueFollowUps": "Overdue follow-ups",
+    "noOverdue": "No overdue follow-ups.",
+    "conversionBySource": "Conversion by source",
+    "filters": "Filters",
+    "period": "Period",
+    "period7d": "7 days",
+    "period30d": "30 days",
+    "period90d": "90 days",
+    "periodAll": "All time",
+    "source": "Source",
+    "owner": "Owner",
+    "allSources": "All sources",
+    "allOwners": "All owners",
+    "segment": "Segment",
+    "allSegments": "All segments",
+    "sourceTotal": "Total",
+    "sourceWon": "Won",
+    "sourceLost": "Lost",
+    "overdueTasks": "Overdue tasks"
   },
   "settings": {
     "title": "Settings",
@@ -216,7 +236,17 @@
       "controllerDesc": "Dedicated channel for privacy requests",
       "contact": "Email: privacy@prospectly.dev. In-app requests create an internal ticket (PENDING in the MVP).",
       "fullPolicy": "View full policy"
-    }
+    },
+    "integrationsTitle": "Integrations",
+    "integrationsDesc": "Generic webhook to sync events with your CRM (stub).",
+    "webhookUrl": "Webhook URL",
+    "webhookLabel": "Label (optional)",
+    "webhookSave": "Save webhook",
+    "webhookSaved": "Webhook saved.",
+    "webhookError": "Could not save webhook.",
+    "webhookEmpty": "No webhook configured yet.",
+    "webhookEnabled": "Enabled",
+    "webhookDisabled": "Disabled"
   },
   "billing": {
     "pixTitle": "Pay with PIX",
@@ -260,7 +290,12 @@
     "search": "Business search",
     "imports": "Import leads from CSV",
     "pipeline": "Pipeline",
-    "tasks": "Tasks"
+    "tasks": "Tasks",
+    "export": "Export CSV",
+    "exportColumns": "Columns",
+    "exportSuccess": "Export complete ({{count}} rows).",
+    "exportError": "Could not export leads.",
+    "exportTitle": "Export filtered leads"
   },
   "pipeline": {
     "subtitle": "{{name}} — drag or use Move to stage",
