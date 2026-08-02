@@ -3,6 +3,8 @@ import type { Prisma } from '@prisma/client';
 
 import { paginate, PaginationQueryDto } from '../../../common/dto/pagination.dto';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { AUDIT_ACTIONS } from '../../audit/audit.constants';
+import { AuditService } from '../../audit/audit.service';
 import {
   SAFE_TEMPLATE_VARIABLES,
   renderTemplate,
@@ -11,10 +13,14 @@ import {
 } from '../domain/template-variables';
 import { CreateTemplateDto } from '../presentation/dto/create-template.dto';
 import { PreviewTemplateDto } from '../presentation/dto/preview-template.dto';
+import { UpdateTemplateDto } from '../presentation/dto/update-template.dto';
 
 @Injectable()
 export class TemplatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   listAllowedVariables() {
     return [...SAFE_TEMPLATE_VARIABLES];
@@ -46,7 +52,7 @@ export class TemplatesService {
 
   async create(organizationId: string, userId: string, dto: CreateTemplateDto) {
     this.assertSafeContent(dto.subject, dto.body);
-    return this.prisma.messageTemplate.create({
+    const template = await this.prisma.messageTemplate.create({
       data: {
         organizationId,
         createdById: userId,
@@ -56,6 +62,45 @@ export class TemplatesService {
         body: dto.body.trim(),
       },
     });
+
+    await this.audit.log({
+      organizationId,
+      userId,
+      action: AUDIT_ACTIONS.MESSAGE_TEMPLATE_CREATED,
+      entity: 'MessageTemplate',
+      entityId: template.id,
+      metadata: { name: template.name, category: template.category, autoSend: false },
+    });
+
+    return template;
+  }
+
+  async update(organizationId: string, userId: string, id: string, dto: UpdateTemplateDto) {
+    const existing = await this.get(organizationId, id);
+    const subject = dto.subject === undefined ? existing.subject ?? undefined : dto.subject ?? undefined;
+    const body = dto.body ?? existing.body;
+    this.assertSafeContent(subject, body);
+
+    const template = await this.prisma.messageTemplate.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.category !== undefined ? { category: dto.category.trim().toUpperCase() } : {}),
+        ...(dto.subject !== undefined ? { subject: dto.subject?.trim() || null } : {}),
+        ...(dto.body !== undefined ? { body: dto.body.trim() } : {}),
+      },
+    });
+
+    await this.audit.log({
+      organizationId,
+      userId,
+      action: AUDIT_ACTIONS.MESSAGE_TEMPLATE_UPDATED,
+      entity: 'MessageTemplate',
+      entityId: template.id,
+      metadata: { name: template.name, category: template.category, autoSend: false },
+    });
+
+    return template;
   }
 
   preview(dto: PreviewTemplateDto) {
@@ -72,6 +117,7 @@ export class TemplatesService {
       unknown: [...new Set([...subject.unknown, ...body.unknown])],
       allowedVariables: this.listAllowedVariables(),
       autoSend: false,
+      messageSent: false,
       note: 'Assisted preview only — no message is sent.',
     };
   }

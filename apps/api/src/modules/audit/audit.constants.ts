@@ -8,6 +8,14 @@ export const AUDIT_ACTIONS = {
   DSR_CREATED: 'data_subject_request.created',
   DSR_APPROVED: 'data_subject_request.approved',
   DSR_COMPLETED: 'data_subject_request.completed',
+  CAMPAIGN_CREATED: 'campaign.created',
+  CAMPAIGN_STATUS_CHANGED: 'campaign.status_changed',
+  CAMPAIGN_LEADS_ADDED: 'campaign.leads_added',
+  CAMPAIGN_LEAD_REMOVED: 'campaign.lead_removed',
+  CAMPAIGN_RESULT_RECORDED: 'campaign.result_recorded',
+  CAMPAIGN_TASKS_CREATED: 'campaign.tasks_created',
+  MESSAGE_TEMPLATE_CREATED: 'message_template.created',
+  MESSAGE_TEMPLATE_UPDATED: 'message_template.updated',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
