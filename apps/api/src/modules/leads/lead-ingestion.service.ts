@@ -211,11 +211,10 @@ export class LeadIngestionService {
       });
 
       if (result.status === 'IMPORTED' && this.websiteAnalysis) {
-        void this.websiteAnalysis.onLeadUpsert(
-          organizationId,
-          result.lead.id,
-          result.lead.website,
-        );
+        // Detached on purpose; onLeadUpsert must soft-fail — never let a rejection crash Node.
+        void this.websiteAnalysis
+          .onLeadUpsert(organizationId, result.lead.id, result.lead.website)
+          .catch(() => undefined);
       }
 
       return result;

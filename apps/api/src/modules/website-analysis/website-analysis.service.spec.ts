@@ -1,0 +1,42 @@
+import { NotFoundException } from '@nestjs/common';
+
+import { WebsiteAnalysisService } from './website-analysis.service';
+
+describe('WebsiteAnalysisService.onLeadUpsert', () => {
+  it('soft-fails when scoring recalculate rejects for a no-website lead', async () => {
+    const scoring = {
+      recalculate: jest.fn().mockRejectedValue(new NotFoundException('Lead not found')),
+    };
+    const service = new WebsiteAnalysisService(
+      {} as never,
+      scoring as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.onLeadUpsert('org-1', 'lead-1', null)).resolves.toBeUndefined();
+    expect(scoring.recalculate).toHaveBeenCalledWith('lead-1');
+  });
+
+  it('soft-fails when website enqueue rejects', async () => {
+    const prisma = {
+      lead: {
+        findFirst: jest.fn().mockRejectedValue(new Error('db down')),
+      },
+    };
+    const scoring = { recalculate: jest.fn() };
+    const queue = { add: jest.fn() };
+    const service = new WebsiteAnalysisService(
+      prisma as never,
+      scoring as never,
+      {} as never,
+      queue as never,
+    );
+
+    await expect(
+      service.onLeadUpsert('org-1', 'lead-1', 'https://example.com'),
+    ).resolves.toBeUndefined();
+    expect(scoring.recalculate).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+});

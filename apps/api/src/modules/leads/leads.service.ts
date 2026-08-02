@@ -139,7 +139,8 @@ export class LeadsService {
         include: LEAD_INCLUDE,
       });
       if (this.websiteAnalysis && (dto.website !== undefined || dto.phone !== undefined || dto.email !== undefined || dto.rating !== undefined)) {
-        void this.websiteAnalysis.onLeadUpsert(organizationId, id, lead.website);
+        // Detached on purpose; onLeadUpsert must soft-fail — never let a rejection crash Node.
+        void this.websiteAnalysis.onLeadUpsert(organizationId, id, lead.website).catch(() => undefined);
       }
       return this.serialize(lead);
     } catch (error) {

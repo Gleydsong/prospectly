@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -34,6 +35,8 @@ function normalizeWebsiteUrl(raw: string): string {
 
 @Injectable()
 export class WebsiteAnalysisService {
+  private readonly logger = new Logger(WebsiteAnalysisService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly scoring: ScoringService,
@@ -213,15 +216,37 @@ export class WebsiteAnalysisService {
     await this.scoring.recalculate(job.leadId);
   }
 
+  /**
+   * Fire-and-forget from lead ingest/update (`void onLeadUpsert(...)`).
+   * Must never reject: Node 22 terminates the process on unhandled rejections,
+   * which would crash the API/worker after the lead write already succeeded.
+   */
   async onLeadUpsert(organizationId: string, leadId: string, website?: string | null, correlationId?: string) {
     if (website?.trim()) {
       try {
         await this.enqueueForLead(organizationId, leadId, false, correlationId);
-      } catch {
+      } catch (error) {
         // Soft-fail enqueue during ingestion — scoring still runs for no-site path elsewhere
+        this.logger.warn({
+          message: 'Website analysis enqueue failed after lead upsert',
+          organizationId,
+          leadId,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
       }
       return;
     }
-    await this.scoring.recalculate(leadId);
+
+    try {
+      await this.scoring.recalculate(leadId);
+    } catch (error) {
+      // Soft-fail: lead may have been deleted concurrently, or scoring may hit a transient DB error.
+      this.logger.warn({
+        message: 'Scoring recalculate failed after lead upsert',
+        organizationId,
+        leadId,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+    }
   }
 }
