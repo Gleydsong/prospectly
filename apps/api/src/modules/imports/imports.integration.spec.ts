@@ -14,6 +14,8 @@ import request from 'supertest';
 
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { initHttpIntegrationApp } from '../../common/testing/http-integration';
+import { AuditService } from '../audit/audit.service';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
 import { CsvParserService } from './csv-parser.service';
 import { IMPORTS_QUEUE, type ProcessCsvImportJobData } from './imports.constants';
@@ -65,6 +67,7 @@ describe('CSV imports HTTP and worker integration', () => {
   let imports: Map<string, StoredImport>;
   let queue: { add: jest.Mock };
   let ingestion: { ingest: jest.Mock };
+  let audit: { log: jest.Mock };
   let prisma: {
     import: Record<string, jest.Mock>;
     importError: Record<string, jest.Mock>;
@@ -76,6 +79,7 @@ describe('CSV imports HTTP and worker integration', () => {
     imports = new Map();
     queue = { add: jest.fn().mockResolvedValue(undefined) };
     ingestion = { ingest: jest.fn() };
+    audit = { log: jest.fn().mockResolvedValue(undefined) };
 
     prisma = {
       import: {
@@ -121,6 +125,7 @@ describe('CSV imports HTTP and worker integration', () => {
         { provide: getQueueToken(IMPORTS_QUEUE), useValue: queue },
         { provide: LeadIngestionService, useValue: ingestion },
         { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(10_000) } },
+        { provide: AuditService, useValue: audit },
       ],
     }).compile();
 
@@ -136,13 +141,15 @@ describe('CSV imports HTTP and worker integration', () => {
       }),
     );
     app.useGlobalGuards(new HeaderAuthGuard(), new RolesGuard(module.get(Reflector)));
-    await app.init();
+    await initHttpIntegrationApp(app);
 
     service = module.get(ImportsService);
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it('forbids VIEWER uploads before parsing or queueing the CSV', async () => {
@@ -155,6 +162,7 @@ describe('CSV imports HTTP and worker integration', () => {
 
     expect(prisma.import.create).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+    expect(audit.log).not.toHaveBeenCalled();
   });
 
   it('returns 404 for another organization and rejects malformed UUIDs before lookup', async () => {
@@ -240,6 +248,19 @@ describe('CSV imports HTTP and worker integration', () => {
     expect(response.body).not.toHaveProperty('userId');
     expect(response.body).not.toHaveProperty('correlationId');
     expect(response.body).not.toHaveProperty('jobDispatchedAt');
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        userId: 'user-1',
+        action: 'import.started',
+        entity: 'Import',
+        entityId: IMPORT_ID,
+        metadata: expect.objectContaining({
+          fileName: 'leads.csv',
+          totalRows: 1,
+        }),
+      }),
+    );
 
     const queued = queue.add.mock.calls[0]?.[1] as ProcessCsvImportJobData;
     expect(queued).toEqual({ importId: IMPORT_ID, correlationId: 'corr-import-1' });

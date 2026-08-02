@@ -42,10 +42,9 @@ jobs:
 
       - name: Audit runtime high advisories
         # Fails on high/critical that affect production dependency paths.
-        # Toolchain exceptions live in docs/security/audit-exceptions.md + scripts/audit-runtime.cjs
+        # Documented exceptions: docs/security/audit-exceptions.md
         run: node scripts/audit-runtime.cjs
 
-      - name: Audit dependencies (high report full)
-        # Full high report for visibility; runtime blockers already handled above.
+      - name: Audit dependencies (high)
+        # Bloqueia qualquer high remanescente (overrides + ignoreGhsas documentados).
         run: pnpm audit --audit-level=high
-        continue-on-error: true

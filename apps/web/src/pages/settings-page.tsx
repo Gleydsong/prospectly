@@ -306,13 +306,17 @@ function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
   });
 
   const webhook = integrations.data?.find((row) => row.provider === 'WEBHOOK');
+  const webhookId = webhook?.id;
+  const webhookUrl = webhook?.url ?? '';
+  const webhookLabel = webhook?.label ?? '';
+  const webhookEnabled = webhook?.status === 'ENABLED';
 
   useEffect(() => {
-    if (!webhook) return;
-    setUrl(webhook.url ?? '');
-    setLabel(webhook.label ?? '');
-    setEnabled(webhook.status === 'ENABLED');
-  }, [webhook?.id, webhook?.url, webhook?.label, webhook?.status]);
+    if (!webhookId) return;
+    setUrl(webhookUrl);
+    setLabel(webhookLabel);
+    setEnabled(webhookEnabled);
+  }, [webhookId, webhookUrl, webhookLabel, webhookEnabled]);
 
   const save = useMutation({
     mutationFn: () =>

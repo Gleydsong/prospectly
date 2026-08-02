@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {

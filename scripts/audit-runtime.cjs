@@ -18,19 +18,23 @@ const RUNTIME_ROOTS = new Set([
   'react-router-dom',
   'postcss',
   'sharp',
+  'lodash',
+  'js-yaml',
   '@nestjs/platform-express',
   '@nestjs/common',
   '@nestjs/core',
+  '@nestjs/config',
+  '@nestjs/swagger',
   'express',
   'body-parser',
 ]);
 
 /**
  * Documented toolchain exceptions (high allowed until expiry).
- * Keep in sync with docs/security/audit-exceptions.md
+ * Prefer pnpm.overrides over exceptions. Keep in sync with docs/security/audit-exceptions.md
  */
 const TOOLCHAIN_EXCEPTIONS = new Map([
-  // brace-expansion via eslint / nest-cli / webpack — not shipped in API/web/landing runtime images
+  // brace-expansion via eslint / nest-cli / webpack — overridden in package.json; keep as safety net
   ['brace-expansion', { expires: '2026-10-01', reason: 'devDependency chain (eslint/nest-cli)' }],
 ]);
 

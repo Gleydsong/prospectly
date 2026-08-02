@@ -11,6 +11,7 @@ import type { Role } from '@prisma/client';
 import request from 'supertest';
 
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { initHttpIntegrationApp } from '../../common/testing/http-integration';
 import { GeoController } from './geo.controller';
 import { GeoService } from './geo.service';
 
@@ -51,14 +52,16 @@ describe('Geo HTTP integration', () => {
       }),
     );
     app.useGlobalGuards(new HeaderAuthGuard(), new RolesGuard(module.get(Reflector)));
-    await app.init();
+    await initHttpIntegrationApp(app);
   });
 
   afterEach(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
-  it('returns regions for Brazil and Portugal', async () => {
+  it('returns regions for Brazil and Portugal over loopback HTTP', async () => {
     const br = await request(app.getHttpServer()).get('/api/v1/geo/regions').query({ country: 'BR' }).expect(200);
     expect(br.body.some((region: { code: string }) => region.code === 'SP')).toBe(true);
 

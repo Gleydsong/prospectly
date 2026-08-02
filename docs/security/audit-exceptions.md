@@ -1,39 +1,47 @@
 # Dependências — exceções e política de audit
 
-Atualizado: **2026-08-01** (Fase 0.3).
+Atualizado: **2026-08-02**.
 
 ## Política de CI
 
 | Nível | Comportamento |
 |-------|----------------|
 | **critical** | Bloqueia (`pnpm audit --audit-level=critical`) |
-| **high (runtime)** | Bloqueia via `node scripts/audit-runtime.cjs` |
-| **high (toolchain)** | Permitido só se listado abaixo com **dono**, **risco residual** e **data de expiração** |
+| **high** | Bloqueia (`pnpm audit --audit-level=high`) — sem `continue-on-error` |
+| **high (runtime)** | Também validado por `node scripts/audit-runtime.cjs` |
 | moderate/low | Monitorado |
 
-Não usar `continue-on-error: true` permanente no audit high de runtime.
+## Remediações aplicadas
 
-## Remediações aplicadas (0.3)
+| Pacote | Ação | Advisory / cadeia | Remover override quando |
+|--------|------|-------------------|-------------------------|
+| `multer` | `pnpm.overrides` `^2.2.0` | GHSA-xf7r-hgr6-v32p, GHSA-v52c-386h-88mc, GHSA-5528-5vmv-3xc2, GHSA-72gw-mp4g-v24j — via `@nestjs/platform-express` | Nest pinar multer ≥2.2.0 |
+| `sharp` | `pnpm.overrides` `>=0.35.0` | GHSA-f88m-g3jw-g9cj — via `next` (landing) | Next depender de sharp ≥0.35.0 |
+| `lodash` | `pnpm.overrides` `>=4.18.0` | GHSA-r5fr-rjxr-66jc — via `@nestjs/config` | `@nestjs/config` pinar lodash ≥4.18.0 |
+| `js-yaml` (v4) | `pnpm.overrides` `js-yaml@>=4` → `>=4.3.0` | GHSA-52cp-r559-cp3m — via `@nestjs/swagger` | Swagger pinar js-yaml ≥4.3.0 |
+| `glob` (v10) | `pnpm.overrides` `glob@>=10.2.0 <11` → `>=10.5.0` | GHSA-5j98-mcp5-4vw2 — via `@nestjs/cli` (toolchain) | Nest CLI pinar glob ≥10.5.0 |
+| `picomatch` (v4) | `pnpm.overrides` `picomatch@>=4 <4.0.4` → `>=4.0.4` | GHSA-c2c7-rcm5-vvqj — via Nest CLI / angular-devkit | Devkit pinar picomatch ≥4.0.4 |
+| `tmp` | `pnpm.overrides` `>=0.2.6` | GHSA-ph9p-34f9-6g65 — via Nest CLI / inquirer | external-editor pinar tmp ≥0.2.6 |
+| `postcss` | `pnpm.overrides` `>=8.5.18` | GHSA-r28c-9q8g-f849 — transitiva via Next | Next pinar postcss seguro |
+| `brace-expansion` | overrides por major | tooling (eslint/nest-cli) | ESLint 9 / Nest CLI atualizado |
+| `react-router` / `react-router-dom` | Direto `^7.18.2` + `auditConfig.ignoreGhsas` | Ver seção abaixo | Quando o advisory DB do npm listar `>=7.18.2` como patched **ou** existir `react-router-dom@8` compatível com React 18 SPA |
 
-| Pacote | Ação | Advisory / nota |
-|--------|------|-----------------|
-| `react-router` / `react-router-dom` | Upgrade para `^7.18.2` | [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) — patch na linha 7.x é `>=7.18.2`. App web é **SPA Vite** e **não usa unstable RSC**; mesmo assim atualizamos o patch. |
-| `postcss` | `pnpm.overrides` `>=8.5.18` | [GHSA-r28c-9q8g-f849](https://github.com/advisories/GHSA-r28c-9q8g-f849) — transitiva via Next |
-| `multer` | Override `^2.0.2` (já resolvido em `@nestjs/platform-express@10.4.22`) | Upload CSV: 1 arquivo/request + limite em `CSV_MAX_FILE_SIZE_BYTES` |
-| `next` | Pin range `^15.5.21` | Alinha landing ao patch recente |
+## React Router (`GHSA-qwww-vcr4-c8h2`)
+
+- Advisory **oficial** (GitHub): patched `>=7.18.2` e `>=8.3.0`; afeta **somente** APIs RSC instáveis.
+- App web é **SPA Vite** com `BrowserRouter` — **não** usa RSC / React Server Components.
+- `react-router-dom@8` **não existe** no npm; `react-router@8.3.0` exige React `>=19.2.7`.
+- O DB de audit do npm ainda reporta `7.12.0–8.2.x` como vulnerável (falso positivo para quem já está em `7.18.2` sem RSC). Ver [issue upstream](https://github.com/remix-run/react-router/issues/15348).
+- Mitigação: manter `react-router-dom@^7.18.2` e `pnpm.auditConfig.ignoreGhsas: ["GHSA-qwww-vcr4-c8h2"]` até o advisory DB corrigir **ou** haver linha 8.x utilizável sem migrar para React 19/RSC.
 
 ## Exceções temporárias (toolchain)
 
-| Pacote | Severidade | Cadeia | Risco residual | Dono | Expira |
-|--------|------------|--------|----------------|------|--------|
-| `brace-expansion` | high | ESLint 8 / Nest CLI / webpack (dev) | DoS em tooling local/CI de lint — **não** entra na imagem runtime da API/web | platform | **2026-10-01** |
+Nenhuma high toolchain fica sem remediação no lockfile. Overrides acima cobrem as cadeias Nest CLI / Next.
 
-Plano de remoção: migrar ESLint 8 → 9 e atualizar `@nestjs/cli` quando o monorepo permitir; reexecutar `pnpm audit` e apagar a linha.
+## Critério para nova exceção / ignoreGhsas
 
-## Critério para nova exceção
+Só adicionar GHSA em `ignoreGhsas` quando:
 
-Só adicionar high sem falhar o CI quando:
-
-1. o pacote é **devDependency / toolchain** (não entra no bundle/imagem de produção), **e**
-2. não existe patch sem breaking major, **e**
-3. risco residual, dono e **data de expiração** estão nesta tabela.
+1. o advisory oficial já considera a versão instalada **patched**, **ou** o vetor não se aplica ao produto (ex.: RSC em SPA), **e**
+2. não há upgrade direto seguro sem breaking major incompatível, **e**
+3. risco residual, dono e condição de remoção estão documentados aqui.

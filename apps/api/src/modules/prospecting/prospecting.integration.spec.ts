@@ -13,8 +13,10 @@ import request from 'supertest';
 
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { initHttpIntegrationApp } from '../../common/testing/http-integration';
 import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
+import { MetricsService } from '../ops/metrics.service';
 import {
   InMemorySearchProviderRegistry,
   OPENSTREETMAP_SEARCH_PROVIDER,
@@ -79,6 +81,7 @@ describe('Prospecting HTTP integration', () => {
   let queue: { add: jest.Mock };
   let provider: { search: jest.Mock };
   let ingestion: { ingest: jest.Mock };
+  let metrics: { recordJob: jest.Mock; recordHttp: jest.Mock };
   let prisma: {
     search: Record<string, jest.Mock>;
     searchResult: Record<string, jest.Mock>;
@@ -91,6 +94,7 @@ describe('Prospecting HTTP integration', () => {
     queue = { add: jest.fn().mockResolvedValue(undefined) };
     provider = { search: jest.fn() };
     ingestion = { ingest: jest.fn() };
+    metrics = { recordJob: jest.fn(), recordHttp: jest.fn() };
 
     prisma = {
       search: {
@@ -202,6 +206,7 @@ describe('Prospecting HTTP integration', () => {
           provide: BillingService,
           useValue: { assertCanCreateSearch: jest.fn().mockResolvedValue(undefined) },
         },
+        { provide: MetricsService, useValue: metrics },
       ],
     }).compile();
 
@@ -217,7 +222,7 @@ describe('Prospecting HTTP integration', () => {
       }),
     );
     app.useGlobalGuards(new HeaderAuthGuard(), new RolesGuard(module.get(Reflector)));
-    await app.init();
+    await initHttpIntegrationApp(app);
 
     service = module.get(ProspectingService);
     processor = module.get(ProspectingProcessor);
@@ -525,5 +530,6 @@ describe('Prospecting HTTP integration', () => {
       }),
     );
     expect(JSON.stringify(persisted)).not.toContain('secret-token');
+    expect(metrics.recordJob).toHaveBeenCalledWith(PROSPECTING_QUEUE, 'failed', expect.any(Number));
   });
 });

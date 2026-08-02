@@ -1,5 +1,4 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsDateString, IsOptional, IsUUID } from 'class-validator';
 
 export class CreateStageTasksDto {
