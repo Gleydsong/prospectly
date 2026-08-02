@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
@@ -8,6 +17,7 @@ import { Roles } from '../../../common/decorators/roles.decorator';
 import { TemplatesService } from '../application/templates.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { PreviewTemplateDto } from './dto/preview-template.dto';
+import { UpdateTemplateDto } from './dto/update-template.dto';
 
 @ApiTags('message-templates')
 @ApiBearerAuth()
@@ -38,6 +48,17 @@ export class TemplatesController {
     @Body() dto: CreateTemplateDto,
   ) {
     return this.templates.create(organizationId, user.id, dto);
+  }
+
+  @Patch('message-templates/:id')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  update(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTemplateDto,
+  ) {
+    return this.templates.update(organizationId, user.id, id, dto);
   }
 
   @Post('message-templates/preview')

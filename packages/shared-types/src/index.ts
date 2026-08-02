@@ -72,6 +72,18 @@ export enum CampaignStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum CampaignLeadResult {
+  CONTACTED = 'CONTACTED',
+  REPLIED = 'REPLIED',
+  INTERESTED = 'INTERESTED',
+  MEETING = 'MEETING',
+  PROPOSAL = 'PROPOSAL',
+  WON = 'WON',
+  LOST = 'LOST',
+  NO_RESPONSE = 'NO_RESPONSE',
+  OPT_OUT = 'OPT_OUT',
+}
+
 export enum ImportStatus {
   PENDING = 'PENDING',
   PROCESSING = 'PROCESSING',
