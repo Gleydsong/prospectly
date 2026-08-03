@@ -267,24 +267,28 @@ function BlockProperties({
           <Input
             label="URL HTTPS"
             value={block.action.url}
-            onChange={(event) =>
+            onChange={(event) => {
+              const action = block.action;
+              if (action.type !== 'external_url' && action.type !== 'calendar') return;
               onChange({
                 ...block,
-                action: { ...block.action, type: block.action.type, url: event.target.value },
-              })
-            }
+                action: { ...action, url: event.target.value },
+              });
+            }}
           />
         ) : null}
         {block.action.type === 'whatsapp' || block.action.type === 'call' ? (
           <Input
             label="Telefone"
             value={block.action.phone}
-            onChange={(event) =>
+            onChange={(event) => {
+              const action = block.action;
+              if (action.type !== 'whatsapp' && action.type !== 'call') return;
               onChange({
                 ...block,
-                action: { ...block.action, phone: event.target.value },
-              })
-            }
+                action: { ...action, phone: event.target.value },
+              });
+            }}
           />
         ) : null}
       </div>
