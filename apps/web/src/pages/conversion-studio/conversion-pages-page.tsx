@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { FeatureGateBanner } from '@/features/conversion-studio/components/feature-gate-banner';
 import { useConversionPages, useCreateConversionPage, useEntitlements } from '@/features/conversion-studio/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
@@ -37,6 +38,9 @@ export function ConversionPagesPage() {
           Crie páginas de proposta vinculadas a leads e acompanhe a conversão.
         </p>
       </div>
+
+      <FeatureGateBanner feature="page_drafts" />
+      <FeatureGateBanner feature="published_pages" />
 
       {entitlements.data ? (
         <Card>
