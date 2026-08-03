@@ -21,7 +21,8 @@
     "logout": "Sair",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
-    "campaigns": "Campanhas"
+    "campaigns": "Campanhas",
+    "pages": "Pages"
   },
   "auth": {
     "loginTitle": "Entrar no Prospectly",
@@ -147,7 +148,9 @@
       "HIGH_POTENTIAL_IDLE": "{{count}} lead(s) com potencial alto ainda em estágio inicial.",
       "STALE_LEADS": "{{count}} lead(s) sem atividade há mais de sete dias.",
       "OVERDUE_FOLLOW_UPS": "{{count}} follow-up(s) atrasado(s).",
-      "FREE_SEARCH_QUOTA": "Quota gratuita de buscas: {{count}} restante(s)."
+      "FREE_SEARCH_QUOTA": "Quota gratuita de buscas: {{count}} restante(s).",
+      "LEADS_WITHOUT_PAGE": "{{count}} lead(s) com potencial ainda sem página de proposta.",
+      "PAGES_WITHOUT_CONVERSION": "{{count}} página(s) publicada(s) sem conversão de formulário."
     }
   },
   "opportunity": {

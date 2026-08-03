@@ -21,7 +21,8 @@
     "logout": "Log out",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "campaigns": "Campaigns"
+    "campaigns": "Campaigns",
+    "pages": "Pages"
   },
   "auth": {
     "loginTitle": "Sign in to Prospectly",
@@ -147,7 +148,9 @@
       "HIGH_POTENTIAL_IDLE": "{{count}} high-potential lead(s) still in early stage.",
       "STALE_LEADS": "{{count}} lead(s) with no activity for over seven days.",
       "OVERDUE_FOLLOW_UPS": "{{count}} overdue follow-up(s).",
-      "FREE_SEARCH_QUOTA": "Free search quota: {{count}} remaining."
+      "FREE_SEARCH_QUOTA": "Free search quota: {{count}} remaining.",
+      "LEADS_WITHOUT_PAGE": "{{count}} high-potential lead(s) still without a proposal page.",
+      "PAGES_WITHOUT_CONVERSION": "{{count}} published page(s) without form conversions."
     }
   },
   "opportunity": {

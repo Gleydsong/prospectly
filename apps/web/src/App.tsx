@@ -38,6 +38,21 @@ const BillingSuccessPage = lazy(() =>
 const BillingCancelPage = lazy(() =>
   import('@/pages/billing-result-page').then((m) => ({ default: m.BillingCancelPage })),
 );
+const ConversionPagesPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-pages-page').then((m) => ({
+    default: m.ConversionPagesPage,
+  })),
+);
+const ConversionPageEditorPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-page-editor-page').then((m) => ({
+    default: m.ConversionPageEditorPage,
+  })),
+);
+const PublicConversionPage = lazy(() =>
+  import('@/pages/conversion-studio/public-conversion-page').then((m) => ({
+    default: m.PublicConversionPage,
+  })),
+);
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -64,6 +79,15 @@ export function App() {
         element={
           <LazyPage>
             <BillingCancelPage />
+          </LazyPage>
+        }
+      />
+
+      <Route
+        path="/p/:slug"
+        element={
+          <LazyPage>
+            <PublicConversionPage />
           </LazyPage>
         }
       />
@@ -98,6 +122,22 @@ export function App() {
           <Route path="leads" element={<LeadsPage />} />
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
+          <Route
+            path="pages"
+            element={
+              <LazyPage>
+                <ConversionPagesPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="pages/:id/edit"
+            element={
+              <LazyPage>
+                <ConversionPageEditorPage />
+              </LazyPage>
+            }
+          />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignDetailPage />} />

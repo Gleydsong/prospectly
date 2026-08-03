@@ -194,7 +194,7 @@ export interface DashboardSummary {
     conversionRate: number;
   }>;
   recommendations?: Array<{
-    code: 'HIGH_POTENTIAL_IDLE' | 'STALE_LEADS' | 'OVERDUE_FOLLOW_UPS' | 'FREE_SEARCH_QUOTA';
+    code: 'HIGH_POTENTIAL_IDLE' | 'STALE_LEADS' | 'OVERDUE_FOLLOW_UPS' | 'FREE_SEARCH_QUOTA' | 'LEADS_WITHOUT_PAGE' | 'PAGES_WITHOUT_CONVERSION';
     count: number;
     href: string;
     severity: 'info' | 'warning' | 'action';
