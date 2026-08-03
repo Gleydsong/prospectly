@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getApiErrorMessage } from '@/lib/api';
 
@@ -15,6 +18,11 @@ import {
   useRestoreConversionVersion,
   useUpdateConversionDraft,
 } from '@/features/conversion-studio/hooks';
+import {
+  listPageAssets,
+  registerPageAsset,
+  updatePageAnalytics,
+} from '@/features/conversion-studio/services/api';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
 
 export function ConversionPageEditorPage() {
@@ -34,6 +42,17 @@ export function ConversionPageEditorPage() {
   const [baseline, setBaseline] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [assetUrl, setAssetUrl] = useState('');
+  const [assetAlt, setAssetAlt] = useState('');
+  const [pixelEnabled, setPixelEnabled] = useState(false);
+  const [consentLabel, setConsentLabel] = useState('');
+  const queryClient = useQueryClient();
+
+  const assetsQuery = useQuery({
+    queryKey: ['conversion-pages', id, 'assets'],
+    queryFn: () => listPageAssets(id!),
+    enabled: Boolean(id),
+  });
 
   useEffect(() => {
     if (!pageQuery.data) return;
@@ -43,6 +62,12 @@ export function ConversionPageEditorPage() {
     setBlocks(nextBlocks);
     setRevision(pageQuery.data.draftRevision);
     setBaseline(JSON.stringify({ title: pageQuery.data.title, blocks: nextBlocks }));
+    const pageData = pageQuery.data as {
+      analyticsPixelEnabled?: boolean;
+      analyticsConsentLabel?: string | null;
+    };
+    setPixelEnabled(Boolean(pageData.analyticsPixelEnabled));
+    setConsentLabel(pageData.analyticsConsentLabel ?? '');
   }, [pageQuery.data]);
 
   const dirty = useMemo(
@@ -190,6 +215,82 @@ export function ConversionPageEditorPage() {
                 <p>CTA mais acionado: {metrics.data.topCtaType ?? '—'}</p>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader title="Assets (URL HTTPS)" description="Sem upload binário local — filesystem efêmero no Render." />
+          <CardContent className="space-y-3">
+            <Input label="URL HTTPS" value={assetUrl} onChange={(event) => setAssetUrl(event.target.value)} />
+            <Input label="Texto alternativo" value={assetAlt} onChange={(event) => setAssetAlt(event.target.value)} />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                if (!id || !assetUrl.trim()) return;
+                void registerPageAsset(id, { url: assetUrl.trim(), altText: assetAlt.trim() || undefined })
+                  .then(async () => {
+                    setAssetUrl('');
+                    setAssetAlt('');
+                    await queryClient.invalidateQueries({ queryKey: ['conversion-pages', id, 'assets'] });
+                    setNotice('Asset registado.');
+                  })
+                  .catch((err) => setError(getApiErrorMessage(err) ?? 'Falha ao registar asset.'));
+              }}
+            >
+              Registar asset
+            </Button>
+            <ul className="space-y-2 text-sm text-zinc-400">
+              {(assetsQuery.data as Array<{ id: string; url: string; altText?: string | null }> | undefined)?.map(
+                (asset) => (
+                  <li key={asset.id} className="truncate">
+                    {asset.altText ? `${asset.altText}: ` : ''}
+                    {asset.url}
+                  </li>
+                ),
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader title="Métricas com consentimento" />
+          <CardContent className="space-y-3">
+            <label className="flex min-h-11 items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={pixelEnabled}
+                onChange={(event) => setPixelEnabled(event.target.checked)}
+                className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
+              />
+              Pedir consentimento para métricas na página pública
+            </label>
+            <Input
+              label="Texto de consentimento"
+              value={consentLabel}
+              onChange={(event) => setConsentLabel(event.target.value)}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                if (!id) return;
+                void updatePageAnalytics(id, {
+                  analyticsPixelEnabled: pixelEnabled,
+                  analyticsConsentLabel: consentLabel,
+                })
+                  .then(async () => {
+                    await pageQuery.refetch();
+                    setNotice('Definições de métricas atualizadas.');
+                  })
+                  .catch((err) => setError(getApiErrorMessage(err) ?? 'Falha ao guardar analytics.'));
+              }}
+            >
+              Guardar analytics
+            </Button>
+            {entitlements.data && !entitlements.data.features.analytics_pixel ? (
+              <p className="text-xs text-amber-300">Plano atual sem analytics_pixel — upgrade necessário para ativar.</p>
+            ) : null}
           </CardContent>
         </Card>
       </div>

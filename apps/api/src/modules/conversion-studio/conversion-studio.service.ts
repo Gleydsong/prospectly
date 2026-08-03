@@ -417,6 +417,8 @@ export class ConversionStudioService {
         publicSlug: true,
         publishedVersion: true,
         organizationId: true,
+        analyticsPixelEnabled: true,
+        analyticsConsentLabel: true,
       },
     });
     if (!page || page.publishedVersion == null) {
@@ -433,11 +435,20 @@ export class ConversionStudioService {
     });
     if (!version) throw new NotFoundException('Page not found');
 
+    const entitlements = await this.entitlements.getSnapshot(page.organizationId);
+    const analyticsAllowed = Boolean(entitlements.features.analytics_pixel);
+
     return {
       title: version.title,
       publicSlug: page.publicSlug,
       version: version.version,
       blocks: version.blocks,
+      analytics: {
+        enabled: analyticsAllowed && page.analyticsPixelEnabled,
+        consentLabel:
+          page.analyticsConsentLabel ??
+          'Aceito o uso de métricas anónimas de visitas nesta página.',
+      },
     };
   }
 
@@ -475,6 +486,8 @@ export class ConversionStudioService {
       ...(dto.message ? { message: dto.message.trim().slice(0, 2000) } : {}),
     };
 
+    const actorId = await this.resolveSystemActorId(page.organizationId, page.createdById);
+
     await this.prisma.$transaction(async (tx) => {
       await tx.conversionFormSubmission.create({
         data: {
@@ -493,12 +506,78 @@ export class ConversionStudioService {
           type: ConversionEventType.form_submitted,
         },
       });
-      if (page.leadId) {
-        // Public form has no authenticated actor; keep linkage via submission.leadId only.
+      if (page.leadId && actorId) {
+        await tx.leadActivity.create({
+          data: {
+            organizationId: page.organizationId,
+            leadId: page.leadId,
+            userId: actorId,
+            type: 'NOTE',
+            description: 'Conversão registrada via página publicada do Conversion Studio.',
+            metadata: {
+              source: 'conversion_page_form',
+              pageId: page.id,
+              version: page.publishedVersion,
+              fieldsPresent: Object.keys(payload),
+            },
+          },
+        });
+        await tx.lead.update({
+          where: { id: page.leadId },
+          data: { lastContactAt: new Date() },
+        });
       }
     });
 
     return { ok: true, message: 'Recebemos o seu contacto.' };
+  }
+
+  async updateAnalyticsSettings(
+    organizationId: string,
+    id: string,
+    actorId: string,
+    input: { analyticsPixelEnabled?: boolean; analyticsConsentLabel?: string },
+  ) {
+    const page = await this.requirePage(organizationId, id);
+    if (input.analyticsPixelEnabled) {
+      await this.entitlements.assertFeature(organizationId, 'analytics_pixel');
+    }
+    return this.prisma.conversionPage.update({
+      where: { id: page.id },
+      data: {
+        ...(input.analyticsPixelEnabled != null
+          ? { analyticsPixelEnabled: input.analyticsPixelEnabled }
+          : {}),
+        ...(input.analyticsConsentLabel !== undefined
+          ? { analyticsConsentLabel: input.analyticsConsentLabel?.trim().slice(0, 240) || null }
+          : {}),
+        updatedById: actorId,
+      },
+      select: {
+        id: true,
+        analyticsPixelEnabled: true,
+        analyticsConsentLabel: true,
+      },
+    });
+  }
+
+  private async resolveSystemActorId(
+    organizationId: string,
+    preferredUserId?: string | null,
+  ): Promise<string | null> {
+    if (preferredUserId) {
+      const member = await this.prisma.organizationMember.findFirst({
+        where: { organizationId, userId: preferredUserId },
+        select: { userId: true },
+      });
+      if (member) return member.userId;
+    }
+    const owner = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, role: 'OWNER' },
+      orderBy: { createdAt: 'asc' },
+      select: { userId: true },
+    });
+    return owner?.userId ?? null;
   }
 
   private async requirePage(organizationId: string, id: string) {
@@ -521,6 +600,7 @@ export class ConversionStudioService {
         organizationId: true,
         publishedVersion: true,
         leadId: true,
+        createdById: true,
       },
     });
     if (!page || page.publishedVersion == null) {

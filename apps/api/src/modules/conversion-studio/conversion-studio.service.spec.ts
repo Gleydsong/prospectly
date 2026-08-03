@@ -64,7 +64,9 @@ describe('ConversionStudioService tenant isolation', () => {
       conversionPageVersion: { create: jest.Mock; findFirst: jest.Mock };
       conversionEvent: { create: jest.Mock; groupBy: jest.Mock; findMany: jest.Mock };
       conversionFormSubmission: { create: jest.Mock; findFirst: jest.Mock };
-      lead: { findFirst: jest.Mock };
+      lead: { findFirst: jest.Mock; update: jest.Mock };
+      leadActivity: { create: jest.Mock };
+      organizationMember: { findFirst: jest.Mock };
       $transaction: jest.Mock;
     } = {
       conversionPage: {
@@ -87,7 +89,9 @@ describe('ConversionStudioService tenant isolation', () => {
         create: jest.fn(),
         findFirst: jest.fn(),
       },
-      lead: { findFirst: jest.fn() },
+      lead: { findFirst: jest.fn(), update: jest.fn() },
+      leadActivity: { create: jest.fn() },
+      organizationMember: { findFirst: jest.fn() },
       $transaction: jest.fn(),
     };
     prisma.$transaction.mockImplementation(async (arg: unknown) => {
@@ -207,6 +211,7 @@ describe('ConversionStudioService tenant isolation', () => {
       organizationId: 'org-a',
       publishedVersion: 2,
       leadId: null,
+      createdById: 'user-1',
     });
     const service = new ConversionStudioService(prisma as never, entitlements as never);
 
@@ -214,6 +219,45 @@ describe('ConversionStudioService tenant isolation', () => {
       service.submitPublicForm('slug-1', { companyWebsite: 'http://spam' } as never),
     ).resolves.toEqual({ ok: true });
     expect(prisma.conversionFormSubmission.create).not.toHaveBeenCalled();
+  });
+
+  it('creates lead activity with system actor without storing form body in activity', async () => {
+    const prisma = makePrisma();
+    prisma.conversionPage.findFirst.mockResolvedValue({
+      id: 'page-1',
+      organizationId: 'org-a',
+      publishedVersion: 2,
+      leadId: 'lead-1',
+      createdById: 'user-1',
+    });
+    prisma.organizationMember.findFirst.mockResolvedValue({ userId: 'user-1' });
+    const service = new ConversionStudioService(prisma as never, entitlements as never);
+
+    await expect(
+      service.submitPublicForm('slug-1', {
+        name: 'Ana',
+        email: 'ana@example.com',
+        message: 'Quero proposta',
+      }),
+    ).resolves.toEqual({ ok: true, message: 'Recebemos o seu contacto.' });
+
+    expect(prisma.leadActivity.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          leadId: 'lead-1',
+          userId: 'user-1',
+          type: 'NOTE',
+          metadata: expect.objectContaining({
+            source: 'conversion_page_form',
+            fieldsPresent: expect.arrayContaining(['name', 'email', 'message']),
+          }),
+        }),
+      }),
+    );
+    const activityCall = prisma.leadActivity.create.mock.calls[0]?.[0] as {
+      data: { description: string; metadata: Record<string, unknown> };
+    };
+    expect(JSON.stringify(activityCall.data)).not.toMatch(/ana@example.com|Quero proposta/i);
   });
 });
 

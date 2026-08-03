@@ -90,10 +90,12 @@ Migração remota / Render / pagamento real: **exige autorização explícita**.
 - Worker BullMQ dedicado para eventos
 - Automação de outreach
 
-## Próximos passos sugeridos
+## Próximos passos sugeridos (estado)
 
-1. Aplicar migração em ambiente descartável e validar fluxo E2E no browser
-2. Object storage para assets
-3. DomainBinding + verificação DNS
-4. Activity no lead a partir de submission (actor de sistema)
-5. Feature flags de pixel/analítica com consentimento
+1. ~~Aplicar migração em ambiente descartável~~ — local `migrate deploy` aplicado (`20260803120000` + `20260803140000`).
+2. ~~Object storage para assets~~ — MVP: registo de URL HTTPS validada (HEAD + tipo/tamanho). S3/R2 ainda exige decisão de produto.
+3. ~~DomainBinding + verificação DNS~~ — TXT `prospectly-verify=<token>` via `dns.resolveTxt` (gate LIFETIME).
+4. ~~Activity no lead a partir de submission~~ — actor = `createdById` ou OWNER; metadata sem corpo do formulário.
+5. ~~Pixel/analítica com consentimento~~ — flag por página + banner de consentimento na rota pública.
+
+Restantes: smoke E2E browser, provider S3/R2 real, binding hostname→page no edge.

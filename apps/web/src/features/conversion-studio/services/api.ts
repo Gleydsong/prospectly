@@ -120,8 +120,42 @@ export async function fetchPublicPage(slug: string): Promise<{
   publicSlug: string;
   version: number;
   blocks: unknown;
+  analytics?: { enabled: boolean; consentLabel: string };
 }> {
   const { data } = await api.get(`/public/pages/${slug}`);
+  return data;
+}
+
+export async function updatePageAnalytics(
+  id: string,
+  input: { analyticsPixelEnabled?: boolean; analyticsConsentLabel?: string },
+) {
+  const { data } = await api.patch(`/conversion-pages/${id}/analytics`, input);
+  return data;
+}
+
+export async function listPageAssets(id: string) {
+  const { data } = await api.get(`/conversion-pages/${id}/assets`);
+  return data;
+}
+
+export async function registerPageAsset(id: string, input: { url: string; altText?: string }) {
+  const { data } = await api.post(`/conversion-pages/${id}/assets`, input);
+  return data;
+}
+
+export async function listDomainBindings() {
+  const { data } = await api.get('/conversion-pages/domains');
+  return data;
+}
+
+export async function createDomainBinding(input: { hostname: string; pageId?: string }) {
+  const { data } = await api.post('/conversion-pages/domains', input);
+  return data;
+}
+
+export async function verifyDomainBinding(id: string) {
+  const { data } = await api.post(`/conversion-pages/domains/${id}/verify`);
   return data;
 }
 

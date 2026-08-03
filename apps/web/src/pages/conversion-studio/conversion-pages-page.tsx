@@ -1,5 +1,6 @@
 import { FilePlus2 } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -9,16 +10,37 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FeatureGateBanner } from '@/features/conversion-studio/components/feature-gate-banner';
 import { useConversionPages, useCreateConversionPage, useEntitlements } from '@/features/conversion-studio/hooks';
+import {
+  createDomainBinding,
+  listDomainBindings,
+  verifyDomainBinding,
+} from '@/features/conversion-studio/services/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 
+type DomainBindingRow = {
+  id: string;
+  hostname: string;
+  verifiedAt?: string | null;
+  verificationToken: string;
+};
+
 export function ConversionPagesPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [title, setTitle] = useState('Nova proposta');
+  const [hostname, setHostname] = useState('');
   const pages = useConversionPages();
   const entitlements = useEntitlements();
   const createPage = useCreateConversionPage();
   const [error, setError] = useState<string | null>(null);
+  const [domainNotice, setDomainNotice] = useState<string | null>(null);
+
+  const domains = useQuery({
+    queryKey: ['conversion-pages', 'domains'],
+    queryFn: listDomainBindings,
+    enabled: Boolean(entitlements.data?.features.custom_domain),
+  });
 
   async function handleCreate() {
     setError(null);
@@ -41,6 +63,7 @@ export function ConversionPagesPage() {
 
       <FeatureGateBanner feature="page_drafts" />
       <FeatureGateBanner feature="published_pages" />
+      <FeatureGateBanner feature="custom_domain" />
 
       {entitlements.data ? (
         <Card>
@@ -66,6 +89,83 @@ export function ConversionPagesPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {entitlements.data?.features.custom_domain ? (
+        <Card>
+          <CardHeader
+            title="Domínios personalizados"
+            description="Crie um TXT prospectly-verify=<token> e depois verifique."
+          />
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Input
+                label="Hostname"
+                placeholder="proposta.cliente.com"
+                value={hostname}
+                onChange={(event) => setHostname(event.target.value)}
+              />
+              <Button
+                type="button"
+                onClick={() => {
+                  setDomainNotice(null);
+                  void createDomainBinding({ hostname: hostname.trim() })
+                    .then(async (binding) => {
+                      setHostname('');
+                      setDomainNotice(
+                        `Registe TXT: prospectly-verify=${(binding as DomainBindingRow).verificationToken}`,
+                      );
+                      await queryClient.invalidateQueries({ queryKey: ['conversion-pages', 'domains'] });
+                    })
+                    .catch((err) => setError(getApiErrorMessage(err) ?? 'Falha ao criar domínio.'));
+                }}
+              >
+                Adicionar domínio
+              </Button>
+            </div>
+            {domainNotice ? (
+              <p className="rounded-lg bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
+                {domainNotice}
+              </p>
+            ) : null}
+            <ul className="space-y-2 text-sm text-zinc-300">
+              {((domains.data as DomainBindingRow[] | undefined) ?? []).map((binding) => (
+                <li
+                  key={binding.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-zinc-800 p-3"
+                >
+                  <div>
+                    <p>{binding.hostname}</p>
+                    <p className="text-xs text-zinc-500">
+                      {binding.verifiedAt
+                        ? 'Verificado'
+                        : `TXT: prospectly-verify=${binding.verificationToken}`}
+                    </p>
+                  </div>
+                  {!binding.verifiedAt ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        void verifyDomainBinding(binding.id)
+                          .then(async () => {
+                            setDomainNotice(`${binding.hostname} verificado.`);
+                            await queryClient.invalidateQueries({
+                              queryKey: ['conversion-pages', 'domains'],
+                            });
+                          })
+                          .catch((err) => setError(getApiErrorMessage(err) ?? 'DNS ainda não bate.'));
+                      }}
+                    >
+                      Verificar DNS
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {error ? (
         <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">

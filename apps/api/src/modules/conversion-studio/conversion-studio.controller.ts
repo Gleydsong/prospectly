@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -15,11 +16,16 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { ConversionAssetService } from './conversion-asset.service';
 import { ConversionStudioService } from './conversion-studio.service';
+import { DomainBindingService } from './domain-binding.service';
 import {
   CreateConversionPageDto,
+  CreateDomainBindingDto,
   QueryConversionPagesDto,
+  RegisterPageAssetDto,
   RestoreVersionDto,
+  UpdateAnalyticsSettingsDto,
   UpdateConversionPageDraftDto,
 } from './dto/conversion-page.dto';
 import { EntitlementService } from './entitlement.service';
@@ -31,12 +37,45 @@ export class ConversionStudioController {
   constructor(
     private readonly studio: ConversionStudioService,
     private readonly entitlements: EntitlementService,
+    private readonly assets: ConversionAssetService,
+    private readonly domains: DomainBindingService,
   ) {}
 
   @Get('entitlements')
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER', 'VIEWER')
   entitlementsSnapshot(@CurrentOrg() organizationId: string) {
     return this.entitlements.getSnapshot(organizationId);
+  }
+
+  @Get('domains')
+  @Roles('OWNER', 'ADMIN')
+  listDomains(@CurrentOrg() organizationId: string) {
+    return this.domains.list(organizationId);
+  }
+
+  @Post('domains')
+  @Roles('OWNER', 'ADMIN')
+  createDomain(@CurrentOrg() organizationId: string, @Body() dto: CreateDomainBindingDto) {
+    return this.domains.create(organizationId, dto.hostname, dto.pageId);
+  }
+
+  @Post('domains/:id/verify')
+  @Roles('OWNER', 'ADMIN')
+  verifyDomain(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.domains.verify(organizationId, id);
+  }
+
+  @Delete('domains/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('OWNER', 'ADMIN')
+  async removeDomain(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.domains.remove(organizationId, id);
   }
 
   @Get()
@@ -70,6 +109,44 @@ export class ConversionStudioController {
     @Body() dto: UpdateConversionPageDraftDto,
   ) {
     return this.studio.updateDraft(organizationId, id, user.id, dto);
+  }
+
+  @Patch(':id/analytics')
+  @Roles('OWNER', 'ADMIN', 'SALES')
+  updateAnalytics(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateAnalyticsSettingsDto,
+  ) {
+    return this.studio.updateAnalyticsSettings(organizationId, id, user.id, dto);
+  }
+
+  @Get(':id/assets')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER', 'VIEWER')
+  listAssets(@CurrentOrg() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return this.assets.list(organizationId, id);
+  }
+
+  @Post(':id/assets')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  registerAsset(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RegisterPageAssetDto,
+  ) {
+    return this.assets.register(organizationId, id, dto);
+  }
+
+  @Delete(':id/assets/:assetId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('OWNER', 'ADMIN', 'SALES')
+  async removeAsset(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('assetId', ParseUUIDPipe) assetId: string,
+  ) {
+    await this.assets.remove(organizationId, id, assetId);
   }
 
   @Post(':id/publish')

@@ -143,6 +143,19 @@ export class EntitlementService {
     }
   }
 
+  async assertFeature(organizationId: string, feature: FeatureKey): Promise<void> {
+    const snapshot = await this.getSnapshot(organizationId);
+    const value = snapshot.features[feature];
+    const allowed = typeof value === 'boolean' ? value : Number(value) > 0;
+    if (!allowed) {
+      throw new ForbiddenException({
+        code: `ENTITLEMENT_${feature.toUpperCase()}`,
+        message: `Feature ${feature} is not available on current plan`,
+        requiredPlan: feature === 'custom_domain' || feature === 'white_label' ? 'LIFETIME' : 'STARTER_MONTHLY',
+      });
+    }
+  }
+
   async recordUsage(
     organizationId: string,
     meterKey: UsageMeterKey,

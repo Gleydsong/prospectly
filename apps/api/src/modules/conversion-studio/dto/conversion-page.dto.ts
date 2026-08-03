@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsInt,
   IsOptional,
   IsString,
@@ -129,4 +130,42 @@ export class TrackPublicEventDto {
   @IsString()
   @MaxLength(80)
   ctaType?: string;
+}
+
+export class RegisterPageAssetDto {
+  @ApiProperty({ description: 'HTTPS image URL (no arbitrary upload storage in MVP)' })
+  @IsString()
+  @MaxLength(2048)
+  url!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  altText?: string;
+}
+
+export class UpdateAnalyticsSettingsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  analyticsPixelEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  analyticsConsentLabel?: string;
+}
+
+export class CreateDomainBindingDto {
+  @ApiProperty({ example: 'proposta.cliente.com' })
+  @IsString()
+  @MaxLength(253)
+  hostname!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID('4')
+  pageId?: string;
 }

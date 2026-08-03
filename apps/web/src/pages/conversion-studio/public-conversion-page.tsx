@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { Button } from '@/components/ui/button';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import {
   fetchPublicPage,
@@ -9,6 +10,8 @@ import {
 } from '@/features/conversion-studio/services/api';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
 
+const CONSENT_KEY_PREFIX = 'prospectly.page.consent.';
+
 export function PublicConversionPage() {
   const { slug } = useParams<{ slug: string }>();
   const [title, setTitle] = useState('');
@@ -16,6 +19,9 @@ export function PublicConversionPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+  const [consentLabel, setConsentLabel] = useState('');
+  const [consented, setConsented] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -27,7 +33,13 @@ export function PublicConversionPage() {
         const parsed = pageBlocksSchema.safeParse(page.blocks);
         setTitle(page.title);
         setBlocks(parsed.success ? parsed.data : []);
-        await trackPublicEvent(slug, { type: 'page_view' });
+        setAnalyticsEnabled(Boolean(page.analytics?.enabled));
+        setConsentLabel(page.analytics?.consentLabel ?? '');
+        const stored = localStorage.getItem(`${CONSENT_KEY_PREFIX}${slug}`) === '1';
+        setConsented(stored);
+        if (!page.analytics?.enabled || stored) {
+          await trackPublicEvent(slug, { type: 'page_view' });
+        }
       } catch {
         if (!cancelled) setError('Página não encontrada.');
       } finally {
@@ -40,6 +52,7 @@ export function PublicConversionPage() {
   }, [slug]);
 
   const heading = useMemo(() => title || 'Proposta', [title]);
+  const showConsent = analyticsEnabled && !consented;
 
   if (loading) {
     return <p className="p-8 text-zinc-400">A carregar…</p>;
@@ -59,6 +72,37 @@ export function PublicConversionPage() {
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
         <h1 className="sr-only">{heading}</h1>
+        {showConsent ? (
+          <div
+            className="rounded-control border border-zinc-700 bg-zinc-900 p-4 text-sm text-zinc-300"
+            role="dialog"
+            aria-label="Consentimento de métricas"
+          >
+            <p>{consentLabel}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  if (!slug) return;
+                  localStorage.setItem(`${CONSENT_KEY_PREFIX}${slug}`, '1');
+                  setConsented(true);
+                  void trackPublicEvent(slug, { type: 'page_view' });
+                }}
+              >
+                Aceitar métricas
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setConsented(true)}
+              >
+                Continuar sem métricas
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {success ? (
           <p className="rounded-lg bg-emerald-500/15 p-3 text-sm text-emerald-200" role="status">
             {success}
@@ -68,6 +112,7 @@ export function PublicConversionPage() {
           blocks={blocks}
           onTrack={(ctaType) => {
             if (!slug) return;
+            if (analyticsEnabled && !consented) return;
             void trackPublicEvent(slug, { type: 'cta_click', ctaType });
           }}
           onSubmitForm={async (payload) => {
