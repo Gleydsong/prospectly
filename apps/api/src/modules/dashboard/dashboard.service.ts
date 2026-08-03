@@ -28,7 +28,9 @@ export class DashboardService {
     const now = new Date();
     const staleBefore = new Date(Date.now() - 7 * 86_400_000);
     const activeStatuses = {
-      notIn: ['WON', 'LOST', 'ARCHIVED', 'DISQUALIFIED'] as const,
+      notIn: ['WON', 'LOST', 'ARCHIVED', 'DISQUALIFIED'] as Array<
+        'WON' | 'LOST' | 'ARCHIVED' | 'DISQUALIFIED'
+      >,
     };
 
     const [
