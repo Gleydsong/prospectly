@@ -479,9 +479,21 @@ export class CampaignsService {
       await this.assertMember(organizationId, dto.assigneeId);
     }
 
-    const leadFilter = dto.leadIds?.length
+    // Without explicit leadIds, include PENDING leads and leads already on this
+    // stage or an earlier stage. Matching only PENDING/currentStageId left later
+    // stages unreachable after the first "create tasks" advanced currentStageId.
+    const reachableStageIds = metrics.stages
+      .filter((candidate) => candidate.order <= stage.order)
+      .map((candidate) => candidate.id);
+    const leadFilter: Prisma.CampaignLeadWhereInput = dto.leadIds?.length
       ? { leadId: { in: dto.leadIds } }
-      : { OR: [{ status: 'PENDING' }, { currentStageId: stageId }] };
+      : {
+          OR: [
+            { status: 'PENDING' },
+            { currentStageId: null },
+            { currentStageId: { in: reachableStageIds } },
+          ],
+        };
 
     const campaignLeads = await this.prisma.campaignLead.findMany({
       where: { campaignId, ...leadFilter },

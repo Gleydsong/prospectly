@@ -88,6 +88,15 @@ const makeAudit = () =>
   }) as unknown as AuditService & { log: jest.Mock };
 
 const stageId = '11111111-1111-4111-8111-111111111111';
+const stageIdCall = '22222222-2222-4222-8222-222222222222';
+const emptyStageMetrics = {
+  delivered: 0,
+  replied: 0,
+  interested: 0,
+  meeting: 0,
+  proposal: 0,
+  won: 0,
+};
 const campaignWithStage = {
   id: 'c1',
   organizationId: 'org-a',
@@ -101,14 +110,14 @@ const campaignWithStage = {
         type: 'EMAIL_MANUAL',
         name: 'E-mail manual',
         order: 1,
-        metrics: {
-          delivered: 0,
-          replied: 0,
-          interested: 0,
-          meeting: 0,
-          proposal: 0,
-          won: 0,
-        },
+        metrics: emptyStageMetrics,
+      },
+      {
+        id: stageIdCall,
+        type: 'CALL',
+        name: 'Ligação',
+        order: 2,
+        metrics: emptyStageMetrics,
       },
     ],
   },
@@ -323,6 +332,55 @@ describe('CampaignsService', () => {
       service.createStageTasks('org-a', 'user-1', 'c1', stageId, {}),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.task.create).not.toHaveBeenCalled();
+  });
+
+  it('createStageTasks includes leads already advanced to an earlier stage', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
+    prisma.campaignLead.findMany.mockResolvedValue([
+      {
+        leadId: 'lead-1',
+        status: 'STAGE_EMAIL_MANUAL',
+        currentStageId: stageId,
+        lead: {
+          id: 'lead-1',
+          companyName: 'Acme',
+          organizationId: 'org-a',
+          doNotContact: false,
+          deletedAt: null,
+        },
+      },
+    ]);
+    prisma.task.findMany.mockResolvedValue([]);
+    prisma.task.create.mockResolvedValue({ id: 'task-call', leadId: 'lead-1' });
+    prisma.campaignLead.updateMany.mockResolvedValue({ count: 1 });
+    const service = new CampaignsService(prisma, makeTemplates(), audit);
+
+    const result = await service.createStageTasks('org-a', 'user-1', 'c1', stageIdCall, {});
+
+    expect(prisma.campaignLead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          campaignId: 'c1',
+          OR: [
+            { status: 'PENDING' },
+            { currentStageId: null },
+            { currentStageId: { in: [stageId, stageIdCall] } },
+          ],
+        },
+      }),
+    );
+    expect(result.tasksCreated).toBe(1);
+    expect(result.stageId).toBe(stageIdCall);
+    expect(prisma.campaignLead.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'STAGE_CALL', currentStageId: stageIdCall },
+      }),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'campaign.tasks_created' }),
+    );
   });
 
   it('recordResult persists activity, updates lead, and opts out when requested', async () => {
