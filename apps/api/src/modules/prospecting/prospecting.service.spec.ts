@@ -384,6 +384,14 @@ describe('ProspectingService', () => {
       skipped: 0,
       invalid: 0,
       conflicts: 0,
+      items: [
+        expect.objectContaining({
+          resultId: 'result-1',
+          status: 'IMPORTED',
+          leadId: 'lead-1',
+          companyName: 'Restaurante Bom',
+        }),
+      ],
     });
 
     expect(ingestion.ingest).toHaveBeenCalledWith(
@@ -483,6 +491,13 @@ describe('ProspectingService', () => {
       skipped: 1,
       invalid: 0,
       conflicts: 0,
+      items: [
+        expect.objectContaining({
+          resultId: 'result-1',
+          status: 'SKIPPED',
+          leadId: 'lead-existing',
+        }),
+      ],
     });
 
     expect(prisma.searchResult.updateMany).toHaveBeenCalledWith({
@@ -517,6 +532,14 @@ describe('ProspectingService', () => {
       skipped: 1,
       invalid: 0,
       conflicts: 0,
+      items: [
+        expect.objectContaining({
+          resultId: 'result-1',
+          status: 'SKIPPED',
+          leadId: 'lead-1',
+          companyName: 'Restaurante Bom',
+        }),
+      ],
     });
   });
 

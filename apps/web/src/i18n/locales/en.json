@@ -136,7 +136,44 @@
     "sourceTotal": "Total",
     "sourceWon": "Won",
     "sourceLost": "Lost",
-    "overdueTasks": "Overdue tasks"
+    "overdueTasks": "Overdue tasks",
+    "approachRate": "Approach rate",
+    "meetingRate": "Meeting rate",
+    "followUpRate": "Follow-up pressure",
+    "lossRate": "Loss rate",
+    "recommendations": "Next actions",
+    "recommendationsEmpty": "No recommendations right now.",
+    "rec": {
+      "HIGH_POTENTIAL_IDLE": "{{count}} high-potential lead(s) still in early stage.",
+      "STALE_LEADS": "{{count}} lead(s) with no activity for over seven days.",
+      "OVERDUE_FOLLOW_UPS": "{{count}} overdue follow-up(s).",
+      "FREE_SEARCH_QUOTA": "Free search quota: {{count}} remaining."
+    }
+  },
+  "opportunity": {
+    "level": {
+      "HIGH": "High potential",
+      "MEDIUM": "Medium potential",
+      "LOW": "Low potential"
+    },
+    "tag": {
+      "HIGH_POTENTIAL": "High potential",
+      "SITE_NOT_REPORTED": "Site not reported",
+      "NEW": "New",
+      "IN_CRM": "In CRM",
+      "HAS_CONTACT": "Contact available"
+    },
+    "explainAria": "Explain opportunity signal",
+    "explainTitle": "Why this signal?",
+    "reason": {
+      "website_not_reported_by_source": "Website not reported by the source",
+      "good_rating_and_volume": "Good rating and meaningful review volume",
+      "contact_available": "Contact details available",
+      "not_yet_in_crm": "Not yet worked in the CRM",
+      "already_in_crm": "Already in the CRM",
+      "website_reported_by_source": "Website reported by the source",
+      "needs_website_review": "Digital presence needs review"
+    }
   },
   "settings": {
     "title": "Settings",

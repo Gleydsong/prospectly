@@ -164,6 +164,18 @@ export interface DashboardSummary {
   won: number;
   lost: number;
   conversionRate: number;
+  lossRate?: number;
+  approachRate?: number;
+  meetingRate?: number;
+  followUpRate?: number;
+  rates?: {
+    approachRate: number;
+    meetingRate: number;
+    followUpRate: number;
+    conversionRate: number;
+    lossRate: number;
+    period: DashboardPeriod;
+  };
   overdueTasks: number;
   overdueFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
   upcomingFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
@@ -180,6 +192,12 @@ export interface DashboardSummary {
     won: number;
     lost: number;
     conversionRate: number;
+  }>;
+  recommendations?: Array<{
+    code: 'HIGH_POTENTIAL_IDLE' | 'STALE_LEADS' | 'OVERDUE_FOLLOW_UPS' | 'FREE_SEARCH_QUOTA';
+    count: number;
+    href: string;
+    severity: 'info' | 'warning' | 'action';
   }>;
   filters?: {
     period: '7d' | '30d' | '90d' | 'all';
@@ -356,6 +374,8 @@ export interface NormalizedBusiness {
   postalCode?: string;
   latitude?: number;
   longitude?: number;
+  rating?: number;
+  reviewCount?: number;
   source: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
   websitePresence: WebsitePresence;
 }
@@ -375,6 +395,12 @@ export interface SearchImportSummary {
   skipped: number;
   invalid: number;
   conflicts: number;
+  items?: Array<{
+    resultId: string;
+    status: 'IMPORTED' | 'SKIPPED' | 'INVALID' | 'CONFLICT';
+    leadId?: string;
+    companyName?: string;
+  }>;
 }
 
 export const CSV_IMPORT_FIELDS = [

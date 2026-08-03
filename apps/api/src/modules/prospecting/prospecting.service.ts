@@ -28,11 +28,21 @@ interface SearchResultForImport {
   normalizedData: Prisma.JsonValue;
 }
 
+export type SearchImportItemStatus = 'IMPORTED' | 'SKIPPED' | 'INVALID' | 'CONFLICT';
+
+export interface SearchImportItemResult {
+  resultId: string;
+  status: SearchImportItemStatus;
+  leadId?: string;
+  companyName?: string;
+}
+
 export interface SearchImportSummary {
   imported: number;
   skipped: number;
   invalid: number;
   conflicts: number;
+  items: SearchImportItemResult[];
 }
 
 @Injectable()
@@ -229,32 +239,69 @@ export class ProspectingService {
       throw new BadRequestException('One or more results do not belong to this search');
     }
 
-    const summary: SearchImportSummary = { imported: 0, skipped: 0, invalid: 0, conflicts: 0 };
+    const summary: SearchImportSummary = {
+      imported: 0,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
+    };
     for (const result of results) {
       if (result.importedLeadId) {
         summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
+          leadId: result.importedLeadId,
+        });
         continue;
       }
       const business = this.readNormalizedBusiness(result.normalizedData);
       if (!business) {
         summary.invalid += 1;
+        summary.items.push({ resultId: result.id, status: 'INVALID' });
         continue;
       }
+      const companyName = business.companyName;
       const outcome = await this.leadIngestion.ingest(organizationId, actorId, this.toLeadCandidate(business));
       if (outcome.status === 'IMPORTED') {
         const linked = await this.linkResultIfUnlinked(result.id, outcome.lead.id);
         if (linked) {
           summary.imported += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'IMPORTED',
+            leadId: outcome.lead.id,
+            companyName,
+          });
         } else {
           summary.skipped += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'SKIPPED',
+            leadId: outcome.lead.id,
+            companyName,
+          });
         }
       } else if (outcome.status === 'POSSIBLE_DUPLICATE') {
         summary.conflicts += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'CONFLICT',
+          leadId: outcome.lead?.id,
+          companyName,
+        });
       } else {
         if (outcome.lead) {
           await this.linkResultIfUnlinked(result.id, outcome.lead.id);
         }
         summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
+          leadId: outcome.lead?.id,
+          companyName,
+        });
       }
     }
     return summary;

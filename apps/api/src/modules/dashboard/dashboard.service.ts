@@ -2,7 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { FREE_SEARCH_LIMIT } from '../billing/billing.constants';
 import type { DashboardPeriod, QueryDashboardDto } from './dto/query-dashboard.dto';
+
+export type DashboardRecommendationCode =
+  | 'HIGH_POTENTIAL_IDLE'
+  | 'STALE_LEADS'
+  | 'OVERDUE_FOLLOW_UPS'
+  | 'FREE_SEARCH_QUOTA';
+
+export interface DashboardRecommendation {
+  code: DashboardRecommendationCode;
+  count: number;
+  href: string;
+  severity: 'info' | 'warning' | 'action';
+}
 
 @Injectable()
 export class DashboardService {
@@ -12,6 +26,10 @@ export class DashboardService {
     const baseWhere = this.buildLeadWhere(organizationId, query);
     const periodStart = periodStartDate(query.period);
     const now = new Date();
+    const staleBefore = new Date(Date.now() - 7 * 86_400_000);
+    const activeStatuses = {
+      notIn: ['WON', 'LOST', 'ARCHIVED', 'DISQUALIFIED'] as const,
+    };
 
     const [
       totalLeads,
@@ -27,6 +45,11 @@ export class DashboardService {
       upcomingFollowUps,
       topOpportunities,
       conversionBySourceRaw,
+      approached,
+      highPotentialIdle,
+      staleLeads,
+      searchCount,
+      org,
     ] = await this.prisma.$transaction([
       this.prisma.lead.count({ where: baseWhere }),
       this.prisma.lead.count({
@@ -79,10 +102,50 @@ export class DashboardService {
         _count: { _all: true },
         orderBy: { source: 'asc' },
       }),
+      this.prisma.lead.count({
+        where: {
+          ...baseWhere,
+          status: {
+            in: [
+              'CONTACTED',
+              'RESPONDED',
+              'MEETING_SCHEDULED',
+              'PROPOSAL_SENT',
+              'NEGOTIATION',
+              'WON',
+              'LOST',
+            ],
+          },
+        },
+      }),
+      this.prisma.lead.count({
+        where: {
+          ...baseWhere,
+          score: { gte: 70 },
+          status: { in: ['NEW', 'TO_REVIEW', 'QUALIFIED'] },
+        },
+      }),
+      this.prisma.lead.count({
+        where: {
+          ...baseWhere,
+          status: activeStatuses,
+          updatedAt: { lt: staleBefore },
+        },
+      }),
+      this.prisma.search.count({ where: { organizationId } }),
+      this.prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { plan: true, planStatus: true },
+      }),
     ]);
 
     const closed = won + lost;
     const conversionRate = closed > 0 ? Math.round((won / closed) * 1000) / 10 : 0;
+    const lossRate = closed > 0 ? Math.round((lost / closed) * 1000) / 10 : 0;
+    const approachRate = totalLeads > 0 ? Math.round((approached / totalLeads) * 1000) / 10 : 0;
+    const meetingRate = approached > 0 ? Math.round((meetings / approached) * 1000) / 10 : 0;
+    const followUpRate =
+      totalLeads > 0 ? Math.round((overdueFollowUps.length / totalLeads) * 1000) / 10 : 0;
 
     const bySource = new Map<string, { source: string; total: number; won: number; lost: number }>();
     for (const row of conversionBySourceRaw) {
@@ -111,6 +174,14 @@ export class DashboardService {
       };
     });
 
+    const recommendations = this.buildRecommendations({
+      highPotentialIdle,
+      staleLeads,
+      overdueFollowUps: overdueFollowUps.length,
+      searchCount,
+      planStatus: org?.planStatus ?? 'INACTIVE',
+    });
+
     return {
       totalLeads,
       newLeads,
@@ -121,11 +192,29 @@ export class DashboardService {
       won,
       lost,
       conversionRate,
+      lossRate,
+      approachRate,
+      meetingRate,
+      followUpRate,
+      rates: {
+        /** approached / totalLeads — status in CONTACTED..LOST */
+        approachRate,
+        /** meetings / approached — MEETING_SCHEDULED / approached */
+        meetingRate,
+        /** overdueFollowUps (sample size up to 10) / totalLeads — proxy for follow-up pressure */
+        followUpRate,
+        /** won / (won + lost) */
+        conversionRate,
+        /** lost / (won + lost) */
+        lossRate,
+        period: query.period ?? '30d',
+      },
       overdueTasks,
       overdueFollowUps,
       upcomingFollowUps,
       topOpportunities,
       conversionBySource,
+      recommendations,
       filters: {
         period: query.period ?? '30d',
         source: query.source ?? null,
@@ -185,6 +274,54 @@ export class DashboardService {
       bySource: bySource.map((row) => ({ source: row.source, count: row._count })),
       byScore: scoreBuckets.map((row) => ({ bucket: row.bucket, count: Number(row.count) })),
     };
+  }
+
+  private buildRecommendations(input: {
+    highPotentialIdle: number;
+    staleLeads: number;
+    overdueFollowUps: number;
+    searchCount: number;
+    planStatus: string;
+  }): DashboardRecommendation[] {
+    const items: DashboardRecommendation[] = [];
+
+    if (input.highPotentialIdle > 0) {
+      items.push({
+        code: 'HIGH_POTENTIAL_IDLE',
+        count: input.highPotentialIdle,
+        href: '/leads?status=QUALIFIED',
+        severity: 'action',
+      });
+    }
+
+    if (input.staleLeads > 0) {
+      items.push({
+        code: 'STALE_LEADS',
+        count: input.staleLeads,
+        href: '/pipeline',
+        severity: 'warning',
+      });
+    }
+
+    if (input.overdueFollowUps > 0) {
+      items.push({
+        code: 'OVERDUE_FOLLOW_UPS',
+        count: input.overdueFollowUps,
+        href: '/tasks',
+        severity: 'warning',
+      });
+    }
+
+    if (input.planStatus !== 'ACTIVE' && input.searchCount >= FREE_SEARCH_LIMIT - 1) {
+      items.push({
+        code: 'FREE_SEARCH_QUOTA',
+        count: Math.max(0, FREE_SEARCH_LIMIT - input.searchCount),
+        href: '/settings',
+        severity: input.searchCount >= FREE_SEARCH_LIMIT ? 'warning' : 'info',
+      });
+    }
+
+    return items;
   }
 
   private buildLeadWhere(organizationId: string, query: QueryDashboardDto): Prisma.LeadWhereInput {

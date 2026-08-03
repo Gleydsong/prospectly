@@ -23,6 +23,10 @@ import {
   useSearchProviders,
   useSearchResults,
 } from '@/features/prospecting/hooks';
+import {
+  computeResultOpportunitySignal,
+  OpportunitySignalBadges,
+} from '@/features/prospecting/opportunity-signal';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import {
@@ -114,10 +118,30 @@ function websiteTone(status: WebsitePresence): 'amber' | 'green' | 'slate' {
 
 function ImportSummary({ summary }: { summary: SearchImportSummary }) {
   return (
-    <p className="rounded-lg bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
-      Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s), {summary.invalid}{' '}
-      inválido(s) e {summary.conflicts} possível(is) duplicado(s).
-    </p>
+    <div className="space-y-2 rounded-lg bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
+      <p>
+        Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s), {summary.invalid}{' '}
+        inválido(s) e {summary.conflicts} possível(is) duplicado(s).
+      </p>
+      {summary.items && summary.items.length > 0 ? (
+        <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-brand-100/90">
+          {summary.items.map((item) => (
+            <li key={item.resultId}>
+              {item.companyName ?? item.resultId}: {item.status}
+              {item.leadId ? (
+                <>
+                  {' '}
+                  —{' '}
+                  <a className="underline hover:text-white" href={`/leads/${item.leadId}`}>
+                    ver lead
+                  </a>
+                </>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -470,6 +494,7 @@ export function SearchPage() {
                   {results.map((result) => {
                     const business = result.normalizedData ?? result.data;
                     const imported = Boolean(result.importedLeadId);
+                    const signal = computeResultOpportunitySignal(result.websitePresence, business, imported);
                     return (
                       <li key={result.id} className="flex gap-3 px-3 py-3">
                         <input
@@ -480,7 +505,7 @@ export function SearchPage() {
                           disabled={imported || !canImport}
                           className="mt-1 h-5 w-5 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                         />
-                        <div className="min-w-0 flex-1 space-y-1">
+                        <div className="min-w-0 flex-1 space-y-2">
                           <p className="font-medium text-zinc-50">
                             {business.companyName}
                             {imported ? (
@@ -488,11 +513,18 @@ export function SearchPage() {
                             ) : null}
                           </p>
                           <p className="text-xs text-zinc-400">
-                            {[business.phone, business.city].filter(Boolean).join(' · ') || '—'}
+                            {[business.category, business.phone, business.city].filter(Boolean).join(' · ') || '—'}
                           </p>
+                          {(business.rating != null || business.reviewCount != null) && (
+                            <p className="text-xs text-zinc-500">
+                              {business.rating != null ? `${business.rating}★` : '—'}
+                              {business.reviewCount != null ? ` · ${business.reviewCount} avaliações` : ''}
+                            </p>
+                          )}
                           <Badge tone={websiteTone(result.websitePresence)}>
                             {WEBSITE_LABEL[result.websitePresence]}
                           </Badge>
+                          <OpportunitySignalBadges signal={signal} />
                         </div>
                       </li>
                     );
@@ -500,7 +532,7 @@ export function SearchPage() {
                 </ul>
 
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[880px] text-left text-sm">
+                  <table className="w-full min-w-[1080px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
                         <th scope="col" className="w-12 px-3 py-3">
@@ -515,15 +547,17 @@ export function SearchPage() {
                         </th>
                         <th scope="col" className="px-3 py-3 font-medium">Empresa</th>
                         <th scope="col" className="px-3 py-3 font-medium">Telefone</th>
-                        <th scope="col" className="px-3 py-3 font-medium">Endereço</th>
-                        <th scope="col" className="px-3 py-3 font-medium">Categoria</th>
+                        <th scope="col" className="px-3 py-3 font-medium">Localização</th>
+                        <th scope="col" className="px-3 py-3 font-medium">Avaliação</th>
                         <th scope="col" className="px-3 py-3 font-medium">Website</th>
+                        <th scope="col" className="px-3 py-3 font-medium">Oportunidade</th>
                       </tr>
                     </thead>
                     <tbody>
                       {results.map((result) => {
                         const business = result.normalizedData ?? result.data;
                         const imported = Boolean(result.importedLeadId);
+                        const signal = computeResultOpportunitySignal(result.websitePresence, business, imported);
                         return (
                           <tr key={result.id} className="border-b border-zinc-800">
                             <td className="px-3 py-3">
@@ -537,11 +571,23 @@ export function SearchPage() {
                                 className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
                               />
                             </td>
-                            <td className="px-3 py-3 font-medium text-zinc-50">{business.companyName}{imported ? <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span> : null}</td>
+                            <td className="px-3 py-3">
+                              <p className="font-medium text-zinc-50">
+                                {business.companyName}
+                                {imported ? <span className="ml-2 text-xs font-normal text-zinc-500">Importado</span> : null}
+                              </p>
+                              <p className="text-xs text-zinc-500">{business.category ?? '—'}</p>
+                            </td>
                             <td className="px-3 py-3 text-zinc-300">{business.phone ?? '—'}</td>
                             <td className="px-3 py-3 text-zinc-300">{business.address ?? `${business.city}/${business.state}`}</td>
-                            <td className="px-3 py-3 text-zinc-300">{business.category ?? '—'}</td>
+                            <td className="px-3 py-3 text-zinc-300">
+                              {business.rating != null ? `${business.rating}★` : '—'}
+                              {business.reviewCount != null ? (
+                                <span className="block text-xs text-zinc-500">{business.reviewCount} av.</span>
+                              ) : null}
+                            </td>
                             <td className="px-3 py-3"><Badge tone={websiteTone(result.websitePresence)}>{WEBSITE_LABEL[result.websitePresence]}</Badge></td>
+                            <td className="px-3 py-3"><OpportunitySignalBadges signal={signal} /></td>
                           </tr>
                         );
                       })}
