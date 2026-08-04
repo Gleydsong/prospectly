@@ -110,10 +110,10 @@ export function sanitizeLandingHtml(raw: string): string {
         continue;
       }
       if (lower === 'action') {
-        const action = (attribs[name] ?? '').trim();
-        if (action && !isSafeHref(action) && action !== '#') {
-          $(element).removeAttr(name);
-        }
+        // Never allow form posts to arbitrary endpoints (phishing / data exfil).
+        // The public page host captures submissions via postMessage bridge.
+        $(element).removeAttr(name);
+        continue;
       }
     }
 

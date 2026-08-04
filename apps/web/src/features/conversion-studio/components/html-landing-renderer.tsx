@@ -7,52 +7,79 @@ type HtmlLandingRendererProps = {
   title?: string;
   className?: string;
   minHeight?: number;
+  onFormSubmit?: (payload: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    message?: string;
+    companyWebsite?: string;
+  }) => void | Promise<void>;
 };
 
+const BRIDGE_SOURCE = 'prospectly-landing';
+
 /**
- * Isolates AI-generated HTML in a sandboxed iframe (no scripts).
- * HTML must already be sanitized by the API.
+ * Isolates AI-generated HTML in a sandboxed iframe.
+ * Scripts from page HTML are stripped by the API; we inject a tiny bridge for
+ * form capture + height sync. `allow-same-origin` is intentionally omitted so
+ * injected scripts cannot touch the parent origin.
  */
 export function HtmlLandingRenderer({
   html,
   title = 'Landing',
   className,
   minHeight = 720,
+  onFormSubmit,
 }: HtmlLandingRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(minHeight);
+  const onFormSubmitRef = useRef(onFormSubmit);
+  onFormSubmitRef.current = onFormSubmit;
 
   const srcDoc = useMemo(() => {
     const trimmed = html.trim();
     if (!trimmed) return '';
+    const bridge = buildBridgeScript();
     if (/<!DOCTYPE html>/i.test(trimmed) || /<html[\s>]/i.test(trimmed)) {
-      return trimmed;
+      if (/<\/body>/i.test(trimmed)) {
+        return trimmed.replace(/<\/body>/i, `${bridge}</body>`);
+      }
+      return `${trimmed}${bridge}`;
     }
-    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${escapeAttr(title)}</title></head><body>${trimmed}</body></html>`;
+    return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${escapeAttr(title)}</title></head><body>${trimmed}${bridge}</body></html>`;
   }, [html, title]);
 
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as
+        | {
+            source?: string;
+            type?: string;
+            height?: number;
+            payload?: Record<string, string>;
+          }
+        | null;
+      if (!data || data.source !== BRIDGE_SOURCE) return;
+      if (iframeRef.current && event.source !== iframeRef.current.contentWindow) return;
 
-    const syncHeight = () => {
-      try {
-        const doc = iframe.contentDocument;
-        const body = doc?.body;
-        const next = Math.max(minHeight, body?.scrollHeight ?? minHeight);
-        setHeight(next);
-      } catch {
-        setHeight(minHeight);
+      if (data.type === 'resize' && typeof data.height === 'number') {
+        setHeight(Math.max(minHeight, Math.ceil(data.height)));
+        return;
+      }
+      if (data.type === 'form_submit' && data.payload && onFormSubmitRef.current) {
+        const payload = data.payload;
+        void onFormSubmitRef.current({
+          name: payload.name || undefined,
+          email: payload.email || undefined,
+          phone: payload.phone || undefined,
+          message: payload.message || undefined,
+          companyWebsite: payload.companyWebsite || undefined,
+        });
       }
     };
-
-    iframe.addEventListener('load', syncHeight);
-    const timer = window.setInterval(syncHeight, 800);
-    return () => {
-      iframe.removeEventListener('load', syncHeight);
-      window.clearInterval(timer);
-    };
-  }, [srcDoc, minHeight]);
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [minHeight, srcDoc]);
 
   if (!srcDoc) {
     return (
@@ -67,12 +94,39 @@ export function HtmlLandingRenderer({
       ref={iframeRef}
       title={title}
       srcDoc={srcDoc}
-      sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin"
+      sandbox="allow-forms allow-scripts allow-popups allow-popups-to-escape-sandbox"
       referrerPolicy="no-referrer"
       className={cn('w-full overflow-hidden rounded-control border border-zinc-800 bg-white', className)}
       style={{ height, minHeight }}
     />
   );
+}
+
+function buildBridgeScript(): string {
+  // Keep this self-contained; no template interpolation of user data.
+  return `<script>(function(){
+var SOURCE=${JSON.stringify(BRIDGE_SOURCE)};
+function post(msg){try{parent.postMessage(Object.assign({source:SOURCE},msg),'*');}catch(e){}}
+function sendHeight(){
+  var h=Math.max(document.documentElement?document.documentElement.scrollHeight:0,document.body?document.body.scrollHeight:0);
+  post({type:'resize',height:h});
+}
+document.addEventListener('submit',function(ev){
+  var form=ev.target;
+  if(!form||form.tagName!=='FORM')return;
+  ev.preventDefault();
+  var payload={};
+  try{
+    var fd=new FormData(form);
+    fd.forEach(function(value,key){payload[String(key)]=String(value);});
+  }catch(e){}
+  post({type:'form_submit',payload:payload});
+},true);
+if(document.readyState==='complete')sendHeight();
+else window.addEventListener('load',sendHeight);
+window.addEventListener('resize',sendHeight);
+setInterval(sendHeight,1000);
+})();</script>`;
 }
 
 function escapeAttr(value: string): string {

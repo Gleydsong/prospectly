@@ -113,7 +113,15 @@ export function PublicConversionPage() {
           </p>
         ) : null}
         {hasHtml ? (
-          <HtmlLandingRenderer html={html} title={heading} />
+          <HtmlLandingRenderer
+            html={html}
+            title={heading}
+            onFormSubmit={async (payload) => {
+              if (!slug) return;
+              const result = await submitPublicForm(slug, payload);
+              setSuccess(result.message ?? 'Recebemos o seu contacto.');
+            }}
+          />
         ) : (
           <PageBlocksRenderer
             blocks={blocks}
