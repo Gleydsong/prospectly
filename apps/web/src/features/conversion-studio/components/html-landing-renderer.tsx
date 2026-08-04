@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,7 @@ export function HtmlLandingRenderer({
 }: HtmlLandingRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(minHeight);
+  const reduceMotion = useReducedMotion();
 
   const srcDoc = useMemo(() => {
     const trimmed = html.trim();
@@ -35,22 +37,51 @@ export function HtmlLandingRenderer({
     const iframe = iframeRef.current;
     if (!iframe) return;
 
+    let observer: ResizeObserver | undefined;
+    let removeImageListeners: (() => void) | undefined;
     const syncHeight = () => {
       try {
         const doc = iframe.contentDocument;
         const body = doc?.body;
-        const next = Math.max(minHeight, body?.scrollHeight ?? minHeight);
+        const root = doc?.documentElement;
+        const next = Math.max(
+          minHeight,
+          body?.scrollHeight ?? 0,
+          body?.offsetHeight ?? 0,
+          root?.scrollHeight ?? 0,
+          root?.offsetHeight ?? 0,
+        );
         setHeight(next);
       } catch {
         setHeight(minHeight);
       }
     };
 
-    iframe.addEventListener('load', syncHeight);
-    const timer = window.setInterval(syncHeight, 800);
+    const observeContentHeight = () => {
+      syncHeight();
+      const doc = iframe.contentDocument;
+      const documentElement = doc?.documentElement;
+      const body = doc?.body;
+      if (!documentElement || !body) return;
+
+      const images = Array.from(doc.images);
+      images.forEach((image) => image.addEventListener('load', syncHeight));
+      removeImageListeners = () => {
+        images.forEach((image) => image.removeEventListener('load', syncHeight));
+      };
+
+      if (typeof ResizeObserver === 'undefined') return;
+      observer?.disconnect();
+      observer = new ResizeObserver(syncHeight);
+      observer.observe(documentElement);
+      observer.observe(body);
+    };
+
+    iframe.addEventListener('load', observeContentHeight);
     return () => {
-      iframe.removeEventListener('load', syncHeight);
-      window.clearInterval(timer);
+      iframe.removeEventListener('load', observeContentHeight);
+      observer?.disconnect();
+      removeImageListeners?.();
     };
   }, [srcDoc, minHeight]);
 
@@ -63,7 +94,7 @@ export function HtmlLandingRenderer({
   }
 
   return (
-    <iframe
+    <motion.iframe
       ref={iframeRef}
       title={title}
       srcDoc={srcDoc}
@@ -71,6 +102,9 @@ export function HtmlLandingRenderer({
       referrerPolicy="no-referrer"
       className={cn('w-full overflow-hidden rounded-control border border-zinc-800 bg-white', className)}
       style={{ height, minHeight }}
+      initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.2, 0, 0, 1] }}
     />
   );
 }
