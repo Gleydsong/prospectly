@@ -2,10 +2,30 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+type Surface = 'default' | 'elevated' | 'bento' | 'accent';
+
+const surfaces: Record<Surface, string> = {
+  default: 'rounded-panel border-white/10 bg-zinc-900 shadow-panel',
+  elevated: 'rounded-panel border-white/[0.12] bg-zinc-800 shadow-elevated',
+  bento: 'rounded-bento border-white/10 bg-zinc-900 bg-surface-sheen shadow-elevated',
+  accent: 'rounded-bento border-brand-500/25 bg-zinc-900 bg-accent-sheen shadow-elevated',
+};
+
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  surface?: Surface;
+  /** Realce discreto no hover. Use apenas em cards clicáveis. */
+  interactive?: boolean;
+}
+
+export function Card({ className, surface = 'default', interactive, ...props }: CardProps) {
   return (
     <div
-      className={cn('rounded-control border border-zinc-800 bg-zinc-900 shadow-soft', className)}
+      className={cn(
+        'border transition-colors',
+        surfaces[surface],
+        interactive && 'hover:border-white/20 hover:bg-zinc-800/60',
+        className,
+      )}
       {...props}
     />
   );
@@ -23,7 +43,12 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn('flex flex-col gap-3 border-b border-zinc-800 p-5 sm:flex-row sm:items-start sm:justify-between', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-3 border-b border-white/[0.08] p-5 sm:flex-row sm:items-start sm:justify-between',
+        className,
+      )}
+    >
       <div className="min-w-0">
         <h3 className="text-base font-semibold tracking-tight text-zinc-50">{title}</h3>
         {description ? <p className="mt-0.5 text-sm text-zinc-400">{description}</p> : null}

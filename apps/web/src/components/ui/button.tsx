@@ -7,10 +7,11 @@ type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
 type Size = 'sm' | 'md' | 'lg';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-500 disabled:bg-brand-900',
-  secondary: 'bg-zinc-800 text-zinc-50 hover:bg-zinc-700',
-  ghost: 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50',
-  outline: 'border border-zinc-700 bg-zinc-900 text-zinc-200 hover:bg-zinc-800',
+  primary:
+    'bg-brand-600 text-white shadow-[0_10px_30px_-12px_rgb(37_99_235_/_0.9)] hover:bg-brand-500 disabled:bg-brand-900 disabled:shadow-none',
+  secondary: 'border border-white/10 bg-white/[0.06] text-zinc-50 hover:bg-white/[0.1]',
+  ghost: 'text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-50',
+  outline: 'border border-white/[0.12] bg-transparent text-zinc-200 hover:bg-white/[0.06]',
   danger: 'bg-red-600 text-white hover:bg-red-500',
 };
 
@@ -31,10 +32,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors active:scale-[0.98]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/40 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+        'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         sizes[size],
         className,
