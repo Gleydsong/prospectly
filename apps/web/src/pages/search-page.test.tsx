@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PropsWithChildren } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SearchPage } from './search-page';
@@ -14,8 +15,10 @@ const mocks = vi.hoisted(() => ({
   useSearch: vi.fn(),
   useSearchResults: vi.fn(),
   useSearchProviders: vi.fn(),
+  useProspectingCategories: vi.fn(),
   useGeoRegions: vi.fn(),
   useGeoCities: vi.fn(),
+  useBillingStatus: vi.fn(),
 }));
 
 vi.mock('@/features/prospecting/hooks', () => ({
@@ -23,6 +26,7 @@ vi.mock('@/features/prospecting/hooks', () => ({
   useSearch: mocks.useSearch,
   useSearchResults: mocks.useSearchResults,
   useSearchProviders: mocks.useSearchProviders,
+  useProspectingCategories: mocks.useProspectingCategories,
   useGeoRegions: mocks.useGeoRegions,
   useGeoCities: mocks.useGeoCities,
   useCreateSearch: () => ({ mutateAsync: mocks.createSearch, isPending: false }),
@@ -34,12 +38,50 @@ vi.mock('@/features/prospecting/hooks', () => ({
   useImportSearchResults: () => ({ mutateAsync: mocks.importResults, isPending: false }),
 }));
 
+vi.mock('@/features/billing/hooks', () => ({
+  BILLING_STATUS_QUERY_KEY: ['billing', 'status'],
+  useBillingStatus: mocks.useBillingStatus,
+}));
+
 function Wrapper({ children }: PropsWithChildren) {
-  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
 }
 
 function renderPage() {
   return render(<SearchPage />, { wrapper: Wrapper });
+}
+
+function processingSearch(status: 'PROCESSING' | 'FAILED' | 'COMPLETED' = 'PROCESSING') {
+  return {
+    data: {
+      data: [
+        {
+          id: 'search-1',
+          provider: 'OPENSTREETMAP',
+          input: {
+            categories: ['restaurant'],
+            category: 'restaurant',
+            city: 'São Paulo',
+            state: 'SP',
+            country: 'BR',
+            onlyWithoutWebsite: true,
+          },
+          status,
+          error: status === 'FAILED' ? 'falhou' : undefined,
+          createdAt: '2026-07-22T10:00:00.000Z',
+          completedAt: null,
+        },
+      ],
+      meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  };
 }
 
 describe('SearchPage', () => {
@@ -50,6 +92,29 @@ describe('SearchPage', () => {
         { id: 'OPENSTREETMAP', label: 'OpenStreetMap', available: true },
         { id: 'GOOGLE_PLACES', label: 'Google Places', available: true },
       ],
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useProspectingCategories.mockReturnValue({
+      data: {
+        plan: 'FREE',
+        requiredPlan: 'STARTER_MONTHLY',
+        total: 3,
+        availableCount: 2,
+        categories: [
+          { value: 'restaurant', label: 'Restaurante', available: true },
+          { value: 'bakery', label: 'Padaria', available: true },
+          { value: 'lawyer', label: 'Advocacia', available: false },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useBillingStatus.mockReturnValue({
+      data: {
+        plan: 'FREE',
+        searchUsage: { used: 2, limit: 3, remaining: 1, unlimited: false },
+      },
       isLoading: false,
       isError: false,
     });
@@ -91,16 +156,16 @@ describe('SearchPage', () => {
     });
   });
 
-  it('requires category, region and city before submitting', async () => {
+  it('requires niche, region and city before submitting', async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
-    expect(await screen.findByText('Selecione pelo menos uma categoria')).toBeInTheDocument();
+    expect(await screen.findByText('Selecione pelo menos um nicho')).toBeInTheDocument();
     expect(mocks.createSearch).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(await screen.findByText('Selecione uma região')).toBeInTheDocument();
@@ -108,46 +173,73 @@ describe('SearchPage', () => {
     expect(mocks.createSearch).not.toHaveBeenCalled();
   });
 
-  it('keeps the no-website filter enabled by default and submits multiple categories', async () => {
+  it('shows the plan search quota and locked niches', () => {
+    renderPage();
+
+    expect(screen.getByText('2 / 3 buscas')).toBeInTheDocument();
+    expect(screen.getByText('2 de 3 nichos disponíveis no plano Gratuito')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Advocacia/ })).toBeDisabled();
+  });
+
+  it('submits multiple niches with neighborhood and requested volume', async () => {
     const user = userEvent.setup();
     mocks.createSearch.mockResolvedValue({ id: 'search-1' });
     renderPage();
 
-    expect(screen.getByRole('checkbox', { name: 'Somente empresas sem site informado' })).toBeChecked();
-    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Padaria' }));
+    expect(
+      screen.getByRole('checkbox', { name: 'Somente empresas sem site informado' }),
+    ).not.toBeChecked();
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'bakery');
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
+    await user.type(screen.getByLabelText('Bairro (opcional)'), 'Pinheiros');
+    await user.click(screen.getByRole('button', { name: '40' }));
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
       categories: ['restaurant', 'bakery'],
       city: 'São Paulo',
+      neighborhood: 'Pinheiros',
       state: 'SP',
       country: 'BR',
       provider: 'OPENSTREETMAP',
-      onlyWithoutWebsite: true,
+      onlyWithoutWebsite: false,
+      limit: 40,
     });
   });
 
-  it('shows country in search history labels', async () => {
+  it('removes a selected niche from the search', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
+    expect(screen.getByRole('button', { name: 'Remover Restaurante' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remover Restaurante' }));
+    expect(screen.queryByRole('button', { name: 'Remover Restaurante' })).not.toBeInTheDocument();
+  });
+
+  it('shows country in search history labels', () => {
     mocks.useSearches.mockReturnValue({
       data: {
-        data: [{
-          id: 'search-pt',
-          provider: 'OPENSTREETMAP',
-          input: {
-            category: 'restaurant',
-            city: 'Lisbon',
-            state: 'Lisbon',
-            country: 'PT',
-            onlyWithoutWebsite: true,
+        data: [
+          {
+            id: 'search-pt',
+            provider: 'OPENSTREETMAP',
+            input: {
+              category: 'restaurant',
+              city: 'Lisbon',
+              state: 'Lisbon',
+              country: 'PT',
+              onlyWithoutWebsite: true,
+            },
+            status: 'COMPLETED',
+            error: null,
+            createdAt: '2026-07-22T10:00:00.000Z',
+            completedAt: '2026-07-22T10:01:00.000Z',
           },
-          status: 'COMPLETED',
-          error: null,
-          createdAt: '2026-07-22T10:00:00.000Z',
-          completedAt: '2026-07-22T10:01:00.000Z',
-        }],
+        ],
         meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
       },
       isLoading: false,
@@ -170,7 +262,7 @@ describe('SearchPage', () => {
     expect(screen.getByLabelText('Região')).toBeInTheDocument();
     expect(screen.getByLabelText('Cidade')).toBeDisabled();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.selectOptions(screen.getByLabelText('Região'), '11');
     expect(screen.getByLabelText('Cidade')).not.toBeDisabled();
     await user.selectOptions(screen.getByLabelText('Cidade'), 'Lisbon');
@@ -182,7 +274,8 @@ describe('SearchPage', () => {
       state: 'Lisbon',
       country: 'PT',
       provider: 'OPENSTREETMAP',
-      onlyWithoutWebsite: true,
+      onlyWithoutWebsite: false,
+      limit: 20,
     });
   });
 
@@ -191,7 +284,7 @@ describe('SearchPage', () => {
     mocks.createSearch.mockRejectedValue(new Error('offline'));
     renderPage();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Restaurante' }));
+    await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
@@ -203,28 +296,14 @@ describe('SearchPage', () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     mocks.deleteSearch.mockResolvedValue(undefined);
-    mocks.useSearches.mockReturnValue({
-      data: {
-        data: [{
-          id: 'search-1',
-          provider: 'OPENSTREETMAP',
-          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
-          status: 'FAILED',
-          error: 'falhou',
-          createdAt: '2026-07-22T10:00:00.000Z',
-          completedAt: null,
-        }],
-        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+    mocks.useSearches.mockReturnValue(processingSearch('FAILED'));
     renderPage();
 
     await user.click(screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Leads já importados permanecem'));
+    expect(confirmSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Leads já importados permanecem'),
+    );
     expect(mocks.deleteSearch).toHaveBeenCalledWith('search-1');
     confirmSpy.mockRestore();
   });
@@ -241,32 +320,19 @@ describe('SearchPage', () => {
     });
     renderPage();
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o histórico de pesquisas.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar o histórico de pesquisas.',
+    );
     expect(screen.queryByText('Nenhuma pesquisa')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(refetch).toHaveBeenCalledOnce();
   });
 
-  it('shows a retriable error instead of an empty result table when result loading fails', async () => {
+  it('shows a retriable error instead of an empty result grid when result loading fails', async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
-    mocks.useSearches.mockReturnValue({
-      data: {
-        data: [{
-          id: 'search-1',
-          provider: 'OPENSTREETMAP',
-          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
-          status: 'PROCESSING',
-          createdAt: '2026-07-22T10:00:00.000Z',
-          completedAt: null,
-        }],
-        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+    mocks.useSearches.mockReturnValue(processingSearch());
     mocks.useSearch.mockReturnValue({ data: undefined });
     mocks.useSearchResults.mockReturnValue({
       data: undefined,
@@ -287,40 +353,37 @@ describe('SearchPage', () => {
     expect(refetch).toHaveBeenCalledOnce();
   });
 
-  it('shows OpenStreetMap attribution and blocks imports until processing completes', async () => {
+  it('shows OpenStreetMap attribution and blocks CRM sending until processing completes', async () => {
     const user = userEvent.setup();
-    mocks.useSearches.mockReturnValue({
-      data: {
-        data: [{
-          id: 'search-1',
-          provider: 'OPENSTREETMAP',
-          input: { categories: ['restaurant'], category: 'restaurant', city: 'São Paulo', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
-          status: 'PROCESSING',
-          createdAt: '2026-07-22T10:00:00.000Z',
-          completedAt: null,
-        }],
-        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-      },
-      isLoading: false,
-      isError: false,
-      refetch: vi.fn(),
-    });
+    mocks.useSearches.mockReturnValue(processingSearch());
     mocks.useSearchResults.mockReturnValue({
       data: {
-        data: [{
-          id: 'result-1',
-          data: {
-            externalId: 'node/1', companyName: 'Empresa em processamento', city: 'São Paulo', state: 'SP',
-            country: 'BR', source: 'OPENSTREETMAP', websitePresence: 'NO_WEBSITE_REPORTED',
+        data: [
+          {
+            id: 'result-1',
+            data: {
+              externalId: 'node/1',
+              companyName: 'Empresa em processamento',
+              city: 'São Paulo',
+              state: 'SP',
+              country: 'BR',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            normalizedData: {
+              externalId: 'node/1',
+              companyName: 'Empresa em processamento',
+              city: 'São Paulo',
+              state: 'SP',
+              country: 'BR',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            websitePresence: 'NO_WEBSITE_REPORTED',
+            importedLeadId: null,
+            createdAt: '2026-07-22T10:00:00.000Z',
           },
-          normalizedData: {
-            externalId: 'node/1', companyName: 'Empresa em processamento', city: 'São Paulo', state: 'SP',
-            country: 'BR', source: 'OPENSTREETMAP', websitePresence: 'NO_WEBSITE_REPORTED',
-          },
-          websitePresence: 'NO_WEBSITE_REPORTED',
-          importedLeadId: null,
-          createdAt: '2026-07-22T10:00:00.000Z',
-        }],
+        ],
         meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
       },
       isLoading: false,
@@ -334,14 +397,71 @@ describe('SearchPage', () => {
 
     const attribution = screen.getByRole('link', { name: 'colaboradores do OpenStreetMap' });
     expect(attribution).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright');
-    // Mobile list + desktop table both render when CSS is disabled in jsdom.
-    const selectBoxes = screen.getAllByRole('checkbox', {
-      name: 'Selecionar Empresa em processamento',
+    expect(
+      screen.getByRole('checkbox', { name: 'Selecionar Empresa em processamento' }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (0)' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Enviar para CRM' })[0]).toBeDisabled();
+  });
+
+  it('sends a single result to the CRM from its card', async () => {
+    const user = userEvent.setup();
+    mocks.importResults.mockResolvedValue({
+      imported: 1,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
     });
-    expect(selectBoxes.length).toBeGreaterThanOrEqual(1);
-    for (const box of selectBoxes) {
-      expect(box).toBeDisabled();
-    }
-    expect(screen.getByRole('button', { name: 'Importar selecionados (0)' })).toBeDisabled();
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    mocks.useSearchResults.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'result-1',
+            data: {
+              externalId: 'node/1',
+              companyName: 'Barbearia Nacuca',
+              city: 'Olinda',
+              state: 'PE',
+              country: 'BR',
+              phone: '(81) 99863-9994',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            normalizedData: {
+              externalId: 'node/1',
+              companyName: 'Barbearia Nacuca',
+              city: 'Olinda',
+              state: 'PE',
+              country: 'BR',
+              phone: '(81) 99863-9994',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            websitePresence: 'NO_WEBSITE_REPORTED',
+            importedLeadId: null,
+            createdAt: '2026-07-22T10:00:00.000Z',
+          },
+        ],
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    expect(screen.getByText('Sem site')).toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: 'Enviar para CRM' })[0]!);
+
+    expect(mocks.importResults).toHaveBeenCalledWith({
+      searchId: 'search-1',
+      resultIds: ['result-1'],
+    });
   });
 });

@@ -77,6 +77,62 @@ describe('GooglePlacesProvider', () => {
     ]);
   });
 
+  it('returns places with and without website when onlyWithoutWebsite is false', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        places: [
+          {
+            id: 'ChIJ1',
+            displayName: { text: 'Padaria Sem Site' },
+            addressComponents: [
+              { longText: 'São Paulo', types: ['locality'] },
+              { shortText: 'SP', types: ['administrative_area_level_1'] },
+            ],
+          },
+          {
+            id: 'ChIJ2',
+            displayName: { text: 'Padaria Com Site' },
+            websiteUri: 'https://padaria.example',
+            addressComponents: [
+              { longText: 'São Paulo', types: ['locality'] },
+              { shortText: 'SP', types: ['administrative_area_level_1'] },
+            ],
+          },
+        ],
+      }),
+    );
+
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    const results = await provider.search({
+      category: 'bakery',
+      city: 'São Paulo',
+      state: 'SP',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+    });
+
+    expect(results).toHaveLength(2);
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          companyName: 'Padaria Sem Site',
+          websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+        }),
+        expect.objectContaining({
+          companyName: 'Padaria Com Site',
+          websitePresence: WebsitePresence.WEBSITE_FOUND,
+          website: 'https://padaria.example',
+        }),
+      ]),
+    );
+  });
+
   it('sanitizes upstream failures without leaking response secrets', async () => {
     const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ error: { message: 'key=secret' } }, 500));
     const provider = new GooglePlacesProvider({

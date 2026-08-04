@@ -1,12 +1,30 @@
-import type { LeadSource, LeadStatus, PaginatedResult, ProspectingCategory, Role } from '@prospectly/shared-types';
+import type {
+  LeadSource,
+  LeadStatus,
+  PaginatedResult,
+  ProspectingCategory,
+  ProspectingCategoryCatalog,
+  ProspectingCategoryOption,
+  Role,
+  SearchResultLimit,
+} from '@prospectly/shared-types';
 
-export type { PaginatedResult, ProspectingCategory };
+export type {
+  PaginatedResult,
+  ProspectingCategory,
+  ProspectingCategoryCatalog,
+  ProspectingCategoryOption,
+  SearchResultLimit,
+};
 export {
+  DEFAULT_SEARCH_RESULT_LIMIT,
+  FREE_PROSPECTING_CATEGORIES,
   LeadStatus,
   LeadSource,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   Role,
+  SEARCH_RESULT_LIMITS,
 } from '@prospectly/shared-types';
 
 export type AppLocale = 'pt' | 'en';
@@ -338,9 +356,11 @@ export interface SearchInput {
   categories: ProspectingCategory[];
   category?: ProspectingCategory;
   city: string;
+  neighborhood?: string;
   state: string;
   country: ProspectingCountryCode;
   onlyWithoutWebsite: boolean;
+  limit?: SearchResultLimit;
   provider?: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
 }
 

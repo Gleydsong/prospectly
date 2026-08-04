@@ -857,6 +857,23 @@ enum ConversionPageStatus {
   ARCHIVED
 }
 
+enum ConversionGenerationStatus {
+  IDLE
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum ConversionGenerationMode {
+  TEMPLATE
+  AI_LEAD
+  AI_DESCRIBE
+  AI_GOOGLE
+  AI_REFINE
+  TEMPLATE_FALLBACK
+}
+
 enum ConversionEventType {
   page_view
   cta_click
@@ -886,6 +903,14 @@ model ConversionPage {
   publishedVersion Int?
   draftRevision    Int                  @default(1)
   draftBlocks      Json                 @default("[]")
+  draftHtml        String?              @db.Text
+  generationStatus ConversionGenerationStatus @default(IDLE)
+  generationMode   ConversionGenerationMode?
+  generationError  String?
+  generationStartedAt  DateTime?
+  generationFinishedAt DateTime?
+  generationPromptVersion String?
+  generationInput  Json?
   createdById      String?
   updatedById      String?
   publishedAt      DateTime?
@@ -915,6 +940,7 @@ model ConversionPageVersion {
   organizationId String
   version        Int
   blocks         Json
+  html           String?  @db.Text
   title          String
   createdById    String?
   changeNote     String?

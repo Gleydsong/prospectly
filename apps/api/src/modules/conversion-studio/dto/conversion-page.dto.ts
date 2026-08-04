@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsInt,
@@ -26,6 +27,40 @@ export class CreateConversionPageDto {
   leadId?: string;
 }
 
+export class GenerateLandingDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID('4')
+  leadId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(1500)
+  describeText?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  googleLink?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(160)
+  title?: string;
+}
+
+export class RefineLandingDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(3)
+  @MaxLength(1000)
+  instruction!: string;
+}
+
 export class UpdateConversionPageDraftDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -36,6 +71,16 @@ export class UpdateConversionPageDraftDto {
 
   @ApiProperty({ type: 'array', items: { type: 'object' } })
   @IsArray()
+  @ArrayMaxSize(40)
+  /**
+   * Read from the original plain body (`obj.blocks`).
+   * With global `enableImplicitConversion`, class-transformer otherwise maps each
+   * array element through Object.values-like conversion before Zod runs.
+   */
+  @Transform(({ obj }) => {
+    const blocks = (obj as { blocks?: unknown }).blocks;
+    return Array.isArray(blocks) ? blocks : [];
+  })
   blocks!: unknown[];
 
   @ApiPropertyOptional({ description: 'Optimistic concurrency token (draftRevision)' })

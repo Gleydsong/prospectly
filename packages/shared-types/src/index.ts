@@ -175,6 +175,42 @@ export const PROSPECTING_CATEGORIES = [
   { value: 'guest_house', label: 'Pousada' },
 ] as const satisfies readonly { value: ProspectingCategory; label: string }[];
 
+/** Categories available without an active paid plan. */
+export const FREE_PROSPECTING_CATEGORIES = [
+  'restaurant',
+  'cafe',
+  'bakery',
+  'hairdresser',
+  'clothes',
+] as const satisfies readonly ProspectingCategory[];
+
+export type FreeProspectingCategory = (typeof FREE_PROSPECTING_CATEGORIES)[number];
+
+export function isFreeProspectingCategory(value: string): value is FreeProspectingCategory {
+  return (FREE_PROSPECTING_CATEGORIES as readonly string[]).includes(value);
+}
+
+/** Result volumes a user can pick per search. */
+export const SEARCH_RESULT_LIMITS = [20, 40, 60] as const;
+
+export type SearchResultLimit = (typeof SEARCH_RESULT_LIMITS)[number];
+
+export const DEFAULT_SEARCH_RESULT_LIMIT: SearchResultLimit = 20;
+
+export interface ProspectingCategoryOption {
+  value: ProspectingCategory;
+  label: string;
+  available: boolean;
+}
+
+export interface ProspectingCategoryCatalog {
+  categories: ProspectingCategoryOption[];
+  total: number;
+  availableCount: number;
+  plan: string;
+  requiredPlan: string;
+}
+
 export interface SearchBusinessesInput {
   query?: string;
   category?: ProspectingCategory;

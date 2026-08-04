@@ -22,13 +22,16 @@ import { DomainBindingService } from './domain-binding.service';
 import {
   CreateConversionPageDto,
   CreateDomainBindingDto,
+  GenerateLandingDto,
   QueryConversionPagesDto,
+  RefineLandingDto,
   RegisterPageAssetDto,
   RestoreVersionDto,
   UpdateAnalyticsSettingsDto,
   UpdateConversionPageDraftDto,
 } from './dto/conversion-page.dto';
 import { EntitlementService } from './entitlement.service';
+import { LandingGenerationService } from './generation/landing-generation.service';
 
 @ApiTags('conversion-studio')
 @ApiBearerAuth()
@@ -39,6 +42,7 @@ export class ConversionStudioController {
     private readonly entitlements: EntitlementService,
     private readonly assets: ConversionAssetService,
     private readonly domains: DomainBindingService,
+    private readonly generation: LandingGenerationService,
   ) {}
 
   @Get('entitlements')
@@ -94,10 +98,31 @@ export class ConversionStudioController {
     return this.studio.create(organizationId, user.id, dto);
   }
 
+  @Post('generate')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  generate(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: GenerateLandingDto,
+  ) {
+    return this.generation.enqueueGenerate(organizationId, user.id, dto);
+  }
+
   @Get(':id')
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER', 'VIEWER')
   get(@CurrentOrg() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.studio.get(organizationId, id);
+  }
+
+  @Post(':id/refine')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  refine(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RefineLandingDto,
+  ) {
+    return this.generation.enqueueRefine(organizationId, id, user.id, dto.instruction);
   }
 
   @Patch(':id/draft')
@@ -171,7 +196,7 @@ export class ConversionStudioController {
 
   @Post(':id/archive')
   @HttpCode(HttpStatus.OK)
-  @Roles('OWNER', 'ADMIN')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   archive(
     @CurrentOrg() organizationId: string,
     @CurrentUser() user: AuthenticatedUser,

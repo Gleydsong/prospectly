@@ -1,22 +1,21 @@
-import { FilePlus2 } from 'lucide-react';
-import { useState } from 'react';
+import { FilePlus2, Link2, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FeatureGateBanner } from '@/features/conversion-studio/components/feature-gate-banner';
-import { useConversionPages, useCreateConversionPage, useEntitlements } from '@/features/conversion-studio/hooks';
+import { PlanLimitsNotice } from '@/features/conversion-studio/components/plan-limits-notice';
+import { ProjectCard } from '@/features/conversion-studio/components/project-card';
+import { useConversionPages, useEntitlements } from '@/features/conversion-studio/hooks';
 import {
   createDomainBinding,
   listDomainBindings,
   verifyDomainBinding,
 } from '@/features/conversion-studio/services/api';
 import { getApiErrorMessage } from '@/lib/api';
-import { formatDateTime } from '@/lib/utils';
 
 type DomainBindingRow = {
   id: string;
@@ -28,75 +27,137 @@ type DomainBindingRow = {
 export function ConversionPagesPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [title, setTitle] = useState('Nova proposta');
   const [hostname, setHostname] = useState('');
-  const pages = useConversionPages();
-  const entitlements = useEntitlements();
-  const createPage = useCreateConversionPage();
   const [error, setError] = useState<string | null>(null);
   const [domainNotice, setDomainNotice] = useState<string | null>(null);
+  const [domainsOpen, setDomainsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const pages = useConversionPages();
+  const entitlements = useEntitlements();
+
+  const draftsBlocked = Boolean(
+    entitlements.data &&
+      entitlements.data.usage.pageDrafts >= entitlements.data.limits.pageDrafts,
+  );
 
   const domains = useQuery({
     queryKey: ['conversion-pages', 'domains'],
     queryFn: listDomainBindings,
-    enabled: Boolean(entitlements.data?.features.custom_domain),
+    enabled: Boolean(entitlements.data?.features.custom_domain) && domainsOpen,
   });
 
-  async function handleCreate() {
-    setError(null);
-    try {
-      const page = await createPage.mutateAsync({ title: title.trim() || 'Nova proposta' });
-      navigate(`/pages/${page.id}/edit`);
-    } catch (err) {
-      setError(getApiErrorMessage(err) ?? 'Não foi possível criar a página.');
-    }
-  }
+  const filtered = useMemo(() => {
+    const rows = pages.data?.data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((page) => {
+      const haystack = [page.title, page.lead?.companyName, page.lead?.city, page.lead?.category]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [pages.data?.data, search]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">Conversion Studio</h1>
-        <p className="text-sm text-zinc-500">
-          Crie páginas de proposta vinculadas a leads e acompanhe a conversão.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">Meus projetos</h1>
+          <p className="mt-1 max-w-2xl text-sm text-zinc-400">
+            Landings já prontas a partir dos leads. Abra para ver o site e publique para o cliente da
+            prospeção.
+          </p>
+        </div>
+        <Button disabled={draftsBlocked} onClick={() => navigate('/pages/new')}>
+          <FilePlus2 className="h-4 w-4" aria-hidden />
+          Novo projeto
+        </Button>
       </div>
 
-      <FeatureGateBanner feature="page_drafts" />
-      <FeatureGateBanner feature="published_pages" />
-      <FeatureGateBanner feature="custom_domain" />
+      <PlanLimitsNotice />
 
-      {entitlements.data ? (
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-zinc-300">
-            <span>
-              Plano {entitlements.data.plan}: {entitlements.data.usage.publishedPages}/
-              {entitlements.data.limits.publishedPages} páginas publicadas
-            </span>
-            <Link to="/settings" className="text-brand-300 underline">
-              Ver planos
-            </Link>
-          </CardContent>
-        </Card>
+      {error ? (
+        <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+          {error}
+        </p>
       ) : null}
 
-      <Card>
-        <CardHeader title="Novo projeto" />
-        <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <Input label="Título" value={title} onChange={(event) => setTitle(event.target.value)} />
-          <Button loading={createPage.isPending} onClick={() => void handleCreate()}>
-            <FilePlus2 className="h-4 w-4" aria-hidden />
-            Criar página
-          </Button>
-        </CardContent>
-      </Card>
+      <section className="space-y-4" aria-labelledby="projects-heading">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <h2 id="projects-heading" className="sr-only">
+            Projetos
+          </h2>
+          <div className="relative w-full sm:max-w-sm">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+              aria-hidden
+            />
+            <Input
+              aria-label="Buscar projeto"
+              placeholder="Buscar projeto…"
+              className="pl-9"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+          <p className="text-xs text-zinc-500">Última edição · mais recentes primeiro</p>
+        </div>
+
+        {pages.isLoading ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+          </div>
+        ) : pages.isError ? (
+          <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300">
+            {getApiErrorMessage(pages.error)}
+          </p>
+        ) : !pages.data || pages.data.data.length === 0 ? (
+          <EmptyState
+            title="Ainda não há projetos"
+            description="Escolha um lead do CRM e gere a landing pronta — depois é só publicar para o cliente."
+            action={
+              <Button disabled={draftsBlocked} onClick={() => navigate('/pages/new')}>
+                <FilePlus2 className="h-4 w-4" aria-hidden />
+                Criar primeiro projeto
+              </Button>
+            }
+          />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title="Nenhum projeto encontrado"
+            description="Tente outro termo de busca."
+          />
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((page) => (
+              <ProjectCard key={page.id} page={page} />
+            ))}
+          </ul>
+        )}
+      </section>
 
       {entitlements.data?.features.custom_domain ? (
-        <Card>
-          <CardHeader
-            title="Domínios personalizados"
-            description="Crie um TXT prospectly-verify=<token> e depois verifique."
-          />
-          <CardContent className="space-y-3">
+        <details
+          className="rounded-control border border-zinc-800 bg-zinc-900/40"
+          open={domainsOpen}
+          onToggle={(event) => setDomainsOpen((event.target as HTMLDetailsElement).open)}
+        >
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-200 marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-zinc-500" aria-hidden />
+              Domínio personalizado
+              <span className="font-normal text-zinc-500">(opcional)</span>
+            </span>
+          </summary>
+          <div className="space-y-3 border-t border-zinc-800 px-4 py-4">
+            <p className="text-sm text-zinc-400">
+              Aponte um hostname seu e confirme o TXT DNS. Não é necessário para publicar em{' '}
+              <code className="text-zinc-300">/p/seu-slug</code>.
+            </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <Input
                 label="Hostname"
@@ -106,6 +167,7 @@ export function ConversionPagesPage() {
               />
               <Button
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   setDomainNotice(null);
                   void createDomainBinding({ hostname: hostname.trim() })
@@ -114,16 +176,20 @@ export function ConversionPagesPage() {
                       setDomainNotice(
                         `Registe TXT: prospectly-verify=${(binding as DomainBindingRow).verificationToken}`,
                       );
-                      await queryClient.invalidateQueries({ queryKey: ['conversion-pages', 'domains'] });
+                      await queryClient.invalidateQueries({
+                        queryKey: ['conversion-pages', 'domains'],
+                      });
                     })
-                    .catch((err) => setError(getApiErrorMessage(err) ?? 'Falha ao criar domínio.'));
+                    .catch((err) =>
+                      setError(getApiErrorMessage(err) ?? 'Falha ao criar domínio.'),
+                    );
                 }}
               >
                 Adicionar domínio
               </Button>
             </div>
             {domainNotice ? (
-              <p className="rounded-lg bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
+              <p className="rounded-control bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
                 {domainNotice}
               </p>
             ) : null}
@@ -154,7 +220,9 @@ export function ConversionPagesPage() {
                               queryKey: ['conversion-pages', 'domains'],
                             });
                           })
-                          .catch((err) => setError(getApiErrorMessage(err) ?? 'DNS ainda não bate.'));
+                          .catch((err) =>
+                            setError(getApiErrorMessage(err) ?? 'DNS ainda não bate.'),
+                          );
                       }}
                     >
                       Verificar DNS
@@ -163,53 +231,9 @@ export function ConversionPagesPage() {
                 </li>
               ))}
             </ul>
-          </CardContent>
-        </Card>
+          </div>
+        </details>
       ) : null}
-
-      {error ? (
-        <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <Card>
-        <CardHeader title="Projetos" />
-        <CardContent>
-          {pages.isLoading ? (
-            <Skeleton className="h-40" />
-          ) : pages.isError ? (
-            <p className="text-sm text-red-300">{getApiErrorMessage(pages.error)}</p>
-          ) : !pages.data || pages.data.data.length === 0 ? (
-            <EmptyState
-              title="Nenhuma página ainda"
-              description="Crie uma proposta a partir de um lead ou comece um projeto em branco."
-            />
-          ) : (
-            <ul className="divide-y divide-zinc-800 rounded-control border border-zinc-800">
-              {pages.data.data.map((page) => (
-                <li key={page.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div>
-                    <Link to={`/pages/${page.id}/edit`} className="font-medium text-zinc-50 hover:underline">
-                      {page.title}
-                    </Link>
-                    <p className="text-xs text-zinc-500">
-                      {page.status}
-                      {page.lead ? ` · ${page.lead.companyName}` : ''} · {formatDateTime(page.updatedAt)}
-                    </p>
-                  </div>
-                  <Link
-                    to={`/pages/${page.id}/edit`}
-                    className="min-h-11 rounded-control px-3 py-2 text-sm text-brand-300 hover:bg-zinc-900"
-                  >
-                    Editar
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

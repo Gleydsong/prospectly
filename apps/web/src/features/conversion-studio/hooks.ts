@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  archiveConversionPage,
   createConversionPage,
   fetchEntitlements,
   fetchPageMetrics,
+  generateLandingPage,
   getConversionPage,
   listConversionPages,
   publishConversionPage,
+  refineLandingPage,
   restoreConversionPageVersion,
   updateConversionPageDraft,
 } from './services/api';
@@ -18,11 +21,17 @@ export function useConversionPages(params?: { page?: number; leadId?: string }) 
   });
 }
 
-export function useConversionPage(id: string | undefined) {
+export function useConversionPage(id: string | undefined, options?: { pollGeneration?: boolean }) {
   return useQuery({
     queryKey: ['conversion-pages', id],
     queryFn: () => getConversionPage(id!),
     enabled: Boolean(id),
+    refetchInterval: (query) => {
+      if (!options?.pollGeneration) return false;
+      const status = query.state.data?.generationStatus;
+      if (status === 'QUEUED' || status === 'RUNNING') return 1500;
+      return false;
+    },
   });
 }
 
@@ -51,6 +60,27 @@ export function useCreateConversionPage() {
   });
 }
 
+export function useGenerateLandingPage() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: generateLandingPage,
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['conversion-pages'] });
+    },
+  });
+}
+
+export function useRefineLandingPage(id: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (instruction: string) => refineLandingPage(id, { instruction }),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ['conversion-pages', id] });
+      await client.invalidateQueries({ queryKey: ['conversion-pages', 'entitlements'] });
+    },
+  });
+}
+
 export function useUpdateConversionDraft(id: string) {
   const client = useQueryClient();
   return useMutation({
@@ -69,6 +99,17 @@ export function usePublishConversionPage(id: string) {
     mutationFn: () => publishConversionPage(id),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['conversion-pages', id] });
+      await client.invalidateQueries({ queryKey: ['conversion-pages'] });
+      await client.invalidateQueries({ queryKey: ['conversion-pages', 'entitlements'] });
+    },
+  });
+}
+
+export function useArchiveConversionPage() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => archiveConversionPage(id),
+    onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['conversion-pages'] });
       await client.invalidateQueries({ queryKey: ['conversion-pages', 'entitlements'] });
     },

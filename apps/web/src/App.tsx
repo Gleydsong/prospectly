@@ -43,9 +43,19 @@ const ConversionPagesPage = lazy(() =>
     default: m.ConversionPagesPage,
   })),
 );
+const CreateConversionPage = lazy(() =>
+  import('@/pages/conversion-studio/create-conversion-page').then((m) => ({
+    default: m.CreateConversionPage,
+  })),
+);
 const ConversionPageEditorPage = lazy(() =>
   import('@/pages/conversion-studio/conversion-page-editor-page').then((m) => ({
     default: m.ConversionPageEditorPage,
+  })),
+);
+const ConversionPageViewPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-page-view-page').then((m) => ({
+    default: m.ConversionPageViewPage,
   })),
 );
 const PublicConversionPage = lazy(() =>
@@ -101,6 +111,14 @@ export function App() {
             </LazyPage>
           }
         />
+        <Route
+          path="/pages/:id/view"
+          element={
+            <LazyPage>
+              <ConversionPageViewPage />
+            </LazyPage>
+          }
+        />
         <Route element={<AppLayout />}>
           <Route
             index
@@ -127,6 +145,14 @@ export function App() {
             element={
               <LazyPage>
                 <ConversionPagesPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="pages/new"
+            element={
+              <LazyPage>
+                <CreateConversionPage />
               </LazyPage>
             }
           />

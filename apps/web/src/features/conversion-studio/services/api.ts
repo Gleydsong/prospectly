@@ -3,6 +3,13 @@ import type { PaginatedResult } from '@/types';
 
 export type ConversionPageStatus = 'DRAFT' | 'PREVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
+export type ConversionGenerationStatus =
+  | 'IDLE'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED';
+
 export interface ConversionPageSummary {
   id: string;
   title: string;
@@ -14,11 +21,18 @@ export interface ConversionPageSummary {
   publishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
-  lead?: { id: string; companyName: string } | null;
+  draftBlocks?: unknown;
+  hasHtml?: boolean;
+  draftHtml?: string | null;
+  generationStatus?: ConversionGenerationStatus;
+  generationMode?: string | null;
+  generationError?: string | null;
+  lead?: { id: string; companyName: string; category?: string | null; city?: string | null } | null;
 }
 
 export interface ConversionPageDetail extends ConversionPageSummary {
   draftBlocks: unknown;
+  draftHtml?: string | null;
   versions: Array<{
     id: string;
     version: number;
@@ -37,11 +51,13 @@ export interface EntitlementsSnapshot {
     publishedPages: number;
     pageDrafts: number;
     versionHistory: number;
+    aiGenerations: number;
   };
   usage: {
     publishedPages: number;
     pageDrafts: number;
     teamMembers: number;
+    aiGenerations: number;
   };
   features: Record<string, boolean | number>;
 }
@@ -80,6 +96,24 @@ export async function createConversionPage(input: {
   return data;
 }
 
+export async function generateLandingPage(input: {
+  leadId?: string;
+  describeText?: string;
+  googleLink?: string;
+  title?: string;
+}): Promise<ConversionPageDetail> {
+  const { data } = await api.post<ConversionPageDetail>('/conversion-pages/generate', input);
+  return data;
+}
+
+export async function refineLandingPage(
+  id: string,
+  input: { instruction: string },
+): Promise<ConversionPageDetail> {
+  const { data } = await api.post<ConversionPageDetail>(`/conversion-pages/${id}/refine`, input);
+  return data;
+}
+
 export async function updateConversionPageDraft(
   id: string,
   input: { title?: string; blocks: unknown[]; expectedRevision?: number },
@@ -90,6 +124,11 @@ export async function updateConversionPageDraft(
 
 export async function publishConversionPage(id: string): Promise<ConversionPageDetail> {
   const { data } = await api.post<ConversionPageDetail>(`/conversion-pages/${id}/publish`);
+  return data;
+}
+
+export async function archiveConversionPage(id: string): Promise<ConversionPageDetail> {
+  const { data } = await api.post<ConversionPageDetail>(`/conversion-pages/${id}/archive`);
   return data;
 }
 
@@ -119,6 +158,7 @@ export async function fetchPublicPage(slug: string): Promise<{
   title: string;
   publicSlug: string;
   version: number;
+  html?: string | null;
   blocks: unknown;
   analytics?: { enabled: boolean; consentLabel: string };
 }> {

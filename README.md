@@ -88,7 +88,27 @@ pnpm dev
 | `pnpm db:migrate`                     | Prisma migrate dev                        |
 | `pnpm db:seed`                        | Seed do banco                             |
 | `docker compose up -d`                | Sobe PostgreSQL + Redis                   |
-| `docker compose --profile full up -d` | Sobe stack completa (db, redis, api, web) |
+| `docker compose --profile ai up -d`   | Sobe Postgres + Redis + Ollama (IA)       |
+| `docker compose --profile full up -d` | Sobe stack completa (db, redis, ollama, api, web, worker) |
+
+### Conversion Studio — IA no site do lead
+
+A geração de landing usa Ollama/Llama **dentro** do fluxo da ferramenta: o usuário escolhe o lead e clica **Gerar site do lead**. Não há integração externa na UI.
+
+```bash
+# Dev local: infra + Ollama
+docker compose --profile ai up -d
+docker compose exec ollama ollama pull llama3.1
+
+# apps/api/.env
+LANDING_AI_PROVIDER=ollama
+LANDING_AI_BASE_URL=http://127.0.0.1:11434
+LANDING_AI_MODEL=llama3.1
+
+# API + worker (worker processa o job de geração)
+pnpm --filter @prospectly/api run dev
+pnpm --filter @prospectly/api run dev:worker
+```
 
 ## Fase 3 — pesquisa OpenStreetMap e importação CSV
 

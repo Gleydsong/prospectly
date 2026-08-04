@@ -28,6 +28,11 @@ import {
   type PageBlock,
 } from './page-blocks.schema';
 import { EntitlementService } from './entitlement.service';
+import { blocksToSimpleHtml } from './generation/blocks-to-html';
+import {
+  assertPublishableLandingHtml,
+  sanitizeLandingHtml,
+} from './generation/html-sanitize';
 
 @Injectable()
 export class ConversionStudioService {
@@ -66,11 +71,20 @@ export class ConversionStudioService {
           publishedAt: true,
           updatedAt: true,
           createdAt: true,
-          lead: { select: { id: true, companyName: true } },
+          draftBlocks: true,
+          draftHtml: true,
+          generationStatus: true,
+          generationMode: true,
+          generationError: true,
+          lead: { select: { id: true, companyName: true, category: true, city: true } },
         },
       }),
     ]);
-    return paginate(rows, total, page, pageSize);
+    const mapped = rows.map(({ draftHtml, ...rest }) => ({
+      ...rest,
+      hasHtml: Boolean(draftHtml?.trim()),
+    }));
+    return paginate(mapped, total, page, pageSize);
   }
 
   async get(organizationId: string, id: string) {
@@ -130,6 +144,15 @@ export class ConversionStudioService {
 
     if (!title) throw new BadRequestException('Title is required');
 
+    const draftHtml =
+      blocks.length > 0
+        ? blocksToSimpleHtml({
+            title,
+            companyName: title.replace(/^Proposta — /, ''),
+            blocks,
+          })
+        : null;
+
     const page = await this.prisma.conversionPage.create({
       data: {
         organizationId,
@@ -138,6 +161,7 @@ export class ConversionStudioService {
         status: ConversionPageStatus.DRAFT,
         publicSlug: this.createPublicSlug(),
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
+        draftHtml,
         createdById: actorId,
         updatedById: actorId,
       },
@@ -170,11 +194,18 @@ export class ConversionStudioService {
       );
     }
 
+    const draftHtml = blocksToSimpleHtml({
+      title: dto.title?.trim() || page.title,
+      companyName: page.title,
+      blocks,
+    });
+
     return this.prisma.conversionPage.update({
       where: { id: page.id },
       data: {
         ...(dto.title ? { title: dto.title.trim() } : {}),
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
+        draftHtml,
         draftRevision: { increment: 1 },
         updatedById: actorId,
         status:
@@ -191,14 +222,38 @@ export class ConversionStudioService {
       throw new BadRequestException('Archived pages cannot be published');
     }
 
-    let blocks: PageBlock[];
-    try {
-      blocks = parsePageBlocks(page.draftBlocks);
-      assertPublishableBlocks(blocks);
-    } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Invalid page blocks schema',
-      );
+    const hasHtml = Boolean(page.draftHtml?.trim());
+    let blocks: PageBlock[] = [];
+    let html: string | null = null;
+
+    if (hasHtml) {
+      try {
+        html = sanitizeLandingHtml(page.draftHtml!);
+        assertPublishableLandingHtml(html, page.title);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Invalid landing HTML',
+        );
+      }
+      try {
+        blocks = parsePageBlocks(page.draftBlocks);
+      } catch {
+        blocks = [];
+      }
+    } else {
+      try {
+        blocks = parsePageBlocks(page.draftBlocks);
+        assertPublishableBlocks(blocks);
+        html = blocksToSimpleHtml({
+          title: page.title,
+          companyName: page.title,
+          blocks,
+        });
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Invalid page blocks schema',
+        );
+      }
     }
 
     const wasPublished = page.status === ConversionPageStatus.PUBLISHED;
@@ -216,6 +271,7 @@ export class ConversionStudioService {
           version: nextVersion,
           title: page.title,
           blocks: blocks as unknown as Prisma.InputJsonValue,
+          html,
           createdById: actorId,
           changeNote: wasPublished ? 'New published version' : 'Initial publish',
         },
@@ -227,6 +283,7 @@ export class ConversionStudioService {
           status: ConversionPageStatus.PUBLISHED,
           publishedVersion: nextVersion,
           publishedAt: new Date(),
+          draftHtml: html,
           updatedById: actorId,
         },
       });
@@ -289,8 +346,8 @@ export class ConversionStudioService {
       data: {
         status: ConversionPageStatus.ARCHIVED,
         archivedAt: new Date(),
+        deletedAt: new Date(),
         updatedById: actorId,
-        deletedAt: null,
       },
     });
   }
@@ -317,6 +374,7 @@ export class ConversionStudioService {
         data: {
           title: snapshot.title,
           draftBlocks: blocks as unknown as Prisma.InputJsonValue,
+          draftHtml: snapshot.html,
           draftRevision: { increment: 1 },
           updatedById: actorId,
           status:
@@ -431,7 +489,7 @@ export class ConversionStudioService {
         organizationId: page.organizationId,
         version: page.publishedVersion,
       },
-      select: { title: true, blocks: true, version: true },
+      select: { title: true, blocks: true, html: true, version: true },
     });
     if (!version) throw new NotFoundException('Page not found');
 
@@ -442,6 +500,7 @@ export class ConversionStudioService {
       title: version.title,
       publicSlug: page.publicSlug,
       version: version.version,
+      html: version.html,
       blocks: version.blocks,
       analytics: {
         enabled: analyticsAllowed && page.analyticsPixelEnabled,

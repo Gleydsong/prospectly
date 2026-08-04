@@ -17,7 +17,6 @@ import { ScoreBadge } from '@/components/ui/score-badge';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateConversionPage } from '@/features/conversion-studio/hooks';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
 import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
@@ -609,32 +608,13 @@ const MISSING_FIELD_LABEL: Record<string, string> = {
   category: 'Categoria',
 };
 
-function CreateProposalButton({ leadId, companyName }: { leadId: string; companyName: string }) {
+function CreateProposalButton({ leadId }: { leadId: string; companyName: string }) {
   const navigate = useNavigate();
-  const createPage = useCreateConversionPage();
-  const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button
-        size="sm"
-        loading={createPage.isPending}
-        onClick={() => {
-          setError(null);
-          void createPage
-            .mutateAsync({ title: `Proposta — ${companyName}`, leadId })
-            .then((page) => navigate(`/pages/${page.id}/edit`))
-            .catch((err) => setError(getApiErrorMessage(err) ?? 'Falha ao criar página'));
-        }}
-      >
-        Criar página de proposta
-      </Button>
-      {error ? (
-        <p className="max-w-xs text-xs text-red-300" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <Button size="sm" onClick={() => navigate(`/pages/new?leadId=${leadId}`)}>
+      Criar página de proposta
+    </Button>
   );
 }
 

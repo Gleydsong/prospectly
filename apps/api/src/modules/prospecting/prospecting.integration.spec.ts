@@ -9,6 +9,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import type { Role } from '@prisma/client';
+import { DEFAULT_SEARCH_RESULT_LIMIT } from '@prospectly/shared-types';
 import request from 'supertest';
 
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -85,6 +86,7 @@ describe('Prospecting HTTP integration', () => {
   let prisma: {
     search: Record<string, jest.Mock>;
     searchResult: Record<string, jest.Mock>;
+    organization: Record<string, jest.Mock>;
     $transaction: jest.Mock;
   };
 
@@ -177,6 +179,9 @@ describe('Prospecting HTTP integration', () => {
             return { count: 1 };
           },
         ),
+      },
+      organization: {
+        findFirst: jest.fn(async () => ({ plan: 'LIFETIME', planStatus: 'ACTIVE' })),
       },
       $transaction: jest.fn(async (work: unknown) => {
         if (typeof work === 'function') {
@@ -414,6 +419,7 @@ describe('Prospecting HTTP integration', () => {
       state: 'Lisboa',
       country: 'PT',
       onlyWithoutWebsite: true,
+      limit: DEFAULT_SEARCH_RESULT_LIMIT,
     });
     expect(searches.get(SEARCH_ID)?.status).toBe('COMPLETED');
 
@@ -497,8 +503,27 @@ describe('Prospecting HTTP integration', () => {
       .send({ resultIds: [RESULT_ID] })
       .expect(201);
 
-    expect(first.body).toEqual({ imported: 1, skipped: 0, invalid: 0, conflicts: 0 });
-    expect(second.body).toEqual({ imported: 0, skipped: 1, invalid: 0, conflicts: 0 });
+    expect(first.body).toEqual({
+      imported: 1,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [
+        {
+          resultId: RESULT_ID,
+          status: 'IMPORTED',
+          leadId: LEAD_ID,
+          companyName: 'Restaurante Bom',
+        },
+      ],
+    });
+    expect(second.body).toEqual({
+      imported: 0,
+      skipped: 1,
+      invalid: 0,
+      conflicts: 0,
+      items: [{ resultId: RESULT_ID, status: 'SKIPPED', leadId: LEAD_ID }],
+    });
     expect(ingestion.ingest).toHaveBeenCalledTimes(1);
     expect(ingestion.ingest).toHaveBeenCalledWith('org-1', 'user-1', expect.any(Object));
   });

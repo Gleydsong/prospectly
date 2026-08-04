@@ -44,6 +44,11 @@ export class ProspectingController {
     return this.prospecting.listProviders();
   }
 
+  @Get('categories')
+  listCategories(@CurrentOrg() organizationId: string) {
+    return this.prospecting.listCategories(organizationId);
+  }
+
   @Get()
   list(@CurrentOrg() organizationId: string, @Query() query: QuerySearchesDto) {
     return this.prospecting.list(organizationId, query);

@@ -66,14 +66,48 @@ function renderBlock(
   switch (block.type) {
     case 'hero':
       return (
-        <div className="rounded-control bg-gradient-to-br from-zinc-900 to-zinc-950 p-8">
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-50">{block.headline}</h1>
-          {block.subheadline ? <p className="mt-2 text-zinc-400">{block.subheadline}</p> : null}
-          {block.cta && block.ctaLabel ? (
-            <div className="mt-6">
-              <CtaLink label={block.ctaLabel} action={block.cta} onTrack={onTrack} />
-            </div>
+        <div
+          className={cn(
+            'relative overflow-hidden rounded-control p-8',
+            block.imageUrl
+              ? 'min-h-72 bg-zinc-900'
+              : 'bg-gradient-to-br from-zinc-900 via-zinc-950 to-brand-950/40',
+          )}
+        >
+          {block.imageUrl ? (
+            <img
+              src={block.imageUrl}
+              alt={block.imageAlt ?? ''}
+              className="absolute inset-0 h-full w-full object-cover opacity-50"
+            />
           ) : null}
+          <div className="relative">
+            <div className="mb-6 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500/20 text-sm font-semibold text-brand-200">
+                {block.headline
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase() ?? '')
+                  .join('') || 'P'}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-zinc-100">{block.headline}</p>
+                {block.subheadline ? (
+                  <p className="truncate text-xs text-zinc-400">{block.subheadline}</p>
+                ) : null}
+              </div>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+              {block.headline}
+            </h1>
+            {block.subheadline ? <p className="mt-3 max-w-2xl text-zinc-300">{block.subheadline}</p> : null}
+            {block.cta && block.ctaLabel ? (
+              <div className="mt-6">
+                <CtaLink label={block.ctaLabel} action={block.cta} onTrack={onTrack} />
+              </div>
+            ) : null}
+          </div>
         </div>
       );
     case 'rich_text':

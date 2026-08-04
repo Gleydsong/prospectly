@@ -1,5 +1,6 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { WebsitePresence } from '@prisma/client';
+import { DEFAULT_SEARCH_RESULT_LIMIT } from '@prospectly/shared-types';
 
 import { ProspectingService } from './prospecting.service';
 
@@ -31,6 +32,9 @@ function createService(overrides: Record<string, unknown> = {}) {
       deleteMany: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
+    },
+    organization: {
+      findFirst: jest.fn().mockResolvedValue({ plan: 'LIFETIME', planStatus: 'ACTIVE' }),
     },
     $transaction: jest.fn(),
     ...overrides,
@@ -80,7 +84,7 @@ describe('ProspectingService', () => {
         organizationId: 'org-1',
         userId: 'user-1',
         provider: 'OPENSTREETMAP',
-        input: searchInput,
+        input: { ...searchInput, limit: DEFAULT_SEARCH_RESULT_LIMIT },
         status: 'PENDING',
       },
     });
@@ -108,7 +112,7 @@ describe('ProspectingService', () => {
 
     expect(prisma.search.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        input: europeanInput,
+        input: { ...europeanInput, limit: DEFAULT_SEARCH_RESULT_LIMIT },
       }),
     });
 
@@ -132,7 +136,10 @@ describe('ProspectingService', () => {
 
     await service.process('search-pt');
 
-    expect(provider.search).toHaveBeenCalledWith(europeanInput);
+    expect(provider.search).toHaveBeenCalledWith({
+      ...europeanInput,
+      limit: DEFAULT_SEARCH_RESULT_LIMIT,
+    });
     expect(prisma.searchResult.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { searchId_externalId: { searchId: 'search-pt', externalId: 'node/pt-1' } },
@@ -176,6 +183,86 @@ describe('ProspectingService', () => {
       service.create('org-1', 'user-1', { ...searchInput, provider: 'GOOGLE_PLACES' }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.search.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a category that the free plan does not unlock', async () => {
+    const { prisma, service } = createService();
+    prisma.organization.findFirst.mockResolvedValue({ plan: 'FREE', planStatus: 'INACTIVE' });
+
+    await expect(
+      service.create('org-1', 'user-1', { ...searchInput, categories: ['lawyer' as const] }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.search.create).not.toHaveBeenCalled();
+  });
+
+  it('accepts a free category and keeps the search on the free plan', async () => {
+    const { prisma, service } = createService();
+    prisma.organization.findFirst.mockResolvedValue({ plan: 'FREE', planStatus: 'INACTIVE' });
+    prisma.search.create.mockResolvedValue({ id: 'search-free', status: 'PENDING' });
+
+    await expect(
+      service.create('org-1', 'user-1', { ...searchInput, categories: ['bakery' as const] }),
+    ).resolves.toEqual({ id: 'search-free', status: 'PENDING' });
+  });
+
+  it('marks paid-only categories as unavailable in the free catalog', async () => {
+    const { prisma, service } = createService();
+    prisma.organization.findFirst.mockResolvedValue({ plan: 'FREE', planStatus: 'INACTIVE' });
+
+    const catalog = await service.listCategories('org-1');
+
+    expect(catalog.plan).toBe('FREE');
+    expect(catalog.availableCount).toBe(5);
+    expect(catalog.categories).toContainEqual({
+      value: 'restaurant',
+      label: 'Restaurante',
+      available: true,
+    });
+    expect(catalog.categories).toContainEqual({
+      value: 'lawyer',
+      label: 'Advocacia',
+      available: false,
+    });
+  });
+
+  it('persists the neighborhood and caps persisted results at the requested volume', async () => {
+    const { prisma, provider, service } = createService();
+    const input = { ...searchInput, neighborhood: 'Casa Caiada', limit: 20 as const };
+    prisma.search.create.mockResolvedValue({ id: 'search-1', status: 'PENDING' });
+
+    await service.create('org-1', 'user-1', input);
+
+    expect(prisma.search.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        input: expect.objectContaining({ neighborhood: 'Casa Caiada', limit: 20 }),
+      }),
+    });
+
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      input: { ...input, limit: 20 },
+    });
+    prisma.search.update.mockResolvedValue(undefined);
+    provider.search.mockResolvedValue(
+      Array.from({ length: 25 }, (_, index) => ({
+        externalId: `node/${index}`,
+        companyName: `Empresa ${index}`,
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+      })),
+    );
+
+    await service.process('search-1');
+
+    expect(provider.search).toHaveBeenCalledWith(
+      expect.objectContaining({ neighborhood: 'Casa Caiada', limit: 20 }),
+    );
+    expect(prisma.searchResult.upsert).toHaveBeenCalledTimes(20);
   });
 
   it('lists only available providers', () => {

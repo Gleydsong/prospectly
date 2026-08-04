@@ -14,6 +14,20 @@ async function transform(body: Record<string, unknown>) {
 }
 
 describe('CreateSearchDto validation', () => {
+  it('defaults onlyWithoutWebsite to false so all places are returned', async () => {
+    await expect(
+      transform({
+        categories: ['restaurant'],
+        city: 'São Paulo',
+        state: 'SP',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        onlyWithoutWebsite: false,
+      }),
+    );
+  });
+
   it('accepts multiple categories and defaults country to BR', async () => {
     await expect(
       transform({

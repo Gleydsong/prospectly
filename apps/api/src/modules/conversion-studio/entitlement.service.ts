@@ -44,7 +44,7 @@ const PLAN_ENTITLEMENTS: Record<OrgPlan, PlanEntitlements> = {
     removeProspectlyBrand: false,
     analyticsPixel: false,
     teamMembers: 2,
-    aiGenerations: 0,
+    aiGenerations: 2,
     whiteLabel: false,
   },
   STARTER_MONTHLY: {
@@ -58,7 +58,7 @@ const PLAN_ENTITLEMENTS: Record<OrgPlan, PlanEntitlements> = {
     removeProspectlyBrand: false,
     analyticsPixel: true,
     teamMembers: 10,
-    aiGenerations: 0,
+    aiGenerations: 50,
     whiteLabel: false,
   },
   LIFETIME: {
@@ -72,7 +72,7 @@ const PLAN_ENTITLEMENTS: Record<OrgPlan, PlanEntitlements> = {
     removeProspectlyBrand: true,
     analyticsPixel: true,
     teamMembers: 25,
-    aiGenerations: 0,
+    aiGenerations: 300,
     whiteLabel: true,
   },
 };
@@ -89,7 +89,7 @@ export class EntitlementService {
     const plan = org.planStatus === PlanStatus.ACTIVE ? org.plan : OrgPlan.FREE;
     const limits = PLAN_ENTITLEMENTS[plan];
 
-    const [publishedPages, pageDrafts, members] = await Promise.all([
+    const [publishedPages, pageDrafts, members, aiGenerationsAgg] = await Promise.all([
       this.prisma.conversionPage.count({
         where: { organizationId, status: 'PUBLISHED', deletedAt: null },
       }),
@@ -101,17 +101,27 @@ export class EntitlementService {
         },
       }),
       this.prisma.organizationMember.count({ where: { organizationId } }),
+      this.prisma.usageLedger.aggregate({
+        where: { organizationId, meterKey: UsageMeterKey.AI_GENERATIONS },
+        _sum: { amount: true },
+      }),
     ]);
+
+    const aiGenerationsUsed = aiGenerationsAgg._sum.amount ?? 0;
 
     return {
       plan,
       planStatus: org.planStatus,
       currentPeriodEnd: org.currentPeriodEnd,
-      limits,
+      limits: {
+        ...limits,
+        aiGenerations: limits.aiGenerations,
+      },
       usage: {
         publishedPages,
         pageDrafts,
         teamMembers: members,
+        aiGenerations: aiGenerationsUsed,
       },
       features: this.featureMap(limits),
     };
@@ -128,6 +138,23 @@ export class EntitlementService {
         limit: snapshot.limits.pageDrafts,
       });
     }
+  }
+
+  async assertCanUseAiGeneration(organizationId: string): Promise<void> {
+    const snapshot = await this.getSnapshot(organizationId);
+    if (snapshot.usage.aiGenerations >= snapshot.limits.aiGenerations) {
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_AI_GENERATIONS',
+        message: 'AI generation trial/limit reached for current plan',
+        requiredPlan: 'STARTER_MONTHLY',
+        usage: snapshot.usage.aiGenerations,
+        limit: snapshot.limits.aiGenerations,
+      });
+    }
+  }
+
+  canUseAiGeneration(snapshot: Awaited<ReturnType<EntitlementService['getSnapshot']>>): boolean {
+    return snapshot.usage.aiGenerations < snapshot.limits.aiGenerations;
   }
 
   async assertCanPublish(organizationId: string): Promise<void> {

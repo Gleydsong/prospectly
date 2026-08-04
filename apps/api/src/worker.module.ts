@@ -7,6 +7,8 @@ import { configuration } from './config/configuration';
 import { validateEnv } from './config/validation';
 import { parseRedisConnection } from './config/redis';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { OpsModule } from './modules/ops/ops.module';
 import { WorkersModule } from './modules/workers/workers.module';
 
 @Module({
@@ -45,6 +47,8 @@ import { WorkersModule } from './modules/workers/workers.module';
       }),
     }),
     PrismaModule,
+    AuditModule,
+    OpsModule,
     WorkersModule,
   ],
 })

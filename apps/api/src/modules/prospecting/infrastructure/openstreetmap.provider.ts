@@ -21,6 +21,16 @@ const DEFAULT_OVERPASS_MIRRORS = [
 ] as const;
 
 const MAX_BBOX_SPAN_DEGREES = 0.75;
+/** Below this span a Nominatim hit is a point, not a usable neighborhood area. */
+const MIN_NEIGHBORHOOD_SPAN_DEGREES = 0.002;
+
+const NEIGHBORHOOD_TAG_KEYS = [
+  'addr:suburb',
+  'addr:neighbourhood',
+  'addr:city_district',
+  'addr:district',
+  'addr:quarter',
+] as const;
 
 interface NominatimPlace {
   osm_id?: number;
@@ -214,6 +224,27 @@ function isCompactBoundingBox(boundingBox: BoundingBox): boolean {
   return latSpan <= MAX_BBOX_SPAN_DEGREES && lonSpan <= MAX_BBOX_SPAN_DEGREES;
 }
 
+function isUsableNeighborhoodBoundingBox(boundingBox: BoundingBox): boolean {
+  const latSpan = Math.abs(boundingBox.north - boundingBox.south);
+  const lonSpan = Math.abs(boundingBox.east - boundingBox.west);
+  return (
+    isCompactBoundingBox(boundingBox) &&
+    (latSpan >= MIN_NEIGHBORHOOD_SPAN_DEGREES || lonSpan >= MIN_NEIGHBORHOOD_SPAN_DEGREES)
+  );
+}
+
+function matchesNeighborhoodTags(
+  tags: Record<string, string> | undefined,
+  neighborhood: string,
+): boolean {
+  if (!tags) return false;
+  const expected = normalizeText(neighborhood);
+  return NEIGHBORHOOD_TAG_KEYS.some((key) => {
+    const value = tags[key];
+    return typeof value === 'string' && normalizeText(value) === expected;
+  });
+}
+
 function resolveSearchCategories(input: SearchProviderInput): string[] {
   const raw = input.categories?.length ? input.categories : [input.category];
   const categories = [...new Set(raw.map((value) => value.trim()).filter(Boolean))];
@@ -359,20 +390,76 @@ export class OpenStreetMapProvider implements SearchProvider {
     const municipality = await this.findMunicipality(input.city.trim(), region, country);
     if (!municipality) return [];
 
+    const neighborhood = input.neighborhood?.trim();
+    const neighborhoodBoundingBox = neighborhood
+      ? await this.findNeighborhoodBoundingBox(neighborhood, input.city.trim(), region, country)
+      : undefined;
+    // Without a resolvable area we narrow by address tags instead of silently widening to the city.
+    const filterByNeighborhoodTags = Boolean(neighborhood) && !neighborhoodBoundingBox;
+
     const overpassResponse = await this.requestOverpass(
       buildOverpassQuery(
         3600000000 + municipality.osm_id,
         categoryTags,
-        this.options.resultLimit,
+        this.resolveResultLimit(input.limit),
         this.options.timeoutMs,
-        municipality.boundingBox,
+        neighborhoodBoundingBox ?? municipality.boundingBox,
       ),
     );
 
     return (overpassResponse.elements ?? [])
+      .filter(
+        (element) =>
+          !filterByNeighborhoodTags || matchesNeighborhoodTags(element.tags, neighborhood!),
+      )
       .map((element) => normalizeElement(element, input.city.trim(), region, country))
       .filter((business): business is NormalizedBusiness => Boolean(business))
       .filter((business) => !input.onlyWithoutWebsite || business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED);
+  }
+
+  private resolveResultLimit(requested?: number): number {
+    const cap = this.options.resultLimit;
+    if (!requested || !Number.isFinite(requested) || requested <= 0) return cap;
+    return Math.min(cap, Math.trunc(requested));
+  }
+
+  private async findNeighborhoodBoundingBox(
+    neighborhood: string,
+    city: string,
+    region: string,
+    country: ProspectingCountryCode,
+  ): Promise<BoundingBox | undefined> {
+    const url = new URL(this.options.nominatimUrl);
+    url.search = new URLSearchParams({
+      q: `${neighborhood}, ${city}, ${region}, ${countryDisplayName(country)}`,
+      countrycodes: country.toLowerCase(),
+      format: 'jsonv2',
+      addressdetails: '1',
+      extratags: '1',
+      limit: '5',
+    }).toString();
+
+    let places: NominatimPlace[];
+    try {
+      places = await this.requestJson<NominatimPlace[]>(
+        url.toString(),
+        { headers: { 'User-Agent': this.options.userAgent } },
+        true,
+      );
+    } catch {
+      // A failed neighborhood lookup must not fail the whole search.
+      return undefined;
+    }
+
+    for (const place of places) {
+      if (!matchesCountry(place, country)) continue;
+      if (!hasRequestedCity(place, city) && !hasRequestedRegion(place, region, country)) continue;
+      const boundingBox = parseBoundingBox(place.boundingbox);
+      if (boundingBox && isUsableNeighborhoodBoundingBox(boundingBox)) {
+        return boundingBox;
+      }
+    }
+    return undefined;
   }
 
   private resolveOverpassUrls(): string[] {

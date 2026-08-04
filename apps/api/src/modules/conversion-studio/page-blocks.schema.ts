@@ -208,39 +208,167 @@ export function defaultBlocksFromLead(input: {
   city?: string | null;
   phone?: string | null;
   address?: string | null;
+  photos?: Array<{ url: string; alt: string }>;
+  googleReviews?: Array<{ quote: string; author: string; rating?: number }>;
 }): PageBlock[] {
   const heroId = crypto.randomUUID();
-  const servicesId = crypto.randomUUID();
+  const aboutId = crypto.randomUUID();
+  const serviceAId = crypto.randomUUID();
+  const serviceBId = crypto.randomUUID();
+  const serviceCId = crypto.randomUUID();
+  const testimonialsId = crypto.randomUUID();
+  const faqId = crypto.randomUUID();
   const formId = crypto.randomUUID();
   const footerId = crypto.randomUUID();
-  const ctaAction: ButtonAction | undefined = input.phone
-    ? { type: 'whatsapp', phone: input.phone }
-    : { type: 'open_form', formBlockId: formId };
+  const secondaryCtaId = crypto.randomUUID();
+  const photos = (input.photos ?? []).filter((photo) => photo.url.startsWith('https://'));
+  const reviews = input.googleReviews ?? [];
+
+  const place = [input.category, input.city].filter(Boolean).join(' · ');
+  const whatsappAction: ButtonAction | undefined = input.phone
+    ? {
+        type: 'whatsapp',
+        phone: input.phone,
+        message: `Olá! Vi o site de ${input.companyName}.`,
+      }
+    : undefined;
+  const primaryAction: ButtonAction = whatsappAction ?? { type: 'open_form', formBlockId: formId };
+  const primaryLabel = whatsappAction ? 'Agendar pelo WhatsApp' : 'Pedir contacto';
 
   return [
     {
       id: heroId,
       type: 'hero',
-      headline: `Proposta para ${input.companyName}`,
-      subheadline: [input.category, input.city].filter(Boolean).join(' · ') || undefined,
-      cta: ctaAction,
-      ctaLabel: input.phone ? 'Falar no WhatsApp' : 'Pedir proposta',
+      headline: input.companyName,
+      subheadline:
+        place ||
+        'Atendimento próximo, presença digital clara e contacto direto para o seu negócio.',
+      cta: primaryAction,
+      ctaLabel: primaryLabel,
       variant: 'brand',
+      ...(photos[0]
+        ? { imageUrl: photos[0].url, imageAlt: photos[0].alt || `Foto de ${input.companyName}` }
+        : {}),
     },
     {
-      id: servicesId,
+      id: secondaryCtaId,
+      type: 'cta_button',
+      label: 'Ver serviços',
+      action: { type: 'anchor', anchor: `block-${serviceAId}` },
+      variant: 'zinc',
+    },
+    {
+      id: aboutId,
+      type: 'rich_text',
+      title: 'Sobre',
+      body: [
+        input.companyName,
+        input.city ? `em ${input.city}` : null,
+        'oferece atendimento profissional e uma presença online pronta para converter visitas em contactos.',
+        'Esta landing já nasce completa — publique e envie ao cliente da sua prospeção.',
+      ]
+        .filter(Boolean)
+        .join(' '),
+      bullets: [
+        'Página mobile-first, rápida e com CTAs claros',
+        'WhatsApp e formulário prontos para conversão',
+        'Conteúdo inicial baseado no lead do CRM',
+      ],
+    },
+    ...(photos.length > 0
+      ? [
+          {
+            id: crypto.randomUUID(),
+            type: 'gallery' as const,
+            title: 'Conheça o espaço',
+            images: photos.slice(0, 8).map((photo) => ({
+              url: photo.url,
+              alt: photo.alt || `Foto de ${input.companyName}`,
+            })),
+          },
+        ]
+      : []),
+    {
+      id: serviceAId,
       type: 'service_card',
-      title: 'Site profissional para o seu negócio',
-      description:
-        'Página rápida, mobile-first e pronta para converter visitas em contactos comerciais.',
+      title: 'Atendimento principal',
+      description: `Serviço de referência de ${input.companyName}${
+        place ? ` (${place})` : ''
+      }, com foco em confiança e resposta rápida.`,
       highlight: true,
       layout: 'stack',
+      cta: primaryAction,
+      ctaLabel: primaryLabel,
+    },
+    {
+      id: serviceBId,
+      type: 'service_card',
+      title: 'Experiência do cliente',
+      description:
+        'Jornada simples: o visitante entende a oferta, vê prova social e fala consigo em um clique.',
+      highlight: false,
+      layout: 'stack',
+    },
+    {
+      id: serviceCId,
+      type: 'service_card',
+      title: 'Presença digital',
+      description:
+        'Landing pronta para prospeção: você aloca ao lead, publica e acompanha visitas e formulários.',
+      highlight: false,
+      layout: 'stack',
+    },
+    {
+      id: testimonialsId,
+      type: 'testimonials',
+      title: reviews.length > 0 ? 'Avaliações no Google' : 'O que dizem os clientes',
+      items:
+        reviews.length > 0
+          ? reviews.slice(0, 4).map((review) => ({
+              quote: review.quote.slice(0, 600),
+              author: review.author.slice(0, 80),
+              role:
+                typeof review.rating === 'number'
+                  ? `${review.rating.toFixed(1)}★ no Google`
+                  : 'Google',
+            }))
+          : [
+              {
+                quote: `Atendimento excelente e resultado rápido. Recomendo ${input.companyName}.`,
+                author: 'Cliente local',
+                role: input.city ?? undefined,
+              },
+              {
+                quote: 'Fácil de contactar e muito profissionais do início ao fim.',
+                author: 'Avaliação recente',
+                role: input.category ?? 'Google',
+              },
+            ],
+    },
+    {
+      id: faqId,
+      type: 'faq',
+      title: 'Perguntas frequentes',
+      items: [
+        {
+          question: 'Como agendar ou pedir orçamento?',
+          answer: whatsappAction
+            ? 'Use o botão de WhatsApp nesta página ou envie uma mensagem pelo formulário.'
+            : 'Envie uma mensagem pelo formulário de contacto no final da página.',
+        },
+        {
+          question: 'Atendem na minha região?',
+          answer: input.city
+            ? `Sim — ${input.companyName} atende em ${input.city} e arredores.`
+            : `Fale com ${input.companyName} pelo contacto da página para confirmar a cobertura.`,
+        },
+      ],
     },
     {
       id: formId,
       type: 'contact_form',
-      title: 'Quer conversar?',
-      submitLabel: 'Enviar',
+      title: 'Fale connosco',
+      submitLabel: 'Enviar mensagem',
       privacyNotice: 'Ao enviar, você concorda com o tratamento dos dados para contacto comercial.',
       fields: ['name', 'email', 'phone', 'message'],
     },
@@ -249,7 +377,7 @@ export function defaultBlocksFromLead(input: {
           {
             id: crypto.randomUUID(),
             type: 'map_address' as const,
-            title: 'Localização',
+            title: 'Onde estamos',
             address: input.address,
           },
         ]

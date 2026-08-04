@@ -278,7 +278,10 @@ describe('EntitlementService', () => {
           .mockResolvedValueOnce(0), // drafts
       },
       organizationMember: { count: jest.fn().mockResolvedValue(1) },
-      usageLedger: { create: jest.fn() },
+      usageLedger: {
+        create: jest.fn(),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+      },
     };
     const service = new EntitlementService(prisma as never);
     await expect(service.assertCanPublish('org-a')).rejects.toBeInstanceOf(ForbiddenException);

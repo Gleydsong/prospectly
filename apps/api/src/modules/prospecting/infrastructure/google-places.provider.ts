@@ -11,6 +11,9 @@ import {
 } from '../domain/search-provider';
 import { googleLanguageCode, mapCategoryToGoogleTextQuery } from './google-category-map';
 
+/** Places API (New) text search caps a single response at 20 places. */
+const GOOGLE_MAX_RESULTS_PER_REQUEST = 20;
+
 const FIELD_MASK = [
   'places.id',
   'places.displayName',
@@ -172,13 +175,25 @@ export class GooglePlacesProvider implements SearchProvider {
     ];
     if (categories.length === 0) throw new Error('Category is required');
 
+    const requestedLimit = input.limit && input.limit > 0 ? input.limit : this.options.resultLimit;
+    const perCategoryLimit = Math.min(
+      GOOGLE_MAX_RESULTS_PER_REQUEST,
+      Math.max(1, Math.min(this.options.resultLimit, requestedLimit)),
+    );
+
     const merged = new Map<string, NormalizedBusiness>();
     for (const category of categories) {
       const response = await this.requestTextSearch({
-        textQuery: mapCategoryToGoogleTextQuery(category, input.city, region, country),
+        textQuery: mapCategoryToGoogleTextQuery(
+          category,
+          input.city,
+          region,
+          country,
+          input.neighborhood,
+        ),
         languageCode: googleLanguageCode(country),
         regionCode: country,
-        maxResultCount: Math.min(20, Math.max(1, this.options.resultLimit)),
+        maxResultCount: perCategoryLimit,
       });
 
       for (const place of response.places ?? []) {

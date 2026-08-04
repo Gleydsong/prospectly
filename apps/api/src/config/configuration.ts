@@ -84,4 +84,10 @@ export const configuration = () => ({
     apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
   },
   sentryDsn: process.env.SENTRY_DSN,
+  landingAi: {
+    provider: process.env.LANDING_AI_PROVIDER ?? 'ollama',
+    baseUrl: process.env.LANDING_AI_BASE_URL ?? 'http://127.0.0.1:11434',
+    model: process.env.LANDING_AI_MODEL ?? 'llama3.1',
+    timeoutMs: parseInt(process.env.LANDING_AI_TIMEOUT_MS ?? '120000', 10),
+  },
 });

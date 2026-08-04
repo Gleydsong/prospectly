@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import {
   createSearch,
   deleteSearch,
   fetchGeoCities,
   fetchGeoRegions,
+  fetchProspectingCategories,
   fetchSearch,
   fetchSearchProviders,
   fetchSearches,
@@ -25,6 +27,14 @@ export function useSearchProviders() {
   return useQuery({
     queryKey: ['searches', 'providers'],
     queryFn: fetchSearchProviders,
+    staleTime: 60_000,
+  });
+}
+
+export function useProspectingCategories() {
+  return useQuery({
+    queryKey: ['searches', 'categories'],
+    queryFn: fetchProspectingCategories,
     staleTime: 60_000,
   });
 }
@@ -66,6 +76,7 @@ export function useCreateSearch() {
     onSuccess: (search) => {
       queryClient.setQueryData(['searches', search.id], search);
       void queryClient.invalidateQueries({ queryKey: ['searches'] });
+      void queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY });
     },
   });
 }
@@ -78,6 +89,7 @@ export function useImportSearchResults() {
     onSuccess: (_summary, { searchId }) => {
       void queryClient.invalidateQueries({ queryKey: ['searches', searchId, 'results'] });
       void queryClient.invalidateQueries({ queryKey: ['searches', searchId] });
+      void queryClient.invalidateQueries({ queryKey: ['leads'] });
     },
   });
 }
