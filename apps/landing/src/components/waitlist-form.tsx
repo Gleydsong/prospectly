@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { CtaButton } from '@/components/ui/cta-button';
 import { t, type Locale } from '@/lib/i18n';
 
 export function WaitlistForm({ locale }: { locale: Locale }) {
@@ -82,13 +83,13 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
           aria-hidden
           className="pointer-events-none absolute left-[-9999px] h-0 w-0 opacity-0"
         />
-        <button
+        <CtaButton
           type="submit"
           disabled={status === 'loading' || email.trim().length === 0}
-          className="focus-ring inline-flex h-12 shrink-0 items-center justify-center rounded-control bg-accent px-6 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:text-accent-ink"
+          className="shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === 'loading' ? t(locale, 'waitlistSubmitting') : t(locale, 'waitlistSubmit')}
-        </button>
+        </CtaButton>
       </div>
       {status === 'error' ? (
         <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">

@@ -1,8 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { EnvelopeSimple, ListPlus } from '@phosphor-icons/react';
 import { Reveal } from '@/components/motion';
+import { CtaButton } from '@/components/ui/cta-button';
 import { TEAM_EMAIL, t, type Locale } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -21,20 +21,14 @@ export function FinalCtaSection({ locale }: { locale: Locale }) {
             {t(locale, 'finalBody')}
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={enterExplainerUrl(locale)}
-              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-            >
+            <CtaButton href={enterExplainerUrl(locale)}>
               <ListPlus weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'finalPrimary')}
-            </Link>
-            <a
-              href={`mailto:${TEAM_EMAIL}`}
-              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--bg-sunken)] active:scale-[0.98]"
-            >
+            </CtaButton>
+            <CtaButton href={`mailto:${TEAM_EMAIL}`} variant="secondary">
               <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'finalSecondary')}
-            </a>
+            </CtaButton>
           </div>
         </Reveal>
       </div>
