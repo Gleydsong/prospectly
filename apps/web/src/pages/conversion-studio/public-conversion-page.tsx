@@ -19,6 +19,7 @@ export function PublicConversionPage() {
   const [html, setHtml] = useState('');
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
@@ -112,14 +113,25 @@ export function PublicConversionPage() {
             {success}
           </p>
         ) : null}
+        {submitError ? (
+          <p className="rounded-lg bg-red-500/15 p-3 text-sm text-red-200" role="alert">
+            {submitError}
+          </p>
+        ) : null}
         {hasHtml ? (
           <HtmlLandingRenderer
             html={html}
             title={heading}
             onFormSubmit={async (payload) => {
               if (!slug) return;
-              const result = await submitPublicForm(slug, payload);
-              setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              try {
+                setSubmitError(null);
+                const result = await submitPublicForm(slug, payload);
+                setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              } catch {
+                setSuccess(null);
+                setSubmitError('Não foi possível enviar o formulário. Tente novamente.');
+              }
             }}
           />
         ) : (
@@ -132,8 +144,14 @@ export function PublicConversionPage() {
             }}
             onSubmitForm={async (payload) => {
               if (!slug) return;
-              const result = await submitPublicForm(slug, payload);
-              setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              try {
+                setSubmitError(null);
+                const result = await submitPublicForm(slug, payload);
+                setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              } catch {
+                setSuccess(null);
+                setSubmitError('Não foi possível enviar o formulário. Tente novamente.');
+              }
             }}
           />
         )}

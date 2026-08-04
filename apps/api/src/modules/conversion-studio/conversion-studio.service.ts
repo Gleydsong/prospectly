@@ -34,6 +34,7 @@ import {
   assertPublishableLandingHtml,
   sanitizeLandingHtml,
 } from './generation/html-sanitize';
+import { normalizePublicFormFields } from './normalize-public-form';
 
 @Injectable()
 export class ConversionStudioService {
@@ -553,22 +554,23 @@ export class ConversionStudioService {
   }
 
   async submitPublicForm(publicSlug: string, dto: PublicFormSubmitDto) {
-    if (dto.companyWebsite) {
+    const normalized = normalizePublicFormFields(dto as unknown as Record<string, unknown>);
+    if (normalized.companyWebsite) {
       return { ok: true };
     }
-    if (!dto.name && !dto.email && !dto.phone && !dto.message) {
+    if (!normalized.name && !normalized.email && !normalized.phone && !normalized.message) {
       throw new BadRequestException('Empty form');
     }
-    if (dto.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dto.email)) {
+    if (normalized.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) {
       throw new BadRequestException('Invalid email');
     }
 
     const page = await this.requirePublishedBySlug(publicSlug);
     const payload = {
-      ...(dto.name ? { name: dto.name.trim().slice(0, 120) } : {}),
-      ...(dto.email ? { email: dto.email.trim().toLowerCase().slice(0, 254) } : {}),
-      ...(dto.phone ? { phone: dto.phone.trim().slice(0, 32) } : {}),
-      ...(dto.message ? { message: dto.message.trim().slice(0, 2000) } : {}),
+      ...(normalized.name ? { name: normalized.name.slice(0, 120) } : {}),
+      ...(normalized.email ? { email: normalized.email.toLowerCase().slice(0, 254) } : {}),
+      ...(normalized.phone ? { phone: normalized.phone.slice(0, 32) } : {}),
+      ...(normalized.message ? { message: normalized.message.slice(0, 2000) } : {}),
     };
 
     const actorId = await this.resolveSystemActorId(page.organizationId, page.createdById);

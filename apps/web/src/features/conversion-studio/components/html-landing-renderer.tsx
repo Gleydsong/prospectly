@@ -67,14 +67,7 @@ export function HtmlLandingRenderer({
         return;
       }
       if (data.type === 'form_submit' && data.payload && onFormSubmitRef.current) {
-        const payload = data.payload;
-        void onFormSubmitRef.current({
-          name: payload.name || undefined,
-          email: payload.email || undefined,
-          phone: payload.phone || undefined,
-          message: payload.message || undefined,
-          companyWebsite: payload.companyWebsite || undefined,
-        });
+        void onFormSubmitRef.current(normalizeFormPayload(data.payload));
       }
     };
     window.addEventListener('message', onMessage);
@@ -131,4 +124,64 @@ setInterval(sendHeight,1000);
 
 function escapeAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function normalizeKey(key: string): string {
+  return key
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[\s_-]+/g, '');
+}
+
+function pickAlias(payload: Record<string, string>, aliases: string[]): string | undefined {
+  const entries = Object.entries(payload).filter(([, value]) => Boolean(value?.trim()));
+  for (const alias of aliases) {
+    const target = normalizeKey(alias);
+    const found = entries.find(([key]) => normalizeKey(key) === target);
+    if (found?.[1]?.trim()) return found[1].trim();
+  }
+  return undefined;
+}
+
+/** AI pt-BR landings often use nome/telefone/mensagem — map to API fields. */
+export function normalizeFormPayload(payload: Record<string, string>): {
+  name?: string;
+  email?: string;
+  phone?: string;
+  message?: string;
+  companyWebsite?: string;
+} {
+  return {
+    name: pickAlias(payload, ['name', 'nome', 'fullname', 'full_name', 'fullname', 'seu_nome', 'your_name']),
+    email: pickAlias(payload, ['email', 'e-mail', 'e_mail', 'correio']),
+    phone: pickAlias(payload, [
+      'phone',
+      'telefone',
+      'tel',
+      'celular',
+      'whatsapp',
+      'mobile',
+      'fone',
+      'telemovel',
+      'telemóvel',
+    ]),
+    message: pickAlias(payload, [
+      'message',
+      'mensagem',
+      'msg',
+      'comentario',
+      'comentário',
+      'comments',
+      'notes',
+      'nota',
+    ]),
+    companyWebsite: pickAlias(payload, [
+      'companyWebsite',
+      'company_website',
+      'website',
+      'url',
+      'honeypot',
+    ]),
+  };
 }

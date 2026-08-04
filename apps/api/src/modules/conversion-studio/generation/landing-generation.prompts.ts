@@ -17,6 +17,7 @@ Where "html" is a complete HTML document (DOCTYPE + html + head with style + bod
 - If googleReviews is empty, omit testimonials
 - Only HTTPS URLs for images; only https/mailto/tel/wa.me for links
 - NO scripts, iframes, event handlers, or javascript: URLs
+- Contact forms MUST use English input name attributes exactly: name, email, phone, message (labels may stay pt-BR)
 - Use real photos from photos[] in hero + gallery when available
 - Follow designReference + the premium brief below
 
@@ -53,6 +54,7 @@ export function buildUserPrompt(context: {
         'Prefer real googleReviews over invented testimonials',
         'Omit sections when data is missing — never fabricate facts',
         'WhatsApp CTA via https://wa.me/ when phone exists (digits only in path)',
+        'Form inputs must use name="name|email|phone|message" (English attrs; pt-BR labels OK)',
       ],
       business: {
         name: context.companyName,
@@ -93,6 +95,7 @@ export function buildRefineHtmlUserPrompt(input: {
         'Preserve real photo URLs unless the user asks to change imagery',
         'Do not invent phone/email/hours/social absent from current HTML/context',
         'Keep self-contained HTML (style in head), no scripts',
+        'Preserve form input name attrs as name|email|phone|message when a form exists',
         'Raise editorial/visual quality while applying the instruction',
         'Return JSON only',
       ],
