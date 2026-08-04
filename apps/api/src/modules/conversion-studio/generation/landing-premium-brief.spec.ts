@@ -23,6 +23,6 @@ describe('landing premium LLM brief', () => {
   });
 
   it('bumps prompt version for HTML premium', () => {
-    expect(LANDING_PROMPT_VERSION).toBe('v5-html-premium-motion');
+    expect(LANDING_PROMPT_VERSION).toBe('v6-html-premium-design-skill');
   });
 });

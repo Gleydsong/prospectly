@@ -28,6 +28,7 @@ import {
   RegisterPageAssetDto,
   RestoreVersionDto,
   UpdateAnalyticsSettingsDto,
+  UpdateConversionPageTemplateDto,
   UpdateConversionPageDraftDto,
 } from './dto/conversion-page.dto';
 import { EntitlementService } from './entitlement.service';
@@ -145,6 +146,17 @@ export class ConversionStudioController {
     @Body() dto: UpdateAnalyticsSettingsDto,
   ) {
     return this.studio.updateAnalyticsSettings(organizationId, id, user.id, dto);
+  }
+
+  @Patch(':id/template')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  updateTemplate(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateConversionPageTemplateDto,
+  ) {
+    return this.studio.updateTemplate(organizationId, id, user.id, dto.template);
   }
 
   @Get(':id/assets')

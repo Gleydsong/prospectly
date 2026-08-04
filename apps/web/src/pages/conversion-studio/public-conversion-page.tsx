@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { HtmlLandingRenderer } from '@/features/conversion-studio/components/html-landing-renderer';
+import { AuroraTrustedTemplate } from '@/features/conversion-studio/components/aurora-trusted-template';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import {
   fetchPublicPage,
@@ -10,6 +11,7 @@ import {
   trackPublicEvent,
 } from '@/features/conversion-studio/services/api';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
+import type { ConversionPageTemplate } from '@/features/conversion-studio/services/api';
 
 const CONSENT_KEY_PREFIX = 'prospectly.page.consent.';
 
@@ -18,6 +20,7 @@ export function PublicConversionPage() {
   const [title, setTitle] = useState('');
   const [html, setHtml] = useState('');
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
+  const [template, setTemplate] = useState<ConversionPageTemplate>('HTML');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +39,7 @@ export function PublicConversionPage() {
         setTitle(page.title);
         setHtml(page.html?.trim() || '');
         setBlocks(parsed.success ? parsed.data : []);
+        setTemplate(page.template ?? 'HTML');
         setAnalyticsEnabled(Boolean(page.analytics?.enabled));
         setConsentLabel(page.analytics?.consentLabel ?? '');
         const stored = localStorage.getItem(`${CONSENT_KEY_PREFIX}${slug}`) === '1';
@@ -56,7 +60,7 @@ export function PublicConversionPage() {
 
   const heading = useMemo(() => title || 'Proposta', [title]);
   const showConsent = analyticsEnabled && !consented;
-  const hasHtml = Boolean(html);
+  const hasHtml = Boolean(html) && template === 'HTML';
 
   if (loading) {
     return <p className="p-8 text-zinc-400">A carregar…</p>;
@@ -112,7 +116,9 @@ export function PublicConversionPage() {
             {success}
           </p>
         ) : null}
-        {hasHtml ? (
+        {template === 'AURORA' ? (
+          <AuroraTrustedTemplate title={heading} blocks={blocks} onTrack={(ctaType) => { if (slug && (!analyticsEnabled || consented)) void trackPublicEvent(slug, { type: 'cta_click', ctaType }); }} onSubmit={async (payload) => { if (!slug) return; const result = await submitPublicForm(slug, payload); setSuccess(result.message ?? 'Recebemos o seu contacto.'); }} />
+        ) : hasHtml ? (
           <HtmlLandingRenderer html={html} title={heading} />
         ) : (
           <PageBlocksRenderer

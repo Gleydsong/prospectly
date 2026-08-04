@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { HtmlLandingRenderer } from '@/features/conversion-studio/components/html-landing-renderer';
+import { AuroraTrustedTemplate } from '@/features/conversion-studio/components/aurora-trusted-template';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import {
   useConversionPage,
@@ -12,6 +13,7 @@ import {
   useRefineLandingPage,
 } from '@/features/conversion-studio/hooks';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
+import { updateConversionPageTemplate } from '@/features/conversion-studio/services/api';
 import { getApiErrorMessage } from '@/lib/api';
 
 function parseDraftBlocks(raw: unknown): PageBlock[] {
@@ -28,6 +30,7 @@ export function ConversionPageViewPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [instruction, setInstruction] = useState('');
   const [chatLog, setChatLog] = useState<string[]>([]);
+  const [templateUpdating, setTemplateUpdating] = useState(false);
 
   const generating =
     pageQuery.data?.generationStatus === 'QUEUED' ||
@@ -150,6 +153,12 @@ export function ConversionPageViewPage() {
             <p>
               Modo: <span className="text-zinc-200">{page.generationMode ?? '—'}</span>
             </p>
+            <div className="border-t border-zinc-800 pt-3">
+              <p className="mb-2 text-zinc-300">Template confiável</p>
+              <div className="flex gap-2">
+                {(['HTML', 'AURORA'] as const).map((template) => <button key={template} type="button" disabled={templateUpdating} onClick={() => { setTemplateUpdating(true); void updateConversionPageTemplate(page.id, template).then(() => pageQuery.refetch()).catch((err) => setActionError(getApiErrorMessage(err) ?? 'Não foi possível trocar o template.')).finally(() => setTemplateUpdating(false)); }} className={`rounded-lg border px-2 py-1 text-xs ${page.draftTemplate === template ? 'border-brand-400 bg-brand-500/15 text-brand-100' : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'}`}>{template === 'AURORA' ? 'Aurora React' : 'HTML seguro'}</button>)}
+              </div>
+            </div>
             {page.generationError ? (
               <p className="text-amber-200">Aviso: {page.generationError}</p>
             ) : null}
@@ -239,6 +248,8 @@ export function ConversionPageViewPage() {
           ) : null}
           {generating && !hasHtml && blocks.length === 0 ? (
             <Skeleton className="h-80" />
+          ) : page.draftTemplate === 'AURORA' ? (
+            <AuroraTrustedTemplate title={page.title} blocks={blocks} preview />
           ) : hasHtml ? (
             <HtmlLandingRenderer html={html} title={page.title} />
           ) : (

@@ -1,4 +1,5 @@
 import { LANDING_PREMIUM_CREATIVE_BRIEF } from './landing-premium-brief';
+import { LANDING_RUNTIME_DESIGN_SKILL } from './landing-runtime-design-skill';
 
 export const LANDING_SYSTEM_PROMPT = `You generate premium local-business landing pages as self-contained HTML for Prospectly.
 
@@ -21,7 +22,9 @@ Where "html" is a complete HTML document (DOCTYPE + html + head with style + bod
 - Include accessible CSS-only motion and a prefers-reduced-motion fallback as defined in the premium brief
 - Follow designReference + the premium brief below
 
-${LANDING_PREMIUM_CREATIVE_BRIEF}`;
+${LANDING_PREMIUM_CREATIVE_BRIEF}
+
+${LANDING_RUNTIME_DESIGN_SKILL}`;
 
 export function buildUserPrompt(context: {
   companyName: string;
