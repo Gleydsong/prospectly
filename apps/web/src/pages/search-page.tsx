@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
@@ -400,15 +401,12 @@ export function SearchPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.search')}</h1>
-          <p className="text-sm text-zinc-500">
-            Encontre negócios locais por nicho e localização no Brasil e na Europa.
-          </p>
-        </div>
-        <SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />
-      </div>
+      <PageHeader
+        eyebrow={t('nav.groupDiscover')}
+        title={t('leads.search')}
+        description="Encontre negócios locais por nicho e localização no Brasil e na Europa."
+        actions={<SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />}
+      />
 
       <Card>
         <CardContent className="space-y-4">
