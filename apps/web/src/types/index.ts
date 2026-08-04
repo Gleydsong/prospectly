@@ -1,12 +1,30 @@
-import type { LeadSource, LeadStatus, PaginatedResult, ProspectingCategory, Role } from '@prospectly/shared-types';
+import type {
+  LeadSource,
+  LeadStatus,
+  PaginatedResult,
+  ProspectingCategory,
+  ProspectingCategoryCatalog,
+  ProspectingCategoryOption,
+  Role,
+  SearchResultLimit,
+} from '@prospectly/shared-types';
 
-export type { PaginatedResult, ProspectingCategory };
+export type {
+  PaginatedResult,
+  ProspectingCategory,
+  ProspectingCategoryCatalog,
+  ProspectingCategoryOption,
+  SearchResultLimit,
+};
 export {
+  DEFAULT_SEARCH_RESULT_LIMIT,
+  FREE_PROSPECTING_CATEGORIES,
   LeadStatus,
   LeadSource,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   Role,
+  SEARCH_RESULT_LIMITS,
 } from '@prospectly/shared-types';
 
 export type AppLocale = 'pt' | 'en';
@@ -164,6 +182,18 @@ export interface DashboardSummary {
   won: number;
   lost: number;
   conversionRate: number;
+  lossRate?: number;
+  approachRate?: number;
+  meetingRate?: number;
+  followUpRate?: number;
+  rates?: {
+    approachRate: number;
+    meetingRate: number;
+    followUpRate: number;
+    conversionRate: number;
+    lossRate: number;
+    period: DashboardPeriod;
+  };
   overdueTasks: number;
   overdueFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
   upcomingFollowUps: Array<{ id: string; companyName: string; nextContactAt: string }>;
@@ -180,6 +210,12 @@ export interface DashboardSummary {
     won: number;
     lost: number;
     conversionRate: number;
+  }>;
+  recommendations?: Array<{
+    code: 'HIGH_POTENTIAL_IDLE' | 'STALE_LEADS' | 'OVERDUE_FOLLOW_UPS' | 'FREE_SEARCH_QUOTA' | 'LEADS_WITHOUT_PAGE' | 'PAGES_WITHOUT_CONVERSION';
+    count: number;
+    href: string;
+    severity: 'info' | 'warning' | 'action';
   }>;
   filters?: {
     period: '7d' | '30d' | '90d' | 'all';
@@ -320,9 +356,11 @@ export interface SearchInput {
   categories: ProspectingCategory[];
   category?: ProspectingCategory;
   city: string;
+  neighborhood?: string;
   state: string;
   country: ProspectingCountryCode;
   onlyWithoutWebsite: boolean;
+  limit?: SearchResultLimit;
   provider?: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
 }
 
@@ -356,6 +394,8 @@ export interface NormalizedBusiness {
   postalCode?: string;
   latitude?: number;
   longitude?: number;
+  rating?: number;
+  reviewCount?: number;
   source: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
   websitePresence: WebsitePresence;
 }
@@ -375,6 +415,12 @@ export interface SearchImportSummary {
   skipped: number;
   invalid: number;
   conflicts: number;
+  items?: Array<{
+    resultId: string;
+    status: 'IMPORTED' | 'SKIPPED' | 'INVALID' | 'CONFLICT';
+    leadId?: string;
+    companyName?: string;
+  }>;
 }
 
 export const CSV_IMPORT_FIELDS = [

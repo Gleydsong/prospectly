@@ -1,12 +1,30 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfidenceLevel, LeadSource, LeadStatus, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { ConfidenceLevel, LeadSource, LeadStatus, OrgPlan, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
 import type { Queue } from 'bullmq';
+import {
+  DEFAULT_SEARCH_RESULT_LIMIT,
+  SEARCH_RESULT_LIMITS,
+  type ProspectingCategoryCatalog,
+} from '@prospectly/shared-types';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
+import {
+  CATEGORY_REQUIRED_PLAN,
+  availableCategoryCount,
+  effectivePlan,
+  isCategoryAvailable,
+  listCategoryOptions,
+} from './domain/category-entitlements';
 import type { NormalizedBusiness } from './domain/normalized-business';
 import {
   isProspectingCountryCode,
@@ -28,11 +46,21 @@ interface SearchResultForImport {
   normalizedData: Prisma.JsonValue;
 }
 
+export type SearchImportItemStatus = 'IMPORTED' | 'SKIPPED' | 'INVALID' | 'CONFLICT';
+
+export interface SearchImportItemResult {
+  resultId: string;
+  status: SearchImportItemStatus;
+  leadId?: string;
+  companyName?: string;
+}
+
 export interface SearchImportSummary {
   imported: number;
   skipped: number;
   invalid: number;
   conflicts: number;
+  items: SearchImportItemResult[];
 }
 
 @Injectable()
@@ -49,6 +77,18 @@ export class ProspectingService {
     return this.providers.list().filter((provider) => provider.available);
   }
 
+  async listCategories(organizationId: string): Promise<ProspectingCategoryCatalog> {
+    const plan = await this.resolvePlan(organizationId);
+    const categories = listCategoryOptions(plan);
+    return {
+      categories,
+      total: categories.length,
+      availableCount: availableCategoryCount(plan),
+      plan,
+      requiredPlan: CATEGORY_REQUIRED_PLAN,
+    };
+  }
+
   async create(organizationId: string, userId: string, dto: CreateSearchDto, correlationId?: string) {
     await this.billing.assertCanCreateSearch(organizationId);
 
@@ -58,13 +98,18 @@ export class ProspectingService {
     }
 
     const categories = [...new Set(dto.categories.map((category) => category.trim()))];
+    await this.assertCategoriesAllowed(organizationId, categories);
+
+    const neighborhood = dto.neighborhood?.trim();
     const input: SearchInput = {
       categories,
       category: categories[0]!,
       city: dto.city.trim(),
+      ...(neighborhood ? { neighborhood } : {}),
       state: dto.state,
       country: dto.country,
       onlyWithoutWebsite: dto.onlyWithoutWebsite,
+      limit: dto.limit ?? DEFAULT_SEARCH_RESULT_LIMIT,
     };
     const search = await this.prisma.search.create({
       data: {
@@ -190,8 +235,9 @@ export class ProspectingService {
     const filtered = input.onlyWithoutWebsite
       ? results.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
       : results;
+    const capped = filtered.slice(0, input.limit ?? DEFAULT_SEARCH_RESULT_LIMIT);
 
-    await this.persistResults(searchId, filtered);
+    await this.persistResults(searchId, capped);
     await this.prisma.search.update({
       where: { id: searchId },
       data: { status: SearchStatus.COMPLETED, error: null, completedAt: new Date() },
@@ -229,32 +275,69 @@ export class ProspectingService {
       throw new BadRequestException('One or more results do not belong to this search');
     }
 
-    const summary: SearchImportSummary = { imported: 0, skipped: 0, invalid: 0, conflicts: 0 };
+    const summary: SearchImportSummary = {
+      imported: 0,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
+    };
     for (const result of results) {
       if (result.importedLeadId) {
         summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
+          leadId: result.importedLeadId,
+        });
         continue;
       }
       const business = this.readNormalizedBusiness(result.normalizedData);
       if (!business) {
         summary.invalid += 1;
+        summary.items.push({ resultId: result.id, status: 'INVALID' });
         continue;
       }
+      const companyName = business.companyName;
       const outcome = await this.leadIngestion.ingest(organizationId, actorId, this.toLeadCandidate(business));
       if (outcome.status === 'IMPORTED') {
         const linked = await this.linkResultIfUnlinked(result.id, outcome.lead.id);
         if (linked) {
           summary.imported += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'IMPORTED',
+            leadId: outcome.lead.id,
+            companyName,
+          });
         } else {
           summary.skipped += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'SKIPPED',
+            leadId: outcome.lead.id,
+            companyName,
+          });
         }
       } else if (outcome.status === 'POSSIBLE_DUPLICATE') {
         summary.conflicts += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'CONFLICT',
+          leadId: outcome.lead?.id,
+          companyName,
+        });
       } else {
         if (outcome.lead) {
           await this.linkResultIfUnlinked(result.id, outcome.lead.id);
         }
         summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
+          leadId: outcome.lead?.id,
+          companyName,
+        });
       }
     }
     return summary;
@@ -340,14 +423,55 @@ export class ProspectingService {
       typeof input.country === 'string' && isProspectingCountryCode(input.country)
         ? input.country
         : 'BR';
+    const neighborhood =
+      typeof input.neighborhood === 'string' && input.neighborhood.trim()
+        ? input.neighborhood.trim()
+        : undefined;
     return {
       categories,
       category: categories[0]!,
       city: input.city,
+      ...(neighborhood ? { neighborhood } : {}),
       state: input.state,
       country,
       onlyWithoutWebsite: input.onlyWithoutWebsite,
+      limit: this.readResultLimit(input.limit),
     };
+  }
+
+  /** Older searches were persisted without a limit; fall back to the default volume. */
+  private readResultLimit(value: unknown): number {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return (SEARCH_RESULT_LIMITS as readonly number[]).includes(parsed)
+      ? parsed
+      : DEFAULT_SEARCH_RESULT_LIMIT;
+  }
+
+  private async resolvePlan(organizationId: string): Promise<OrgPlan> {
+    const org = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { plan: true, planStatus: true },
+    });
+    if (!org) throw new NotFoundException('Organization not found');
+    return effectivePlan({ plan: org.plan, planStatus: org.planStatus });
+  }
+
+  private async assertCategoriesAllowed(
+    organizationId: string,
+    categories: string[],
+  ): Promise<void> {
+    const plan = await this.resolvePlan(organizationId);
+    if (plan !== OrgPlan.FREE) return;
+
+    const blocked = categories.filter((category) => !isCategoryAvailable(plan, category));
+    if (blocked.length === 0) return;
+
+    throw new ForbiddenException({
+      code: 'ENTITLEMENT_CATEGORIES',
+      message: 'One or more categories are not available on the current plan',
+      requiredPlan: CATEGORY_REQUIRED_PLAN,
+      categories: blocked,
+    });
   }
 
   private resolveCategories(input: {

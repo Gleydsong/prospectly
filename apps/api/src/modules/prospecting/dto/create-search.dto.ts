@@ -7,6 +7,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -16,7 +17,13 @@ import {
   ValidatorConstraintInterface,
   type ValidationArguments,
 } from 'class-validator';
-import { PROSPECTING_CATEGORY_VALUES, type ProspectingCategory } from '@prospectly/shared-types';
+import {
+  DEFAULT_SEARCH_RESULT_LIMIT,
+  PROSPECTING_CATEGORY_VALUES,
+  SEARCH_RESULT_LIMITS,
+  type ProspectingCategory,
+  type SearchResultLimit,
+} from '@prospectly/shared-types';
 
 import {
   BRAZILIAN_STATE_CODES,
@@ -117,20 +124,53 @@ export class CreateSearchDto {
   @Validate(ProspectingRegionForCountryConstraint)
   state!: string;
 
+  @ApiPropertyOptional({
+    example: 'Casa Caiada',
+    description: 'Optional neighborhood/district used to narrow the search inside the city',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  })
+  @IsString()
+  @MaxLength(120)
+  neighborhood?: string;
+
+  @ApiPropertyOptional({
+    enum: [...SEARCH_RESULT_LIMITS],
+    default: DEFAULT_SEARCH_RESULT_LIMIT,
+    description: 'Maximum number of results to persist for this search',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return DEFAULT_SEARCH_RESULT_LIMIT;
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : value;
+  })
+  @IsInt()
+  @IsIn([...SEARCH_RESULT_LIMITS])
+  limit?: SearchResultLimit;
+
   @ApiPropertyOptional({ enum: PROSPECTING_PROVIDER_IDS, default: 'OPENSTREETMAP' })
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
   @IsIn([...PROSPECTING_PROVIDER_IDS])
   provider?: ProspectingProviderId;
 
-  @ApiPropertyOptional({ default: true })
+  @ApiPropertyOptional({
+    default: false,
+    description:
+      'When true, keep only places whose source did not report a website (NO_WEBSITE_REPORTED). Default false returns all places.',
+  })
   @IsOptional()
   @Transform(({ obj, value }) => {
     const raw = (obj as Record<string, unknown>).onlyWithoutWebsite;
     if (raw === true || raw === 'true') return true;
     if (raw === false || raw === 'false') return false;
-    return value === undefined ? true : raw;
+    return value === undefined ? false : raw;
   })
   @IsBoolean()
-  onlyWithoutWebsite: boolean = true;
+  onlyWithoutWebsite: boolean = false;
 }

@@ -90,6 +90,44 @@ describe('BillingService', () => {
     await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('reports remaining free searches in the billing status', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.INACTIVE,
+      planCurrency: null,
+      paymentProvider: null,
+      currentPeriodEnd: null,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(2);
+
+    await expect(service.getOrganizationBilling('org1')).resolves.toEqual(
+      expect.objectContaining({
+        searchUsage: { used: 2, limit: 3, remaining: 1, unlimited: false },
+      }),
+    );
+  });
+
+  it('reports unlimited searches for an active plan', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      planCurrency: 'BRL',
+      paymentProvider: null,
+      currentPeriodEnd: null,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(12);
+
+    await expect(service.getOrganizationBilling('org1')).resolves.toEqual(
+      expect.objectContaining({
+        searchUsage: { used: 12, limit: null, remaining: null, unlimited: true },
+      }),
+    );
+  });
+
   it('routes EUR monthly checkout to Stripe redirect', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',

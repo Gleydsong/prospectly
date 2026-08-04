@@ -41,12 +41,14 @@ export function mapCategoryToGoogleTextQuery(
   city: string,
   region: string,
   country: ProspectingCountryCode,
+  neighborhood?: string,
 ): string {
   const normalized = category.trim().toLocaleLowerCase('pt-BR') as ProspectingCategory;
   const label = LABEL_BY_VALUE[normalized] ?? category.trim();
   const countryName = countryDisplayName(country);
-  if (country === 'BR' || country === 'PT') {
-    return `${label} em ${city.trim()}, ${region.trim()}, ${countryName}`;
-  }
-  return `${label} in ${city.trim()}, ${region.trim()}, ${countryName}`;
+  const place = [neighborhood?.trim(), city.trim(), region.trim(), countryName]
+    .filter((part): part is string => Boolean(part))
+    .join(', ');
+  const preposition = country === 'BR' || country === 'PT' ? 'em' : 'in';
+  return `${label} ${preposition} ${place}`;
 }

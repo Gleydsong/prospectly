@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 import type {
   PaginatedResult,
+  ProspectingCategoryCatalog,
   ProspectingSearch,
   ProspectingSearchResult,
   SearchImportSummary,
@@ -22,6 +23,11 @@ export interface SearchResultsQuery {
 
 export async function fetchSearchProviders(): Promise<SearchProviderInfo[]> {
   const { data } = await api.get<SearchProviderInfo[]>('/searches/providers');
+  return data;
+}
+
+export async function fetchProspectingCategories(): Promise<ProspectingCategoryCatalog> {
+  const { data } = await api.get<ProspectingCategoryCatalog>('/searches/categories');
   return data;
 }
 

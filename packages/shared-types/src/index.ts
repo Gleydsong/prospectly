@@ -175,6 +175,42 @@ export const PROSPECTING_CATEGORIES = [
   { value: 'guest_house', label: 'Pousada' },
 ] as const satisfies readonly { value: ProspectingCategory; label: string }[];
 
+/** Categories available without an active paid plan. */
+export const FREE_PROSPECTING_CATEGORIES = [
+  'restaurant',
+  'cafe',
+  'bakery',
+  'hairdresser',
+  'clothes',
+] as const satisfies readonly ProspectingCategory[];
+
+export type FreeProspectingCategory = (typeof FREE_PROSPECTING_CATEGORIES)[number];
+
+export function isFreeProspectingCategory(value: string): value is FreeProspectingCategory {
+  return (FREE_PROSPECTING_CATEGORIES as readonly string[]).includes(value);
+}
+
+/** Result volumes a user can pick per search. */
+export const SEARCH_RESULT_LIMITS = [20, 40, 60] as const;
+
+export type SearchResultLimit = (typeof SEARCH_RESULT_LIMITS)[number];
+
+export const DEFAULT_SEARCH_RESULT_LIMIT: SearchResultLimit = 20;
+
+export interface ProspectingCategoryOption {
+  value: ProspectingCategory;
+  label: string;
+  available: boolean;
+}
+
+export interface ProspectingCategoryCatalog {
+  categories: ProspectingCategoryOption[];
+  total: number;
+  availableCount: number;
+  plan: string;
+  requiredPlan: string;
+}
+
 export interface SearchBusinessesInput {
   query?: string;
   category?: ProspectingCategory;
@@ -288,4 +324,98 @@ export interface ScoreResult {
   missingData: string[];
   recommendedAction: string;
   configVersion: number;
+}
+
+// ---------- Opportunity signals (Conversion Studio) ----------
+// Heuristic for discovery cards. Does NOT claim a business has no website.
+// NO_WEBSITE_REPORTED means "source did not report a website".
+
+export type OpportunitySignalLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type OpportunitySignalReasonKey =
+  | 'website_not_reported_by_source'
+  | 'good_rating_and_volume'
+  | 'contact_available'
+  | 'not_yet_in_crm'
+  | 'already_in_crm'
+  | 'website_reported_by_source'
+  | 'needs_website_review';
+
+export type OpportunitySignalTag =
+  | 'HIGH_POTENTIAL'
+  | 'SITE_NOT_REPORTED'
+  | 'NEW'
+  | 'IN_CRM'
+  | 'HAS_CONTACT';
+
+export interface OpportunitySignalInput {
+  websitePresence: 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
+  phone?: string | null;
+  email?: string | null;
+  whatsapp?: string | null;
+  rating?: number | null;
+  reviewCount?: number | null;
+  inCrm?: boolean;
+}
+
+export interface OpportunitySignal {
+  level: OpportunitySignalLevel;
+  score: number;
+  reasons: OpportunitySignalReasonKey[];
+  tags: OpportunitySignalTag[];
+}
+
+export const OPPORTUNITY_HIGH_RATING = 4;
+export const OPPORTUNITY_MIN_REVIEWS = 10;
+
+export function buildOpportunitySignal(input: OpportunitySignalInput): OpportunitySignal {
+  const reasons: OpportunitySignalReasonKey[] = [];
+  const tags: OpportunitySignalTag[] = [];
+  let score = 0;
+
+  const hasContact = Boolean(input.phone?.trim() || input.email?.trim() || input.whatsapp?.trim());
+  const rating = typeof input.rating === 'number' ? input.rating : null;
+  const reviews = typeof input.reviewCount === 'number' ? input.reviewCount : null;
+  const strongSocialProof =
+    rating !== null &&
+    reviews !== null &&
+    rating >= OPPORTUNITY_HIGH_RATING &&
+    reviews >= OPPORTUNITY_MIN_REVIEWS;
+
+  if (input.websitePresence === 'NO_WEBSITE_REPORTED') {
+    score += 40;
+    reasons.push('website_not_reported_by_source');
+    tags.push('SITE_NOT_REPORTED');
+  } else if (input.websitePresence === 'NEEDS_REVIEW') {
+    score += 15;
+    reasons.push('needs_website_review');
+  } else {
+    reasons.push('website_reported_by_source');
+  }
+
+  if (strongSocialProof) {
+    score += 25;
+    reasons.push('good_rating_and_volume');
+  }
+
+  if (hasContact) {
+    score += 20;
+    reasons.push('contact_available');
+    tags.push('HAS_CONTACT');
+  }
+
+  if (input.inCrm) {
+    tags.push('IN_CRM');
+    reasons.push('already_in_crm');
+  } else {
+    score += 15;
+    reasons.push('not_yet_in_crm');
+    tags.push('NEW');
+  }
+
+  const capped = Math.min(100, score);
+  const level: OpportunitySignalLevel = capped >= 70 ? 'HIGH' : capped >= 40 ? 'MEDIUM' : 'LOW';
+  if (level === 'HIGH') tags.unshift('HIGH_POTENTIAL');
+
+  return { level, score: capped, reasons, tags: [...new Set(tags)] };
 }

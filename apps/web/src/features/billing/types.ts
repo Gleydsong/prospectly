@@ -16,7 +16,16 @@ export type CheckoutResult =
       expiresAt?: string;
     };
 
+export type SearchUsage = {
+  used: number;
+  /** null when the active plan has no search cap. */
+  limit: number | null;
+  remaining: number | null;
+  unlimited: boolean;
+};
+
 export type BillingStatus = {
+  searchUsage: SearchUsage;
   plan: string;
   planStatus: string;
   planCurrency: string | null;

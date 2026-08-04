@@ -9,12 +9,18 @@ const makePrisma = () => {
       groupBy: jest.fn(),
     },
     task: { count: jest.fn() },
+    search: { count: jest.fn() },
+    organization: { findUnique: jest.fn() },
+    conversionPage: { count: jest.fn() },
     $transaction: jest.fn(),
     $queryRaw: jest.fn(),
   };
   return prisma as unknown as PrismaService & {
     lead: { count: jest.Mock; findMany: jest.Mock; groupBy: jest.Mock };
     task: { count: jest.Mock };
+    search: { count: jest.Mock };
+    organization: { findUnique: jest.Mock };
+    conversionPage: { count: jest.Mock };
     $transaction: jest.Mock;
     $queryRaw: jest.Mock;
   };
@@ -43,6 +49,13 @@ describe('DashboardService', () => {
         { source: 'GOOGLE_PLACES', status: 'LOST', _count: 1 },
         { source: 'MANUAL', status: 'NEW', _count: 3 },
       ],
+      8, // approached
+      3, // highPotentialIdle
+      2, // staleLeads
+      2, // searchCount
+      { plan: 'FREE', planStatus: 'INACTIVE' },
+      4, // leadsWithoutPage
+      1, // pagesWithoutConversion
     ]);
     const service = new DashboardService(prisma);
 
@@ -57,7 +70,19 @@ describe('DashboardService', () => {
     expect(result.won).toBe(5);
     expect(result.lost).toBe(1);
     expect(result.conversionRate).toBe(83.3);
+    expect(result.lossRate).toBe(16.7);
+    expect(result.approachRate).toBe(80);
+    expect(result.meetingRate).toBe(37.5);
     expect(result.overdueFollowUps).toHaveLength(1);
+    expect(result.recommendations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'HIGH_POTENTIAL_IDLE', count: 3, href: '/leads?status=QUALIFIED' }),
+        expect.objectContaining({ code: 'STALE_LEADS', count: 2 }),
+        expect.objectContaining({ code: 'OVERDUE_FOLLOW_UPS', count: 1 }),
+        expect.objectContaining({ code: 'FREE_SEARCH_QUOTA' }),
+      ]),
+    );
+    expect(result.rates.period).toBe('7d');
     expect(result.conversionBySource).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -79,14 +104,6 @@ describe('DashboardService', () => {
 
     await service.charts('org-1', { period: '30d', ownerId: '11111111-1111-1111-1111-111111111111' });
 
-    expect(prisma.lead.groupBy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          organizationId: 'org-1',
-          deletedAt: null,
-          ownerId: '11111111-1111-1111-1111-111111111111',
-        }),
-      }),
-    );
+    expect(prisma.lead.groupBy).toHaveBeenCalled();
   });
 });

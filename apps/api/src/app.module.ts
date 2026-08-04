@@ -34,6 +34,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { OpsModule } from './modules/ops/ops.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { ConversionStudioModule } from './modules/conversion-studio/conversion-studio.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
     WaitlistModule,
     CampaignsModule,
     IntegrationsModule,
+    ConversionStudioModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

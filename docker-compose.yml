@@ -37,6 +37,23 @@ services:
     networks:
       - prospectly
 
+  # IA self-host (Llama via Ollama) — usada na geração de landing a partir do lead.
+  # Sobe com: docker compose --profile ai up -d
+  # Depois: docker compose exec ollama ollama pull llama3.1
+  ollama:
+    image: ollama/ollama:latest
+    container_name: prospectly-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - prospectly
+    profiles:
+      - ai
+      - full
+
   api:
     build:
       context: .
@@ -48,6 +65,10 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:-prospectly}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
       REDIS_URL: redis://redis:6379
+      LANDING_AI_PROVIDER: ${LANDING_AI_PROVIDER:-ollama}
+      LANDING_AI_BASE_URL: ${LANDING_AI_BASE_URL:-http://ollama:11434}
+      LANDING_AI_MODEL: ${LANDING_AI_MODEL:-llama3.1}
+      LANDING_AI_TIMEOUT_MS: ${LANDING_AI_TIMEOUT_MS:-60000}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -73,6 +94,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:-prospectly}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
       REDIS_URL: redis://redis:6379
       ROLE: worker
+      LANDING_AI_PROVIDER: ${LANDING_AI_PROVIDER:-ollama}
+      LANDING_AI_BASE_URL: ${LANDING_AI_BASE_URL:-http://ollama:11434}
+      LANDING_AI_MODEL: ${LANDING_AI_MODEL:-llama3.1}
+      LANDING_AI_TIMEOUT_MS: ${LANDING_AI_TIMEOUT_MS:-60000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -103,6 +128,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  ollama-data:
 
 networks:
   prospectly:

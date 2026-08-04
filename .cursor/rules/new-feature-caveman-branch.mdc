@@ -1,0 +1,34 @@
+---
+description: Novas features — caveman + branch dedicada fora do tema atual
+alwaysApply: true
+---
+
+# Workflow: feature nova = caveman + branch nova
+
+A partir de agora, **toda feature nova** (pedido de capacidade/produto novo, não bugfix pontual no tema corrente) segue estas regras:
+
+## 1. Caveman (obrigatório)
+
+No início da feature, ativar modo **caveman full**:
+
+- Respostas curtas, estilo caveman inteligente
+- Sem artigos/filler/hedging/pleasantries desnecessários
+- Fragmentos OK; termos técnicos exatos
+- Padrão: `[coisa] [ação] [motivo]. [próximo passo].`
+- Código, commits, avisos de segurança e planos estruturados: português/inglês normal e claro
+- Persiste até o utilizador dizer `stop caveman` / `normal mode`
+
+## 2. Branch nova (obrigatório)
+
+- **Não** continuar a feature nova em cima da branch temática atual (ex.: não empilhar outra feature em `feat/prospectly-conversion-studio`)
+- Antes de implementar: criar branch a partir de `main` (ou base acordada), com nome convencional:
+  - `feat/<slug-curto>`
+  - `fix/<slug-curto>`
+  - `chore/<slug-curto>`
+- Confirmar com `git status` / `git branch --show-current` que a branch ativa é a nova
+- Só misturar com a branch anterior se o utilizador pedir merge/rebase explicitamente
+
+## 3. Exceções
+
+- Hotfix / typo / ajuste mínimo **no mesmo tema** da branch atual: pode ficar na branch corrente (sem nova branch)
+- Se o utilizador disser explicitamente “continua nesta branch”: respeitar

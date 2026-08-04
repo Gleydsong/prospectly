@@ -4,7 +4,7 @@ import { ArrowLeft, Globe, Mail, MapPin, Phone, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
@@ -133,6 +133,7 @@ export function LeadDetailPage() {
           <LeadStatusBadge status={lead.status} />
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
+          <CreateProposalButton leadId={lead.id} companyName={lead.companyName} />
         </div>
       </div>
 
@@ -606,6 +607,16 @@ const MISSING_FIELD_LABEL: Record<string, string> = {
   city: 'Cidade',
   category: 'Categoria',
 };
+
+function CreateProposalButton({ leadId }: { leadId: string; companyName: string }) {
+  const navigate = useNavigate();
+
+  return (
+    <Button size="sm" onClick={() => navigate(`/pages/new?leadId=${leadId}`)}>
+      Criar página de proposta
+    </Button>
+  );
+}
 
 function websitePresenceLabel(presence?: string | null): string {
   switch (presence) {

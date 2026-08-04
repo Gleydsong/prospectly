@@ -35,7 +35,6 @@ import {
   type OrgMember,
 } from '@/features/organizations/api';
 import { fetchIntegrations, upsertWebhookIntegration } from '@/features/integrations/api';
-import { fetchScoreConfig, updateScoreRules, type ScoreRule } from '@/features/scoring/api';
 import { setAppLocale } from '@/i18n';
 import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
@@ -59,115 +58,6 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
-}
-
-function ScoringSettingsCard() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const emailVerified = Boolean(useAuthStore((s) => s.user?.emailVerifiedAt));
-  const [draft, setDraft] = useState<ScoreRule[] | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const configQuery = useQuery({
-    queryKey: ['scoring', 'config'],
-    queryFn: fetchScoreConfig,
-  });
-
-  const rules = draft ?? configQuery.data?.rules ?? [];
-
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      updateScoreRules(
-        rules.map((rule) => ({
-          key: rule.key,
-          enabled: rule.enabled,
-          points: rule.points,
-        })),
-      ),
-    onSuccess: async (data) => {
-      setDraft(null);
-      setSaveError(null);
-      setSaveMessage(t('settings.scoringSaved'));
-      await queryClient.setQueryData(['scoring', 'config'], data);
-    },
-    onError: (err) => {
-      setSaveMessage(null);
-      setSaveError(getApiErrorMessage(err) || t('settings.scoringError'));
-    },
-  });
-
-  const updateRule = (key: string, patch: Partial<Pick<ScoreRule, 'enabled' | 'points'>>) => {
-    const base = draft ?? configQuery.data?.rules ?? [];
-    setDraft(base.map((rule) => (rule.key === key ? { ...rule, ...patch } : rule)));
-  };
-
-  return (
-    <Card>
-      <CardHeader title={t('settings.scoringTitle')} description={t('settings.scoringDesc')} />
-      <CardContent className="space-y-4">
-        {configQuery.isLoading ? (
-          <Skeleton className="h-40" />
-        ) : configQuery.isError ? (
-          <p className="text-sm text-red-300" role="alert">
-            {getApiErrorMessage(configQuery.error) || t('settings.scoringError')}
-          </p>
-        ) : (
-          <>
-            <ul className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
-              {rules.map((rule) => (
-                <li key={rule.key} className="flex flex-wrap items-center gap-3 px-3 py-3">
-                  <label className="flex min-w-0 flex-1 items-center gap-2.5 text-sm text-zinc-100">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
-                      checked={rule.enabled}
-                      onChange={(event) => updateRule(rule.key, { enabled: event.target.checked })}
-                    />
-                    <span className="font-medium">
-                      {t(`scoreRules.${rule.key}`, { defaultValue: rule.description || rule.key })}
-                    </span>
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={50}
-                    className="w-24"
-                    aria-label={t('settings.scoringPointsAria', {
-                      rule: t(`scoreRules.${rule.key}`, { defaultValue: rule.key }),
-                    })}
-                    value={rule.points}
-                    onChange={(event) =>
-                      updateRule(rule.key, {
-                        points: Math.max(0, Math.min(50, Number(event.target.value) || 0)),
-                      })
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-            {saveError ? (
-              <p className="text-sm text-red-300" role="alert">
-                {saveError}
-              </p>
-            ) : null}
-            {saveMessage ? <p className="text-sm text-brand-300">{saveMessage}</p> : null}
-            {!emailVerified ? (
-              <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
-            ) : null}
-            <Button
-              type="button"
-              loading={saveMutation.isPending}
-              disabled={!draft || !emailVerified}
-              onClick={() => saveMutation.mutate()}
-            >
-              {t('settings.scoringSave')}
-            </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
 }
 
 function InviteMemberModal({
@@ -992,8 +882,6 @@ export function SettingsPage() {
           {dsrMessage ? <p className="text-sm text-zinc-200">{dsrMessage}</p> : null}
         </CardContent>
       </Card>
-
-      <ScoringSettingsCard />
 
       <InviteMemberModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
 

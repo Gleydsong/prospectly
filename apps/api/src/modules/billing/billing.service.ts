@@ -20,6 +20,14 @@ import { resolvePaymentProviderId } from './domain/payment-router';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
+export interface SearchUsageSnapshot {
+  used: number;
+  /** null when the active plan has no search cap. */
+  limit: number | null;
+  remaining: number | null;
+  unlimited: boolean;
+}
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
@@ -35,7 +43,9 @@ export class BillingService {
   async getOrganizationBilling(organizationId: string) {
     const org = await this.requireOrg(organizationId);
     const provider = org.paymentProvider;
+    const searchUsage = await this.getSearchUsage(org);
     return {
+      searchUsage,
       plan: org.plan,
       planStatus: org.planStatus,
       planCurrency: org.planCurrency,
@@ -52,6 +62,21 @@ export class BillingService {
     };
   }
 
+  async getSearchUsage(
+    organization: Organization | string,
+  ): Promise<SearchUsageSnapshot> {
+    const org =
+      typeof organization === 'string' ? await this.requireOrg(organization) : organization;
+    const used = await this.prisma.search.count({ where: { organizationId: org.id } });
+    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT;
+    return {
+      used,
+      limit,
+      remaining: limit === null ? null : Math.max(0, limit - used),
+      unlimited: limit === null,
+    };
+  }
+
   async assertCanCreateSearch(organizationId: string): Promise<void> {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) {
@@ -60,9 +85,13 @@ export class BillingService {
 
     const searchCount = await this.prisma.search.count({ where: { organizationId } });
     if (searchCount >= FREE_SEARCH_LIMIT) {
-      throw new ForbiddenException(
-        `Free plan allows ${FREE_SEARCH_LIMIT} searches. Upgrade to continue.`,
-      );
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_SEARCHES',
+        message: `Free plan allows ${FREE_SEARCH_LIMIT} searches. Upgrade to continue.`,
+        requiredPlan: OrgPlan.STARTER_MONTHLY,
+        usage: searchCount,
+        limit: FREE_SEARCH_LIMIT,
+      });
     }
   }
 

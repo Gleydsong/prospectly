@@ -186,6 +186,42 @@ export function DashboardPage() {
         )}
       </div>
 
+      {!summary.isLoading && data ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label={t('dashboard.approachRate')} value={`${data.approachRate ?? 0}%`} icon={Target} />
+          <StatCard label={t('dashboard.meetingRate')} value={`${data.meetingRate ?? 0}%`} icon={CalendarClock} />
+          <StatCard label={t('dashboard.followUpRate')} value={`${data.followUpRate ?? 0}%`} icon={AlertTriangle} />
+          <StatCard label={t('dashboard.lossRate')} value={`${data.lossRate ?? 0}%`} icon={AlertTriangle} />
+        </div>
+      ) : null}
+
+      <Card>
+        <CardHeader title={t('dashboard.recommendations')} />
+        <CardContent className="space-y-3">
+          {summary.isLoading || !data ? (
+            <Skeleton className="h-24" />
+          ) : !data.recommendations || data.recommendations.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t('dashboard.recommendationsEmpty')}</p>
+          ) : (
+            data.recommendations.map((rec) => (
+              <Link
+                key={rec.code}
+                to={rec.href}
+                className="flex items-start justify-between gap-3 rounded-lg border border-zinc-800 p-3 hover:bg-zinc-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+              >
+                <div>
+                  <p className="text-sm font-medium text-zinc-50">
+                    {t(`dashboard.rec.${rec.code}`, { count: rec.count })}
+                  </p>
+                  <p className="text-xs uppercase tracking-wide text-zinc-500">{rec.severity}</p>
+                </div>
+                <span className="shrink-0 text-xs text-brand-300">{rec.count}</span>
+              </Link>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader title={t('dashboard.byStatus')} />

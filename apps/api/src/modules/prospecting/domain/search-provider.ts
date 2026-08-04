@@ -91,9 +91,13 @@ export interface SearchProviderInput {
   category: string;
   categories?: string[];
   city: string;
+  /** Optional neighborhood/district used to narrow the search inside the city. */
+  neighborhood?: string;
   state: string;
   country: ProspectingCountryCode;
   onlyWithoutWebsite: boolean;
+  /** Upper bound of results the caller wants; providers may return fewer. */
+  limit?: number;
 }
 
 export interface SearchProvider {

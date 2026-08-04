@@ -38,6 +38,31 @@ const BillingSuccessPage = lazy(() =>
 const BillingCancelPage = lazy(() =>
   import('@/pages/billing-result-page').then((m) => ({ default: m.BillingCancelPage })),
 );
+const ConversionPagesPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-pages-page').then((m) => ({
+    default: m.ConversionPagesPage,
+  })),
+);
+const CreateConversionPage = lazy(() =>
+  import('@/pages/conversion-studio/create-conversion-page').then((m) => ({
+    default: m.CreateConversionPage,
+  })),
+);
+const ConversionPageEditorPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-page-editor-page').then((m) => ({
+    default: m.ConversionPageEditorPage,
+  })),
+);
+const ConversionPageViewPage = lazy(() =>
+  import('@/pages/conversion-studio/conversion-page-view-page').then((m) => ({
+    default: m.ConversionPageViewPage,
+  })),
+);
+const PublicConversionPage = lazy(() =>
+  import('@/pages/conversion-studio/public-conversion-page').then((m) => ({
+    default: m.PublicConversionPage,
+  })),
+);
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -68,12 +93,29 @@ export function App() {
         }
       />
 
+      <Route
+        path="/p/:slug"
+        element={
+          <LazyPage>
+            <PublicConversionPage />
+          </LazyPage>
+        }
+      />
+
       <Route element={<ProtectedRoute />}>
         <Route
           path="/billing/pix"
           element={
             <LazyPage>
               <PixCheckoutPage />
+            </LazyPage>
+          }
+        />
+        <Route
+          path="/pages/:id/view"
+          element={
+            <LazyPage>
+              <ConversionPageViewPage />
             </LazyPage>
           }
         />
@@ -98,6 +140,30 @@ export function App() {
           <Route path="leads" element={<LeadsPage />} />
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
+          <Route
+            path="pages"
+            element={
+              <LazyPage>
+                <ConversionPagesPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="pages/new"
+            element={
+              <LazyPage>
+                <CreateConversionPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="pages/:id/edit"
+            element={
+              <LazyPage>
+                <ConversionPageEditorPage />
+              </LazyPage>
+            }
+          />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignDetailPage />} />

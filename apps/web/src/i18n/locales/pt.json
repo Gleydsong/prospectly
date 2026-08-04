@@ -21,7 +21,8 @@
     "logout": "Sair",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
-    "campaigns": "Campanhas"
+    "campaigns": "Campanhas",
+    "pages": "Pages"
   },
   "auth": {
     "loginTitle": "Entrar no Prospectly",
@@ -136,7 +137,46 @@
     "sourceTotal": "Total",
     "sourceWon": "Ganhos",
     "sourceLost": "Perdidos",
-    "overdueTasks": "Tarefas atrasadas"
+    "overdueTasks": "Tarefas atrasadas",
+    "approachRate": "Taxa de abordagem",
+    "meetingRate": "Taxa de agendamento",
+    "followUpRate": "Pressão de follow-up",
+    "lossRate": "Taxa de perda",
+    "recommendations": "Próximas ações",
+    "recommendationsEmpty": "Nenhuma recomendação no momento.",
+    "rec": {
+      "HIGH_POTENTIAL_IDLE": "{{count}} lead(s) com potencial alto ainda em estágio inicial.",
+      "STALE_LEADS": "{{count}} lead(s) sem atividade há mais de sete dias.",
+      "OVERDUE_FOLLOW_UPS": "{{count}} follow-up(s) atrasado(s).",
+      "FREE_SEARCH_QUOTA": "Quota gratuita de buscas: {{count}} restante(s).",
+      "LEADS_WITHOUT_PAGE": "{{count}} lead(s) com potencial ainda sem página de proposta.",
+      "PAGES_WITHOUT_CONVERSION": "{{count}} página(s) publicada(s) sem conversão de formulário."
+    }
+  },
+  "opportunity": {
+    "level": {
+      "HIGH": "Potencial alto",
+      "MEDIUM": "Potencial médio",
+      "LOW": "Potencial baixo"
+    },
+    "tag": {
+      "HIGH_POTENTIAL": "Potencial alto",
+      "SITE_NOT_REPORTED": "Site não informado",
+      "NEW": "Novo",
+      "IN_CRM": "Em CRM",
+      "HAS_CONTACT": "Contato disponível"
+    },
+    "explainAria": "Explicar sinal de oportunidade",
+    "explainTitle": "Por que este sinal?",
+    "reason": {
+      "website_not_reported_by_source": "Website não informado pela fonte",
+      "good_rating_and_volume": "Boa avaliação e volume relevante",
+      "contact_available": "Dados de contato disponíveis",
+      "not_yet_in_crm": "Ainda não trabalhado no CRM",
+      "already_in_crm": "Já está no CRM",
+      "website_reported_by_source": "Website informado pela fonte",
+      "needs_website_review": "Presença digital precisa de revisão"
+    }
   },
   "settings": {
     "title": "Configurações",
