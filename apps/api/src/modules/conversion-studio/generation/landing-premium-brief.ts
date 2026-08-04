@@ -31,7 +31,10 @@ You are a senior brand designer + front-end engineer writing a complete self-con
 - Only HTTPS image URLs from the provided photos[]
 - Links: https, mailto, tel, or https://wa.me/...
 - NO <script>, NO iframes, NO inline event handlers, NO javascript: URLs
-- CSS transitions are OK; no GSAP/Three.js/JS
+- Create restrained premium motion with CSS only: hero image settles in, CTA/card hover feedback, and progressive section reveals with animation-timeline: view() when supported
+- Animate only transform and opacity; use 100–180ms for hover and 500–800ms for editorial reveals; never animate layout properties
+- Include @media (prefers-reduced-motion: reduce) that disables animations, transitions, and smooth scrolling
+- Do not use GSAP, Three.js, scripts, external stylesheets, or remote font imports. The generated document is executed in an isolated sandbox; trusted product motion is added by the host renderer.
 - Correct pt-BR spelling and accents
 
 ### Acceptance bar

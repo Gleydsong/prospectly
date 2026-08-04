@@ -1,7 +1,7 @@
 export const LANDING_GENERATION_QUEUE = 'conversion-landing-generate';
 export const GENERATE_LANDING_JOB = 'generate-landing';
 export const REFINE_LANDING_JOB = 'refine-landing';
-export const LANDING_PROMPT_VERSION = 'v4-html-premium';
+export const LANDING_PROMPT_VERSION = 'v5-html-premium-motion';
 
 export type GenerateLandingJobData = {
   organizationId: string;

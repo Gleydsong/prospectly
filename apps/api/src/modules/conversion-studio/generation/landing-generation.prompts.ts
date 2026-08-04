@@ -18,6 +18,7 @@ Where "html" is a complete HTML document (DOCTYPE + html + head with style + bod
 - Only HTTPS URLs for images; only https/mailto/tel/wa.me for links
 - NO scripts, iframes, event handlers, or javascript: URLs
 - Use real photos from photos[] in hero + gallery when available
+- Include accessible CSS-only motion and a prefers-reduced-motion fallback as defined in the premium brief
 - Follow designReference + the premium brief below
 
 ${LANDING_PREMIUM_CREATIVE_BRIEF}`;
