@@ -33,9 +33,9 @@ const makePrisma = () => {
 };
 
 const makeAudit = () =>
-  ({
-    log: jest.fn().mockResolvedValue(undefined),
-  }) as unknown as AuditService;
+  ({ log: jest.fn().mockResolvedValue(undefined) }) as unknown as AuditService & {
+    log: jest.Mock;
+  };
 
 describe('OrganizationsService.updateMemberRole', () => {
   beforeEach(() => jest.clearAllMocks());
