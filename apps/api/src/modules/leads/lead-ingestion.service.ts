@@ -162,6 +162,43 @@ export class LeadIngestionService {
           return { status: 'POSSIBLE_DUPLICATE' as const, lead: possibleDuplicate };
         }
 
+        // Soft-deleted rows still occupy unique keys. Restore instead of
+        // treating them as active duplicates (which poisons CRM re-import).
+        const tombstone = await this.findSoftDeletedConflict(
+          transaction,
+          organizationId,
+          normalized,
+        );
+        if (tombstone) {
+          const restored = await transaction.lead.update({
+            where: { id: tombstone.id },
+            data: {
+              deletedAt: null,
+              ownerId: normalized.ownerId ?? actorId,
+              companyName: normalized.companyName,
+              tradeName: normalized.tradeName,
+              category: normalized.category,
+              segment: normalized.segment,
+              description: normalized.description,
+              phone: normalized.phone,
+              email: normalized.email,
+              whatsapp: normalized.whatsapp,
+              website: normalized.website,
+              domain: normalized.domain,
+              address: normalized.address,
+              city: normalized.city,
+              state: normalized.state,
+              country: normalized.country,
+              status: normalized.status,
+              websitePresence: normalized.websitePresence,
+              probableDuplicateKey: normalized.probableDuplicateKey,
+              dataCollectedAt: new Date(),
+            },
+            include: INGESTED_LEAD_INCLUDE,
+          });
+          return { status: 'IMPORTED' as const, lead: restored };
+        }
+
         const tags = await this.upsertTags(transaction, organizationId, normalized.tags);
 
         const lead = await transaction.lead.create({
@@ -223,6 +260,15 @@ export class LeadIngestionService {
       if (!this.isUniqueConstraintViolation(error)) {
         throw error;
       }
+
+      const restored = await this.tryRestoreSoftDeletedConflict(
+        this.prisma,
+        organizationId,
+        actorId,
+        normalized,
+      );
+      if (restored) return { status: 'IMPORTED', lead: restored };
+
       const duplicate = await this.findStrongDuplicate(this.prisma, organizationId, normalized);
       if (duplicate) return { status: 'DUPLICATE', lead: duplicate };
       const possibleDuplicate = await this.findPossibleDuplicate(
@@ -274,6 +320,7 @@ export class LeadIngestionService {
       const duplicate = await transaction.lead.findFirst({
         where: {
           organizationId,
+          deletedAt: null,
           source: candidate.source,
           externalId: candidate.externalId,
         },
@@ -286,7 +333,7 @@ export class LeadIngestionService {
       const value = candidate[field];
       if (!value) continue;
       const duplicate = await transaction.lead.findFirst({
-        where: { organizationId, [field]: value },
+        where: { organizationId, deletedAt: null, [field]: value },
         select,
       });
       if (duplicate) return duplicate;
@@ -307,9 +354,62 @@ export class LeadIngestionService {
     return transaction.lead.findFirst({
       where: {
         organizationId,
+        deletedAt: null,
         probableDuplicateKey: candidate.probableDuplicateKey,
       },
       select: { id: true, companyName: true },
+    });
+  }
+
+  private async findSoftDeletedConflict(
+    transaction: Pick<Prisma.TransactionClient, 'lead'>,
+    organizationId: string,
+    candidate: ReturnType<LeadIngestionService['normalizeCandidate']>,
+  ): Promise<{ id: string } | null> {
+    const select = { id: true } as const;
+    if (candidate.externalId) {
+      const match = await transaction.lead.findFirst({
+        where: {
+          organizationId,
+          deletedAt: { not: null },
+          source: candidate.source,
+          externalId: candidate.externalId,
+        },
+        select,
+      });
+      if (match) return match;
+    }
+
+    for (const field of ['domain', 'phone', 'email', 'probableDuplicateKey'] as const) {
+      const value = candidate[field];
+      if (!value) continue;
+      const match = await transaction.lead.findFirst({
+        where: { organizationId, deletedAt: { not: null }, [field]: value },
+        select,
+      });
+      if (match) return match;
+    }
+
+    return null;
+  }
+
+  private async tryRestoreSoftDeletedConflict(
+    db: Pick<Prisma.TransactionClient, 'lead'>,
+    organizationId: string,
+    actorId: string,
+    candidate: ReturnType<LeadIngestionService['normalizeCandidate']>,
+  ): Promise<IngestedLead | null> {
+    const tombstone = await this.findSoftDeletedConflict(db, organizationId, candidate);
+    if (!tombstone) return null;
+    return db.lead.update({
+      where: { id: tombstone.id },
+      data: {
+        deletedAt: null,
+        ownerId: candidate.ownerId ?? actorId,
+        companyName: candidate.companyName,
+        dataCollectedAt: new Date(),
+      },
+      include: INGESTED_LEAD_INCLUDE,
     });
   }
 
