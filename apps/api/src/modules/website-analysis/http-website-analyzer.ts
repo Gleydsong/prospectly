@@ -125,16 +125,29 @@ export function parseHtmlSignals(html: string, finalUrl: string): Omit<
   };
 }
 
+type LimitedBodyStream = {
+  getReader: () => {
+    read: () => Promise<{ done: boolean; value?: Uint8Array }>;
+    cancel: () => Promise<void> | void;
+  };
+  cancel?: () => Promise<void> | void;
+};
+
+type LimitedBodyResponse = {
+  body?: LimitedBodyStream | null;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+};
+
 /**
  * Reads at most `maxBodyBytes` from a fetch Response, canceling the stream once
  * the cap is hit so a malicious/huge HTML payload cannot OOM the worker.
  */
 export async function readBodyWithLimit(
-  response: Pick<Response, 'body' | 'arrayBuffer'>,
+  response: LimitedBodyResponse,
   maxBodyBytes: number,
 ): Promise<Buffer> {
   if (maxBodyBytes <= 0) {
-    if (response.body) {
+    if (response.body?.cancel) {
       try {
         await response.body.cancel();
       } catch {
