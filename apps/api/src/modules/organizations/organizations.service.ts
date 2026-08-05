@@ -87,10 +87,7 @@ export class OrganizationsService {
     const passwordHash = await argon2.hash(dto.temporaryPassword);
 
     const member = existing
-      ? await this.prisma.organizationMember.create({
-          data: { userId: existing.id, organizationId, role: dto.role },
-          include: { user: { select: { id: true, name: true, email: true } } },
-        })
+      ? await this.attachVerifiedExistingUser(existing, organizationId, dto.role)
       : await (async () => {
           const user = await this.prisma.user.create({
             data: { email, name: dto.name.trim(), passwordHash },
@@ -111,6 +108,23 @@ export class OrganizationsService {
     });
 
     return member;
+  }
+
+  private async attachVerifiedExistingUser(
+    user: { id: string; emailVerifiedAt: Date | null },
+    organizationId: string,
+    role: Role,
+  ) {
+    if (!user.emailVerifiedAt) {
+      throw new ConflictException(
+        'A user with this email exists but has not verified it yet. Ask them to verify before inviting.',
+      );
+    }
+
+    return this.prisma.organizationMember.create({
+      data: { userId: user.id, organizationId, role },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
   }
 
   async updateMemberRole(

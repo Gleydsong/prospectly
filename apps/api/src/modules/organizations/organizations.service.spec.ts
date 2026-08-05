@@ -1,8 +1,13 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import * as argon2 from 'argon2';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuditService } from '../audit/audit.service';
 import { OrganizationsService } from './organizations.service';
+
+jest.mock('argon2', () => ({
+  hash: jest.fn().mockResolvedValue('hashed'),
+}));
 
 const makePrisma = () => {
   const prisma = {
@@ -11,7 +16,9 @@ const makePrisma = () => {
       count: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      create: jest.fn(),
     },
+    user: { findUnique: jest.fn(), create: jest.fn() },
   };
   return prisma as unknown as PrismaService & {
     organizationMember: {
@@ -19,7 +26,9 @@ const makePrisma = () => {
       count: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
+      create: jest.Mock;
     };
+    user: { findUnique: jest.Mock; create: jest.Mock };
   };
 };
 
@@ -103,7 +112,7 @@ describe('OrganizationsService.removeMember', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.count.mockResolvedValue(2);
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await expect(
       service.removeMember('org1', 'm-owner', 'admin-1', 'ADMIN'),
@@ -121,7 +130,7 @@ describe('OrganizationsService.removeMember', () => {
     });
     prisma.organizationMember.count.mockResolvedValue(2);
     prisma.organizationMember.delete.mockResolvedValue({ id: 'm-owner-2' });
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await service.removeMember('org1', 'm-owner-2', 'owner-1', 'OWNER');
     expect(prisma.organizationMember.delete).toHaveBeenCalledWith({
@@ -138,11 +147,68 @@ describe('OrganizationsService.removeMember', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.delete.mockResolvedValue({ id: 'm-member' });
-    const service = new OrganizationsService(prisma);
+    const service = new OrganizationsService(prisma, makeAudit());
 
     await service.removeMember('org1', 'm-member', 'admin-1', 'ADMIN');
     expect(prisma.organizationMember.delete).toHaveBeenCalledWith({
       where: { id: 'm-member' },
     });
+  });
+});
+
+describe('OrganizationsService.inviteMember', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('does not auto-attach an existing unverified user', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'attacker',
+      email: 'victim@company.com',
+      emailVerifiedAt: null,
+      memberships: [],
+    });
+    const service = new OrganizationsService(prisma, makeAudit());
+
+    await expect(
+      service.inviteMember('org1', {
+        email: 'victim@company.com',
+        name: 'Victim',
+        role: 'SALES',
+        temporaryPassword: 'TempPass1!',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.organizationMember.create).not.toHaveBeenCalled();
+  });
+
+  it('attaches an existing verified user', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u2',
+      email: 'colleague@company.com',
+      emailVerifiedAt: new Date(),
+      memberships: [],
+    });
+    prisma.organizationMember.create.mockResolvedValue({
+      id: 'm2',
+      userId: 'u2',
+      role: 'SALES',
+      user: { id: 'u2', name: 'Colleague', email: 'colleague@company.com' },
+    });
+    const service = new OrganizationsService(prisma, makeAudit());
+
+    await service.inviteMember('org1', {
+      email: 'colleague@company.com',
+      name: 'Colleague',
+      role: 'SALES',
+      temporaryPassword: 'TempPass1!',
+    });
+
+    expect(argon2.hash).toHaveBeenCalledWith('TempPass1!');
+    expect(prisma.organizationMember.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { userId: 'u2', organizationId: 'org1', role: 'SALES' },
+      }),
+    );
   });
 });

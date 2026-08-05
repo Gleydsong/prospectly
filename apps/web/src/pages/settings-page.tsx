@@ -413,7 +413,7 @@ export function SettingsPage() {
       setEmailMessage(data.message || t('settings.emailChangeSuccess'));
       setEmailError(null);
       setEmailPassword('');
-      updateUser({ email: newEmail.trim().toLowerCase(), emailVerifiedAt: null });
+      setNewEmail('');
     },
     onError: (err) => {
       setEmailMessage(null);
