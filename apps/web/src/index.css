@@ -78,6 +78,51 @@
     background-size: 4px 4px;
   }
 
+  /*
+   * Módulo bento: gradiente vertical, brilho radial no topo e textura
+   * pontilhada que desaparece ao descer. Feito com pseudo-elementos para não
+   * exigir wrappers extras nos cards já existentes.
+   */
+  .surface-bento {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1b1f26 0%, #101317 58%, #0a0c0f 100%);
+  }
+
+  .surface-bento::before,
+  .surface-bento::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .surface-bento::before {
+    inset: 0;
+    background:
+      radial-gradient(90% 60% at 30% -10%, rgb(255 255 255 / 0.1) 0%, transparent 62%),
+      radial-gradient(60% 40% at 100% 0%, rgb(59 130 246 / 0.1) 0%, transparent 70%);
+  }
+
+  .surface-bento::after {
+    inset: 0 0 50% 0;
+    background-image: radial-gradient(rgb(255 255 255 / 0.055) 1px, transparent 1px);
+    background-size: 5px 5px;
+    -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 100%);
+    mask-image: linear-gradient(180deg, black 0%, transparent 100%);
+  }
+
+  .surface-bento > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Variante com acento cobalto para o módulo principal da composição. */
+  .surface-bento-accent {
+    background: linear-gradient(180deg, #1a2130 0%, #101520 58%, #0a0c11 100%);
+  }
+
   /* Borda luminosa de 1px em superfícies premium. */
   .hairline {
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);

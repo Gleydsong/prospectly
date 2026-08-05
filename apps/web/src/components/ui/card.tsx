@@ -7,8 +7,8 @@ type Surface = 'default' | 'elevated' | 'bento' | 'accent';
 const surfaces: Record<Surface, string> = {
   default: 'rounded-panel border-white/10 bg-zinc-900 shadow-panel',
   elevated: 'rounded-panel border-white/[0.12] bg-zinc-800 shadow-elevated',
-  bento: 'rounded-bento border-white/10 bg-zinc-900 bg-surface-sheen shadow-elevated',
-  accent: 'rounded-bento border-brand-500/25 bg-zinc-900 bg-accent-sheen shadow-elevated',
+  bento: 'surface-bento rounded-bento border-white/[0.08] shadow-elevated',
+  accent: 'surface-bento surface-bento-accent rounded-bento border-brand-500/25 shadow-elevated',
 };
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {

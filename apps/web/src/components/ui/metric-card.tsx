@@ -26,8 +26,8 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        'animate-fade-rise rounded-panel border border-white/10 p-4 shadow-panel transition-colors',
-        emphasis ? 'bg-zinc-900 bg-accent-sheen' : 'bg-zinc-900 bg-surface-sheen',
+        'surface-bento animate-fade-rise rounded-panel border p-4 shadow-panel transition-colors',
+        emphasis ? 'surface-bento-accent border-brand-500/25' : 'border-white/[0.08]',
         'hover:border-white/20',
         className,
       )}
