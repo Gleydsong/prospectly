@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,7 @@ export function HtmlLandingRenderer({
   const [height, setHeight] = useState(minHeight);
   const onFormSubmitRef = useRef(onFormSubmit);
   onFormSubmitRef.current = onFormSubmit;
+  const reduceMotion = useReducedMotion();
 
   const srcDoc = useMemo(() => {
     const trimmed = html.trim();
@@ -83,7 +85,7 @@ export function HtmlLandingRenderer({
   }
 
   return (
-    <iframe
+    <motion.iframe
       ref={iframeRef}
       title={title}
       srcDoc={srcDoc}
@@ -91,6 +93,9 @@ export function HtmlLandingRenderer({
       referrerPolicy="no-referrer"
       className={cn('w-full overflow-hidden rounded-control border border-zinc-800 bg-white', className)}
       style={{ height, minHeight }}
+      initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.2, 0, 0, 1] }}
     />
   );
 }

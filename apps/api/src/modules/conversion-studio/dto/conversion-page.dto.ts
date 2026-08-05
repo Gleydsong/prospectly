@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -236,6 +237,13 @@ export class UpdateAnalyticsSettingsDto {
   @IsString()
   @MaxLength(240)
   analyticsConsentLabel?: string;
+}
+
+export class UpdateConversionPageTemplateDto {
+  @ApiProperty({ enum: ['HTML', 'AURORA'] })
+  @IsString()
+  @IsIn(['HTML', 'AURORA'])
+  template!: 'HTML' | 'AURORA';
 }
 
 export class CreateDomainBindingDto {

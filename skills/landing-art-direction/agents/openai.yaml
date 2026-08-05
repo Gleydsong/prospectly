@@ -1,0 +1,4 @@
+interface:
+  display_name: "Landing Art Direction"
+  short_description: "Premium responsive landing art direction"
+  default_prompt: "Use $landing-art-direction to design a premium landing page."

@@ -9,6 +9,7 @@ import {
   submitPublicForm,
   trackPublicEvent,
 } from '@/features/conversion-studio/services/api';
+import type { ConversionPageTemplate } from '@/features/conversion-studio/services/api';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
 
 const CONSENT_KEY_PREFIX = 'prospectly.page.consent.';
@@ -18,6 +19,7 @@ export function PublicConversionPage() {
   const [title, setTitle] = useState('');
   const [html, setHtml] = useState('');
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
+  const [template, setTemplate] = useState<ConversionPageTemplate>('HTML');
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export function PublicConversionPage() {
         setTitle(page.title);
         setHtml(page.html?.trim() || '');
         setBlocks(parsed.success ? parsed.data : []);
+        setTemplate(page.template ?? 'HTML');
         setAnalyticsEnabled(Boolean(page.analytics?.enabled));
         setConsentLabel(page.analytics?.consentLabel ?? '');
         const stored = localStorage.getItem(`${CONSENT_KEY_PREFIX}${slug}`) === '1';
@@ -57,7 +60,7 @@ export function PublicConversionPage() {
 
   const heading = useMemo(() => title || 'Proposta', [title]);
   const showConsent = analyticsEnabled && !consented;
-  const hasHtml = Boolean(html);
+  const hasLegacyHtml = blocks.length === 0 && template === 'HTML' && Boolean(html);
 
   if (loading) {
     return <p className="p-8 text-zinc-400">A carregar…</p>;
@@ -77,7 +80,7 @@ export function PublicConversionPage() {
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
       <div
         className={
-          hasHtml
+          hasLegacyHtml
             ? 'mx-auto max-w-5xl space-y-4 px-2 py-4 sm:px-4 sm:py-8'
             : 'mx-auto max-w-3xl space-y-6 px-4 py-10'
         }
@@ -124,7 +127,7 @@ export function PublicConversionPage() {
             {submitError}
           </p>
         ) : null}
-        {hasHtml ? (
+        {hasLegacyHtml ? (
           <HtmlLandingRenderer
             html={html}
             title={heading}

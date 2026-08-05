@@ -9,15 +9,18 @@
     "preview": "vite preview",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc -b --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^3.9.1",
     "@prospectly/shared-types": "workspace:*",
     "@react-oauth/google": "^0.13.5",
     "@tanstack/react-query": "^5.62.7",
     "axios": "^1.7.9",
     "clsx": "^2.1.1",
+    "gsap": "^3.15.0",
     "i18next": "^26.3.6",
     "lucide-react": "^0.468.0",
     "motion": "^12.42.2",
@@ -32,6 +35,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

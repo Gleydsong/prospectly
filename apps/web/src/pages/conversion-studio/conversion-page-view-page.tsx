@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { HtmlLandingRenderer } from '@/features/conversion-studio/components/html-landing-renderer';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import {
   useConversionPage,
@@ -99,6 +100,7 @@ export function ConversionPageViewPage() {
 
   const page = pageQuery.data;
   const blocks = parseDraftBlocks(page.draftBlocks);
+  const hasLegacyHtml = blocks.length === 0 && Boolean(page.draftHtml?.trim());
   const isPublished = page.status === 'PUBLISHED';
   const leadName = page.lead?.companyName ?? page.title;
 
@@ -325,6 +327,8 @@ export function ConversionPageViewPage() {
           ) : null}
           {generating && blocks.length === 0 ? (
             <Skeleton className="h-80" />
+          ) : hasLegacyHtml ? (
+            <HtmlLandingRenderer html={page.draftHtml ?? ''} title={page.title} />
           ) : (
             <PageBlocksRenderer
               blocks={blocks}

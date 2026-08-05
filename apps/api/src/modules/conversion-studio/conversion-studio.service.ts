@@ -69,6 +69,8 @@ export class ConversionStudioService {
           updatedAt: true,
           createdAt: true,
           draftBlocks: true,
+          draftHtml: true,
+          draftTemplate: true,
           generationStatus: true,
           generationMode: true,
           generationError: true,
@@ -197,6 +199,22 @@ export class ConversionStudioService {
     });
   }
 
+  async updateTemplate(
+    organizationId: string,
+    id: string,
+    actorId: string,
+    template: 'HTML' | 'AURORA',
+  ) {
+    const page = await this.requirePage(organizationId, id);
+    if (page.status === ConversionPageStatus.ARCHIVED) {
+      throw new BadRequestException('Archived pages cannot be edited');
+    }
+    return this.prisma.conversionPage.update({
+      where: { id: page.id },
+      data: { draftTemplate: template, draftRevision: { increment: 1 }, updatedById: actorId },
+    });
+  }
+
   async publish(organizationId: string, id: string, actorId: string) {
     const page = await this.requirePage(organizationId, id);
     if (page.status === ConversionPageStatus.ARCHIVED) {
@@ -254,6 +272,7 @@ export class ConversionStudioService {
           title: page.title,
           blocks: blocks as unknown as Prisma.InputJsonValue,
           html: null,
+          template: page.draftTemplate,
           createdById: actorId,
           changeNote: wasPublished ? 'New published version' : 'Initial publish',
         },
@@ -357,6 +376,7 @@ export class ConversionStudioService {
           title: snapshot.title,
           draftBlocks: blocks as unknown as Prisma.InputJsonValue,
           draftHtml: null,
+          draftTemplate: snapshot.template,
           draftRevision: { increment: 1 },
           updatedById: actorId,
           status:
@@ -471,7 +491,7 @@ export class ConversionStudioService {
         organizationId: page.organizationId,
         version: page.publishedVersion,
       },
-      select: { title: true, blocks: true, html: true, version: true },
+      select: { title: true, blocks: true, html: true, template: true, version: true },
     });
     if (!version) throw new NotFoundException('Page not found');
 
@@ -483,6 +503,7 @@ export class ConversionStudioService {
       publicSlug: page.publicSlug,
       version: version.version,
       html: version.html,
+      template: version.template,
       blocks: version.blocks,
       analytics: {
         enabled: analyticsAllowed && page.analyticsPixelEnabled,
