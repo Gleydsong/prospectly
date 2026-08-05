@@ -204,7 +204,7 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
         stripeCustomerId: customerId,
       });
 
-      if (previous.previousStripeSubscriptionId) {
+      if (previous?.previousStripeSubscriptionId) {
         try {
           const stripe = this.requireStripe();
           await stripe.subscriptions.cancel(previous.previousStripeSubscriptionId);

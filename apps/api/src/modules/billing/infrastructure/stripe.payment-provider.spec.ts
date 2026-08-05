@@ -24,6 +24,8 @@ describe('StripePaymentProvider', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    activation.activateLifetime.mockResolvedValue({});
+    activation.activateMonthly.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StripePaymentProvider,
