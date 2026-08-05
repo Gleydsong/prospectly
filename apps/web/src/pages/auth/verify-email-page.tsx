@@ -46,7 +46,7 @@ export function VerifyEmailPage() {
         <div className="flex flex-wrap gap-3">
           <Link
             to="/"
-            className="inline-flex h-10 items-center justify-center rounded-control bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-500"
+            className="cta-glass inline-flex h-10 items-center justify-center rounded-control px-4 text-sm font-medium"
           >
             {t('auth.verifyGoApp')}
           </Link>

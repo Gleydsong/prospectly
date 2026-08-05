@@ -522,7 +522,7 @@ export function SearchPage() {
                       onClick={() => setValue('limit', limit, { shouldDirty: true })}
                       className={
                         selectedLimit === limit
-                          ? 'h-8 rounded-control bg-brand-600 px-3 text-sm font-medium text-white'
+                          ? 'cta-glass h-8 rounded-control px-3 text-sm font-medium !shadow-none'
                           : 'h-8 rounded-control border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800'
                       }
                     >

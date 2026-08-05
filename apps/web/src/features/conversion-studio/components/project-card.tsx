@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import { useArchiveConversionPage } from '@/features/conversion-studio/hooks';
 import type { ConversionPageSummary } from '@/features/conversion-studio/services/api';
+import { generationFormatLabel } from '@/features/conversion-studio/utils/generation-mode';
 import { pageBlocksSchema, type PageBlock } from '@/features/conversion-studio/types/blocks';
 import { getApiErrorMessage } from '@/lib/api';
 import { cn, formatRelativeTime } from '@/lib/utils';
@@ -64,12 +65,7 @@ export function ProjectCard({ page }: { page: ConversionPageSummary }) {
         )}
       >
         <div className="relative h-44 overflow-hidden border-b border-zinc-800 bg-zinc-950">
-          {page.hasHtml ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-zinc-900 via-zinc-950 to-amber-950/40 px-6 text-center">
-              <p className="text-sm font-medium text-zinc-200">Site HTML premium</p>
-              <p className="text-xs text-zinc-500">Pré-visualização completa na página do projeto</p>
-            </div>
-          ) : blocks.length > 0 ? (
+          {blocks.length > 0 ? (
             <div
               className="pointer-events-none absolute inset-0 origin-top-left scale-[0.42] p-4"
               style={{ width: '238%' }}
@@ -78,7 +74,7 @@ export function ProjectCard({ page }: { page: ConversionPageSummary }) {
             </div>
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 px-6 text-center">
-              <p className="text-sm text-zinc-500">Pré-visualização indisponível</p>
+              <p className="text-sm text-zinc-500">Gerando com React Aura…</p>
             </div>
           )}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-zinc-950 to-transparent" />
@@ -94,7 +90,7 @@ export function ProjectCard({ page }: { page: ConversionPageSummary }) {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
             <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-zinc-300">
-              {page.hasHtml ? 'HTML premium' : 'Site simples'}
+              {generationFormatLabel()}
             </span>
             <span>Editado {formatRelativeTime(page.updatedAt)}</span>
           </div>

@@ -25,7 +25,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       >
         <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-5">
           <NavLink to="/" className="flex items-center gap-2.5" onClick={onClose}>
-            <span className="flex h-8 w-8 items-center justify-center rounded-control border border-brand-400/30 bg-brand-600 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgb(37_99_235_/_0.9)]">
+            <span className="cta-glass flex h-8 w-8 items-center justify-center rounded-control text-sm font-semibold">
               P
             </span>
             <span className="text-lg font-semibold tracking-tight text-zinc-50">Prospectly</span>

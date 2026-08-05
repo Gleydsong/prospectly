@@ -19,7 +19,7 @@ function CtaLink({
   return (
     <a
       href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-control bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+      className="cta-glass inline-flex min-h-11 items-center justify-center rounded-control px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
       {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
       onClick={() => onTrack?.(action.type)}
     >

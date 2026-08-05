@@ -50,7 +50,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <p className="text-xs text-zinc-400">{user?.role}</p>
         </div>
         <div
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-brand-400/30 bg-brand-600 text-sm font-semibold text-white"
+          className="cta-glass flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold !shadow-none"
           aria-hidden
         >
           {user?.name?.charAt(0).toUpperCase() ?? '?'}

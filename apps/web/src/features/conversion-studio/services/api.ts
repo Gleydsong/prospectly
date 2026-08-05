@@ -22,8 +22,7 @@ export interface ConversionPageSummary {
   updatedAt: string;
   createdAt: string;
   draftBlocks?: unknown;
-  hasHtml?: boolean;
-  draftHtml?: string | null;
+  renderer?: 'react_aura';
   generationStatus?: ConversionGenerationStatus;
   generationMode?: string | null;
   generationError?: string | null;
@@ -32,7 +31,6 @@ export interface ConversionPageSummary {
 
 export interface ConversionPageDetail extends ConversionPageSummary {
   draftBlocks: unknown;
-  draftHtml?: string | null;
   versions: Array<{
     id: string;
     version: number;
