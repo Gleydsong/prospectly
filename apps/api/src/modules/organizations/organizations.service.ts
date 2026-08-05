@@ -11,6 +11,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
+import { EntitlementService } from '../conversion-studio/entitlement.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async getCurrent(organizationId: string) {
@@ -83,6 +85,8 @@ export class OrganizationsService {
     if (existing && existing.memberships.length > 0) {
       throw new ConflictException('User is already a member of this organization');
     }
+
+    await this.entitlements.assertCanInviteMember(organizationId);
 
     const passwordHash = await argon2.hash(dto.temporaryPassword);
 
