@@ -2,6 +2,7 @@
 
 import { Check } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+import { CtaButton } from '@/components/ui/cta-button';
 import { t, type Locale } from '@/lib/i18n';
 import {
   appRegisterUrl,
@@ -104,12 +105,9 @@ export function PricingCard({ locale }: { locale: Locale }) {
         ))}
       </ul>
 
-      <a
-        href={appRegisterUrl(interval, currency)}
-        className="focus-ring mt-10 flex h-12 items-center justify-center rounded-control bg-accent text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-      >
+      <CtaButton href={appRegisterUrl(interval, currency)} className="mt-10 w-full">
         {interval === 'monthly' ? t(locale, 'ctaMonthly') : t(locale, 'ctaLifetime')}
-      </a>
+      </CtaButton>
     </div>
   );
 }

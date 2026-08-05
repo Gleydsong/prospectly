@@ -4,6 +4,7 @@ import { CaretDown } from '@phosphor-icons/react';
 import Link from 'next/link';
 import { useId, useMemo, useState } from 'react';
 import { Reveal } from '@/components/motion';
+import { CtaButton } from '@/components/ui/cta-button';
 import {
   FAQ_CATEGORY_ORDER,
   getFaqCategoryLabel,
@@ -183,18 +184,12 @@ export function FaqPageView({ locale }: { locale: Locale }) {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link
-              href={enterExplainerUrl(locale)}
-              className="focus-ring inline-flex items-center justify-center rounded-control bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-            >
+            <CtaButton href={enterExplainerUrl(locale)} size="md" className="font-medium">
               {t(locale, 'faqStillCta')}
-            </Link>
-            <Link
-              href={`${p}/pricing`}
-              className="focus-ring inline-flex items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-5 py-3 text-sm font-medium text-[color:var(--ink)]"
-            >
+            </CtaButton>
+            <CtaButton href={`${p}/pricing`} variant="secondary" size="md" className="font-medium">
               {t(locale, 'faqStillSecondary')}
-            </Link>
+            </CtaButton>
           </div>
         </div>
       </section>

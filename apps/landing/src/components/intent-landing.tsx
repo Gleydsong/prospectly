@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { ListPlus, EnvelopeSimple } from '@phosphor-icons/react/dist/ssr';
 import { Reveal } from '@/components/motion';
+import { CtaButton } from '@/components/ui/cta-button';
 import { TEAM_EMAIL } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -44,20 +44,14 @@ export function IntentLanding({ content }: { content: IntentPageContent }) {
         </div>
 
         <Reveal className="mt-14 flex flex-wrap gap-3">
-          <Link
-            href={enterExplainerUrl('pt')}
-            className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover dark:text-accent-ink"
-          >
+          <CtaButton href={enterExplainerUrl('pt')}>
             <ListPlus weight="bold" className="h-4 w-4" aria-hidden />
             {content.ctaPrimary}
-          </Link>
-          <a
-            href={`mailto:${TEAM_EMAIL}`}
-            className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--bg-sunken)]"
-          >
+          </CtaButton>
+          <CtaButton href={`mailto:${TEAM_EMAIL}`} variant="secondary">
             <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
             {content.ctaSecondary}
-          </a>
+          </CtaButton>
         </Reveal>
       </div>
     </article>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useReducedMotion, motion } from 'motion/react';
 import { MagnifyingGlass, Funnel, Path, EnvelopeSimple } from '@phosphor-icons/react';
 import { ProductDemoVideo } from '@/components/product-demo-video';
+import { CtaButton } from '@/components/ui/cta-button';
 import { WaitlistForm } from '@/components/waitlist-form';
 import { prefix, t, type Locale } from '@/lib/i18n';
 
@@ -123,35 +124,23 @@ export function EnterExplainerPage({ locale }: { locale: Locale }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.24, ease }}
               >
-                <a
-                  href="#lista-espera-entrar"
-                  className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-                >
+                <CtaButton href="#lista-espera-entrar">
                   <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
                   {t(locale, 'enterCtaWaitlist')}
-                </a>
-                <Link
-                  href={p || '/'}
-                  className="focus-ring inline-flex h-12 items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--bg-sunken)]"
-                >
+                </CtaButton>
+                <CtaButton href={p || '/'} variant="secondary">
                   {t(locale, 'enterCtaHome')}
-                </Link>
+                </CtaButton>
               </motion.div>
             ) : (
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                <a
-                  href="#lista-espera-entrar"
-                  className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white dark:text-accent-ink"
-                >
+                <CtaButton href="#lista-espera-entrar">
                   <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
                   {t(locale, 'enterCtaWaitlist')}
-                </a>
-                <Link
-                  href={p || '/'}
-                  className="focus-ring inline-flex h-12 items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)]"
-                >
+                </CtaButton>
+                <CtaButton href={p || '/'} variant="secondary">
                   {t(locale, 'enterCtaHome')}
-                </Link>
+                </CtaButton>
               </div>
             )}
           </div>

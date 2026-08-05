@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
+import { CtaButton } from '@/components/ui/cta-button';
 import { prefix, t, type Locale } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -63,21 +64,15 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           >
             {t(locale, 'navLogin')}
           </Link>
-          <Link
-            href={enterExplainerUrl(locale)}
-            className="focus-ring ml-1 rounded-control bg-accent px-3.5 py-2 font-medium text-white transition-colors hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-          >
+          <CtaButton href={enterExplainerUrl(locale)} size="sm" className="ml-1 font-medium">
             {t(locale, 'navCta')}
-          </Link>
+          </CtaButton>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <Link
-            href={enterExplainerUrl(locale)}
-            className="focus-ring rounded-control bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover dark:text-accent-ink"
-          >
+          <CtaButton href={enterExplainerUrl(locale)} size="sm" className="font-medium">
             {t(locale, 'navCta')}
-          </Link>
+          </CtaButton>
           <button
             type="button"
             className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink)]"

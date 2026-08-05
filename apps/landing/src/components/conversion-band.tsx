@@ -1,10 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { ListPlus, PlayCircle } from '@phosphor-icons/react';
 import { HeroMotion } from '@/components/motion';
 import { ProductFlowMock } from '@/components/product-flow-mock';
+import { CtaButton } from '@/components/ui/cta-button';
 import { t, type Locale } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -36,20 +36,19 @@ export function ConversionBand({ locale }: { locale: Locale }) {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <Link
-              href={enterExplainerUrl(locale)}
-              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-blue-700 px-6 text-sm font-semibold text-white transition-colors hover:bg-blue-600 active:scale-[0.98]"
-            >
+            <CtaButton href={enterExplainerUrl(locale)}>
               <ListPlus weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'ctaBandPrimary')}
-            </Link>
-            <Link
+            </CtaButton>
+            {/* Sobre a arte escura da faixa, o secundário usa vidro claro em vez dos tokens de superfície. */}
+            <CtaButton
               href="#como-funciona"
-              className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control border border-white/20 bg-white/10 px-6 text-sm font-semibold text-white transition-colors hover:bg-white/15 active:scale-[0.98]"
+              variant="secondary"
+              className="border-white/20 bg-white/10 text-white hover:bg-white/15"
             >
               <PlayCircle weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'ctaBandSecondary')}
-            </Link>
+            </CtaButton>
           </div>
         </HeroMotion>
 
