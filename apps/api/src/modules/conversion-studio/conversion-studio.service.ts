@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -28,11 +29,7 @@ import {
   type PageBlock,
 } from './page-blocks.schema';
 import { EntitlementService } from './entitlement.service';
-import { blocksToSimpleHtml } from './generation/blocks-to-html';
-import {
-  assertPublishableLandingHtml,
-  sanitizeLandingHtml,
-} from './generation/html-sanitize';
+import { normalizePublicFormFields } from './normalize-public-form';
 
 @Injectable()
 export class ConversionStudioService {
@@ -73,6 +70,7 @@ export class ConversionStudioService {
           createdAt: true,
           draftBlocks: true,
           draftHtml: true,
+          draftTemplate: true,
           generationStatus: true,
           generationMode: true,
           generationError: true,
@@ -80,9 +78,9 @@ export class ConversionStudioService {
         },
       }),
     ]);
-    const mapped = rows.map(({ draftHtml, ...rest }) => ({
-      ...rest,
-      hasHtml: Boolean(draftHtml?.trim()),
+    const mapped = rows.map((row) => ({
+      ...row,
+      renderer: 'react_aura' as const,
     }));
     return paginate(mapped, total, page, pageSize);
   }
@@ -144,15 +142,6 @@ export class ConversionStudioService {
 
     if (!title) throw new BadRequestException('Title is required');
 
-    const draftHtml =
-      blocks.length > 0
-        ? blocksToSimpleHtml({
-            title,
-            companyName: title.replace(/^Proposta — /, ''),
-            blocks,
-          })
-        : null;
-
     const page = await this.prisma.conversionPage.create({
       data: {
         organizationId,
@@ -161,7 +150,7 @@ export class ConversionStudioService {
         status: ConversionPageStatus.DRAFT,
         publicSlug: this.createPublicSlug(),
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-        draftHtml,
+        draftHtml: null,
         createdById: actorId,
         updatedById: actorId,
       },
@@ -194,18 +183,12 @@ export class ConversionStudioService {
       );
     }
 
-    const draftHtml = blocksToSimpleHtml({
-      title: dto.title?.trim() || page.title,
-      companyName: page.title,
-      blocks,
-    });
-
     return this.prisma.conversionPage.update({
       where: { id: page.id },
       data: {
         ...(dto.title ? { title: dto.title.trim() } : {}),
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-        draftHtml,
+        draftHtml: null,
         draftRevision: { increment: 1 },
         updatedById: actorId,
         status:
@@ -216,54 +199,71 @@ export class ConversionStudioService {
     });
   }
 
+  async updateTemplate(
+    organizationId: string,
+    id: string,
+    actorId: string,
+    template: 'HTML' | 'AURORA',
+  ) {
+    const page = await this.requirePage(organizationId, id);
+    if (page.status === ConversionPageStatus.ARCHIVED) {
+      throw new BadRequestException('Archived pages cannot be edited');
+    }
+    return this.prisma.conversionPage.update({
+      where: { id: page.id },
+      data: { draftTemplate: template, draftRevision: { increment: 1 }, updatedById: actorId },
+    });
+  }
+
   async publish(organizationId: string, id: string, actorId: string) {
     const page = await this.requirePage(organizationId, id);
     if (page.status === ConversionPageStatus.ARCHIVED) {
       throw new BadRequestException('Archived pages cannot be published');
     }
 
-    const hasHtml = Boolean(page.draftHtml?.trim());
-    let blocks: PageBlock[] = [];
-    let html: string | null = null;
-
-    if (hasHtml) {
-      try {
-        html = sanitizeLandingHtml(page.draftHtml!);
-        assertPublishableLandingHtml(html, page.title);
-      } catch (error) {
-        throw new BadRequestException(
-          error instanceof Error ? error.message : 'Invalid landing HTML',
-        );
-      }
-      try {
-        blocks = parsePageBlocks(page.draftBlocks);
-      } catch {
-        blocks = [];
-      }
-    } else {
-      try {
-        blocks = parsePageBlocks(page.draftBlocks);
-        assertPublishableBlocks(blocks);
-        html = blocksToSimpleHtml({
-          title: page.title,
-          companyName: page.title,
-          blocks,
-        });
-      } catch (error) {
-        throw new BadRequestException(
-          error instanceof Error ? error.message : 'Invalid page blocks schema',
-        );
-      }
+    let blocks: PageBlock[];
+    try {
+      blocks = parsePageBlocks(page.draftBlocks);
+      assertPublishableBlocks(blocks);
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Invalid page blocks schema',
+      );
     }
 
     const wasPublished = page.status === ConversionPageStatus.PUBLISHED;
+    // Pre-check for fast fail; authoritative quota is re-checked under org row lock below.
     if (!wasPublished) {
       await this.entitlements.assertCanPublish(organizationId);
     }
 
     const nextVersion = (page.publishedVersion ?? 0) + 1;
+    const publishLimit = (await this.entitlements.getSnapshot(organizationId)).limits
+      .publishedPages;
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      // Serialize concurrent first-publishes for this org (quota race).
+      await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
+
+      if (!wasPublished) {
+        const publishedCount = await tx.conversionPage.count({
+          where: {
+            organizationId,
+            status: ConversionPageStatus.PUBLISHED,
+            deletedAt: null,
+          },
+        });
+        if (publishedCount >= publishLimit) {
+          throw new ForbiddenException({
+            code: 'ENTITLEMENT_PUBLISHED_PAGES',
+            message: 'Published page limit reached for current plan',
+            requiredPlan: 'STARTER_MONTHLY',
+            usage: publishedCount,
+            limit: publishLimit,
+          });
+        }
+      }
+
       await tx.conversionPageVersion.create({
         data: {
           pageId: page.id,
@@ -271,7 +271,8 @@ export class ConversionStudioService {
           version: nextVersion,
           title: page.title,
           blocks: blocks as unknown as Prisma.InputJsonValue,
-          html,
+          html: null,
+          template: page.draftTemplate,
           createdById: actorId,
           changeNote: wasPublished ? 'New published version' : 'Initial publish',
         },
@@ -283,7 +284,7 @@ export class ConversionStudioService {
           status: ConversionPageStatus.PUBLISHED,
           publishedVersion: nextVersion,
           publishedAt: new Date(),
-          draftHtml: html,
+          draftHtml: null,
           updatedById: actorId,
         },
       });
@@ -374,7 +375,8 @@ export class ConversionStudioService {
         data: {
           title: snapshot.title,
           draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-          draftHtml: snapshot.html,
+          draftHtml: null,
+          draftTemplate: snapshot.template,
           draftRevision: { increment: 1 },
           updatedById: actorId,
           status:
@@ -489,7 +491,7 @@ export class ConversionStudioService {
         organizationId: page.organizationId,
         version: page.publishedVersion,
       },
-      select: { title: true, blocks: true, html: true, version: true },
+      select: { title: true, blocks: true, html: true, template: true, version: true },
     });
     if (!version) throw new NotFoundException('Page not found');
 
@@ -501,6 +503,7 @@ export class ConversionStudioService {
       publicSlug: page.publicSlug,
       version: version.version,
       html: version.html,
+      template: version.template,
       blocks: version.blocks,
       analytics: {
         enabled: analyticsAllowed && page.analyticsPixelEnabled,
@@ -527,22 +530,23 @@ export class ConversionStudioService {
   }
 
   async submitPublicForm(publicSlug: string, dto: PublicFormSubmitDto) {
-    if (dto.companyWebsite) {
+    const normalized = normalizePublicFormFields(dto as unknown as Record<string, unknown>);
+    if (normalized.companyWebsite) {
       return { ok: true };
     }
-    if (!dto.name && !dto.email && !dto.phone && !dto.message) {
+    if (!normalized.name && !normalized.email && !normalized.phone && !normalized.message) {
       throw new BadRequestException('Empty form');
     }
-    if (dto.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dto.email)) {
+    if (normalized.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized.email)) {
       throw new BadRequestException('Invalid email');
     }
 
     const page = await this.requirePublishedBySlug(publicSlug);
     const payload = {
-      ...(dto.name ? { name: dto.name.trim().slice(0, 120) } : {}),
-      ...(dto.email ? { email: dto.email.trim().toLowerCase().slice(0, 254) } : {}),
-      ...(dto.phone ? { phone: dto.phone.trim().slice(0, 32) } : {}),
-      ...(dto.message ? { message: dto.message.trim().slice(0, 2000) } : {}),
+      ...(normalized.name ? { name: normalized.name.slice(0, 120) } : {}),
+      ...(normalized.email ? { email: normalized.email.toLowerCase().slice(0, 254) } : {}),
+      ...(normalized.phone ? { phone: normalized.phone.slice(0, 32) } : {}),
+      ...(normalized.message ? { message: normalized.message.slice(0, 2000) } : {}),
     };
 
     const actorId = await this.resolveSystemActorId(page.organizationId, page.createdById);

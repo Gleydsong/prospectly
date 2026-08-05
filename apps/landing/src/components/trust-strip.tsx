@@ -1,8 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { EnvelopeSimple, LockKey, MagnifyingGlass, ShieldCheck } from '@phosphor-icons/react';
 import { Reveal } from '@/components/motion';
+import { BentoCard, BentoIconDisk } from '@/components/ui/bento-card';
+import { CtaButton } from '@/components/ui/cta-button';
 import { prefix, t, type Locale } from '@/lib/i18n';
 
 const ITEMS = [
@@ -16,10 +17,7 @@ export function TrustStrip({ locale }: { locale: Locale }) {
   const p = prefix(locale);
 
   return (
-    <section
-      className="border-y border-[color:var(--border)] bg-[color:var(--bg-sunken)]"
-      aria-labelledby="trust-heading"
-    >
+    <section className="bg-[color:var(--bg)]" aria-labelledby="trust-heading">
       <div className="mx-auto max-w-shell px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2
@@ -33,28 +31,33 @@ export function TrustStrip({ locale }: { locale: Locale }) {
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {ITEMS.map(({ title, body, Icon }, index) => (
             <Reveal key={title} delay={index * 0.04}>
-              <li className="surface-raised h-full rounded-control p-5 text-left">
-                <Icon weight="duotone" className="h-6 w-6 text-accent" aria-hidden />
-                <h3 className="mt-3 text-base font-semibold text-[color:var(--ink)]">{t(locale, title)}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{t(locale, body)}</p>
+              <li className="h-full list-none">
+                <BentoCard
+                  visualSize="icon"
+                  visual={
+                    <BentoIconDisk>
+                      <Icon weight="duotone" className="h-6 w-6" aria-hidden />
+                    </BentoIconDisk>
+                  }
+                  title={t(locale, title)}
+                  description={t(locale, body)}
+                />
               </li>
             </Reveal>
           ))}
         </ul>
 
-        <p className="mt-8 text-center text-sm text-[color:var(--ink-muted)]">
-          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/privacy`}>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+          <CtaButton href={`${p}/privacy`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerPrivacy')}
-          </Link>
-          {' · '}
-          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/terms`}>
+          </CtaButton>
+          <CtaButton href={`${p}/terms`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerTerms')}
-          </Link>
-          {' · '}
-          <Link className="focus-ring underline-offset-2 hover:underline" href={`${p}/cookies`}>
+          </CtaButton>
+          <CtaButton href={`${p}/cookies`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerCookies')}
-          </Link>
-        </p>
+          </CtaButton>
+        </div>
         <p className="mx-auto mt-3 max-w-2xl text-center text-xs text-[color:var(--ink-muted)]">
           {t(locale, 'trustTodoNote')}
         </p>

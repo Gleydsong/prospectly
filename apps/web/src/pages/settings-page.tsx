@@ -413,7 +413,7 @@ export function SettingsPage() {
       setEmailMessage(data.message || t('settings.emailChangeSuccess'));
       setEmailError(null);
       setEmailPassword('');
-      updateUser({ email: newEmail.trim().toLowerCase(), emailVerifiedAt: null });
+      setNewEmail('');
     },
     onError: (err) => {
       setEmailMessage(null);
@@ -537,7 +537,7 @@ export function SettingsPage() {
               </div>
               <button
                 type="button"
-                className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white hover:bg-brand-500"
+                className="cta-glass absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full !shadow-none"
                 aria-label={t('settings.changePhoto')}
                 onClick={() => fileRef.current?.click()}
               >

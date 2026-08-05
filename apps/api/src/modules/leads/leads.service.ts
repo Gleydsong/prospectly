@@ -9,6 +9,7 @@ import { LeadSource, Prisma } from '@prisma/client';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { EntitlementService } from '../conversion-studio/entitlement.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
@@ -38,6 +39,7 @@ export class LeadsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leadIngestion: LeadIngestionService,
+    private readonly entitlements: EntitlementService,
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
   ) {}
 
@@ -137,7 +139,8 @@ export class LeadsService {
         include: LEAD_INCLUDE,
       });
       if (this.websiteAnalysis && (dto.website !== undefined || dto.phone !== undefined || dto.email !== undefined || dto.rating !== undefined)) {
-        void this.websiteAnalysis.onLeadUpsert(organizationId, id, lead.website);
+        // Detached on purpose; onLeadUpsert must soft-fail — never let a rejection crash Node.
+        void this.websiteAnalysis.onLeadUpsert(organizationId, id, lead.website).catch(() => undefined);
       }
       return this.serialize(lead);
     } catch (error) {
@@ -218,6 +221,7 @@ export class LeadsService {
   }
 
   async exportCsv(organizationId: string, userId: string, dto: ExportLeadsDto) {
+    await this.entitlements.assertFeature(organizationId, 'csv_export');
     const columns = (dto.columns?.length ? dto.columns : DEFAULT_EXPORT_COLUMNS) as ExportableLeadColumn[];
     const where = this.buildListWhere(organizationId, dto);
 

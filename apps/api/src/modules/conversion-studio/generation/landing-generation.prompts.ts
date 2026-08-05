@@ -1,26 +1,31 @@
 import { LANDING_PREMIUM_CREATIVE_BRIEF } from './landing-premium-brief';
 
-export const LANDING_SYSTEM_PROMPT = `You generate premium local-business landing pages as self-contained HTML for Prospectly.
+export const LANDING_SYSTEM_PROMPT = `You generate premium local-business landing pages as structured JSON blocks for Prospectly React Aura.
 
 Return ONLY valid JSON (no markdown fences) with this shape:
 {
   "title": string,
-  "html": string
+  "themeHint": "restaurant|cafe|clinic|barbershop|generic",
+  "blocks": [ /* PageBlock[] — max 40 */ ]
 }
 
-Where "html" is a complete HTML document (DOCTYPE + html + head with style + body).
+## Block types (use only these)
+hero, rich_text, cta_button, service_card, pricing_cards, testimonials, gallery, faq, contact_form, map_address, footer, spacer
+
+Each block needs: "type", stable fields per type. You may omit "id" — server assigns UUIDs.
 
 ## Hard rules
 - Portuguese (Brazil) copy unless context says otherwise
 - Do NOT invent phone/email/WhatsApp/address/hours/social not in context
 - Do NOT invent fake reviews when googleReviews exist — use those texts
 - If googleReviews is empty, omit testimonials
-- Only HTTPS URLs for images; only https/mailto/tel/wa.me for links
-- NO scripts, iframes, event handlers, or javascript: URLs
+- Only HTTPS URLs for images; button actions: whatsapp, call, email, external_url, anchor, open_form, calendar
+- Contact forms MUST use English input name attributes exactly: name, email, phone, message (labels may stay pt-BR)
 - Use real photos from photos[] in hero + gallery when available
-- Follow designReference + the premium brief below
+- Follow designReference + premium brief below
+- Minimum publishable structure: hero (or rich_text) + at least one CTA (hero.cta, cta_button, or contact_form)
 
-${LANDING_PREMIUM_CREATIVE_BRIEF}`;
+${LANDING_PREMIUM_CREATIVE_BRIEF.replace(/HTML/gi, 'block layout').replace(/html/gi, 'blocks')}`;
 
 export function buildUserPrompt(context: {
   companyName: string;
@@ -43,16 +48,18 @@ export function buildUserPrompt(context: {
 }): string {
   return JSON.stringify(
     {
-      task: 'Generate a premium photo-first HTML landing page as JSON { title, html }',
+      task: 'Generate a premium React Aura landing as JSON { title, themeHint?, blocks }',
       creativeGoal:
         'Institutional elegant page unique to this establishment — photos drive identity',
       requirements: [
-        'Complete self-contained HTML document in html field',
+        'Return blocks[] only — no HTML field',
         'Use Google photos in hero + gallery when photos[] is non-empty',
         'Apply designReference as vertical guidance',
         'Prefer real googleReviews over invented testimonials',
         'Omit sections when data is missing — never fabricate facts',
-        'WhatsApp CTA via https://wa.me/ when phone exists (digits only in path)',
+        'WhatsApp CTA via { type: "whatsapp", phone } when phone exists',
+        'Include contact_form with privacyNotice in pt-BR',
+        'Form inputs must use name="name|email|phone|message" (English attrs; pt-BR labels OK)',
       ],
       business: {
         name: context.companyName,
@@ -79,35 +86,6 @@ export function buildUserPrompt(context: {
   );
 }
 
-export function buildRefineHtmlUserPrompt(input: {
-  companyName: string;
-  instruction: string;
-  currentHtml: string;
-  photos?: Array<{ url: string; alt: string }>;
-  designReference?: string | null;
-}): string {
-  return JSON.stringify(
-    {
-      task: 'Refine the existing HTML landing. Return full JSON { title?, html } with a complete updated HTML document.',
-      rules: [
-        'Preserve real photo URLs unless the user asks to change imagery',
-        'Do not invent phone/email/hours/social absent from current HTML/context',
-        'Keep self-contained HTML (style in head), no scripts',
-        'Raise editorial/visual quality while applying the instruction',
-        'Return JSON only',
-      ],
-      businessName: input.companyName,
-      instruction: input.instruction,
-      photos: input.photos ?? [],
-      designReference: input.designReference ?? null,
-      currentHtml: input.currentHtml,
-    },
-    null,
-    2,
-  );
-}
-
-/** @deprecated block refine — kept for type compatibility in older tests if any */
 export function buildRefineUserPrompt(input: {
   companyName: string;
   instruction: string;
@@ -115,10 +93,45 @@ export function buildRefineUserPrompt(input: {
   photos?: Array<{ url: string; alt: string }>;
   designReference?: string | null;
 }): string {
-  return buildRefineHtmlUserPrompt({
+  return JSON.stringify(
+    {
+      task: 'Refine the existing React Aura landing blocks. Return JSON only.',
+      outputShape: {
+        title: 'optional string',
+        ops: 'preferred: array of { op: update|replace|remove|insert, blockId?, patch?, block?, afterBlockId? }',
+        blocks: 'optional full blocks[] replacement if ops are impractical',
+      },
+      rules: [
+        'Prefer incremental ops[] over rewriting all blocks',
+        'Preserve real photo URLs unless the user asks to change imagery',
+        'Do not invent phone/email/hours/social absent from current blocks/context',
+        'Do not return HTML — blocks only',
+        'Preserve form input name attrs as name|email|phone|message when a form exists',
+        'Apply the user instruction while keeping publishable structure',
+      ],
+      businessName: input.companyName,
+      instruction: input.instruction,
+      photos: input.photos ?? [],
+      designReference: input.designReference ?? null,
+      currentBlocks: input.currentBlocks,
+    },
+    null,
+    2,
+  );
+}
+
+/** @deprecated HTML refine removed — use buildRefineUserPrompt */
+export function buildRefineHtmlUserPrompt(input: {
+  companyName: string;
+  instruction: string;
+  currentHtml: string;
+  photos?: Array<{ url: string; alt: string }>;
+  designReference?: string | null;
+}): string {
+  return buildRefineUserPrompt({
     companyName: input.companyName,
     instruction: input.instruction,
-    currentHtml: JSON.stringify(input.currentBlocks),
+    currentBlocks: [],
     photos: input.photos,
     designReference: input.designReference,
   });

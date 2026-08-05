@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import type { PaginatedResult } from '@/types';
 
 export type ConversionPageStatus = 'DRAFT' | 'PREVIEW' | 'PUBLISHED' | 'ARCHIVED';
+export type ConversionPageTemplate = 'HTML' | 'AURORA';
 
 export type ConversionGenerationStatus =
   | 'IDLE'
@@ -22,8 +23,10 @@ export interface ConversionPageSummary {
   updatedAt: string;
   createdAt: string;
   draftBlocks?: unknown;
+  renderer?: 'react_aura';
   hasHtml?: boolean;
   draftHtml?: string | null;
+  draftTemplate?: ConversionPageTemplate;
   generationStatus?: ConversionGenerationStatus;
   generationMode?: string | null;
   generationError?: string | null;
@@ -32,7 +35,6 @@ export interface ConversionPageSummary {
 
 export interface ConversionPageDetail extends ConversionPageSummary {
   draftBlocks: unknown;
-  draftHtml?: string | null;
   versions: Array<{
     id: string;
     version: number;
@@ -159,6 +161,7 @@ export async function fetchPublicPage(slug: string): Promise<{
   publicSlug: string;
   version: number;
   html?: string | null;
+  template?: ConversionPageTemplate;
   blocks: unknown;
   analytics?: { enabled: boolean; consentLabel: string };
 }> {
@@ -171,6 +174,13 @@ export async function updatePageAnalytics(
   input: { analyticsPixelEnabled?: boolean; analyticsConsentLabel?: string },
 ) {
   const { data } = await api.patch(`/conversion-pages/${id}/analytics`, input);
+  return data;
+}
+
+export async function updateConversionPageTemplate(id: string, template: ConversionPageTemplate) {
+  const { data } = await api.patch<ConversionPageDetail>(`/conversion-pages/${id}/template`, {
+    template,
+  });
   return data;
 }
 

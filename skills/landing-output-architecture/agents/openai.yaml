@@ -1,0 +1,4 @@
+interface:
+  display_name: "Landing Output Architecture"
+  short_description: "Choose HTML, React, or Astro landing delivery"
+  default_prompt: "Use $landing-output-architecture to choose a landing delivery target."

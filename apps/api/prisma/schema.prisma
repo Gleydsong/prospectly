@@ -159,6 +159,7 @@ enum PaymentProvider {
 model User {
   id                   String    @id @default(uuid())
   email                String    @unique
+  pendingEmail         String?   @unique
   name                 String
   passwordHash         String?
   avatarUrl            String?
@@ -857,6 +858,11 @@ enum ConversionPageStatus {
   ARCHIVED
 }
 
+enum ConversionPageTemplate {
+  HTML
+  AURORA
+}
+
 enum ConversionGenerationStatus {
   IDLE
   QUEUED
@@ -904,6 +910,7 @@ model ConversionPage {
   draftRevision    Int                  @default(1)
   draftBlocks      Json                 @default("[]")
   draftHtml        String?              @db.Text
+  draftTemplate    ConversionPageTemplate @default(HTML)
   generationStatus ConversionGenerationStatus @default(IDLE)
   generationMode   ConversionGenerationMode?
   generationError  String?
@@ -941,6 +948,7 @@ model ConversionPageVersion {
   version        Int
   blocks         Json
   html           String?  @db.Text
+  template       ConversionPageTemplate @default(HTML)
   title          String
   createdById    String?
   changeNote     String?

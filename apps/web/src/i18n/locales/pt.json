@@ -22,7 +22,12 @@
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
     "campaigns": "Campanhas",
-    "pages": "Pages"
+    "pages": "Pages",
+    "groupOverview": "Visão geral",
+    "groupDiscover": "Encontrar",
+    "groupQualify": "Qualificar",
+    "groupConvert": "Converter",
+    "groupAccount": "Conta"
   },
   "auth": {
     "loginTitle": "Entrar no Prospectly",

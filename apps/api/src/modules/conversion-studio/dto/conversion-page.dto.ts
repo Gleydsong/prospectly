@@ -5,6 +5,7 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -133,6 +134,13 @@ export class PublicFormSubmitDto {
   @MaxLength(120)
   name?: string;
 
+  /** AI pt-BR alias — normalized in service */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  nome?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -145,11 +153,39 @@ export class PublicFormSubmitDto {
   @MaxLength(32)
   phone?: string;
 
+  /** AI pt-BR alias — normalized in service */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  telefone?: string;
+
+  /** AI pt-BR alias — normalized in service */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  celular?: string;
+
+  /** AI pt-BR alias — normalized in service */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  whatsapp?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   @MaxLength(2000)
   message?: string;
+
+  /** AI pt-BR alias — normalized in service */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  mensagem?: string;
 
   /** Honeypot — must stay empty */
   @ApiPropertyOptional()
@@ -201,6 +237,13 @@ export class UpdateAnalyticsSettingsDto {
   @IsString()
   @MaxLength(240)
   analyticsConsentLabel?: string;
+}
+
+export class UpdateConversionPageTemplateDto {
+  @ApiProperty({ enum: ['HTML', 'AURORA'] })
+  @IsString()
+  @IsIn(['HTML', 'AURORA'])
+  template!: 'HTML' | 'AURORA';
 }
 
 export class CreateDomainBindingDto {

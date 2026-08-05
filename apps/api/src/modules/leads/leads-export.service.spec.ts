@@ -49,13 +49,21 @@ describe('LeadsService.exportCsv', () => {
       },
     ]);
     prisma.auditLog.create.mockResolvedValue({});
-    const service = new LeadsService(prisma, { ingest: jest.fn() } as unknown as LeadIngestionService);
+    const entitlements = {
+      assertFeature: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new LeadsService(
+      prisma,
+      { ingest: jest.fn() } as unknown as LeadIngestionService,
+      entitlements as never,
+    );
 
     const result = await service.exportCsv('org-1', 'user-1', {
       columns: ['companyName', 'email', 'notes'],
       status: 'NEW' as never,
     });
 
+    expect(entitlements.assertFeature).toHaveBeenCalledWith('org-1', 'csv_export');
     expect(result.rowCount).toBe(1);
     expect(result.csv.split('\n')[0]).toBe('companyName,email,notes');
     expect(result.csv).toContain('"Café ""Central"""');
@@ -75,5 +83,22 @@ describe('LeadsService.exportCsv', () => {
     };
     expect(metadata.filters).not.toHaveProperty('q');
     expect(JSON.stringify(metadata)).not.toContain('a@b.com');
+  });
+
+  it('blocks CSV export when csv_export entitlement is missing', async () => {
+    const prisma = makePrisma();
+    const entitlements = {
+      assertFeature: jest.fn().mockRejectedValue(new Error('ENTITLEMENT_CSV_EXPORT')),
+    };
+    const service = new LeadsService(
+      prisma,
+      { ingest: jest.fn() } as unknown as LeadIngestionService,
+      entitlements as never,
+    );
+
+    await expect(
+      service.exportCsv('org-1', 'user-1', { columns: ['companyName'] }),
+    ).rejects.toThrow(/ENTITLEMENT_CSV_EXPORT/);
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { AppErrorBoundary } from './components/app-error-boundary';
 import { LocaleSync } from './components/locale-sync';
+import { ToastProvider } from './components/ui/toast';
 import { GoogleAuthProvider } from './features/auth/google-auth-provider';
 import { initObservability } from './lib/observability';
 import { App } from './App';
@@ -34,8 +35,10 @@ createRoot(rootElement).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <GoogleAuthProvider>
-            <LocaleSync />
-            <App />
+            <ToastProvider>
+              <LocaleSync />
+              <App />
+            </ToastProvider>
           </GoogleAuthProvider>
         </BrowserRouter>
       </QueryClientProvider>

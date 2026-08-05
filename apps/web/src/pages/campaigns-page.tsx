@@ -12,6 +12,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import {
@@ -90,16 +91,17 @@ export function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-zinc-50">{t('campaigns.title')}</h1>
-          <p className="mt-1 max-w-2xl text-sm text-zinc-400">{t('campaigns.subtitle')}</p>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" aria-hidden />
-          {t('campaigns.create')}
-        </Button>
-      </div>
+      <PageHeader
+        eyebrow={t('nav.groupConvert')}
+        title={t('campaigns.title')}
+        description={t('campaigns.subtitle')}
+        actions={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" aria-hidden />
+            {t('campaigns.create')}
+          </Button>
+        }
+      />
 
       <Card className="border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90" role="note">
         {t('campaigns.assistedNotice')}

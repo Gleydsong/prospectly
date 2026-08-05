@@ -76,6 +76,6 @@ export class OrganizationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('memberId') memberId: string,
   ): Promise<void> {
-    await this.organizations.removeMember(organizationId, memberId, user.id);
+    await this.organizations.removeMember(organizationId, memberId, user.id, user.role);
   }
 }

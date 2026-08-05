@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { Download, Globe, Plus, Trash2 } from 'lucide-react';
 
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Select } from '@/components/ui/select';
@@ -105,22 +107,23 @@ export function LeadsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.title')}</h1>
-          <p className="text-sm text-zinc-500">Gerencie e qualifique suas oportunidades</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => setExportOpen(true)}>
-            <Download className="h-4 w-4" aria-hidden />
-            {t('leads.export')}
-          </Button>
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Novo lead
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={t('nav.groupQualify')}
+        title={t('leads.title')}
+        description="Gerencie e qualifique suas oportunidades"
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setExportOpen(true)}>
+              <Download className="h-4 w-4" aria-hidden />
+              {t('leads.export')}
+            </Button>
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden />
+              Novo lead
+            </Button>
+          </>
+        }
+      />
 
       <Card className="p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_170px_auto]">
@@ -168,18 +171,14 @@ export function LeadsPage() {
         </div>
       </Card>
 
-      {exportMessage ? (
-        <p className="rounded-lg bg-brand-500/10 p-3 text-sm text-brand-300">{exportMessage}</p>
-      ) : null}
+      {exportMessage ? <Alert tone="success">{exportMessage}</Alert> : null}
 
       {query.isLoading ? (
         <Card className="p-5">
           <TableSkeleton rows={8} columns={5} />
         </Card>
       ) : query.isError ? (
-        <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
-          Erro ao carregar leads. Tente novamente.
-        </p>
+        <Alert tone="error">Erro ao carregar leads. Tente novamente.</Alert>
       ) : leads.length === 0 ? (
         <EmptyState
           title="Nenhum lead encontrado"
@@ -193,11 +192,7 @@ export function LeadsPage() {
         />
       ) : (
         <>
-          {actionError ? (
-            <p className="rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
-              {actionError}
-            </p>
-          ) : null}
+          {actionError ? <Alert tone="error">{actionError}</Alert> : null}
           <Card className="overflow-hidden">
             <ul className="divide-y divide-zinc-800 md:hidden">
               {leads.map((lead) => (

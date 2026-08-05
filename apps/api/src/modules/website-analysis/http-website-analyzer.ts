@@ -125,6 +125,75 @@ export function parseHtmlSignals(html: string, finalUrl: string): Omit<
   };
 }
 
+type LimitedBodyStream = {
+  getReader: () => {
+    read: () => Promise<{ done: boolean; value?: Uint8Array }>;
+    cancel: () => Promise<void> | void;
+  };
+  cancel?: () => Promise<void> | void;
+};
+
+type LimitedBodyResponse = {
+  body?: LimitedBodyStream | null;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+};
+
+/**
+ * Reads at most `maxBodyBytes` from a fetch Response, canceling the stream once
+ * the cap is hit so a malicious/huge HTML payload cannot OOM the worker.
+ */
+export async function readBodyWithLimit(
+  response: LimitedBodyResponse,
+  maxBodyBytes: number,
+): Promise<Buffer> {
+  if (maxBodyBytes <= 0) {
+    if (response.body?.cancel) {
+      try {
+        await response.body.cancel();
+      } catch {
+        // ignore cancel errors
+      }
+    }
+    return Buffer.alloc(0);
+  }
+
+  if (response.body) {
+    const reader = response.body.getReader();
+    const chunks: Buffer[] = [];
+    let total = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value?.byteLength) continue;
+
+        const remaining = maxBodyBytes - total;
+        if (remaining <= 0) {
+          break;
+        }
+        if (value.byteLength > remaining) {
+          chunks.push(Buffer.from(value.subarray(0, remaining)));
+          total += remaining;
+          break;
+        }
+        chunks.push(Buffer.from(value));
+        total += value.byteLength;
+      }
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        // ignore cancel errors
+      }
+    }
+    return total === 0 ? Buffer.alloc(0) : Buffer.concat(chunks, total);
+  }
+
+  // Fallback for test doubles / odd runtimes without a stream body.
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return buffer.byteLength > maxBodyBytes ? buffer.subarray(0, maxBodyBytes) : buffer;
+}
+
 export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
   constructor(
     private readonly options: {
@@ -209,12 +278,8 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
       const contentType = response.headers.get('content-type') ?? '';
       let html = '';
       if (contentType.includes('text/html') || contentType.includes('application/xhtml')) {
-        const buffer = Buffer.from(await response.arrayBuffer());
-        if (buffer.byteLength > maxBodyBytes) {
-          html = buffer.subarray(0, maxBodyBytes).toString('utf8');
-        } else {
-          html = buffer.toString('utf8');
-        }
+        const buffer = await readBodyWithLimit(response, maxBodyBytes);
+        html = buffer.toString('utf8');
       }
 
       const signals = html

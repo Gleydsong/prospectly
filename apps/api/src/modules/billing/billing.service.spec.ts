@@ -22,6 +22,7 @@ describe('BillingService', () => {
     },
     billingWebhookEvent: {
       create: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue({}),
     },
   };
 
@@ -185,6 +186,21 @@ describe('BillingService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
+  it('rejects checkout when organization already has active lifetime', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.LIFETIME,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: 'ABACATE',
+      deletedAt: null,
+    });
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid Stripe webhook signature', async () => {
     stripeProvider.verifyAndParseWebhook.mockRejectedValue(new BadRequestException('bad sig'));
     await expect(
@@ -226,5 +242,27 @@ describe('BillingService', () => {
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
     ).resolves.toEqual({ received: true });
     expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it('releases webhook claim when apply fails so retries can succeed', async () => {
+    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
+      eventId: 'evt_fail',
+      type: 'checkout.session.completed',
+      payload: { id: 'evt_fail' },
+    });
+        prisma.billingWebhookEvent.create.mockResolvedValue({});
+stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
+    ).rejects.toThrow('db down');
+    expect(prisma.billingWebhookEvent.delete).toHaveBeenCalledWith({
+      where: {
+        provider_eventId: {
+          provider: 'STRIPE',
+          eventId: 'evt_fail',
+        },
+      },
+    });
   });
 });

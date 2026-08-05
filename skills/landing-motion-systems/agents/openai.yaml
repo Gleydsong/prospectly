@@ -1,0 +1,4 @@
+interface:
+  display_name: "Landing Motion Systems"
+  short_description: "Accessible GSAP and WebGL motion systems"
+  default_prompt: "Use $landing-motion-systems to plan motion for a landing page."

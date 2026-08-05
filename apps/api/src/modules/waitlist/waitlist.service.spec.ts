@@ -72,6 +72,24 @@ describe('WaitlistService', () => {
     expect(mail.send).not.toHaveBeenCalled();
   });
 
+  it('treats concurrent unique violations as idempotent success without mailing', async () => {
+    const prisma = makePrisma();
+    const mail = makeMail();
+    prisma.waitlistEntry.findUnique.mockResolvedValue(null);
+    prisma.waitlistEntry.create.mockRejectedValue({ code: 'P2002' });
+    const service = new WaitlistService(prisma, mail, makeConfig('team@prospectly.dev'));
+
+    const result = await service.join({
+      email: 'ana@agency.dev',
+      locale: AppLocale.pt,
+      source: 'landing-home',
+    });
+
+    expect(result.message).toBeTruthy();
+    expect(mail.send).not.toHaveBeenCalled();
+    expect(prisma.waitlistEntry.update).not.toHaveBeenCalled();
+  });
+
   it('creates entry, sends confirmation, and notifies team when configured', async () => {
     const prisma = makePrisma();
     const mail = makeMail();

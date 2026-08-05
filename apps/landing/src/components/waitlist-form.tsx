@@ -1,13 +1,22 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { CtaButton } from '@/components/ui/cta-button';
 import { t, type Locale } from '@/lib/i18n';
 
-export function WaitlistForm({ locale }: { locale: Locale }) {
+export function WaitlistForm({
+  locale,
+  tone = 'default',
+}: {
+  locale: Locale;
+  /** `bento` = campos claros sobre painel escuro. */
+  tone?: 'default' | 'bento';
+}) {
   const [email, setEmail] = useState('');
   const [honeypot, setHoneypot] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const isBento = tone === 'bento';
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -17,7 +26,6 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
     setMessage('');
 
     try {
-      // Same-origin Next route — landing works standalone (Resend) without Nest API
       const res = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -48,7 +56,13 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
 
   if (status === 'success') {
     return (
-      <p className="mt-8 max-w-md text-base font-medium text-accent" role="status">
+      <p
+        className={[
+          'mt-8 max-w-md text-base font-medium',
+          isBento ? 'text-brand-400' : 'text-accent',
+        ].join(' ')}
+        role="status"
+      >
         {message}
       </p>
     );
@@ -69,7 +83,12 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={t(locale, 'waitlistEmailPlaceholder')}
-          className="focus-ring h-12 w-full flex-1 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-4 text-sm text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)]"
+          className={[
+            'focus-ring h-12 w-full flex-1 rounded-control px-4 text-sm',
+            isBento
+              ? 'bento-field'
+              : 'border border-[color:var(--border)] bg-[color:var(--bg-raised)] text-[color:var(--ink)] placeholder:text-[color:var(--ink-muted)]',
+          ].join(' ')}
           disabled={status === 'loading'}
         />
         <input
@@ -82,20 +101,27 @@ export function WaitlistForm({ locale }: { locale: Locale }) {
           aria-hidden
           className="pointer-events-none absolute left-[-9999px] h-0 w-0 opacity-0"
         />
-        <button
+        <CtaButton
           type="submit"
           disabled={status === 'loading' || email.trim().length === 0}
-          className="focus-ring inline-flex h-12 shrink-0 items-center justify-center rounded-control bg-accent px-6 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:text-accent-ink"
+          className="shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === 'loading' ? t(locale, 'waitlistSubmitting') : t(locale, 'waitlistSubmit')}
-        </button>
+        </CtaButton>
       </div>
       {status === 'error' ? (
-        <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="mt-3 text-sm text-red-400" role="alert">
           {message}
         </p>
       ) : (
-        <p className="mt-3 text-sm text-[color:var(--ink-muted)]">{t(locale, 'waitlistHint')}</p>
+        <p
+          className={[
+            'mt-3 text-sm',
+            isBento ? 'text-[color:var(--bento-ink-muted)]' : 'text-[color:var(--ink-muted)]',
+          ].join(' ')}
+        >
+          {t(locale, 'waitlistHint')}
+        </p>
       )}
     </form>
   );

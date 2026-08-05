@@ -1,43 +1,14 @@
 'use client';
 
-import Link from 'next/link';
 import { useReducedMotion, motion } from 'motion/react';
 import { MagnifyingGlass, Funnel, Path, EnvelopeSimple } from '@phosphor-icons/react';
 import { ProductDemoVideo } from '@/components/product-demo-video';
+import { BentoCard, BentoIconDisk, BentoSurface } from '@/components/ui/bento-card';
+import { CtaButton } from '@/components/ui/cta-button';
 import { WaitlistForm } from '@/components/waitlist-form';
 import { prefix, t, type Locale } from '@/lib/i18n';
 
 const ease = [0.16, 1, 0.3, 1] as const;
-
-function StepIcon({
-  icon: Icon,
-  delay,
-  animate,
-}: {
-  icon: typeof MagnifyingGlass;
-  delay: number;
-  animate: boolean;
-}) {
-  if (!animate) {
-    return (
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-control bg-accent/10 text-accent">
-        <Icon weight="bold" className="h-5 w-5" aria-hidden />
-      </span>
-    );
-  }
-
-  return (
-    <motion.span
-      className="inline-flex h-11 w-11 items-center justify-center rounded-control bg-accent/10 text-accent"
-      initial={{ opacity: 0, scale: 0.7 }}
-      whileInView={{ opacity: 1, scale: 1 }}
-      viewport={{ once: true, amount: 0.6 }}
-      transition={{ duration: 0.45, delay, ease }}
-    >
-      <Icon weight="bold" className="h-5 w-5" aria-hidden />
-    </motion.span>
-  );
-}
 
 export function EnterExplainerPage({ locale }: { locale: Locale }) {
   const reduce = useReducedMotion();
@@ -123,120 +94,123 @@ export function EnterExplainerPage({ locale }: { locale: Locale }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.55, delay: 0.24, ease }}
               >
-                <a
-                  href="#lista-espera-entrar"
-                  className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white transition-transform hover:bg-accent-hover active:scale-[0.98] dark:text-accent-ink"
-                >
+                <CtaButton href="#lista-espera-entrar">
                   <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
                   {t(locale, 'enterCtaWaitlist')}
-                </a>
-                <Link
-                  href={p || '/'}
-                  className="focus-ring inline-flex h-12 items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)] transition-colors hover:bg-[color:var(--bg-sunken)]"
-                >
+                </CtaButton>
+                <CtaButton href={p || '/'} variant="secondary">
                   {t(locale, 'enterCtaHome')}
-                </Link>
+                </CtaButton>
               </motion.div>
             ) : (
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                <a
-                  href="#lista-espera-entrar"
-                  className="focus-ring inline-flex h-12 items-center justify-center gap-2 rounded-control bg-accent px-6 text-sm font-semibold text-white dark:text-accent-ink"
-                >
+                <CtaButton href="#lista-espera-entrar">
                   <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
                   {t(locale, 'enterCtaWaitlist')}
-                </a>
-                <Link
-                  href={p || '/'}
-                  className="focus-ring inline-flex h-12 items-center justify-center rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-6 text-sm font-semibold text-[color:var(--ink)]"
-                >
+                </CtaButton>
+                <CtaButton href={p || '/'} variant="secondary">
                   {t(locale, 'enterCtaHome')}
-                </Link>
+                </CtaButton>
               </div>
             )}
           </div>
 
           {animate ? (
             <motion.div
-              className="relative aspect-video overflow-hidden rounded-control border border-[color:var(--border)] bg-[color:var(--bg-sunken)] shadow-soft lg:col-span-7"
+              className="lg:col-span-7"
               initial={{ opacity: 0, scale: 0.96, y: 24 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.75, delay: 0.12, ease }}
             >
-              <ProductDemoVideo locale={locale} className="absolute inset-0" />
+              <BentoSurface decor={false} className="relative aspect-video">
+                <ProductDemoVideo locale={locale} className="absolute inset-0" />
+              </BentoSurface>
             </motion.div>
           ) : (
-            <div className="relative aspect-video overflow-hidden rounded-control border border-[color:var(--border)] bg-[color:var(--bg-sunken)] shadow-soft lg:col-span-7">
+            <BentoSurface decor={false} className="relative aspect-video lg:col-span-7">
               <ProductDemoVideo locale={locale} className="absolute inset-0" />
-            </div>
+            </BentoSurface>
           )}
         </div>
       </section>
 
-      <section className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
-            {t(locale, 'enterHowTitle')}
-          </h2>
-          <p className="mx-auto mt-4 max-w-[50ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
-            {t(locale, 'enterHowBody')}
-          </p>
-        </div>
-
-        <ol className="mx-auto mt-12 grid max-w-4xl gap-10 sm:grid-cols-3 sm:gap-8">
-          {steps.map((step, index) => (
-            <li key={step.title} className="flex flex-col items-center text-center sm:items-start sm:text-left">
-              <StepIcon icon={step.icon} delay={0.05 * index} animate={animate} />
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-accent">
-                {locale === 'pt' ? `Passo ${index + 1}` : `Step ${index + 1}`}
-              </p>
-              <h3 className="mt-2 text-lg font-semibold tracking-tight text-[color:var(--ink)]">
-                {step.title}
-              </h3>
-              <p className="mt-2 max-w-[36ch] text-sm leading-relaxed text-[color:var(--ink-muted)]">
-                {step.body}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="border-y border-[color:var(--border)] bg-[color:var(--bg-sunken)]/40">
-        <div className="mx-auto grid max-w-shell items-center gap-8 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:py-16">
-          <div className="text-center lg:col-span-5 lg:text-left">
-            <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)] md:text-3xl">
-              {t(locale, 'enterWhyTitle')}
+      <section className="bg-[color:var(--bg-sunken)]">
+        <div className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
+              {t(locale, 'enterHowTitle')}
             </h2>
-            <p className="mx-auto mt-4 max-w-[44ch] text-base leading-relaxed text-[color:var(--ink-muted)] lg:mx-0">
-              {t(locale, 'enterWhyBody')}
+            <p className="mx-auto mt-4 max-w-[50ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
+              {t(locale, 'enterHowBody')}
             </p>
           </div>
-          <ul className="space-y-4 lg:col-span-7">
-            {[t(locale, 'enterWhy1'), t(locale, 'enterWhy2'), t(locale, 'enterWhy3')].map(
-              (item, i) => (
-                <li
-                  key={item}
-                  className="flex gap-3 text-left text-sm leading-relaxed text-[color:var(--ink)] md:text-base"
-                  style={animate ? { animationDelay: `${i * 60}ms` } : undefined}
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden />
-                  {item}
+
+          <ol className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-3">
+            {steps.map((step) => {
+              const Icon = step.icon;
+              return (
+                <li key={step.title} className="list-none">
+                  <BentoCard
+                    visualSize="icon"
+                    visual={
+                      <BentoIconDisk>
+                        <Icon weight="bold" className="h-6 w-6" aria-hidden />
+                      </BentoIconDisk>
+                    }
+                    title={step.title}
+                    description={step.body}
+                  />
                 </li>
-              ),
-            )}
-          </ul>
+              );
+            })}
+          </ol>
         </div>
       </section>
 
-      <section id="lista-espera-entrar" className="hero-wash">
-        <div className="mx-auto flex max-w-shell flex-col items-center px-4 py-14 text-center sm:px-6 lg:px-8 lg:py-20">
-          <h2 className="max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
-            {t(locale, 'enterWaitlistTitle')}
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-base leading-relaxed text-[color:var(--ink-muted)] md:text-lg">
-            {t(locale, 'enterWaitlistBody')}
-          </p>
-          <WaitlistForm locale={locale} />
+      <section className="bg-[color:var(--bg)]">
+        <div className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+          <BentoSurface className="grid gap-8 px-6 py-10 sm:px-10 lg:grid-cols-12 lg:items-center lg:gap-10">
+            <div className="relative text-center lg:col-span-5 lg:text-left">
+              <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--bento-ink)] md:text-3xl">
+                {t(locale, 'enterWhyTitle')}
+              </h2>
+              <p className="mx-auto mt-4 max-w-[44ch] text-base leading-relaxed text-[color:var(--bento-ink-muted)] lg:mx-0">
+                {t(locale, 'enterWhyBody')}
+              </p>
+            </div>
+            <ul className="relative space-y-4 lg:col-span-7">
+              {[t(locale, 'enterWhy1'), t(locale, 'enterWhy2'), t(locale, 'enterWhy3')].map(
+                (item) => (
+                  <li
+                    key={item}
+                    className="flex gap-3 text-left text-sm leading-relaxed text-[color:var(--bento-ink)] md:text-base"
+                  >
+                    <span
+                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-400"
+                      aria-hidden
+                    />
+                    {item}
+                  </li>
+                ),
+              )}
+            </ul>
+          </BentoSurface>
+        </div>
+      </section>
+
+      <section id="lista-espera-entrar" className="bg-[color:var(--bg-sunken)]">
+        <div className="mx-auto max-w-shell px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+          <BentoSurface className="mx-auto flex max-w-2xl flex-col items-center px-6 py-10 text-center sm:px-10 sm:py-12">
+            <h2 className="relative max-w-[18ch] text-3xl font-semibold tracking-tight text-[color:var(--bento-ink)] md:text-4xl">
+              {t(locale, 'enterWaitlistTitle')}
+            </h2>
+            <p className="relative mt-4 max-w-[46ch] text-base leading-relaxed text-[color:var(--bento-ink-muted)] md:text-lg">
+              {t(locale, 'enterWaitlistBody')}
+            </p>
+            <div className="relative w-full">
+              <WaitlistForm locale={locale} tone="bento" />
+            </div>
+          </BentoSurface>
         </div>
       </section>
     </div>

@@ -49,6 +49,9 @@ describe('ConversionStudioService tenant isolation', () => {
   const entitlements = {
     assertCanCreateDraft: jest.fn(),
     assertCanPublish: jest.fn(),
+    getSnapshot: jest.fn().mockResolvedValue({
+      limits: { publishedPages: 20 },
+    }),
     recordUsage: jest.fn(),
   };
 
@@ -68,12 +71,13 @@ describe('ConversionStudioService tenant isolation', () => {
       leadActivity: { create: jest.Mock };
       organizationMember: { findFirst: jest.Mock };
       $transaction: jest.Mock;
+      $queryRaw: jest.Mock;
     } = {
       conversionPage: {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
       },
       conversionPageVersion: {
@@ -93,6 +97,7 @@ describe('ConversionStudioService tenant isolation', () => {
       leadActivity: { create: jest.fn() },
       organizationMember: { findFirst: jest.fn() },
       $transaction: jest.fn(),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'org-a' }]),
     };
     prisma.$transaction.mockImplementation(async (arg: unknown) => {
       if (typeof arg === 'function') {

@@ -205,12 +205,12 @@ export function CreateConversionPage() {
               Criar site do lead
             </h1>
             <p className="mx-auto mt-2 max-w-md text-pretty text-sm text-zinc-400">
-              Escolha o lead da prospeção. A IA da Prospectly monta a landing completa com os dados
+              Escolha o lead da prospeção. O React Aura monta a landing completa com os dados
               dele — você só publica e envia ao cliente.
             </p>
             {aiRemaining != null ? (
               <p className="mt-2 text-xs text-zinc-500">
-                Gerações IA restantes neste plano: {aiRemaining}
+                Gerações React Aura restantes neste plano: {aiRemaining}
               </p>
             ) : null}
           </>
@@ -323,7 +323,7 @@ export function CreateConversionPage() {
                     ) : null}
                   </div>
                   <p className="text-xs text-zinc-500">
-                    Ao gerar, a IA usa nome, categoria, cidade e contacto deste lead para montar o
+                    Ao gerar, o React Aura usa nome, categoria, cidade e contacto deste lead para montar o
                     site dentro da Prospectly.
                   </p>
                 </div>
@@ -449,7 +449,7 @@ function CreatingOrb() {
           Criando
         </span>
       </div>
-      <p className="text-sm text-zinc-400">A IA está montando o site do lead…</p>
+      <p className="text-sm text-zinc-400">O React Aura está montando o site do lead…</p>
     </div>
   );
 }
@@ -477,7 +477,7 @@ function TabButton({
       className={cn(
         'relative flex min-h-10 items-center justify-center gap-1.5 rounded-control px-2 text-xs font-medium transition-colors sm:text-sm',
         active
-          ? 'bg-brand-600 text-white shadow-sm'
+          ? 'cta-glass !shadow-none text-white'
           : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200',
         disabled && 'cursor-not-allowed opacity-70',
       )}

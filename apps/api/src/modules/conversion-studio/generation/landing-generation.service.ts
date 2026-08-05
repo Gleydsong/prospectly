@@ -34,14 +34,9 @@ import type { LandingGenerationContext } from './providers/landing-generation.pr
 import { OllamaLandingProvider } from './providers/ollama.provider';
 import { TemplateLandingProvider } from './providers/template.provider';
 import { applyGoogleMediaToBlocks } from './apply-google-media';
-import { blocksToSimpleHtml } from './blocks-to-html';
 import { GoogleLinkResolver } from './google-link.resolver';
 import { GooglePlaceEnrichmentService } from './google-place-enrichment.service';
 import { isAllowedGoogleMapsUrl } from './google-link.parser';
-import {
-  assertPublishableLandingHtml,
-  sanitizeLandingHtml,
-} from './html-sanitize';
 
 type GenerateInput = {
   leadId?: string;
@@ -80,8 +75,7 @@ export class LandingGenerationService {
 
     if (input.leadId) {
       contextLead = await this.loadLead(organizationId, input.leadId);
-      mode = preferAi && hasAiQuota ? 'AI_LEAD' : 'TEMPLATE';
-      useAi = mode === 'AI_LEAD';
+      ({ mode, useAi } = await this.resolveAuraMode(preferAi, hasAiQuota, 'AI_LEAD', organizationId));
       resolvedTitle = contextLead.companyName;
     } else if (describeText) {
       if (describeText.length < 12) {
@@ -100,15 +94,20 @@ export class LandingGenerationService {
       const resolved = await this.googleLinks.resolve(organizationId, googleLink);
       if (resolved.matchedLeadId) {
         contextLead = await this.loadLead(organizationId, resolved.matchedLeadId);
-        mode = preferAi && hasAiQuota ? 'AI_GOOGLE' : 'TEMPLATE';
-        useAi = mode === 'AI_GOOGLE';
+        ({ mode, useAi } = await this.resolveAuraMode(
+          preferAi,
+          hasAiQuota,
+          'AI_GOOGLE',
+          organizationId,
+        ));
         resolvedTitle = contextLead.companyName;
       } else {
-        if (!hasAiQuota && preferAi) {
-          await this.entitlements.assertCanUseAiGeneration(organizationId);
-        }
-        mode = preferAi && hasAiQuota ? 'AI_GOOGLE' : 'TEMPLATE';
-        useAi = mode === 'AI_GOOGLE';
+        ({ mode, useAi } = await this.resolveAuraMode(
+          preferAi,
+          hasAiQuota,
+          'AI_GOOGLE',
+          organizationId,
+        ));
         resolvedTitle = resolved.context.companyName;
         describeText = resolved.context.describeText ?? describeText;
         // Stash resolved fields into generationInput via describe/context later in worker
@@ -267,13 +266,6 @@ export class LandingGenerationService {
           : await this.templateProvider.generate(context);
 
       const blocks = applyGoogleMediaToBlocks(result.blocks, context);
-      const html =
-        result.html?.trim() ||
-        blocksToSimpleHtml({
-          title: result.title,
-          companyName: context.companyName,
-          blocks,
-        });
 
       const mode: ConversionGenerationMode =
         job.mode === 'TEMPLATE'
@@ -288,10 +280,10 @@ export class LandingGenerationService {
         );
       }
 
-      await this.persistSuccess(page.id, job.actorId, result.title, blocks, html, mode);
+      await this.persistSuccess(page.id, job.actorId, result.title, blocks, mode);
     } catch (error) {
       this.logger.warn({
-        message: 'AI generate failed; applying template fallback',
+        message: 'React Aura generate failed; applying block fallback',
         pageId: page.id,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -302,12 +294,6 @@ export class LandingGenerationService {
         job.actorId,
         fallback.title,
         blocks,
-        fallback.html ||
-          blocksToSimpleHtml({
-            title: fallback.title,
-            companyName: context.companyName,
-            blocks,
-          }),
         ConversionGenerationMode.TEMPLATE_FALLBACK,
         error instanceof Error ? error.message.slice(0, 300) : 'AI failed',
       );
@@ -332,14 +318,14 @@ export class LandingGenerationService {
       const result = await this.ollamaProvider.refine!({
         ...context,
         currentBlocks,
-        currentHtml: page.draftHtml,
         currentTitle: page.title,
         instruction: job.instruction,
       });
       await this.entitlements.recordUsage(
         job.organizationId,
         UsageMeterKey.AI_GENERATIONS,
-        `ai-refine:${page.id}:${Date.now()}`,
+        // Stable per-job key so BullMQ retries do not double-charge the meter.
+        `ai-refine:${page.id}:${job.correlationId ?? 'missing-correlation'}`,
       );
       const blocks = applyGoogleMediaToBlocks(result.blocks, context);
       await this.persistSuccess(
@@ -347,7 +333,6 @@ export class LandingGenerationService {
         job.actorId,
         result.title || page.title,
         blocks,
-        result.html,
         ConversionGenerationMode.AI_REFINE,
       );
     } catch (error) {
@@ -370,19 +355,16 @@ export class LandingGenerationService {
     actorId: string,
     title: string,
     blocks: PageBlock[],
-    html: string,
     mode: ConversionGenerationMode,
     softError?: string,
   ) {
     assertPublishableBlocks(blocks);
-    const sanitized = sanitizeLandingHtml(html);
-    assertPublishableLandingHtml(sanitized, title);
     await this.prisma.conversionPage.update({
       where: { id: pageId },
       data: {
         title,
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-        draftHtml: sanitized,
+        draftHtml: null,
         draftRevision: { increment: 1 },
         generationStatus: ConversionGenerationStatus.SUCCEEDED,
         generationMode: mode,
@@ -391,6 +373,21 @@ export class LandingGenerationService {
         updatedById: actorId,
       },
     });
+  }
+
+  private async resolveAuraMode(
+    preferAi: boolean,
+    hasAiQuota: boolean,
+    aiMode: 'AI_LEAD' | 'AI_GOOGLE',
+    organizationId: string,
+  ): Promise<{ mode: GenerateLandingJobData['mode']; useAi: boolean }> {
+    if (!preferAi) {
+      return { mode: 'TEMPLATE', useAi: false };
+    }
+    if (!hasAiQuota) {
+      await this.entitlements.assertCanUseAiGeneration(organizationId);
+    }
+    return { mode: aiMode, useAi: true };
   }
 
   private providerName(): 'ollama' | 'template' {

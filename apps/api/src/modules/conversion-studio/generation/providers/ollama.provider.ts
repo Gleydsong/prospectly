@@ -3,19 +3,19 @@ import { ConfigService } from '@nestjs/config';
 
 import {
   assertPublishableBlocks,
-  defaultBlocksFromLead,
+  parsePageBlocks,
   type PageBlock,
 } from '../../page-blocks.schema';
-import { blocksToSimpleHtml } from '../blocks-to-html';
 import {
-  assertPublishableLandingHtml,
-  sanitizeLandingHtml,
-} from '../html-sanitize';
-import {
-  buildRefineHtmlUserPrompt,
+  buildRefineUserPrompt,
   buildUserPrompt,
   LANDING_SYSTEM_PROMPT,
 } from '../landing-generation.prompts';
+import {
+  applyRefineResponse,
+  ensureBlockIds,
+  type RefineModelResponse,
+} from '../refine-ops';
 import type {
   LandingGenerationContext,
   LandingGenerationProvider,
@@ -34,7 +34,7 @@ export class OllamaLandingProvider implements LandingGenerationProvider {
       { role: 'system', content: LANDING_SYSTEM_PROMPT },
       { role: 'user', content: buildUserPrompt(context) },
     ]);
-    return this.parseHtmlResult(raw, context, true);
+    return this.parseBlocksResult(raw, context, true);
   }
 
   async refine(
@@ -45,28 +45,31 @@ export class OllamaLandingProvider implements LandingGenerationProvider {
       instruction: string;
     },
   ): Promise<LandingGenerationResult> {
-    const currentHtml =
-      context.currentHtml?.trim() ||
-      blocksToSimpleHtml({
-        title: context.currentTitle || context.companyName,
-        companyName: context.companyName,
-        blocks: context.currentBlocks,
-      });
-
     const raw = await this.chat([
       { role: 'system', content: LANDING_SYSTEM_PROMPT },
       {
         role: 'user',
-        content: buildRefineHtmlUserPrompt({
+        content: buildRefineUserPrompt({
           companyName: context.companyName,
           instruction: context.instruction,
-          currentHtml,
+          currentBlocks: context.currentBlocks,
           photos: context.photos,
           designReference: context.designReference,
         }),
       },
     ]);
-    return this.parseHtmlResult(raw, context, true, context.currentTitle);
+    const parsed = this.parseJson(raw) as RefineModelResponse;
+    const { title, blocks } = applyRefineResponse(
+      context.currentBlocks,
+      context.currentTitle,
+      parsed,
+    );
+    return {
+      title,
+      blocks,
+      provider: 'ollama',
+      usedAi: true,
+    };
   }
 
   private async chat(messages: Array<{ role: string; content: string }>): Promise<string> {
@@ -104,7 +107,7 @@ export class OllamaLandingProvider implements LandingGenerationProvider {
       return content;
     } catch (error) {
       this.logger.warn({
-        message: 'Ollama HTML generation failed',
+        message: 'Ollama React Aura generation failed',
         error: error instanceof Error ? error.message : String(error),
       });
       throw error;
@@ -113,39 +116,27 @@ export class OllamaLandingProvider implements LandingGenerationProvider {
     }
   }
 
-  private parseHtmlResult(
+  private parseBlocksResult(
     raw: string,
     context: LandingGenerationContext,
     usedAi: boolean,
     fallbackTitle?: string,
   ): LandingGenerationResult {
-    const parsed = this.parseJson(raw) as { title?: unknown; html?: unknown };
-    if (typeof parsed.html !== 'string' || !parsed.html.trim()) {
-      throw new Error('Model response missing html');
+    const parsed = this.parseJson(raw) as { title?: unknown; blocks?: unknown };
+    if (!Array.isArray(parsed.blocks) || parsed.blocks.length === 0) {
+      throw new Error('Model response missing blocks');
     }
-    const html = sanitizeLandingHtml(parsed.html);
-    assertPublishableLandingHtml(html, context.companyName);
+    const withIds = ensureBlockIds(parsed.blocks);
+    const blocks = parsePageBlocks(withIds);
+    assertPublishableBlocks(blocks);
 
     const title =
       typeof parsed.title === 'string' && parsed.title.trim()
         ? parsed.title.trim().slice(0, 160)
         : fallbackTitle || context.companyName;
 
-    // Keep a minimal block snapshot for legado/editor fallback
-    const blocks = defaultBlocksFromLead({
-      companyName: context.companyName,
-      category: context.category,
-      city: context.city,
-      phone: context.phone,
-      address: context.address,
-      photos: context.photos,
-      googleReviews: context.googleReviews,
-    });
-    assertPublishableBlocks(blocks);
-
     return {
       title,
-      html,
       blocks,
       provider: 'ollama',
       usedAi,

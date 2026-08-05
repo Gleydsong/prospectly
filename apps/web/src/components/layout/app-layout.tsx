@@ -9,12 +9,12 @@ export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="min-w-0 lg:pl-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
         <EmailVerificationBanner />
-        <main className="p-4 lg:p-6">
+        <main className="mx-auto max-w-[1600px] p-4 lg:p-6">
           <Outlet />
         </main>
       </div>

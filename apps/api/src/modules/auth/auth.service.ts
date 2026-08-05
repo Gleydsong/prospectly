@@ -48,6 +48,7 @@ const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const GENERIC_VERIFY_FAIL = 'Invalid or expired verification token';
 const GENERIC_RESET_MAIL_FAIL = 'Unable to process password reset right now. Please try again later.';
+const REFRESH_REUSE_GRACE_MS = 60_000;
 
 @Injectable()
 export class AuthService {
@@ -235,45 +236,26 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    // Reuse of an already-rotated refresh token → revoke the whole session family.
+    const matches = await argon2.verify(stored.tokenHash, refreshToken);
+    if (!matches) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     if (stored.revokedAt) {
+      const rotatedAgoMs = Date.now() - stored.revokedAt.getTime();
+      if (stored.replacedById && rotatedAgoMs <= REFRESH_REUSE_GRACE_MS) {
+        return this.issueTokensForStoredRefresh(payload.sub, stored, meta);
+      }
       if (stored.replacedById) {
         await this.logoutAll(payload.sub);
       }
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    const matches = await argon2.verify(stored.tokenHash, refreshToken);
-    if (!matches) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
+    const tokens = await this.issueTokensForStoredRefresh(payload.sub, stored, meta);
 
-    const membership = stored.organizationId
-      ? await this.prisma.organizationMember.findUnique({
-          where: {
-            userId_organizationId: {
-              userId: payload.sub,
-              organizationId: stored.organizationId,
-            },
-          },
-        })
-      : await this.prisma.organizationMember.findFirst({
-          where: { userId: payload.sub },
-          orderBy: { createdAt: 'asc' },
-        });
-    if (!membership) {
-      throw new UnauthorizedException('User has no organization');
-    }
-
-    const tokens = await this.issueTokens(
-      payload.sub,
-      membership.organizationId,
-      membership.role,
-      meta,
-    );
-
-    await this.prisma.refreshToken.update({
-      where: { id: stored.id },
+    await this.prisma.refreshToken.updateMany({
+      where: { id: stored.id, revokedAt: null },
       data: { revokedAt: new Date(), replacedById: this.extractJti(tokens.refreshToken) },
     });
 
@@ -402,27 +384,56 @@ export class AuthService {
       this.logger.warn({ outcome: 'verify_email_failed', ip: meta?.ip }, 'email verification failed');
       throw new BadRequestException(GENERIC_VERIFY_FAIL);
     }
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerifiedAt: new Date(),
-        emailVerifyTokenHash: null,
-        emailVerifyTokenExpiresAt: null,
-      },
-    });
+
+    if (user.pendingEmail) {
+      const taken = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: user.pendingEmail }, { pendingEmail: user.pendingEmail }],
+          NOT: { id: user.id },
+        },
+      });
+      if (taken) {
+        this.logger.warn(
+          { outcome: 'verify_email_pending_taken', userId: user.id, ip: meta?.ip },
+          'pending email no longer available',
+        );
+        throw new BadRequestException(GENERIC_VERIFY_FAIL);
+      }
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.pendingEmail,
+          pendingEmail: null,
+          emailVerifiedAt: new Date(),
+          emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
+        },
+      });
+    } else {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerifiedAt: new Date(),
+          emailVerifyTokenHash: null,
+          emailVerifyTokenExpiresAt: null,
+        },
+      });
+    }
     this.logger.log({ outcome: 'verify_email_ok', userId: user.id, ip: meta?.ip }, 'email verified');
   }
 
   async resendVerification(userId: string, meta?: { ip?: string }): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.emailVerifiedAt) {
+    const targetEmail = user?.pendingEmail ?? user?.email;
+    if (!user || (!user.pendingEmail && user.emailVerifiedAt) || !targetEmail) {
       this.logger.log(
         { outcome: 'resend_verification_noop', userId, ip: meta?.ip },
         'resend verification',
       );
       return { message: 'If verification is required, an email was sent.' };
     }
-    await this.issueEmailVerification(user.id, user.email, user.locale);
+    await this.issueEmailVerification(user.id, targetEmail, user.locale);
     this.logger.log(
       { outcome: 'resend_verification_sent', userId, ip: meta?.ip },
       'resend verification',
@@ -450,7 +461,12 @@ export class AuthService {
       return { message: 'If the change is allowed, a verification email was sent.' };
     }
 
-    const taken = await this.prisma.user.findUnique({ where: { email } });
+    const taken = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { pendingEmail: email }],
+        NOT: { id: userId },
+      },
+    });
     if (taken) {
       // Anti-enumeration: same response, no change
       this.logger.warn({ outcome: 'change_email_taken', userId, ip: meta?.ip });
@@ -460,14 +476,13 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: userId },
       data: {
-        email,
-        emailVerifiedAt: null,
+        pendingEmail: email,
         emailVerifyTokenHash: null,
         emailVerifyTokenExpiresAt: null,
       },
     });
     await this.issueEmailVerification(userId, email, user.locale);
-    this.logger.log({ outcome: 'change_email_ok', userId, ip: meta?.ip }, 'email changed');
+    this.logger.log({ outcome: 'change_email_ok', userId, ip: meta?.ip }, 'email change pending');
     return { message: 'If the change is allowed, a verification email was sent.' };
   }
 
@@ -659,6 +674,49 @@ export class AuthService {
         : `Abra este link para verificar o seu e-mail (expira em 24h):\n\n${link}\n`;
 
     await this.mail.send({ to: email, subject, text });
+  }
+
+  private async issueTokensForStoredRefresh(
+    userId: string,
+    stored: { organizationId: string | null; replacedById: string | null },
+    meta?: { userAgent?: string; ip?: string },
+  ): Promise<AuthTokens> {
+    let organizationId = stored.organizationId;
+
+    if (!organizationId && stored.replacedById) {
+      const successor = await this.prisma.refreshToken.findUnique({
+        where: { id: stored.replacedById },
+        select: { organizationId: true },
+      });
+      organizationId = successor?.organizationId ?? null;
+    }
+
+    const membership = await this.resolveRefreshMembership(userId, organizationId);
+    return this.issueTokens(userId, membership.organizationId, membership.role, meta);
+  }
+
+  private async resolveRefreshMembership(userId: string, organizationId: string | null) {
+    if (organizationId) {
+      const membership = await this.prisma.organizationMember.findUnique({
+        where: {
+          userId_organizationId: { userId, organizationId },
+        },
+      });
+      if (!membership) {
+        throw new UnauthorizedException('User has no organization');
+      }
+      return membership;
+    }
+
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      take: 2,
+    });
+    if (memberships.length === 1) {
+      return memberships[0]!;
+    }
+    throw new UnauthorizedException('Refresh token expired or revoked');
   }
 
   private async issueTokens(

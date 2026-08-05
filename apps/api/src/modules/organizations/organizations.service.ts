@@ -87,10 +87,7 @@ export class OrganizationsService {
     const passwordHash = await argon2.hash(dto.temporaryPassword);
 
     const member = existing
-      ? await this.prisma.organizationMember.create({
-          data: { userId: existing.id, organizationId, role: dto.role },
-          include: { user: { select: { id: true, name: true, email: true } } },
-        })
+      ? await this.attachVerifiedExistingUser(existing, organizationId, dto.role)
       : await (async () => {
           const user = await this.prisma.user.create({
             data: { email, name: dto.name.trim(), passwordHash },
@@ -111,6 +108,23 @@ export class OrganizationsService {
     });
 
     return member;
+  }
+
+  private async attachVerifiedExistingUser(
+    user: { id: string; emailVerifiedAt: Date | null },
+    organizationId: string,
+    role: Role,
+  ) {
+    if (!user.emailVerifiedAt) {
+      throw new ConflictException(
+        'A user with this email exists but has not verified it yet. Ask them to verify before inviting.',
+      );
+    }
+
+    return this.prisma.organizationMember.create({
+      data: { userId: user.id, organizationId, role },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
   }
 
   async updateMemberRole(
@@ -156,12 +170,21 @@ export class OrganizationsService {
     return updated;
   }
 
-  async removeMember(organizationId: string, memberId: string, actingUserId: string) {
+  async removeMember(
+    organizationId: string,
+    memberId: string,
+    actingUserId: string,
+    actingRole: Role,
+  ) {
     const member = await this.prisma.organizationMember.findFirst({
       where: { id: memberId, organizationId },
     });
     if (!member) {
       throw new NotFoundException('Member not found');
+    }
+    // Mirror updateMemberRole: only OWNER may remove an OWNER (blocks ADMIN privilege escalation).
+    if (actingRole !== 'OWNER' && member.role === 'OWNER') {
+      throw new ForbiddenException('Only OWNER can remove an OWNER');
     }
     if (member.role === 'OWNER') {
       const owners = await this.prisma.organizationMember.count({

@@ -22,9 +22,13 @@ describe('AbacatePaymentProvider', () => {
   };
 
   const activation = {
-    activateLifetime: jest.fn(),
+    activateLifetime: jest.fn().mockResolvedValue({
+      previousStripeSubscriptionId: null,
+      previousAbacateSubscriptionId: null,
+    }),
     activateMonthly: jest.fn(),
     syncMonthlyStatus: jest.fn(),
+    revokeLifetime: jest.fn(),
   };
 
   const prisma = {
@@ -145,6 +149,68 @@ describe('AbacatePaymentProvider', () => {
         abacatePaymentId: 'pix_1',
       }),
     );
+    expect(client.cancelSubscription).not.toHaveBeenCalled();
+  });
+
+  it('cancels prior monthly Abacate subscription after lifetime upgrade', async () => {
+    activation.activateLifetime.mockResolvedValue({
+      previousStripeSubscriptionId: null,
+      previousAbacateSubscriptionId: 'subs_old',
+    });
+
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_upgrade',
+        event: 'transparent.completed',
+        data: {
+          id: 'pix_2',
+          metadata: { organizationId: 'org1', interval: 'lifetime' },
+        },
+      },
+      'transparent.completed',
+    );
+
+    expect(client.cancelSubscription).toHaveBeenCalledWith('subs_old');
+  });
+
+  it('revokes lifetime on transparent.refunded', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_refund',
+        event: 'transparent.refunded',
+        data: {
+          id: 'pix_1',
+          metadata: { organizationId: 'org1', interval: 'lifetime' },
+        },
+      },
+      'transparent.refunded',
+    );
+    expect(activation.revokeLifetime).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_1',
+    });
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
+  });
+
+  it('revokes lifetime on transparent.lost via abacatePaymentId lookup', async () => {
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1' });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_lost',
+        event: 'transparent.lost',
+        data: { id: 'pix_lost' },
+      },
+      'transparent.lost',
+    );
+    expect(prisma.organization.findFirst).toHaveBeenCalledWith({
+      where: { abacatePaymentId: 'pix_lost' },
+    });
+    expect(activation.revokeLifetime).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      provider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_lost',
+    });
   });
 
   it('verifies webhook HMAC + secret', async () => {
