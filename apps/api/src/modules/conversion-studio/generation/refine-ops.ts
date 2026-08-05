@@ -105,7 +105,7 @@ function asBlockRecord(block: unknown, forcedId?: string): Record<string, unknow
   };
 }
 
-function ensureBlockIds(blocks: unknown): unknown {
+export function ensureBlockIds(blocks: unknown): unknown {
   if (!Array.isArray(blocks)) return blocks;
   return blocks.map((block) => {
     if (!block || typeof block !== 'object') return block;

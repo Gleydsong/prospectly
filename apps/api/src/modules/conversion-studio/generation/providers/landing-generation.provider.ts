@@ -39,7 +39,6 @@ export type LandingGenerationContext = {
 export type LandingGenerationResult = {
   title: string;
   blocks: PageBlock[];
-  html: string;
   provider: 'ollama' | 'template';
   usedAi: boolean;
 };

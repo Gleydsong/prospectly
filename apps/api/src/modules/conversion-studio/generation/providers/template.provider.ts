@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
 import { defaultBlocksFromLead } from '../../page-blocks.schema';
-import { blocksToSimpleHtml } from '../blocks-to-html';
 import type {
   LandingGenerationContext,
   LandingGenerationProvider,
@@ -22,15 +21,9 @@ export class TemplateLandingProvider implements LandingGenerationProvider {
       photos: context.photos,
       googleReviews: context.googleReviews,
     });
-    const html = blocksToSimpleHtml({
-      title: context.companyName,
-      companyName: context.companyName,
-      blocks,
-    });
     return {
       title: context.companyName,
       blocks,
-      html,
       provider: 'template',
       usedAi: false,
     };
@@ -45,17 +38,9 @@ export class TemplateLandingProvider implements LandingGenerationProvider {
     },
   ): Promise<LandingGenerationResult> {
     void context.instruction;
-    const html =
-      context.currentHtml?.trim() ||
-      blocksToSimpleHtml({
-        title: context.currentTitle || context.companyName,
-        companyName: context.companyName,
-        blocks: context.currentBlocks,
-      });
     return {
       title: context.currentTitle || context.companyName,
       blocks: context.currentBlocks,
-      html,
       provider: 'template',
       usedAi: false,
     };
