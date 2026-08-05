@@ -12,11 +12,13 @@ const CHIJ_RE = /\b(ChIJ[A-Za-z0-9_-]+)\b/;
 const PLACE_PATH_RE = /\/maps\/place\/([^/@]+)/i;
 const AT_COORDS_RE = /@(-?\d+\.?\d*),(-?\d+\.?\d*)/;
 const Q_RE = /[?&](?:q|query)=([^&]+)/i;
+const MAX_SHORT_LINK_REDIRECTS = 4;
 
 export function isAllowedGoogleMapsUrl(value: string): boolean {
   try {
     const url = new URL(value.trim());
     if (!['http:', 'https:'].includes(url.protocol)) return false;
+    if (url.username || url.password) return false;
     const host = url.hostname.toLowerCase();
     return (
       host === 'maps.google.com' ||
@@ -67,26 +69,65 @@ export function parseGoogleMapsLink(raw: string): ParsedGoogleMapsLink {
   };
 }
 
+/**
+ * Expand Google short links without following redirects to non-Google / private hosts.
+ * Uses redirect:manual so each hop can be allowlisted (SSRF-safe).
+ */
 export async function expandGoogleShortLink(
   rawUrl: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
+  if (!isAllowedGoogleMapsUrl(rawUrl)) {
+    throw new Error('URL must be a Google Maps / Business link');
+  }
+
   const host = new URL(rawUrl).hostname.toLowerCase();
   if (!['maps.app.goo.gl', 'goo.gl', 'g.page'].includes(host)) {
     return rawUrl;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
-  try {
-    const response = await fetchImpl(rawUrl, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal,
-      headers: { 'user-agent': 'Prospectly/1.0' },
-    });
-    return response.url || rawUrl;
-  } finally {
-    clearTimeout(timer);
+  let currentUrl = rawUrl.trim();
+  const visited = new Set<string>();
+
+  for (let hop = 0; hop <= MAX_SHORT_LINK_REDIRECTS; hop++) {
+    if (visited.has(currentUrl)) {
+      throw new Error('Google short link redirect loop');
+    }
+    visited.add(currentUrl);
+
+    if (!isAllowedGoogleMapsUrl(currentUrl)) {
+      throw new Error('Google short link redirected outside allowlisted hosts');
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetchImpl(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        signal: controller.signal,
+        headers: { 'user-agent': 'Prospectly/1.0' },
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new Error('Google short link redirect missing Location');
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+
+      // Final non-redirect response — prefer response.url when present, else last hop.
+      const finalUrl = response.url || currentUrl;
+      if (!isAllowedGoogleMapsUrl(finalUrl)) {
+        throw new Error('Google short link resolved outside allowlisted hosts');
+      }
+      return finalUrl;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  throw new Error('Too many redirects expanding Google short link');
 }
