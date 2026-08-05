@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
+import { HtmlLandingRenderer } from '@/features/conversion-studio/components/html-landing-renderer';
 import { PageBlocksRenderer } from '@/features/conversion-studio/components/page-blocks-renderer';
 import {
   fetchPublicPage,
@@ -15,8 +16,10 @@ const CONSENT_KEY_PREFIX = 'prospectly.page.consent.';
 export function PublicConversionPage() {
   const { slug } = useParams<{ slug: string }>();
   const [title, setTitle] = useState('');
+  const [html, setHtml] = useState('');
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
@@ -32,6 +35,7 @@ export function PublicConversionPage() {
         if (cancelled) return;
         const parsed = pageBlocksSchema.safeParse(page.blocks);
         setTitle(page.title);
+        setHtml(page.html?.trim() || '');
         setBlocks(parsed.success ? parsed.data : []);
         setAnalyticsEnabled(Boolean(page.analytics?.enabled));
         setConsentLabel(page.analytics?.consentLabel ?? '');
@@ -53,6 +57,7 @@ export function PublicConversionPage() {
 
   const heading = useMemo(() => title || 'Proposta', [title]);
   const showConsent = analyticsEnabled && !consented;
+  const hasHtml = Boolean(html);
 
   if (loading) {
     return <p className="p-8 text-zinc-400">A carregar…</p>;
@@ -70,7 +75,13 @@ export function PublicConversionPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-50">
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
+      <div
+        className={
+          hasHtml
+            ? 'mx-auto max-w-5xl space-y-4 px-2 py-4 sm:px-4 sm:py-8'
+            : 'mx-auto max-w-3xl space-y-6 px-4 py-10'
+        }
+      >
         <h1 className="sr-only">{heading}</h1>
         {showConsent ? (
           <div
@@ -108,19 +119,48 @@ export function PublicConversionPage() {
             {success}
           </p>
         ) : null}
-        <PageBlocksRenderer
-          blocks={blocks}
-          onTrack={(ctaType) => {
-            if (!slug) return;
-            if (analyticsEnabled && !consented) return;
-            void trackPublicEvent(slug, { type: 'cta_click', ctaType });
-          }}
-          onSubmitForm={async (payload) => {
-            if (!slug) return;
-            const result = await submitPublicForm(slug, payload);
-            setSuccess(result.message ?? 'Recebemos o seu contacto.');
-          }}
-        />
+        {submitError ? (
+          <p className="rounded-lg bg-red-500/15 p-3 text-sm text-red-200" role="alert">
+            {submitError}
+          </p>
+        ) : null}
+        {hasHtml ? (
+          <HtmlLandingRenderer
+            html={html}
+            title={heading}
+            onFormSubmit={async (payload) => {
+              if (!slug) return;
+              try {
+                setSubmitError(null);
+                const result = await submitPublicForm(slug, payload);
+                setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              } catch {
+                setSuccess(null);
+                setSubmitError('Não foi possível enviar o formulário. Tente novamente.');
+              }
+            }}
+          />
+        ) : (
+          <PageBlocksRenderer
+            blocks={blocks}
+            onTrack={(ctaType) => {
+              if (!slug) return;
+              if (analyticsEnabled && !consented) return;
+              void trackPublicEvent(slug, { type: 'cta_click', ctaType });
+            }}
+            onSubmitForm={async (payload) => {
+              if (!slug) return;
+              try {
+                setSubmitError(null);
+                const result = await submitPublicForm(slug, payload);
+                setSuccess(result.message ?? 'Recebemos o seu contacto.');
+              } catch {
+                setSuccess(null);
+                setSubmitError('Não foi possível enviar o formulário. Tente novamente.');
+              }
+            }}
+          />
+        )}
       </div>
     </main>
   );

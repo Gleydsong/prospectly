@@ -18,8 +18,9 @@ Each block needs: "type", stable fields per type. You may omit "id" — server a
 - Portuguese (Brazil) copy unless context says otherwise
 - Do NOT invent phone/email/WhatsApp/address/hours/social not in context
 - Do NOT invent fake reviews when googleReviews exist — use those texts
-- If googleReviews is empty, use generic testimonials sparingly or omit
+- If googleReviews is empty, omit testimonials
 - Only HTTPS URLs for images; button actions: whatsapp, call, email, external_url, anchor, open_form, calendar
+- Contact forms MUST use English input name attributes exactly: name, email, phone, message (labels may stay pt-BR)
 - Use real photos from photos[] in hero + gallery when available
 - Follow designReference + premium brief below
 - Minimum publishable structure: hero (or rich_text) + at least one CTA (hero.cta, cta_button, or contact_form)
@@ -58,6 +59,7 @@ export function buildUserPrompt(context: {
         'Omit sections when data is missing — never fabricate facts',
         'WhatsApp CTA via { type: "whatsapp", phone } when phone exists',
         'Include contact_form with privacyNotice in pt-BR',
+        'Form inputs must use name="name|email|phone|message" (English attrs; pt-BR labels OK)',
       ],
       business: {
         name: context.companyName,
@@ -104,6 +106,7 @@ export function buildRefineUserPrompt(input: {
         'Preserve real photo URLs unless the user asks to change imagery',
         'Do not invent phone/email/hours/social absent from current blocks/context',
         'Do not return HTML — blocks only',
+        'Preserve form input name attrs as name|email|phone|message when a form exists',
         'Apply the user instruction while keeping publishable structure',
       ],
       businessName: input.companyName,

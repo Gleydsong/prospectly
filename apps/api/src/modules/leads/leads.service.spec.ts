@@ -38,6 +38,11 @@ const makeIngestion = () =>
     ingest: jest.Mock;
   };
 
+const makeEntitlements = () =>
+  ({
+    assertFeature: jest.fn().mockResolvedValue(undefined),
+  }) as { assertFeature: jest.Mock };
+
 const baseDto: CreateLeadDto = {
   companyName: 'Restaurante Teste',
   email: 'contato@teste.pt',
@@ -55,7 +60,7 @@ describe('LeadsService', () => {
       status: 'DUPLICATE',
       lead: { id: 'dup-1', companyName: 'Outro' },
     });
-    const service = new LeadsService(prisma, ingestion);
+    const service = new LeadsService(prisma, ingestion, makeEntitlements() as never);
 
     await expect(service.create('org1', baseDto, 'user1')).rejects.toBeInstanceOf(
       ConflictException,
@@ -69,7 +74,7 @@ describe('LeadsService', () => {
       status: 'IMPORTED',
       lead: { id: 'lead-1', companyName: 'Restaurante Teste', tags: [] },
     });
-    const service = new LeadsService(prisma, ingestion);
+    const service = new LeadsService(prisma, ingestion, makeEntitlements() as never);
 
     const result = await service.create('org1', { ...baseDto, email: 'CONTATO@Teste.pt' }, 'user1');
 
@@ -100,7 +105,7 @@ describe('LeadsService', () => {
       }
       return Promise.resolve({ id: 'lead-deleted', companyName: 'Lead Removido' });
     });
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await expect(
       service.update('org1', 'lead-1', { email: 'contato@teste.pt' }),
@@ -122,7 +127,7 @@ describe('LeadsService', () => {
       .mockResolvedValueOnce({ id: 'lead-1', organizationId: 'org1' })
       .mockResolvedValueOnce(null);
     prisma.lead.update.mockRejectedValue({ code: 'P2002' });
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await expect(
       service.update('org1', 'lead-1', { email: 'contato@teste.pt' }),
@@ -140,7 +145,7 @@ describe('LeadsService', () => {
       }
       return Promise.resolve(null);
     });
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await expect(
       service.update('org1', 'lead-1', { phone: '(11) 99876-5432' }),
@@ -166,7 +171,7 @@ describe('LeadsService', () => {
       state: 'SP',
     });
     prisma.lead.update.mockResolvedValue({ id: 'lead-1', tags: [] });
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await service.update('org1', 'lead-1', { city: 'Campinas' });
 
@@ -182,7 +187,7 @@ describe('LeadsService', () => {
   it('list always scopes by organization and excludes soft-deleted', async () => {
     const prisma = makePrisma();
     prisma.$transaction.mockResolvedValue([0, []]);
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await service.list('org1', { page: 1, pageSize: 20, sortBy: 'createdAt', sortOrder: 'desc' });
 
@@ -199,7 +204,7 @@ describe('LeadsService', () => {
   it('getById throws NotFoundException for lead from another org', async () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue(null);
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await expect(service.getById('org-A', 'lead-from-org-B')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -215,7 +220,7 @@ describe('LeadsService', () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue({ id: 'l1', organizationId: 'org1' });
     prisma.lead.update.mockResolvedValue({});
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await service.softDelete('org1', 'l1');
 
@@ -262,7 +267,7 @@ describe('LeadsService', () => {
       scores: [],
       websiteRecord: null,
     });
-    const service = new LeadsService(prisma, makeIngestion());
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     const result = await service.getById('org1', 'lead-1');
 
