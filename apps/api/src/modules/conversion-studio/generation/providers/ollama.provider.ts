@@ -11,7 +11,11 @@ import {
   buildUserPrompt,
   LANDING_SYSTEM_PROMPT,
 } from '../landing-generation.prompts';
-import { applyRefineResponse, ensureBlockIds } from '../refine-ops';
+import {
+  applyRefineResponse,
+  ensureBlockIds,
+  type RefineModelResponse,
+} from '../refine-ops';
 import type {
   LandingGenerationContext,
   LandingGenerationProvider,
@@ -54,11 +58,7 @@ export class OllamaLandingProvider implements LandingGenerationProvider {
         }),
       },
     ]);
-    const parsed = this.parseJson(raw) as {
-      title?: unknown;
-      ops?: unknown;
-      blocks?: unknown;
-    };
+    const parsed = this.parseJson(raw) as RefineModelResponse;
     const { title, blocks } = applyRefineResponse(
       context.currentBlocks,
       context.currentTitle,
