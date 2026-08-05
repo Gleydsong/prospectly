@@ -46,6 +46,9 @@ export class GoogleLinkResolver {
     const expanded = await expandGoogleShortLink(googleLink.trim());
     const parsed = parseGoogleMapsLink(expanded);
 
+    // Only attach an existing CRM lead on exact Google place id / externalId.
+    // Fuzzy companyName contains-matching incorrectly binds form submissions and
+    // activity to unrelated leads (e.g. "Cafe" → "Cafe Central").
     if (parsed.placeId) {
       const byExternal = await this.prisma.lead.findFirst({
         where: {
@@ -63,27 +66,6 @@ export class GoogleLinkResolver {
           parsed,
           context: this.leadToContext(byExternal),
         };
-      }
-    }
-
-    if (parsed.placeName || parsed.query) {
-      const name = (parsed.placeName || parsed.query || '').trim();
-      if (name.length >= 3) {
-        const byName = await this.prisma.lead.findFirst({
-          where: {
-            organizationId,
-            deletedAt: null,
-            companyName: { contains: name.slice(0, 80), mode: 'insensitive' },
-          },
-          orderBy: { updatedAt: 'desc' },
-        });
-        if (byName) {
-          return {
-            matchedLeadId: byName.id,
-            parsed,
-            context: this.leadToContext(byName),
-          };
-        }
       }
     }
 

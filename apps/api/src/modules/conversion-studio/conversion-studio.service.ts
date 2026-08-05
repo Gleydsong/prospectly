@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
   ConversionEventType,
+  ConversionGenerationStatus,
   ConversionPageStatus,
   type Prisma,
   UsageMeterKey,
@@ -120,6 +122,7 @@ export class ConversionStudioService {
   }
 
   async create(organizationId: string, actorId: string, dto: CreateConversionPageDto) {
+    // Fast-fail; authoritative quota is re-checked under org row lock below.
     await this.entitlements.assertCanCreateDraft(organizationId);
 
     let blocks: PageBlock[] = [];
@@ -153,18 +156,40 @@ export class ConversionStudioService {
           })
         : null;
 
-    const page = await this.prisma.conversionPage.create({
-      data: {
-        organizationId,
-        leadId,
-        title,
-        status: ConversionPageStatus.DRAFT,
-        publicSlug: this.createPublicSlug(),
-        draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-        draftHtml,
-        createdById: actorId,
-        updatedById: actorId,
-      },
+    const draftLimit = (await this.entitlements.getSnapshot(organizationId)).limits.pageDrafts;
+
+    const page = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
+      const draftCount = await tx.conversionPage.count({
+        where: {
+          organizationId,
+          status: { in: [ConversionPageStatus.DRAFT, ConversionPageStatus.PREVIEW] },
+          deletedAt: null,
+        },
+      });
+      if (draftCount >= draftLimit) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_PAGE_DRAFTS',
+          message: 'Draft page limit reached for current plan',
+          requiredPlan: 'STARTER_MONTHLY',
+          usage: draftCount,
+          limit: draftLimit,
+        });
+      }
+
+      return tx.conversionPage.create({
+        data: {
+          organizationId,
+          leadId,
+          title,
+          status: ConversionPageStatus.DRAFT,
+          publicSlug: this.createPublicSlug(),
+          draftBlocks: blocks as unknown as Prisma.InputJsonValue,
+          draftHtml,
+          createdById: actorId,
+          updatedById: actorId,
+        },
+      });
     });
 
     await this.entitlements.recordUsage(organizationId, UsageMeterKey.PAGE_DRAFTS, `draft:${page.id}`);
@@ -181,6 +206,12 @@ export class ConversionStudioService {
     if (page.status === ConversionPageStatus.ARCHIVED) {
       throw new BadRequestException('Archived pages cannot be edited');
     }
+    if (
+      page.generationStatus === ConversionGenerationStatus.QUEUED ||
+      page.generationStatus === ConversionGenerationStatus.RUNNING
+    ) {
+      throw new ConflictException('Cannot edit draft while generation is in progress');
+    }
     if (dto.expectedRevision != null && dto.expectedRevision !== page.draftRevision) {
       throw new ConflictException('Draft was modified by another session');
     }
@@ -194,11 +225,32 @@ export class ConversionStudioService {
       );
     }
 
-    const draftHtml = blocksToSimpleHtml({
-      title: dto.title?.trim() || page.title,
+    const nextTitle = dto.title?.trim() || page.title;
+    const nextFromBlocks = blocksToSimpleHtml({
+      title: nextTitle,
       companyName: page.title,
       blocks,
     });
+
+    // Preserve AI/custom HTML. Regenerating from blocks would silently destroy
+    // premium landings when the block editor (or PATCH /draft) is used.
+    let draftHtml = nextFromBlocks;
+    const existingHtml = page.draftHtml?.trim() ?? '';
+    if (existingHtml) {
+      let previousFromBlocks = '';
+      try {
+        previousFromBlocks = blocksToSimpleHtml({
+          title: page.title,
+          companyName: page.title,
+          blocks: parsePageBlocks(page.draftBlocks),
+        }).trim();
+      } catch {
+        previousFromBlocks = '';
+      }
+      if (existingHtml !== previousFromBlocks) {
+        draftHtml = existingHtml;
+      }
+    }
 
     return this.prisma.conversionPage.update({
       where: { id: page.id },
@@ -513,6 +565,14 @@ export class ConversionStudioService {
 
   async trackPublic(publicSlug: string, dto: TrackPublicEventDto) {
     const page = await this.requirePublishedBySlug(publicSlug);
+    // Server-side gate: do not persist analytics when pixel is off or plan lacks entitlement.
+    if (!page.analyticsPixelEnabled) {
+      return { ok: true };
+    }
+    const entitlements = await this.entitlements.getSnapshot(page.organizationId);
+    if (!entitlements.features.analytics_pixel) {
+      return { ok: true };
+    }
     await this.prisma.conversionEvent.create({
       data: {
         organizationId: page.organizationId,
@@ -660,6 +720,7 @@ export class ConversionStudioService {
         publishedVersion: true,
         leadId: true,
         createdById: true,
+        analyticsPixelEnabled: true,
       },
     });
     if (!page || page.publishedVersion == null) {

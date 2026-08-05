@@ -40,7 +40,8 @@ export function PublicConversionPage() {
         setConsentLabel(page.analytics?.consentLabel ?? '');
         const stored = localStorage.getItem(`${CONSENT_KEY_PREFIX}${slug}`) === '1';
         setConsented(stored);
-        if (!page.analytics?.enabled || stored) {
+        // Only track when analytics is entitled/enabled AND consent was given.
+        if (page.analytics?.enabled && stored) {
           await trackPublicEvent(slug, { type: 'page_view' });
         }
       } catch {
