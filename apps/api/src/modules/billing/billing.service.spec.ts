@@ -250,7 +250,8 @@ describe('BillingService', () => {
       type: 'checkout.session.completed',
       payload: { id: 'evt_fail' },
     });
-    stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
+        prisma.billingWebhookEvent.create.mockResolvedValue({});
+stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
