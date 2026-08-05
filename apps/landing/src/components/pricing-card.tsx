@@ -2,6 +2,7 @@
 
 import { Check } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
+import { BentoSurface } from '@/components/ui/bento-card';
 import { CtaButton } from '@/components/ui/cta-button';
 import { t, type Locale } from '@/lib/i18n';
 import {
@@ -49,28 +50,26 @@ export function PricingCard({ locale }: { locale: Locale }) {
   const features = t(locale, 'planFeatures').split('|');
 
   return (
-    <div className="surface-raised mx-auto max-w-xl rounded-control p-8 shadow-soft sm:p-10">
-      <div className="flex gap-1 rounded-control bg-[color:var(--bg-sunken)] p-1">
+    <BentoSurface className="mx-auto max-w-xl p-8 sm:p-10">
+      <div className="relative flex gap-1 rounded-control border border-white/10 bg-white/[0.04] p-1">
         {(['monthly', 'lifetime'] as const).map((value) => (
-          <button
+          <CtaButton
             key={value}
             type="button"
+            size="md"
+            variant={interval === value ? 'primary' : 'ghost'}
             onClick={() => setInterval(value)}
-            className={`focus-ring flex-1 rounded-[10px] px-3 py-3 min-h-11 text-sm font-medium transition-colors active:scale-[0.99] ${
-              interval === value
-                ? 'bg-[color:var(--bg-raised)] text-[color:var(--ink)] shadow-sm'
-                : 'text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]'
-            }`}
+            className="min-h-11 flex-1 font-medium !shadow-none"
           >
             {t(locale, value)}
-          </button>
+          </CtaButton>
         ))}
       </div>
 
-      <label className="mt-6 block text-sm text-[color:var(--ink-muted)]">
+      <label className="relative mt-6 block text-sm text-[color:var(--bento-ink-muted)]">
         {t(locale, 'currency')}
         <select
-          className="focus-ring mt-2 w-full rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-2.5 text-[color:var(--ink)]"
+          className="focus-ring bento-field mt-2 w-full rounded-control px-3 py-2.5"
           value={currency}
           onChange={(e) => {
             const next = e.target.value as Currency;
@@ -86,28 +85,28 @@ export function PricingCard({ locale }: { locale: Locale }) {
         </select>
       </label>
 
-      <p className="mt-8 font-mono text-xs uppercase tracking-[0.16em] text-accent">
+      <p className="relative mt-8 font-mono text-xs uppercase tracking-[0.16em] text-brand-400">
         {t(locale, 'planName')}
       </p>
-      <p className="mt-3 text-5xl font-semibold tracking-tighter text-[color:var(--ink)]">
+      <p className="relative mt-3 text-5xl font-semibold tracking-tighter text-[color:var(--bento-ink)]">
         {price.formatted}
-        <span className="ml-2 text-base font-normal tracking-normal text-[color:var(--ink-muted)]">
+        <span className="ml-2 text-base font-normal tracking-normal text-[color:var(--bento-ink-muted)]">
           {interval === 'monthly' ? t(locale, 'perMonth') : t(locale, 'oneTime')}
         </span>
       </p>
 
-      <ul className="mt-8 space-y-3 text-sm text-[color:var(--ink)]">
+      <ul className="relative mt-8 space-y-3 text-sm text-[color:var(--bento-ink)]">
         {features.map((feature) => (
           <li key={feature} className="flex gap-3">
-            <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+            <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" aria-hidden />
             <span>{feature}</span>
           </li>
         ))}
       </ul>
 
-      <CtaButton href={appRegisterUrl(interval, currency)} className="mt-10 w-full">
+      <CtaButton href={appRegisterUrl(interval, currency)} className="relative mt-10 w-full">
         {interval === 'monthly' ? t(locale, 'ctaMonthly') : t(locale, 'ctaLifetime')}
       </CtaButton>
-    </div>
+    </BentoSurface>
   );
 }

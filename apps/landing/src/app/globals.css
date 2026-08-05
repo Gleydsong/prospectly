@@ -15,6 +15,26 @@
   --hero-wash: radial-gradient(ellipse 70% 55% at 85% 15%, rgb(37 99 235 / 0.12), transparent 55%),
     radial-gradient(ellipse 50% 40% at 10% 80%, rgb(24 24 27 / 0.04), transparent 50%),
     linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+  /* Secondary CTA — vidro leve (light). */
+  --cta-secondary-bg: rgb(24 24 27 / 0.04);
+  --cta-secondary-border: rgb(24 24 27 / 0.12);
+  --cta-secondary-ink: #18181b;
+  --cta-secondary-hover: rgb(24 24 27 / 0.08);
+  --cta-ghost-hover: rgb(24 24 27 / 0.04);
+  /* Glass CTA — transparente mas bem legível. */
+  --cta-glass-bg: rgb(24 24 27 / 0.06);
+  --cta-glass-border: rgb(24 24 27 / 0.16);
+  --cta-glass-ink: #18181b;
+  --cta-glass-hover: rgb(24 24 27 / 0.1);
+  --cta-glass-inset: rgb(255 255 255 / 0.55);
+  /* Primary cobalto premium (mesmo em light). */
+  --cta-primary-from: #3b82f6;
+  --cta-primary-to: #1d4ed8;
+  --cta-primary-border: rgb(255 255 255 / 0.22);
+  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.22) inset,
+    0 12px 32px -14px rgb(37 99 235 / 0.85);
+  --cta-primary-hover-from: #60a5fa;
+  --cta-primary-hover-to: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,6 +52,24 @@
     --hero-wash: radial-gradient(ellipse 70% 55% at 85% 10%, rgb(59 130 246 / 0.18), transparent 55%),
       radial-gradient(ellipse 45% 35% at 0% 90%, rgb(255 255 255 / 0.05), transparent 50%),
       linear-gradient(180deg, #090a0c 0%, #15181d 100%);
+    /* Secondary CTA = vidro do app. */
+    --cta-secondary-bg: rgb(255 255 255 / 0.06);
+    --cta-secondary-border: rgb(255 255 255 / 0.1);
+    --cta-secondary-ink: #f1f2f4;
+    --cta-secondary-hover: rgb(255 255 255 / 0.1);
+    --cta-ghost-hover: rgb(255 255 255 / 0.06);
+    --cta-glass-bg: rgb(255 255 255 / 0.12);
+    --cta-glass-border: rgb(255 255 255 / 0.22);
+    --cta-glass-ink: #ffffff;
+    --cta-glass-hover: rgb(255 255 255 / 0.18);
+    --cta-glass-inset: rgb(255 255 255 / 0.2);
+    --cta-primary-from: #60a5fa;
+    --cta-primary-to: #2563eb;
+    --cta-primary-border: rgb(147 197 253 / 0.35);
+    --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.28) inset,
+      0 14px 36px -12px rgb(37 99 235 / 0.7);
+    --cta-primary-hover-from: #93c5fd;
+    --cta-primary-hover-to: #3b82f6;
   }
 }
 
@@ -68,6 +106,26 @@ body {
 
 .conversion-brand {
   background: #061126;
+  --ink: #ffffff;
+  --ink-muted: rgb(191 219 254 / 0.85);
+  --border: rgb(255 255 255 / 0.2);
+  --cta-secondary-bg: rgb(255 255 255 / 0.1);
+  --cta-secondary-border: rgb(255 255 255 / 0.2);
+  --cta-secondary-ink: #ffffff;
+  --cta-secondary-hover: rgb(255 255 255 / 0.15);
+  --cta-ghost-hover: rgb(255 255 255 / 0.1);
+  --cta-glass-bg: rgb(255 255 255 / 0.14);
+  --cta-glass-border: rgb(255 255 255 / 0.28);
+  --cta-glass-ink: #ffffff;
+  --cta-glass-hover: rgb(255 255 255 / 0.2);
+  --cta-glass-inset: rgb(255 255 255 / 0.25);
+  --cta-primary-from: #60a5fa;
+  --cta-primary-to: #1d4ed8;
+  --cta-primary-border: rgb(147 197 253 / 0.45);
+  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.3) inset,
+    0 16px 40px -12px rgb(37 99 235 / 0.8);
+  --cta-primary-hover-from: #93c5fd;
+  --cta-primary-hover-to: #2563eb;
 }
 
 .conversion-brand-overlay {
@@ -157,8 +215,8 @@ body {
 }
 
 /*
- * Módulos bento. A vitrine é sempre escura nos dois esquemas para manter o
- * contraste dos mocks internos, então os tokens são próprios da seção.
+ * Módulos bento. Superfície sempre escura nos dois esquemas de cor —
+ * contraste dos mocks e leitura uniforme light/dark.
  */
 :root {
   --bento-bg: linear-gradient(180deg, #1b1f26 0%, #101317 58%, #0a0c0f 100%);
@@ -166,6 +224,35 @@ body {
   --bento-border-hover: rgb(255 255 255 / 0.16);
   --bento-ink: #f1f2f4;
   --bento-ink-muted: #969da8;
+  --bento-field-bg: rgb(255 255 255 / 0.06);
+  --bento-field-border: rgb(255 255 255 / 0.12);
+}
+
+.bento-surface {
+  background: var(--bento-bg);
+  color: var(--bento-ink);
+  /* Ghost/outline/secondary herdam o contraste do módulo escuro. */
+  --ink: var(--bento-ink);
+  --ink-muted: var(--bento-ink-muted);
+  --border: var(--bento-border);
+  --bg-sunken: rgb(255 255 255 / 0.06);
+  --cta-secondary-bg: rgb(255 255 255 / 0.1);
+  --cta-secondary-border: rgb(255 255 255 / 0.15);
+  --cta-secondary-ink: #ffffff;
+  --cta-secondary-hover: rgb(255 255 255 / 0.15);
+  --cta-ghost-hover: rgb(255 255 255 / 0.08);
+  --cta-glass-bg: rgb(255 255 255 / 0.14);
+  --cta-glass-border: rgb(255 255 255 / 0.26);
+  --cta-glass-ink: #ffffff;
+  --cta-glass-hover: rgb(255 255 255 / 0.2);
+  --cta-glass-inset: rgb(255 255 255 / 0.22);
+  --cta-primary-from: #60a5fa;
+  --cta-primary-to: #1d4ed8;
+  --cta-primary-border: rgb(147 197 253 / 0.4);
+  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.28) inset,
+    0 16px 40px -14px rgb(37 99 235 / 0.75);
+  --cta-primary-hover-from: #93c5fd;
+  --cta-primary-hover-to: #2563eb;
 }
 
 .bento-sheen {
@@ -179,6 +266,49 @@ body {
   background-size: 5px 5px;
   -webkit-mask-image: linear-gradient(180deg, black 0%, transparent 100%);
   mask-image: linear-gradient(180deg, black 0%, transparent 100%);
+}
+
+/* Controles de formulário dentro de painéis bento. */
+.bento-field {
+  border: 1px solid var(--bento-field-border);
+  background: var(--bento-field-bg);
+  color: var(--bento-ink);
+}
+
+.bento-field::placeholder {
+  color: var(--bento-ink-muted);
+}
+
+.bento-field option {
+  background: #15181d;
+  color: var(--bento-ink);
+}
+
+/* Primary azul do redesign: gradiente + hairline + brilho interno. */
+.cta-primary {
+  border: 1px solid var(--cta-primary-border);
+  background-color: var(--cta-primary-to);
+  background-image: linear-gradient(
+    180deg,
+    var(--cta-primary-from) 0%,
+    var(--cta-primary-to) 100%
+  );
+  color: #ffffff;
+  box-shadow: var(--cta-primary-shadow);
+}
+
+.cta-primary:hover {
+  background-image: linear-gradient(
+    180deg,
+    var(--cta-primary-hover-from) 0%,
+    var(--cta-primary-hover-to) 100%
+  );
+}
+
+.cta-primary:disabled,
+.cta-primary[aria-disabled='true'] {
+  box-shadow: none;
+  opacity: 0.6;
 }
 
 .focus-ring:focus-visible {

@@ -40,49 +40,43 @@ export function SiteHeader({ locale }: { locale: Locale }) {
         </Link>
 
         <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
-          <Link
-            href={p || '/'}
-            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
-          >
+          <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'navHome')}
-          </Link>
-          <Link
-            href={`${p}/faq`}
-            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
-          >
+          </CtaButton>
+          <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'navFaq')}
-          </Link>
-          <Link
-            href={`${p}/pricing`}
-            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
-          >
+          </CtaButton>
+          <CtaButton href={`${p}/pricing`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'navPricing')}
-          </Link>
-          <Link
+          </CtaButton>
+          <CtaButton
             href={enterExplainerUrl(locale)}
-            className="focus-ring rounded-control px-3 py-2 text-[color:var(--ink-muted)] transition-colors hover:text-[color:var(--ink)]"
+            variant="ghost"
+            size="sm"
+            className="font-medium"
           >
             {t(locale, 'navLogin')}
-          </Link>
-          <CtaButton href={enterExplainerUrl(locale)} size="sm" className="ml-1 font-medium">
+          </CtaButton>
+          <CtaButton href={enterExplainerUrl(locale)} variant="glass" size="sm" className="ml-1 font-medium">
             {t(locale, 'navCta')}
           </CtaButton>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <CtaButton href={enterExplainerUrl(locale)} size="sm" className="font-medium">
+          <CtaButton href={enterExplainerUrl(locale)} variant="glass" size="sm" className="font-medium">
             {t(locale, 'navCta')}
           </CtaButton>
-          <button
+          <CtaButton
             type="button"
-            className="focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink)]"
+            variant="secondary"
+            size="icon"
             aria-expanded={menuOpen}
             aria-controls="mobile-nav"
             aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
             onClick={() => setMenuOpen((open) => !open)}
           >
             {menuOpen ? <X weight="bold" className="h-5 w-5" /> : <List weight="bold" className="h-5 w-5" />}
-          </button>
+          </CtaButton>
         </div>
       </div>
 
@@ -92,34 +86,42 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           className="border-t border-[color:var(--border)] bg-[color:var(--bg)] md:hidden"
         >
           <nav className="mx-auto flex max-w-shell flex-col gap-1 px-4 py-3 text-sm sm:px-6">
-            <Link
+            <CtaButton
               href={p || '/'}
+              variant="ghost"
+              size="md"
+              className="w-full justify-start font-medium"
               onClick={close}
-              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
             >
               {t(locale, 'navHome')}
-            </Link>
-            <Link
+            </CtaButton>
+            <CtaButton
               href={`${p}/faq`}
+              variant="ghost"
+              size="md"
+              className="w-full justify-start font-medium"
               onClick={close}
-              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
             >
               {t(locale, 'navFaq')}
-            </Link>
-            <Link
+            </CtaButton>
+            <CtaButton
               href={`${p}/pricing`}
+              variant="ghost"
+              size="md"
+              className="w-full justify-start font-medium"
               onClick={close}
-              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
             >
               {t(locale, 'navPricing')}
-            </Link>
-            <Link
+            </CtaButton>
+            <CtaButton
               href={enterExplainerUrl(locale)}
+              variant="ghost"
+              size="md"
+              className="w-full justify-start font-medium"
               onClick={close}
-              className="focus-ring rounded-control px-3 py-3 text-[color:var(--ink)]"
             >
               {t(locale, 'navLogin')}
-            </Link>
+            </CtaButton>
           </nav>
         </div>
       ) : null}
@@ -139,22 +141,27 @@ export function SiteFooter({ locale }: { locale: Locale }) {
             {t(locale, 'footerTagline')}
           </p>
         </div>
-        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-[color:var(--ink-muted)]">
-          <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/faq`}>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerFaq')}
-          </Link>
-          <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/privacy`}>
+          </CtaButton>
+          <CtaButton href={`${p}/privacy`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerPrivacy')}
-          </Link>
-          <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/terms`}>
+          </CtaButton>
+          <CtaButton href={`${p}/terms`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerTerms')}
-          </Link>
-          <Link className="focus-ring hover:text-[color:var(--ink)]" href={`${p}/cookies`}>
+          </CtaButton>
+          <CtaButton href={`${p}/cookies`} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerCookies')}
-          </Link>
-          <Link className="focus-ring hover:text-[color:var(--ink)]" href={locale === 'pt' ? '/en' : '/'}>
+          </CtaButton>
+          <CtaButton
+            href={locale === 'pt' ? '/en' : '/'}
+            variant="secondary"
+            size="sm"
+            className="font-medium"
+          >
             {locale === 'pt' ? 'EN' : 'PT'}
-          </Link>
+          </CtaButton>
         </div>
       </div>
       <div className="border-t border-[color:var(--border)]">

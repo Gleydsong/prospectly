@@ -5,31 +5,75 @@ export interface BentoCardProps {
   visual: ReactNode;
   title: string;
   description: string;
+  /** `default` = mock largo; `compact` = vitrine menor; `icon` = só ícone. */
+  visualSize?: 'default' | 'compact' | 'icon';
   className?: string;
 }
 
+const VISUAL_MIN: Record<NonNullable<BentoCardProps['visualSize']>, string> = {
+  default: 'min-h-[190px]',
+  compact: 'min-h-[120px]',
+  icon: 'min-h-[88px]',
+};
+
 /**
- * Card modular escuro: vitrine no topo, texto na base. A superfície combina
- * gradiente vertical, brilho radial e textura pontilhada para dar profundidade
- * sem depender de blur, que pesaria no scroll.
+ * Shell escuro compartilhado: gradiente, sheen e textura.
+ * Usado por cards e painéis maiores (waitlist, FAQ, pricing, CTA).
  */
-export function BentoCard({ visual, title, description, className }: BentoCardProps) {
+export function BentoSurface({
+  children,
+  className,
+  as: Tag = 'div',
+  /** Desliga sheen/textura (ex.: embed de vídeo). */
+  decor = true,
+  ...rest
+}: {
+  children: ReactNode;
+  className?: string;
+  as?: 'div' | 'article' | 'section' | 'li';
+  decor?: boolean;
+} & React.HTMLAttributes<HTMLElement>) {
   return (
-    <article
+    <Tag
       className={[
-        'group relative flex h-full flex-col overflow-hidden rounded-bento',
-        'border border-[color:var(--bento-border)] bg-[color:var(--bento-bg)]',
-        'shadow-panel transition-colors duration-200 hover:border-[color:var(--bento-border-hover)]',
+        'bento-surface group relative overflow-hidden rounded-bento',
+        'border border-[color:var(--bento-border)] shadow-panel',
+        'transition-colors duration-200 hover:border-[color:var(--bento-border-hover)]',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
+      {...rest}
     >
-      {/* Brilho radial no topo e textura: decorativos, fora da árvore acessível. */}
-      <span aria-hidden className="bento-sheen pointer-events-none absolute inset-0" />
-      <span aria-hidden className="bento-texture pointer-events-none absolute inset-x-0 top-0 h-1/2" />
+      {decor ? (
+        <>
+          <span aria-hidden className="bento-sheen pointer-events-none absolute inset-0" />
+          <span aria-hidden className="bento-texture pointer-events-none absolute inset-x-0 top-0 h-1/2" />
+        </>
+      ) : null}
+      {children}
+    </Tag>
+  );
+}
 
-      <div className="relative flex min-h-[190px] flex-1 items-center justify-center px-5 pb-2 pt-7">
+/**
+ * Card modular escuro: vitrine no topo, texto na base.
+ */
+export function BentoCard({
+  visual,
+  title,
+  description,
+  visualSize = 'default',
+  className,
+}: BentoCardProps) {
+  return (
+    <BentoSurface as="article" className={['flex h-full flex-col', className].filter(Boolean).join(' ')}>
+      <div
+        className={[
+          'relative flex flex-1 items-center justify-center px-5 pb-2 pt-7',
+          VISUAL_MIN[visualSize],
+        ].join(' ')}
+      >
         {visual}
       </div>
 
@@ -41,7 +85,16 @@ export function BentoCard({ visual, title, description, className }: BentoCardPr
           {description}
         </p>
       </div>
-    </article>
+    </BentoSurface>
+  );
+}
+
+/** Ícone em disco para vitrines compactas. */
+export function BentoIconDisk({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex h-14 w-14 items-center justify-center rounded-panel border border-white/12 bg-white/[0.07] text-white/85">
+      {children}
+    </span>
   );
 }
 

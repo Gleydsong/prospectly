@@ -1,29 +1,34 @@
 import Link from 'next/link';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 
-export type CtaVariant = 'primary' | 'secondary' | 'ghost';
-export type CtaSize = 'sm' | 'md' | 'lg';
+export type CtaVariant = 'primary' | 'secondary' | 'glass' | 'ghost' | 'outline';
+export type CtaSize = 'sm' | 'md' | 'lg' | 'icon';
 
 /**
- * Mesmas variantes e medidas do botão do app autenticado, para que os CTAs
- * públicos e o produto compartilhem a mesma linguagem visual.
+ * Único sistema de botão da landing — alinhado ao redesign grafite/bento.
+ * Primary: cobalto. Secondary: vidro leve. Glass: vidro mais visível (CTAs principais).
  */
 const variants: Record<CtaVariant, string> = {
-  primary:
-    'bg-brand-600 text-white shadow-[0_10px_30px_-12px_rgb(37_99_235_/_0.9)] hover:bg-brand-500',
+  primary: 'cta-primary',
   secondary:
-    'border border-[color:var(--border)] bg-[color:var(--bg-raised)] text-[color:var(--ink)] hover:bg-[color:var(--bg-sunken)]',
-  ghost: 'text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]',
+    'border border-[color:var(--cta-secondary-border)] bg-[color:var(--cta-secondary-bg)] text-[color:var(--cta-secondary-ink)] hover:bg-[color:var(--cta-secondary-hover)]',
+  glass:
+    'border border-[color:var(--cta-glass-border)] bg-[color:var(--cta-glass-bg)] text-[color:var(--cta-glass-ink)] shadow-[inset_0_1px_0_0_var(--cta-glass-inset)] backdrop-blur-md hover:bg-[color:var(--cta-glass-hover)]',
+  outline:
+    'border border-[color:var(--border)] bg-transparent text-[color:var(--ink)] hover:bg-[color:var(--cta-ghost-hover)]',
+  ghost:
+    'text-[color:var(--ink-muted)] hover:bg-[color:var(--cta-ghost-hover)] hover:text-[color:var(--ink)]',
 };
 
 const sizes: Record<CtaSize, string> = {
   sm: 'h-9 px-3.5 text-sm',
   md: 'h-11 px-5 text-sm',
   lg: 'h-12 px-6 text-sm',
+  icon: 'h-11 w-11 shrink-0 px-0',
 };
 
 const base =
-  'focus-ring inline-flex items-center justify-center gap-2 rounded-control font-semibold transition-colors active:scale-[0.98]';
+  'focus-ring inline-flex items-center justify-center gap-2 rounded-control font-semibold transition-[color,background,box-shadow,transform] duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100';
 
 function classes(variant: CtaVariant, size: CtaSize, className?: string): string {
   return [base, variants[variant], sizes[size], className].filter(Boolean).join(' ');

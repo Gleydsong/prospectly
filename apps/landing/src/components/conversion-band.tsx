@@ -36,16 +36,11 @@ export function ConversionBand({ locale }: { locale: Locale }) {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-            <CtaButton href={enterExplainerUrl(locale)}>
+            <CtaButton href={enterExplainerUrl(locale)} variant="glass">
               <ListPlus weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'ctaBandPrimary')}
             </CtaButton>
-            {/* Sobre a arte escura da faixa, o secundário usa vidro claro em vez dos tokens de superfície. */}
-            <CtaButton
-              href="#como-funciona"
-              variant="secondary"
-              className="border-white/20 bg-white/10 text-white hover:bg-white/15"
-            >
+            <CtaButton href="#como-funciona" variant="secondary">
               <PlayCircle weight="bold" className="h-4 w-4" aria-hidden />
               {t(locale, 'ctaBandSecondary')}
             </CtaButton>
