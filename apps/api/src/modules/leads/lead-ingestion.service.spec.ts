@@ -11,6 +11,7 @@ const makePrisma = () => {
       findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     tag: { upsert: jest.fn() },
     $transaction: jest.fn(),
@@ -19,7 +20,12 @@ const makePrisma = () => {
     async (operation: (transaction: typeof prisma) => unknown) => operation(prisma),
   );
   return prisma as unknown as PrismaService & {
-    lead: { findFirst: jest.Mock; findMany: jest.Mock; create: jest.Mock };
+    lead: {
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
     tag: { upsert: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -60,6 +66,7 @@ describe('LeadIngestionService', () => {
     expect(prisma.lead.findFirst).toHaveBeenCalledWith({
       where: {
         organizationId: 'org-1',
+        deletedAt: null,
         source: 'OPENSTREETMAP',
         externalId: 'node/42',
       },
@@ -68,11 +75,49 @@ describe('LeadIngestionService', () => {
     expect(prisma.lead.create).not.toHaveBeenCalled();
   });
 
+  it('restores a soft-deleted lead instead of poisoning CRM re-import', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockImplementation(({ where }) => {
+      if (
+        where.deletedAt &&
+        typeof where.deletedAt === 'object' &&
+        where.externalId === 'node/42'
+      ) {
+        return Promise.resolve({ id: 'lead-trashed' });
+      }
+      return Promise.resolve(null);
+    });
+    prisma.lead.update.mockResolvedValue({
+      id: 'lead-trashed',
+      companyName: 'Padaria Central',
+      deletedAt: null,
+      tags: [],
+      contacts: [],
+    });
+    const service = new LeadIngestionService(prisma);
+
+    const result = await service.ingest('org-1', 'user-1', {
+      companyName: 'Padaria Central',
+      source: 'OPENSTREETMAP',
+      externalId: 'node/42',
+    });
+
+    expect(result.status).toBe('IMPORTED');
+    expect(result.lead?.id).toBe('lead-trashed');
+    expect(prisma.lead.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'lead-trashed' },
+        data: expect.objectContaining({ deletedAt: null, companyName: 'Padaria Central' }),
+      }),
+    );
+    expect(prisma.lead.create).not.toHaveBeenCalled();
+  });
+
   it('does not treat an external identity from another organization as a duplicate', async () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockImplementation(({ where }) =>
       Promise.resolve(
-        where.organizationId === 'org-a'
+        where.organizationId === 'org-a' && where.deletedAt === null
           ? { id: 'lead-org-a', companyName: 'Padaria Central' }
           : null,
       ),
@@ -93,6 +138,7 @@ describe('LeadIngestionService', () => {
     expect(prisma.lead.findFirst).toHaveBeenCalledWith({
       where: {
         organizationId: 'org-b',
+        deletedAt: null,
         source: 'OPENSTREETMAP',
         externalId: 'node/42',
       },
@@ -122,6 +168,7 @@ describe('LeadIngestionService', () => {
     expect(prisma.lead.findFirst).toHaveBeenCalledWith({
       where: {
         organizationId: 'org-1',
+        deletedAt: null,
         ...duplicate,
       },
       select: { id: true, companyName: true },
@@ -132,23 +179,37 @@ describe('LeadIngestionService', () => {
     {
       description: 'domain',
       candidate: { companyName: 'Nova Loja', website: 'https://example.com' },
+      activeWhere: (where: Record<string, unknown>) =>
+        where.deletedAt === null && where.domain === 'example.com',
     },
     {
       description: 'Brazilian phone',
       candidate: { companyName: 'Nova Loja', phone: '(11) 99876-5432' },
+      activeWhere: (where: Record<string, unknown>) =>
+        where.deletedAt === null && where.phone === '+5511998765432',
     },
     {
       description: 'email',
       candidate: { companyName: 'Nova Loja', email: 'vendas@example.com' },
+      activeWhere: (where: Record<string, unknown>) =>
+        where.deletedAt === null && where.email === 'vendas@example.com',
     },
   ])(
     'returns the existing lead when a concurrent $description unique constraint wins',
-    async ({ candidate }) => {
+    async ({ candidate, activeWhere }) => {
       const prisma = makePrisma();
-      prisma.lead.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({ id: 'lead-existing', companyName: 'Loja Existente' });
-      prisma.lead.create.mockRejectedValue({ code: 'P2002' });
+      let createAttempts = 0;
+      prisma.lead.findFirst.mockImplementation(({ where }) => {
+        // After create fails, surface the winning active duplicate.
+        if (createAttempts > 0 && activeWhere(where as Record<string, unknown>)) {
+          return Promise.resolve({ id: 'lead-existing', companyName: 'Loja Existente' });
+        }
+        return Promise.resolve(null);
+      });
+      prisma.lead.create.mockImplementation(() => {
+        createAttempts += 1;
+        return Promise.reject({ code: 'P2002' });
+      });
       const service = new LeadIngestionService(prisma);
 
       const result = await service.ingest('org-1', 'user-1', candidate);
@@ -182,6 +243,7 @@ describe('LeadIngestionService', () => {
     expect(prisma.lead.findFirst).toHaveBeenCalledWith({
       where: {
         organizationId: 'org-1',
+        deletedAt: null,
         probableDuplicateKey: 'cafe sao joao|sao paulo|SP',
       },
       select: { id: true, companyName: true },
@@ -191,10 +253,21 @@ describe('LeadIngestionService', () => {
 
   it('returns POSSIBLE_DUPLICATE when a concurrent probable fingerprint wins', async () => {
     const prisma = makePrisma();
-    prisma.lead.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'lead-winner', companyName: 'Café São João' });
-    prisma.lead.create.mockRejectedValue({ code: 'P2002' });
+    let createAttempts = 0;
+    prisma.lead.findFirst.mockImplementation(({ where }) => {
+      if (
+        createAttempts > 0 &&
+        where.deletedAt === null &&
+        where.probableDuplicateKey === 'cafe sao joao|sao paulo|SP'
+      ) {
+        return Promise.resolve({ id: 'lead-winner', companyName: 'Café São João' });
+      }
+      return Promise.resolve(null);
+    });
+    prisma.lead.create.mockImplementation(() => {
+      createAttempts += 1;
+      return Promise.reject({ code: 'P2002' });
+    });
     const service = new LeadIngestionService(prisma);
 
     await expect(
@@ -217,6 +290,7 @@ describe('LeadIngestionService', () => {
 
   it('creates normalized tags and uses TO_REVIEW defaults for a new lead', async () => {
     const prisma = makePrisma();
+    // strong, possible, tombstone all miss
     prisma.lead.findFirst.mockResolvedValue(null);
     prisma.lead.findMany.mockResolvedValue([]);
     prisma.tag.upsert

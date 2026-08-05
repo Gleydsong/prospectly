@@ -15,6 +15,21 @@ describe('ConversionAssetService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.conversionPageAsset.create).not.toHaveBeenCalled();
   });
+
+  it('rejects private / metadata hosts (SSRF)', async () => {
+    const prisma = {
+      conversionPage: { findFirst: jest.fn().mockResolvedValue({ id: 'page-1' }) },
+      conversionPageAsset: { create: jest.fn() },
+    };
+    const service = new ConversionAssetService(prisma as never);
+    await expect(
+      service.register('org-a', 'page-1', { url: 'https://169.254.169.254/latest/meta-data/' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.register('org-a', 'page-1', { url: 'https://127.0.0.1/secret.png' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.conversionPageAsset.create).not.toHaveBeenCalled();
+  });
 });
 
 describe('DomainBindingService', () => {

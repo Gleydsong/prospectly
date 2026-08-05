@@ -170,6 +170,19 @@ export class EntitlementService {
     }
   }
 
+  async assertCanInviteMember(organizationId: string): Promise<void> {
+    const snapshot = await this.getSnapshot(organizationId);
+    if (snapshot.usage.teamMembers >= snapshot.limits.teamMembers) {
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_TEAM_MEMBERS',
+        message: 'Team member limit reached for current plan',
+        requiredPlan: snapshot.limits.teamMembers >= 10 ? 'LIFETIME' : 'STARTER_MONTHLY',
+        usage: snapshot.usage.teamMembers,
+        limit: snapshot.limits.teamMembers,
+      });
+    }
+  }
+
   async assertFeature(organizationId: string, feature: FeatureKey): Promise<void> {
     const snapshot = await this.getSnapshot(organizationId);
     const value = snapshot.features[feature];

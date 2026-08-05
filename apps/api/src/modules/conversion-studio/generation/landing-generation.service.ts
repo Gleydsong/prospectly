@@ -1,6 +1,8 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -9,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   ConversionGenerationMode,
   ConversionGenerationStatus,
+  ConversionPageStatus,
   UsageMeterKey,
   type Prisma,
 } from '@prisma/client';
@@ -118,28 +121,49 @@ export class LandingGenerationService {
     }
 
     const title = input.title?.trim() || resolvedTitle || 'Landing';
+    const draftLimit = (await this.entitlements.getSnapshot(organizationId)).limits.pageDrafts;
 
-    const page = await this.prisma.conversionPage.create({
-      data: {
-        organizationId,
-        leadId: contextLead?.id,
-        title,
-        status: 'DRAFT',
-        publicSlug: this.createPublicSlug(),
-        draftBlocks: [] as unknown as Prisma.InputJsonValue,
-        generationStatus: ConversionGenerationStatus.QUEUED,
-        generationMode: mode as ConversionGenerationMode,
-        generationStartedAt: new Date(),
-        generationPromptVersion: LANDING_PROMPT_VERSION,
-        generationInput: {
-          leadId: contextLead?.id ?? input.leadId ?? null,
-          describeText: describeText?.slice(0, 1500) ?? null,
-          googleLink: googleLink ?? null,
-          resolvedCompanyName: resolvedTitle ?? null,
-        } as Prisma.InputJsonValue,
-        createdById: actorId,
-        updatedById: actorId,
-      },
+    const page = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${organizationId} FOR UPDATE`;
+      const draftCount = await tx.conversionPage.count({
+        where: {
+          organizationId,
+          status: { in: [ConversionPageStatus.DRAFT, ConversionPageStatus.PREVIEW] },
+          deletedAt: null,
+        },
+      });
+      if (draftCount >= draftLimit) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_PAGE_DRAFTS',
+          message: 'Draft page limit reached for current plan',
+          requiredPlan: 'STARTER_MONTHLY',
+          usage: draftCount,
+          limit: draftLimit,
+        });
+      }
+
+      return tx.conversionPage.create({
+        data: {
+          organizationId,
+          leadId: contextLead?.id,
+          title,
+          status: 'DRAFT',
+          publicSlug: this.createPublicSlug(),
+          draftBlocks: [] as unknown as Prisma.InputJsonValue,
+          generationStatus: ConversionGenerationStatus.QUEUED,
+          generationMode: mode as ConversionGenerationMode,
+          generationStartedAt: new Date(),
+          generationPromptVersion: LANDING_PROMPT_VERSION,
+          generationInput: {
+            leadId: contextLead?.id ?? input.leadId ?? null,
+            describeText: describeText?.slice(0, 1500) ?? null,
+            googleLink: googleLink ?? null,
+            resolvedCompanyName: resolvedTitle ?? null,
+          } as Prisma.InputJsonValue,
+          createdById: actorId,
+          updatedById: actorId,
+        },
+      });
     });
 
     await this.entitlements.recordUsage(
@@ -179,15 +203,14 @@ export class LandingGenerationService {
     await this.entitlements.assertCanUseAiGeneration(organizationId);
 
     const page = await this.requirePage(organizationId, pageId);
-    if (
-      page.generationStatus === ConversionGenerationStatus.QUEUED ||
-      page.generationStatus === ConversionGenerationStatus.RUNNING
-    ) {
-      throw new BadRequestException('Generation already in progress');
-    }
-
-    await this.prisma.conversionPage.update({
-      where: { id: page.id },
+    const claimed = await this.prisma.conversionPage.updateMany({
+      where: {
+        id: page.id,
+        organizationId,
+        generationStatus: {
+          notIn: [ConversionGenerationStatus.QUEUED, ConversionGenerationStatus.RUNNING],
+        },
+      },
       data: {
         generationStatus: ConversionGenerationStatus.QUEUED,
         generationMode: ConversionGenerationMode.AI_REFINE,
@@ -197,6 +220,9 @@ export class LandingGenerationService {
         updatedById: actorId,
       },
     });
+    if (claimed.count === 0) {
+      throw new ConflictException('Generation already in progress');
+    }
 
     await this.queue.add(
       REFINE_LANDING_JOB,
@@ -214,14 +240,30 @@ export class LandingGenerationService {
   }
 
   async processGenerate(job: GenerateLandingJobData): Promise<void> {
-    const page = await this.requirePage(job.organizationId, job.pageId);
-    await this.prisma.conversionPage.update({
-      where: { id: page.id },
+    const claimed = await this.prisma.conversionPage.updateMany({
+      where: {
+        id: job.pageId,
+        organizationId: job.organizationId,
+        deletedAt: null,
+        generationStatus: {
+          in: [ConversionGenerationStatus.QUEUED, ConversionGenerationStatus.RUNNING],
+        },
+      },
       data: {
         generationStatus: ConversionGenerationStatus.RUNNING,
         generationError: null,
       },
     });
+    if (claimed.count === 0) {
+      this.logger.warn({
+        message: 'Skipping generate job; page not awaiting generation',
+        pageId: job.pageId,
+      });
+      return;
+    }
+
+    const page = await this.requirePage(job.organizationId, job.pageId);
+    const startedRevision = page.draftRevision;
 
     const lead = page.leadId ? await this.loadLead(job.organizationId, page.leadId) : null;
     let context = this.toContext(lead, job.describeText);
@@ -288,7 +330,16 @@ export class LandingGenerationService {
         );
       }
 
-      await this.persistSuccess(page.id, job.actorId, result.title, blocks, html, mode);
+      await this.persistSuccess(
+        page.id,
+        job.actorId,
+        result.title,
+        blocks,
+        html,
+        mode,
+        undefined,
+        startedRevision,
+      );
     } catch (error) {
       this.logger.warn({
         message: 'AI generate failed; applying template fallback',
@@ -310,16 +361,36 @@ export class LandingGenerationService {
           }),
         ConversionGenerationMode.TEMPLATE_FALLBACK,
         error instanceof Error ? error.message.slice(0, 300) : 'AI failed',
+        startedRevision,
       );
     }
   }
 
   async processRefine(job: RefineLandingJobData): Promise<void> {
-    const page = await this.requirePage(job.organizationId, job.pageId);
-    await this.prisma.conversionPage.update({
-      where: { id: page.id },
-      data: { generationStatus: ConversionGenerationStatus.RUNNING, generationError: null },
+    const claimed = await this.prisma.conversionPage.updateMany({
+      where: {
+        id: job.pageId,
+        organizationId: job.organizationId,
+        deletedAt: null,
+        generationStatus: {
+          in: [ConversionGenerationStatus.QUEUED, ConversionGenerationStatus.RUNNING],
+        },
+      },
+      data: {
+        generationStatus: ConversionGenerationStatus.RUNNING,
+        generationError: null,
+      },
     });
+    if (claimed.count === 0) {
+      this.logger.warn({
+        message: 'Skipping refine job; page not awaiting generation',
+        pageId: job.pageId,
+      });
+      return;
+    }
+
+    const page = await this.requirePage(job.organizationId, job.pageId);
+    const startedRevision = page.draftRevision;
 
     const lead = page.leadId ? await this.loadLead(job.organizationId, page.leadId) : null;
     const context = await this.placeEnrichment.enrichContext(this.toContext(lead));
@@ -339,7 +410,8 @@ export class LandingGenerationService {
       await this.entitlements.recordUsage(
         job.organizationId,
         UsageMeterKey.AI_GENERATIONS,
-        `ai-refine:${page.id}:${Date.now()}`,
+        // Stable key so BullMQ retries do not double-charge (also fixed in PR #30).
+        `ai-refine:${page.id}:${job.correlationId}`,
       );
       const blocks = applyGoogleMediaToBlocks(result.blocks, context);
       await this.persistSuccess(
@@ -349,10 +421,15 @@ export class LandingGenerationService {
         blocks,
         result.html,
         ConversionGenerationMode.AI_REFINE,
+        undefined,
+        startedRevision,
       );
     } catch (error) {
-      await this.prisma.conversionPage.update({
-        where: { id: page.id },
+      await this.prisma.conversionPage.updateMany({
+        where: {
+          id: page.id,
+          generationStatus: ConversionGenerationStatus.RUNNING,
+        },
         data: {
           generationStatus: ConversionGenerationStatus.FAILED,
           generationError:
@@ -373,12 +450,22 @@ export class LandingGenerationService {
     html: string,
     mode: ConversionGenerationMode,
     softError?: string,
+    expectedDraftRevision?: number,
   ) {
     assertPublishableBlocks(blocks);
     const sanitized = sanitizeLandingHtml(html);
     assertPublishableLandingHtml(sanitized, title);
-    await this.prisma.conversionPage.update({
-      where: { id: pageId },
+
+    // Conditional write: skip if the user edited the draft (revision moved) or
+    // another generation job already finished — avoids silent data loss.
+    const updated = await this.prisma.conversionPage.updateMany({
+      where: {
+        id: pageId,
+        generationStatus: {
+          in: [ConversionGenerationStatus.QUEUED, ConversionGenerationStatus.RUNNING],
+        },
+        ...(expectedDraftRevision != null ? { draftRevision: expectedDraftRevision } : {}),
+      },
       data: {
         title,
         draftBlocks: blocks as unknown as Prisma.InputJsonValue,
@@ -391,6 +478,14 @@ export class LandingGenerationService {
         updatedById: actorId,
       },
     });
+
+    if (updated.count === 0) {
+      this.logger.warn({
+        message: 'Skipped stale landing generation write (draft changed or job superseded)',
+        pageId,
+        expectedDraftRevision,
+      });
+    }
   }
 
   private providerName(): 'ollama' | 'template' {

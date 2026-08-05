@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  assertSafePublicUrl,
+  SsrfBlockedError,
+} from '../website-analysis/ssrf';
 
 const ALLOWED_CONTENT_TYPES = new Set([
   'image/jpeg',
@@ -11,6 +15,7 @@ const ALLOWED_CONTENT_TYPES = new Set([
 ]);
 
 const MAX_ASSET_BYTES = 5 * 1024 * 1024;
+const MAX_REDIRECTS = 3;
 
 @Injectable()
 export class ConversionAssetService {
@@ -34,29 +39,27 @@ export class ConversionAssetService {
     input: { url: string; altText?: string },
   ) {
     await this.requirePage(organizationId, pageId);
-    const url = this.assertHttpsAssetUrl(input.url);
+    const url = await this.assertSafeHttpsAssetUrl(input.url);
 
     let contentType: string | undefined;
     let byteSize: number | undefined;
+    let finalUrl = url;
     try {
-      const response = await fetch(url, {
-        method: 'HEAD',
-        redirect: 'follow',
-        signal: AbortSignal.timeout(5_000),
-      });
-      if (!response.ok) {
-        throw new BadRequestException('Asset URL is not reachable');
-      }
-      contentType = response.headers.get('content-type')?.split(';')[0]?.trim() || undefined;
-      const length = response.headers.get('content-length');
-      if (length) byteSize = Number(length);
+      const head = await this.headWithSafeRedirects(url);
+      finalUrl = head.url;
+      contentType = head.contentType;
+      byteSize = head.byteSize;
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       throw new BadRequestException('Unable to validate asset URL');
     }
 
-    if (contentType && !ALLOWED_CONTENT_TYPES.has(contentType)) {
-      throw new BadRequestException(`Unsupported content type: ${contentType}`);
+    if (!contentType || !ALLOWED_CONTENT_TYPES.has(contentType)) {
+      throw new BadRequestException(
+        contentType
+          ? `Unsupported content type: ${contentType}`
+          : 'Asset URL must return an image Content-Type',
+      );
     }
     if (byteSize != null && (!Number.isFinite(byteSize) || byteSize > MAX_ASSET_BYTES)) {
       throw new BadRequestException('Asset exceeds 5MB limit');
@@ -66,7 +69,7 @@ export class ConversionAssetService {
       data: {
         organizationId,
         pageId,
-        url,
+        url: finalUrl,
         altText: input.altText?.trim().slice(0, 160) || null,
         contentType,
         byteSize: byteSize && Number.isFinite(byteSize) ? Math.floor(byteSize) : null,
@@ -84,20 +87,64 @@ export class ConversionAssetService {
     }
   }
 
-  private assertHttpsAssetUrl(raw: string): string {
+  private async assertSafeHttpsAssetUrl(raw: string): Promise<string> {
     let parsed: URL;
     try {
-      parsed = new URL(raw);
-    } catch {
+      parsed = await assertSafePublicUrl(raw);
+    } catch (error) {
+      if (error instanceof SsrfBlockedError) {
+        throw new BadRequestException(error.message);
+      }
       throw new BadRequestException('Invalid asset URL');
     }
     if (parsed.protocol !== 'https:') {
       throw new BadRequestException('Only HTTPS asset URLs are allowed');
     }
-    if (parsed.username || parsed.password) {
-      throw new BadRequestException('Credentials in asset URL are not allowed');
-    }
     return parsed.toString();
+  }
+
+  private async headWithSafeRedirects(startUrl: string): Promise<{
+    url: string;
+    contentType?: string;
+    byteSize?: number;
+  }> {
+    let currentUrl = startUrl;
+    const visited = new Set<string>();
+
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      if (visited.has(currentUrl)) {
+        throw new BadRequestException('Redirect loop detected');
+      }
+      visited.add(currentUrl);
+      currentUrl = await this.assertSafeHttpsAssetUrl(currentUrl);
+
+      const response = await fetch(currentUrl, {
+        method: 'HEAD',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(5_000),
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        if (!location) {
+          throw new BadRequestException('Asset URL redirect missing Location');
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new BadRequestException('Asset URL is not reachable');
+      }
+
+      const contentType =
+        response.headers.get('content-type')?.split(';')[0]?.trim() || undefined;
+      const length = response.headers.get('content-length');
+      const byteSize = length ? Number(length) : undefined;
+      return { url: currentUrl, contentType, byteSize };
+    }
+
+    throw new BadRequestException('Too many redirects while validating asset URL');
   }
 
   private async requirePage(organizationId: string, pageId: string) {

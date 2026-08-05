@@ -50,6 +50,7 @@ describe('ConversionStudioService tenant isolation', () => {
     assertCanCreateDraft: jest.fn(),
     assertCanPublish: jest.fn(),
     recordUsage: jest.fn(),
+    getSnapshot: jest.fn(),
   };
 
   const makePrisma = () => {
@@ -68,6 +69,7 @@ describe('ConversionStudioService tenant isolation', () => {
       leadActivity: { create: jest.Mock };
       organizationMember: { findFirst: jest.Mock };
       $transaction: jest.Mock;
+      $queryRaw: jest.Mock;
     } = {
       conversionPage: {
         findFirst: jest.fn(),
@@ -93,6 +95,7 @@ describe('ConversionStudioService tenant isolation', () => {
       leadActivity: { create: jest.fn() },
       organizationMember: { findFirst: jest.fn() },
       $transaction: jest.fn(),
+      $queryRaw: jest.fn().mockResolvedValue([{ id: 'org-a' }]),
     };
     prisma.$transaction.mockImplementation(async (arg: unknown) => {
       if (typeof arg === 'function') {
@@ -103,7 +106,14 @@ describe('ConversionStudioService tenant isolation', () => {
     return prisma;
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    entitlements.getSnapshot.mockResolvedValue({
+      limits: { pageDrafts: 5, publishedPages: 1 },
+      features: { analytics_pixel: true },
+      usage: { pageDrafts: 0, publishedPages: 0 },
+    });
+  });
 
   it('does not return another organization page', async () => {
     const prisma = makePrisma();
@@ -185,7 +195,11 @@ describe('ConversionStudioService tenant isolation', () => {
       id: 'page-1',
       organizationId: 'org-a',
       status: ConversionPageStatus.DRAFT,
+      generationStatus: 'IDLE',
       draftRevision: 3,
+      draftHtml: null,
+      draftBlocks: [],
+      title: 'Proposta',
       deletedAt: null,
     });
     const service = new ConversionStudioService(prisma as never, entitlements as never);
@@ -202,6 +216,67 @@ describe('ConversionStudioService tenant isolation', () => {
         expectedRevision: 2,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('preserves AI draftHtml when block draft is saved', async () => {
+    const prisma = makePrisma();
+    const aiHtml =
+      '<!DOCTYPE html><html><head><title>AI</title><style>.x{color:red}</style></head><body><h1>Premium</h1><a href="https://wa.me/1">CTA</a></body></html>';
+    prisma.conversionPage.findFirst.mockResolvedValue({
+      id: 'page-1',
+      organizationId: 'org-a',
+      status: ConversionPageStatus.DRAFT,
+      generationStatus: 'SUCCEEDED',
+      draftRevision: 1,
+      draftHtml: aiHtml,
+      draftBlocks: [
+        {
+          id: '11111111-1111-1111-1111-111111111111',
+          type: 'rich_text',
+          body: 'legado',
+        },
+      ],
+      title: 'Proposta',
+      deletedAt: null,
+    });
+    prisma.conversionPage.update.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data);
+    const service = new ConversionStudioService(prisma as never, entitlements as never);
+
+    await service.updateDraft('org-a', 'page-1', 'user-1', {
+      title: 'Proposta v2',
+      blocks: [
+        {
+          id: '11111111-1111-1111-1111-111111111111',
+          type: 'rich_text',
+          body: 'editado',
+        },
+      ],
+      expectedRevision: 1,
+    });
+
+    expect(prisma.conversionPage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ draftHtml: aiHtml, title: 'Proposta v2' }),
+      }),
+    );
+  });
+
+  it('does not persist analytics events when pixel disabled', async () => {
+    const prisma = makePrisma();
+    prisma.conversionPage.findFirst.mockResolvedValue({
+      id: 'page-1',
+      organizationId: 'org-a',
+      publishedVersion: 1,
+      leadId: null,
+      createdById: 'user-1',
+      analyticsPixelEnabled: false,
+    });
+    const service = new ConversionStudioService(prisma as never, entitlements as never);
+
+    await expect(service.trackPublic('slug-1', { type: 'page_view' })).resolves.toEqual({
+      ok: true,
+    });
+    expect(prisma.conversionEvent.create).not.toHaveBeenCalled();
   });
 
   it('public form ignores organizationId from client and honeypot', async () => {
