@@ -49,6 +49,7 @@ const ACTIVITY_TYPES = [
 
 export function LeadDetailPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { id = '' } = useParams();
   const leadQuery = useLead(id);
   const activitiesQuery = useLeadActivities(id);
