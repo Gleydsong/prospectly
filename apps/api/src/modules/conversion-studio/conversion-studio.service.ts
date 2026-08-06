@@ -29,6 +29,10 @@ import {
   type PageBlock,
 } from './page-blocks.schema';
 import { EntitlementService } from './entitlement.service';
+import {
+  assertPublishableLandingHtml,
+  sanitizeLandingHtml,
+} from './generation/html-sanitize';
 import { normalizePublicFormFields } from './normalize-public-form';
 
 @Injectable()
@@ -221,14 +225,35 @@ export class ConversionStudioService {
       throw new BadRequestException('Archived pages cannot be published');
     }
 
-    let blocks: PageBlock[];
-    try {
-      blocks = parsePageBlocks(page.draftBlocks);
-      assertPublishableBlocks(blocks);
-    } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Invalid page blocks schema',
-      );
+    // Prefer premium/custom draftHtml when present (pre–React Aura AI landings).
+    // Aura block pages publish with html=null and render via PageBlocksRenderer.
+    const hasHtml = Boolean(page.draftHtml?.trim());
+    let blocks: PageBlock[] = [];
+    let html: string | null = null;
+
+    if (hasHtml) {
+      try {
+        html = sanitizeLandingHtml(page.draftHtml!);
+        assertPublishableLandingHtml(html, page.title);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Invalid landing HTML',
+        );
+      }
+      try {
+        blocks = parsePageBlocks(page.draftBlocks);
+      } catch {
+        blocks = [];
+      }
+    } else {
+      try {
+        blocks = parsePageBlocks(page.draftBlocks);
+        assertPublishableBlocks(blocks);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Invalid page blocks schema',
+        );
+      }
     }
 
     const wasPublished = page.status === ConversionPageStatus.PUBLISHED;
@@ -271,7 +296,7 @@ export class ConversionStudioService {
           version: nextVersion,
           title: page.title,
           blocks: blocks as unknown as Prisma.InputJsonValue,
-          html: null,
+          html,
           template: page.draftTemplate,
           createdById: actorId,
           changeNote: wasPublished ? 'New published version' : 'Initial publish',
@@ -284,7 +309,7 @@ export class ConversionStudioService {
           status: ConversionPageStatus.PUBLISHED,
           publishedVersion: nextVersion,
           publishedAt: new Date(),
-          draftHtml: null,
+          draftHtml: html,
           updatedById: actorId,
         },
       });
@@ -375,7 +400,8 @@ export class ConversionStudioService {
         data: {
           title: snapshot.title,
           draftBlocks: blocks as unknown as Prisma.InputJsonValue,
-          draftHtml: null,
+          // Restore stored HTML when present; Aura-only versions keep null.
+          draftHtml: snapshot.html,
           draftTemplate: snapshot.template,
           draftRevision: { increment: 1 },
           updatedById: actorId,

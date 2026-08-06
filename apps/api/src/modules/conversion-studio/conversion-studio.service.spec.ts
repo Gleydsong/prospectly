@@ -155,6 +155,7 @@ describe('ConversionStudioService tenant isolation', () => {
       status: ConversionPageStatus.DRAFT,
       publishedVersion: null,
       draftBlocks: blocks,
+      draftHtml: null,
       title: 'Proposta',
       deletedAt: null,
     });
@@ -169,7 +170,7 @@ describe('ConversionStudioService tenant isolation', () => {
 
     expect(prisma.conversionPageVersion.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ version: 1, organizationId: 'org-a' }),
+        data: expect.objectContaining({ version: 1, organizationId: 'org-a', html: null }),
       }),
     );
     expect(prisma.conversionEvent.create).toHaveBeenCalledWith(
@@ -181,6 +182,107 @@ describe('ConversionStudioService tenant isolation', () => {
       'org-a',
       UsageMeterKey.PUBLISHED_PAGES,
       'publish:page-1',
+    );
+  });
+
+  it('publishes premium draftHtml instead of wiping it to null', async () => {
+    const prisma = makePrisma();
+    entitlements.assertCanPublish.mockResolvedValue(undefined);
+    entitlements.recordUsage.mockResolvedValue(undefined);
+    const premiumHtml = `
+      <!doctype html><html><head><title>Barbearia</title></head>
+      <body><main>
+        <h1>Barbearia Central</h1>
+        <p>Cortes clássicos e atendimento próximo em Olinda.</p>
+        <a href="https://wa.me/5511999999999">Agendar pelo WhatsApp</a>
+        <form><label>Nome<input name="name" /></label></form>
+      </main></body></html>
+    `;
+    const companionBlocks = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        type: 'hero',
+        headline: 'Stub',
+        cta: { type: 'call', phone: '+5511999999999' },
+        ctaLabel: 'Ligar',
+        variant: 'brand',
+      },
+    ];
+    prisma.conversionPage.findFirst.mockResolvedValue({
+      id: 'page-html',
+      organizationId: 'org-a',
+      status: ConversionPageStatus.DRAFT,
+      publishedVersion: null,
+      draftBlocks: companionBlocks,
+      draftHtml: premiumHtml,
+      draftTemplate: 'HTML',
+      title: 'Barbearia Central',
+      deletedAt: null,
+    });
+    prisma.conversionPage.update.mockResolvedValue({
+      id: 'page-html',
+      status: ConversionPageStatus.PUBLISHED,
+      publishedVersion: 1,
+    });
+
+    const service = new ConversionStudioService(prisma as never, entitlements as never);
+    await service.publish('org-a', 'page-html', 'user-1');
+
+    expect(prisma.conversionPageVersion.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          version: 1,
+          html: expect.stringContaining('<h1>Barbearia Central</h1>'),
+        }),
+      }),
+    );
+    expect(prisma.conversionPage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          draftHtml: expect.stringContaining('<h1>Barbearia Central</h1>'),
+        }),
+      }),
+    );
+  });
+
+  it('restores snapshot.html into draftHtml', async () => {
+    const prisma = makePrisma();
+    const blocks = [
+      {
+        id: '11111111-1111-1111-1111-111111111111',
+        type: 'hero',
+        headline: 'Olá',
+        cta: { type: 'call', phone: '+5511999999999' },
+        ctaLabel: 'Ligar',
+        variant: 'brand',
+      },
+    ];
+    prisma.conversionPage.findFirst.mockResolvedValue({
+      id: 'page-1',
+      organizationId: 'org-a',
+      status: ConversionPageStatus.PUBLISHED,
+      deletedAt: null,
+    });
+    prisma.conversionPageVersion.findFirst.mockResolvedValue({
+      pageId: 'page-1',
+      organizationId: 'org-a',
+      version: 2,
+      title: 'Versão 2',
+      blocks,
+      html: '<html><body><h1>Versão 2</h1><a href="https://wa.me/1">CTA</a></body></html>',
+      template: 'HTML',
+    });
+    prisma.conversionPage.update.mockResolvedValue({ id: 'page-1' });
+
+    const service = new ConversionStudioService(prisma as never, entitlements as never);
+    await service.restoreVersion('org-a', 'page-1', 2, 'user-1');
+
+    expect(prisma.conversionPage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          draftHtml: expect.stringContaining('<h1>Versão 2</h1>'),
+        }),
+      }),
     );
   });
 
