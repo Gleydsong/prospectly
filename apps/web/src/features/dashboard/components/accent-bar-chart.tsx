@@ -16,13 +16,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getLeadStatusShortLabel, getLeadStatusLabel } from '@/lib/lead-status';
 import type { LeadStatus } from '@/types';
 
-const AXIS_TICK = { fontSize: 11, fill: '#7C8593' } as const;
+const AXIS_TICK = { fontSize: 11, fill: 'rgb(var(--zinc-400))' } as const;
 
 const TOOLTIP_STYLE = {
-  background: '#15181D',
-  border: '1px solid rgb(255 255 255 / 0.1)',
+  background: 'rgb(var(--zinc-900))',
+  border: '1px solid var(--border)',
   borderRadius: 14,
-  color: '#F1F2F4',
+  color: 'rgb(var(--zinc-50))',
   fontSize: 12,
 } as const;
 
