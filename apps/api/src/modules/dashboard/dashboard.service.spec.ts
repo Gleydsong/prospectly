@@ -99,11 +99,34 @@ describe('DashboardService', () => {
   it('charts scopes groupBy by organization and optional filters', async () => {
     const prisma = makePrisma();
     prisma.lead.groupBy.mockResolvedValue([]);
+    prisma.lead.findMany.mockResolvedValue([
+      {
+        id: 'p1',
+        companyName: 'Cafe SP',
+        city: 'São Paulo',
+        latitude: -23.55,
+        longitude: -46.63,
+        score: 88,
+        status: 'QUALIFIED',
+      },
+    ]);
     prisma.$queryRaw.mockResolvedValue([]);
     const service = new DashboardService(prisma);
 
-    await service.charts('org-1', { period: '30d', ownerId: '11111111-1111-1111-1111-111111111111' });
+    const result = await service.charts('org-1', {
+      period: '30d',
+      ownerId: '11111111-1111-1111-1111-111111111111',
+    });
 
     expect(prisma.lead.groupBy).toHaveBeenCalled();
+    expect(prisma.lead.findMany).toHaveBeenCalled();
+    expect(result.mapPins).toEqual([
+      expect.objectContaining({
+        id: 'p1',
+        latitude: -23.55,
+        longitude: -46.63,
+        score: 88,
+      }),
+    ]);
   });
 });

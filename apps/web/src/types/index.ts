@@ -251,12 +251,23 @@ export interface LeadExportResult {
   csv: string;
 }
 
+export interface DashboardMapPin {
+  id: string;
+  companyName: string;
+  city?: string | null;
+  latitude: number;
+  longitude: number;
+  score: number;
+  status: LeadStatus;
+}
+
 export interface DashboardCharts {
   byStatus: Array<{ status: LeadStatus; count: number }>;
   bySegment: Array<{ segment: string | null; count: number }>;
   byCity: Array<{ city: string | null; count: number }>;
   bySource: Array<{ source: LeadSource; count: number }>;
   byScore: Array<{ bucket: string; count: number }>;
+  mapPins?: DashboardMapPin[];
 }
 
 export interface PipelineBoardStage extends LeadStage {

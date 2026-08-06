@@ -205,4 +205,53 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  .dashboard-map-pin-halo,
+  .dashboard-map-arc,
+  .dashboard-map-progress {
+    animation: none !important;
+  }
+
+  .dashboard-first-reveal {
+    clip-path: none !important;
+  }
+}
+
+@keyframes dashboard-pin-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes dashboard-arc-dash {
+  to {
+    stroke-dashoffset: -36;
+  }
+}
+
+@keyframes dashboard-progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.dashboard-map-pin-halo {
+  animation: dashboard-pin-pulse 2.4s ease-in-out infinite;
+}
+
+.dashboard-map-arc {
+  stroke-dashoffset: 0;
+  animation: dashboard-arc-dash 8s linear infinite;
+}
+
+.dashboard-map-progress {
+  transform-origin: left center;
+  animation: dashboard-progress-fill 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
