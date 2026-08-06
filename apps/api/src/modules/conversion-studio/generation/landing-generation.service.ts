@@ -37,6 +37,7 @@ import { applyGoogleMediaToBlocks } from './apply-google-media';
 import { GoogleLinkResolver } from './google-link.resolver';
 import { GooglePlaceEnrichmentService } from './google-place-enrichment.service';
 import { isAllowedGoogleMapsUrl } from './google-link.parser';
+import { resolveAuraMode } from './resolve-aura-mode';
 
 type GenerateInput = {
   leadId?: string;
@@ -75,7 +76,7 @@ export class LandingGenerationService {
 
     if (input.leadId) {
       contextLead = await this.loadLead(organizationId, input.leadId);
-      ({ mode, useAi } = await this.resolveAuraMode(preferAi, hasAiQuota, 'AI_LEAD', organizationId));
+      ({ mode, useAi } = resolveAuraMode(preferAi, hasAiQuota, 'AI_LEAD'));
       resolvedTitle = contextLead.companyName;
     } else if (describeText) {
       if (describeText.length < 12) {
@@ -94,20 +95,10 @@ export class LandingGenerationService {
       const resolved = await this.googleLinks.resolve(organizationId, googleLink);
       if (resolved.matchedLeadId) {
         contextLead = await this.loadLead(organizationId, resolved.matchedLeadId);
-        ({ mode, useAi } = await this.resolveAuraMode(
-          preferAi,
-          hasAiQuota,
-          'AI_GOOGLE',
-          organizationId,
-        ));
+        ({ mode, useAi } = resolveAuraMode(preferAi, hasAiQuota, 'AI_GOOGLE'));
         resolvedTitle = contextLead.companyName;
       } else {
-        ({ mode, useAi } = await this.resolveAuraMode(
-          preferAi,
-          hasAiQuota,
-          'AI_GOOGLE',
-          organizationId,
-        ));
+        ({ mode, useAi } = resolveAuraMode(preferAi, hasAiQuota, 'AI_GOOGLE'));
         resolvedTitle = resolved.context.companyName;
         describeText = resolved.context.describeText ?? describeText;
         // Stash resolved fields into generationInput via describe/context later in worker
@@ -373,21 +364,6 @@ export class LandingGenerationService {
         updatedById: actorId,
       },
     });
-  }
-
-  private async resolveAuraMode(
-    preferAi: boolean,
-    hasAiQuota: boolean,
-    aiMode: 'AI_LEAD' | 'AI_GOOGLE',
-    organizationId: string,
-  ): Promise<{ mode: GenerateLandingJobData['mode']; useAi: boolean }> {
-    if (!preferAi) {
-      return { mode: 'TEMPLATE', useAi: false };
-    }
-    if (!hasAiQuota) {
-      await this.entitlements.assertCanUseAiGeneration(organizationId);
-    }
-    return { mode: aiMode, useAi: true };
   }
 
   private providerName(): 'ollama' | 'template' {

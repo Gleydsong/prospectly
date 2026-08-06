@@ -100,7 +100,8 @@ export function ConversionPageViewPage() {
 
   const page = pageQuery.data;
   const blocks = parseDraftBlocks(page.draftBlocks);
-  const hasLegacyHtml = blocks.length === 0 && Boolean(page.draftHtml?.trim());
+  // Prefer draftHtml when present (premium AI HTML), even if companion blocks exist.
+  const hasHtml = Boolean(page.draftHtml?.trim());
   const isPublished = page.status === 'PUBLISHED';
   const leadName = page.lead?.companyName ?? page.title;
 
@@ -327,7 +328,7 @@ export function ConversionPageViewPage() {
           ) : null}
           {generating && blocks.length === 0 ? (
             <Skeleton className="h-80" />
-          ) : hasLegacyHtml ? (
+          ) : hasHtml ? (
             <HtmlLandingRenderer html={page.draftHtml ?? ''} title={page.title} />
           ) : (
             <PageBlocksRenderer
