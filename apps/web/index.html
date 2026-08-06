@@ -10,6 +10,23 @@
       content="Prospectly - plataforma inteligente para prospecção de clientes locais"
     />
     <!-- CSP is applied via nginx / Render headers in production; avoid conflicting meta CSP. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('prospectly:theme');
+          if (t === 'light') {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            document.documentElement.style.colorScheme = 'light';
+            document.documentElement.dataset.theme = 'light';
+            var meta = document.querySelector('meta[name="color-scheme"]');
+            if (meta) meta.setAttribute('content', 'light');
+            var theme = document.querySelector('meta[name="theme-color"]');
+            if (theme) theme.setAttribute('content', '#eef1f6');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

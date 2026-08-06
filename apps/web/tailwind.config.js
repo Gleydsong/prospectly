@@ -18,20 +18,19 @@ export default {
           900: '#1e3a8a',
           950: '#172554',
         },
-        // Grafite premium. Substitui o zinc padrão para que toda a app herde as
-        // novas superfícies sem reescrever classes página a página.
+        // Grafite via CSS vars — dark/light remapeiam a escala sem reescrever classes.
         zinc: {
-          50: '#F1F2F4',
-          100: '#E7EAEE',
-          200: '#D3D8DF',
-          300: '#B6BCC6',
-          400: '#969DA8',
-          500: '#7C8593',
-          600: '#4A515C',
-          700: '#2A2F38',
-          800: '#20242B',
-          900: '#15181D',
-          950: '#090A0C',
+          50: 'rgb(var(--zinc-50) / <alpha-value>)',
+          100: 'rgb(var(--zinc-100) / <alpha-value>)',
+          200: 'rgb(var(--zinc-200) / <alpha-value>)',
+          300: 'rgb(var(--zinc-300) / <alpha-value>)',
+          400: 'rgb(var(--zinc-400) / <alpha-value>)',
+          500: 'rgb(var(--zinc-500) / <alpha-value>)',
+          600: 'rgb(var(--zinc-600) / <alpha-value>)',
+          700: 'rgb(var(--zinc-700) / <alpha-value>)',
+          800: 'rgb(var(--zinc-800) / <alpha-value>)',
+          900: 'rgb(var(--zinc-900) / <alpha-value>)',
+          950: 'rgb(var(--zinc-950) / <alpha-value>)',
         },
       },
       fontFamily: {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { logout } from '@/features/auth/api';
+import { ThemeToggle } from '@/features/theme/theme-toggle';
 import { useAuthStore } from '@/stores/auth.store';
 import { routeTitleKey } from './nav-items';
 
@@ -44,7 +45,8 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <span className="text-sm font-medium text-zinc-200">{user?.organizationName}</span>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 sm:gap-3">
+        <ThemeToggle />
         <div className="hidden text-right sm:block">
           <p className="text-sm font-medium text-zinc-50">{user?.name}</p>
           <p className="text-xs text-zinc-400">{user?.role}</p>

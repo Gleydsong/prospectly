@@ -21,6 +21,8 @@
     "logout": "Sair",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
+    "themeToLight": "Ativar tema claro",
+    "themeToDark": "Ativar tema escuro",
     "campaigns": "Campanhas",
     "pages": "Pages",
     "agents": "Agents",

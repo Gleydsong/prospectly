@@ -7,6 +7,7 @@ import { AppErrorBoundary } from './components/app-error-boundary';
 import { LocaleSync } from './components/locale-sync';
 import { ToastProvider } from './components/ui/toast';
 import { GoogleAuthProvider } from './features/auth/google-auth-provider';
+import { ThemeProvider } from './features/theme/theme-provider';
 import { initObservability } from './lib/observability';
 import { App } from './App';
 import './i18n';
@@ -34,12 +35,14 @@ createRoot(rootElement).render(
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <GoogleAuthProvider>
-            <ToastProvider>
-              <LocaleSync />
-              <App />
-            </ToastProvider>
-          </GoogleAuthProvider>
+          <ThemeProvider>
+            <GoogleAuthProvider>
+              <ToastProvider>
+                <LocaleSync />
+                <App />
+              </ToastProvider>
+            </GoogleAuthProvider>
+          </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </AppErrorBoundary>
