@@ -159,7 +159,6 @@ export function LeadDetailPage() {
           <LeadStatusBadge status={lead.status} />
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
-          <CreateProposalButton leadId={lead.id} companyName={lead.companyName} />
           <Button size="sm" variant="secondary" onClick={() => navigate(`/agents/crm?leadId=${lead.id}`)}>
             Agent CRM
           </Button>
@@ -612,16 +611,6 @@ const MISSING_FIELD_LABEL: Record<string, string> = {
 };
 
 const CONTACT_MISSING_FIELDS = new Set(['email', 'website', 'whatsapp', 'phone']);
-
-function CreateProposalButton({ leadId }: { leadId: string; companyName: string }) {
-  const navigate = useNavigate();
-
-  return (
-    <Button size="sm" onClick={() => navigate(`/pages/new?leadId=${leadId}`)}>
-      Criar página de proposta
-    </Button>
-  );
-}
 
 function websitePresenceLabel(presence?: string | null): string {
   switch (presence) {

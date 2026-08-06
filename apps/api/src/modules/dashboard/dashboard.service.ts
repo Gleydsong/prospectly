@@ -9,9 +9,7 @@ export type DashboardRecommendationCode =
   | 'HIGH_POTENTIAL_IDLE'
   | 'STALE_LEADS'
   | 'OVERDUE_FOLLOW_UPS'
-  | 'FREE_SEARCH_QUOTA'
-  | 'LEADS_WITHOUT_PAGE'
-  | 'PAGES_WITHOUT_CONVERSION';
+  | 'FREE_SEARCH_QUOTA';
 
 export interface DashboardRecommendation {
   code: DashboardRecommendationCode;
@@ -54,8 +52,6 @@ export class DashboardService {
       staleLeads,
       searchCount,
       org,
-      leadsWithoutPage,
-      pagesWithoutConversion,
     ] = await this.prisma.$transaction([
       this.prisma.lead.count({ where: baseWhere }),
       this.prisma.lead.count({
@@ -143,22 +139,6 @@ export class DashboardService {
         where: { id: organizationId },
         select: { plan: true, planStatus: true },
       }),
-      this.prisma.lead.count({
-        where: {
-          ...baseWhere,
-          score: { gte: 70 },
-          status: { in: ['NEW', 'TO_REVIEW', 'QUALIFIED', 'CONTACTED'] },
-          conversionPages: { none: { deletedAt: null } },
-        },
-      }),
-      this.prisma.conversionPage.count({
-        where: {
-          organizationId,
-          status: 'PUBLISHED',
-          deletedAt: null,
-          events: { none: { type: 'form_submitted' } },
-        },
-      }),
     ]);
 
     const closed = won + lost;
@@ -202,8 +182,6 @@ export class DashboardService {
       overdueFollowUps: overdueFollowUps.length,
       searchCount,
       planStatus: org?.planStatus ?? 'INACTIVE',
-      leadsWithoutPage,
-      pagesWithoutConversion,
     });
 
     return {
@@ -338,8 +316,6 @@ export class DashboardService {
     overdueFollowUps: number;
     searchCount: number;
     planStatus: string;
-    leadsWithoutPage: number;
-    pagesWithoutConversion: number;
   }): DashboardRecommendation[] {
     const items: DashboardRecommendation[] = [];
 
@@ -349,24 +325,6 @@ export class DashboardService {
         count: input.highPotentialIdle,
         href: '/leads?status=QUALIFIED',
         severity: 'action',
-      });
-    }
-
-    if (input.leadsWithoutPage > 0) {
-      items.push({
-        code: 'LEADS_WITHOUT_PAGE',
-        count: input.leadsWithoutPage,
-        href: '/leads',
-        severity: 'action',
-      });
-    }
-
-    if (input.pagesWithoutConversion > 0) {
-      items.push({
-        code: 'PAGES_WITHOUT_CONVERSION',
-        count: input.pagesWithoutConversion,
-        href: '/pages',
-        severity: 'warning',
       });
     }
 

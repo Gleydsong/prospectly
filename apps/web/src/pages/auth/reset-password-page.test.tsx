@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
+import { ThemeProvider } from '@/features/theme/theme-provider';
 import { ResetPasswordPage } from './reset-password-page';
 
 const resetPassword = vi.fn().mockResolvedValue(undefined);
@@ -15,13 +16,15 @@ vi.mock('@/features/auth/api', () => ({
 
 const renderPage = (initialEntry: string) =>
   render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   );
 
 describe('ResetPasswordPage', () => {

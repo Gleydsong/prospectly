@@ -47,7 +47,7 @@ function computeViewBox(pins: Array<{ x: number; y: number; latitude: number; lo
   if (pins.length === 0) {
     ({ minLng, maxLng, minLat, maxLat } = FALLBACK_BOUNDS);
   } else if (pins.length === 1) {
-    const p = pins[0];
+    const p = pins[0]!;
     minLng = p.longitude - 8;
     maxLng = p.longitude + 8;
     minLat = p.latitude - 6;
@@ -116,11 +116,15 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
     const top = [...projected].sort((a, b) => b.score - a.score).slice(0, 6);
     const paths: string[] = [];
     for (let i = 0; i < top.length - 1; i += 1) {
-      paths.push(arcPath(top[i], top[i + 1]));
+      const from = top[i];
+      const to = top[i + 1];
+      if (from && to) paths.push(arcPath(from, to));
     }
     // Fecha um anel leve entre primeiro e último quando há ≥3
     if (top.length >= 3) {
-      paths.push(arcPath(top[top.length - 1], top[0]));
+      const last = top[top.length - 1];
+      const first = top[0];
+      if (last && first) paths.push(arcPath(last, first));
     }
     return paths;
   }, [projected]);

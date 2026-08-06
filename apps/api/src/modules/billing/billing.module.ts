@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { BillingActivationService } from './billing-activation.service';
 import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
+import { EntitlementService } from './entitlement.service';
 import { AbacateClient } from './infrastructure/abacate.client';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
@@ -12,10 +13,11 @@ import { StripePaymentProvider } from './infrastructure/stripe.payment-provider'
   providers: [
     BillingService,
     BillingActivationService,
+    EntitlementService,
     StripePaymentProvider,
     AbacateClient,
     AbacatePaymentProvider,
   ],
-  exports: [BillingService],
+  exports: [BillingService, EntitlementService],
 })
 export class BillingModule {}

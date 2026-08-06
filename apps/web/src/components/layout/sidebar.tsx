@@ -12,14 +12,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     <>
       {open ? (
         <button
-          className="fixed inset-0 z-30 bg-zinc-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-[var(--chrome-overlay)] backdrop-blur-sm lg:hidden"
           onClick={onClose}
           aria-label={t('nav.closeMenu')}
         />
       ) : null}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/[0.08] bg-zinc-900/95 backdrop-blur-xl transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/[0.08] bg-[var(--chrome-sidebar)] backdrop-blur-xl transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
@@ -28,7 +28,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
             <span className="cta-glass flex h-8 w-8 items-center justify-center rounded-control text-sm font-semibold">
               P
             </span>
-            <span className="text-lg font-semibold tracking-tight text-zinc-50">Prospectly</span>
+            <span className="text-lg font-bold tracking-tight text-zinc-50">Prospectly</span>
           </NavLink>
           <button
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 lg:hidden"
@@ -64,13 +64,13 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
                     <>
                       <span
                         className={cn(
-                          'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-brand-400 transition-opacity',
+                          'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-zinc-400 transition-opacity',
                           isActive ? 'opacity-100' : 'opacity-0',
                         )}
                         aria-hidden
                       />
                       <item.icon
-                        className={cn('h-5 w-5', isActive ? 'text-brand-300' : 'text-current')}
+                        className={cn('h-5 w-5', isActive ? 'text-zinc-50' : 'text-current')}
                         aria-hidden
                       />
                       {t(item.labelKey)}

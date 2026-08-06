@@ -34,18 +34,20 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        control: '14px',
-        panel: '18px',
-        bento: '22px',
+        control: '12px',
+        panel: '16px',
+        bento: '18px',
       },
       boxShadow: {
         soft: '0 18px 50px -28px rgb(0 0 0 / 0.65)',
         panel: '0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 24px 60px -32px rgb(0 0 0 / 0.85)',
         elevated: '0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 32px 80px -36px rgb(0 0 0 / 0.9)',
+        'panel-light':
+          '0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -24px rgb(46 26 74 / 0.18)',
       },
       backgroundImage: {
         'surface-sheen':

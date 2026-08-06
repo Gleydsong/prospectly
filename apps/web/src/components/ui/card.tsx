@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 type Surface = 'default' | 'elevated' | 'bento' | 'accent';
 
 const surfaces: Record<Surface, string> = {
-  default: 'rounded-panel border-white/10 bg-zinc-900 shadow-panel',
-  elevated: 'rounded-panel border-white/[0.12] bg-zinc-800 shadow-elevated',
-  bento: 'surface-bento rounded-bento border-white/[0.08] shadow-elevated',
-  accent: 'surface-bento surface-bento-accent rounded-bento border-brand-500/25 shadow-elevated',
+  default: 'rounded-panel border-[color:var(--border)] bg-[color:var(--surface-card)] shadow-panel',
+  elevated: 'rounded-panel border-[color:var(--border-strong)] bg-[color:var(--surface-card)] shadow-elevated',
+  bento: 'surface-bento rounded-bento border-[color:var(--border)] shadow-elevated',
+  accent: 'surface-bento surface-bento-accent rounded-bento border-[color:var(--border-strong)] shadow-elevated',
 };
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -21,9 +21,9 @@ export function Card({ className, surface = 'default', interactive, ...props }: 
   return (
     <div
       className={cn(
-        'border transition-colors',
+        'border transition-[background-color,border-color,box-shadow] duration-200',
         surfaces[surface],
-        interactive && 'hover:border-white/20 hover:bg-zinc-800/60',
+        interactive && 'cursor-pointer hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-hover)]',
         className,
       )}
       {...props}
@@ -45,13 +45,13 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 border-b border-white/[0.08] p-5 sm:flex-row sm:items-start sm:justify-between',
+        'flex flex-col gap-3 border-b border-[color:var(--border)] p-5 sm:flex-row sm:items-start sm:justify-between',
         className,
       )}
     >
       <div className="min-w-0">
-        <h3 className="text-base font-semibold tracking-tight text-zinc-50">{title}</h3>
-        {description ? <p className="mt-0.5 text-sm text-zinc-400">{description}</p> : null}
+        <h3 className="text-base font-bold tracking-tight text-[color:var(--ink)]">{title}</h3>
+        {description ? <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{description}</p> : null}
       </div>
       {action ? <div className="w-full shrink-0 sm:w-auto">{action}</div> : null}
     </div>

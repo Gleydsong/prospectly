@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 
-import { ConversionStudioModule } from '../conversion-studio/conversion-studio.module';
-import { LandingGenerationProcessor } from '../conversion-studio/generation/landing-generation.processor';
 import { ImportsModule } from '../imports/imports.module';
 import { ImportsProcessor } from '../imports/imports.processor';
 import { OpsModule } from '../ops/ops.module';
@@ -22,7 +20,6 @@ import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.p
     ImportsModule,
     ScoringModule,
     WebsiteAnalysisModule,
-    ConversionStudioModule,
     OpsModule,
   ],
   providers: [
@@ -30,7 +27,6 @@ import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.p
     ImportsProcessor,
     ScoringProcessor,
     WebsiteAnalysisProcessor,
-    LandingGenerationProcessor,
   ],
 })
 export class WorkersModule {}

@@ -15,6 +15,7 @@ import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
 import { LeadsPage } from '@/pages/leads/leads-page';
 import { PipelinePage } from '@/pages/pipeline-page';
 import { SearchPage } from '@/pages/search-page';
+import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
 
 const DashboardPage = lazy(() =>
@@ -38,31 +39,6 @@ const BillingSuccessPage = lazy(() =>
 const BillingCancelPage = lazy(() =>
   import('@/pages/billing-result-page').then((m) => ({ default: m.BillingCancelPage })),
 );
-const ConversionPagesPage = lazy(() =>
-  import('@/pages/conversion-studio/conversion-pages-page').then((m) => ({
-    default: m.ConversionPagesPage,
-  })),
-);
-const CreateConversionPage = lazy(() =>
-  import('@/pages/conversion-studio/create-conversion-page').then((m) => ({
-    default: m.CreateConversionPage,
-  })),
-);
-const ConversionPageEditorPage = lazy(() =>
-  import('@/pages/conversion-studio/conversion-page-editor-page').then((m) => ({
-    default: m.ConversionPageEditorPage,
-  })),
-);
-const ConversionPageViewPage = lazy(() =>
-  import('@/pages/conversion-studio/conversion-page-view-page').then((m) => ({
-    default: m.ConversionPageViewPage,
-  })),
-);
-const PublicConversionPage = lazy(() =>
-  import('@/pages/conversion-studio/public-conversion-page').then((m) => ({
-    default: m.PublicConversionPage,
-  })),
-);
 const AgentsPage = lazy(() =>
   import('@/pages/agents/agents-page').then((m) => ({ default: m.AgentsPage })),
 );
@@ -71,6 +47,9 @@ const AgentsCrmPage = lazy(() =>
 );
 const AgentsWhatsappPage = lazy(() =>
   import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
+);
+const ToolsPage = lazy(() =>
+  import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })),
 );
 
 function LazyPage({ children }: { children: ReactNode }) {
@@ -102,29 +81,12 @@ export function App() {
         }
       />
 
-      <Route
-        path="/p/:slug"
-        element={
-          <LazyPage>
-            <PublicConversionPage />
-          </LazyPage>
-        }
-      />
-
       <Route element={<ProtectedRoute />}>
         <Route
           path="/billing/pix"
           element={
             <LazyPage>
               <PixCheckoutPage />
-            </LazyPage>
-          }
-        />
-        <Route
-          path="/pages/:id/view"
-          element={
-            <LazyPage>
-              <ConversionPageViewPage />
             </LazyPage>
           }
         />
@@ -137,7 +99,16 @@ export function App() {
               </LazyPage>
             }
           />
+          <Route
+            path="tools"
+            element={
+              <LazyPage>
+                <ToolsPage />
+              </LazyPage>
+            }
+          />
           <Route path="search" element={<SearchPage />} />
+          <Route path="support" element={<SupportPage />} />
           <Route
             path="imports"
             element={
@@ -170,30 +141,6 @@ export function App() {
             element={
               <LazyPage>
                 <AgentsWhatsappPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="pages"
-            element={
-              <LazyPage>
-                <ConversionPagesPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="pages/new"
-            element={
-              <LazyPage>
-                <CreateConversionPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="pages/:id/edit"
-            element={
-              <LazyPage>
-                <ConversionPageEditorPage />
               </LazyPage>
             }
           />

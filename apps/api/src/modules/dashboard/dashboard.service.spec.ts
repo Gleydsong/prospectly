@@ -11,7 +11,6 @@ const makePrisma = () => {
     task: { count: jest.fn() },
     search: { count: jest.fn() },
     organization: { findUnique: jest.fn() },
-    conversionPage: { count: jest.fn() },
     $transaction: jest.fn(),
     $queryRaw: jest.fn(),
   };
@@ -20,7 +19,6 @@ const makePrisma = () => {
     task: { count: jest.Mock };
     search: { count: jest.Mock };
     organization: { findUnique: jest.Mock };
-    conversionPage: { count: jest.Mock };
     $transaction: jest.Mock;
     $queryRaw: jest.Mock;
   };
@@ -54,8 +52,6 @@ describe('DashboardService', () => {
       2, // staleLeads
       2, // searchCount
       { plan: 'FREE', planStatus: 'INACTIVE' },
-      4, // leadsWithoutPage
-      1, // pagesWithoutConversion
     ]);
     const service = new DashboardService(prisma);
 

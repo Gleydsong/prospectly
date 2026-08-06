@@ -32,6 +32,6 @@ export function applyThemeClass(theme: ThemeMode): void {
 
   const metaTheme = document.querySelector('meta[name="theme-color"]');
   if (metaTheme) {
-    metaTheme.setAttribute('content', theme === 'light' ? '#eef1f6' : '#090a0c');
+    metaTheme.setAttribute('content', theme === 'light' ? '#f0ebf7' : '#090a0c');
   }
 }

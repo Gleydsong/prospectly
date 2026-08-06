@@ -157,7 +157,7 @@ export function FaqPageView({ locale }: { locale: Locale }) {
   const filters: Array<FaqCategory | 'all'> = ['all', ...FAQ_CATEGORY_ORDER];
 
   return (
-    <div>
+    <div className="landing-v2 landing-light-page landing-faq-v2">
       <section className="hero-wash border-b border-[color:var(--border)]">
         <div className="mx-auto max-w-shell px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
           <Reveal>

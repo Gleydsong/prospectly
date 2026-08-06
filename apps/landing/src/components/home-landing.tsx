@@ -34,7 +34,7 @@ export function HomeLanding({ locale }: { locale: Locale }) {
   };
 
   return (
-    <>
+    <div className="landing-v2 landing-light-page landing-home-v2">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
@@ -135,6 +135,6 @@ export function HomeLanding({ locale }: { locale: Locale }) {
       <WaitlistSection locale={locale} />
       <FaqSection locale={locale} />
       <FinalCtaSection locale={locale} />
-    </>
+    </div>
   );
 }

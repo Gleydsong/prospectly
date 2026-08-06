@@ -1,458 +1,323 @@
 import { useQuery } from '@tanstack/react-query';
 import {
-  AlertTriangle,
-  FileText,
-  Handshake,
-  Target,
+  CheckCircle2,
+  Clock3,
+  KanbanSquare,
+  List,
+  Search,
   UserPlus,
   Users,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
-import { BentoGrid, BentoItem } from '@/components/ui/bento-grid';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
-import { MetricCard } from '@/components/ui/metric-card';
-import { PageHeader } from '@/components/ui/page-header';
-import { ScoreBadge } from '@/components/ui/score-badge';
-import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AccentBarChart } from '@/features/dashboard/components/accent-bar-chart';
-import { ActionNextCard } from '@/features/dashboard/components/action-next-card';
-import { DashboardFirstReveal } from '@/features/dashboard/components/dashboard-first-reveal';
-import { DashboardWave } from '@/features/dashboard/components/dashboard-wave';
-import { GaugePair } from '@/features/dashboard/components/gauge-pair';
-import { HeroKpiCard } from '@/features/dashboard/components/hero-kpi-card';
-import { LeadsMapCard } from '@/features/dashboard/components/leads-map-card';
-import { PerformanceGauges } from '@/features/dashboard/components/performance-gauges';
-import { useDashboardFirstReveal } from '@/features/dashboard/components/use-dashboard-first-reveal';
-import { fetchDashboardCharts, fetchDashboardSummary } from '@/features/dashboard/api';
-import { fetchOrganizationMembers } from '@/features/organizations/api';
-import { formatDate } from '@/lib/utils';
-import { DashboardPeriod, LeadSource } from '@/types';
+import { fetchDashboardSummary } from '@/features/dashboard/api';
+import { useLeads } from '@/features/leads/hooks';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/auth.store';
+import { LeadStatus } from '@/types';
+
+function greetingKey(): 'morning' | 'afternoon' | 'evening' {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 18) return 'afternoon';
+  return 'evening';
+}
+
+const STATUS_TABS: Array<{ key: string; status: LeadStatus | '' }> = [
+  { key: 'all', status: '' },
+  { key: 'new', status: LeadStatus.NEW },
+  { key: 'contacted', status: LeadStatus.CONTACTED },
+  { key: 'qualified', status: LeadStatus.QUALIFIED },
+  { key: 'won', status: LeadStatus.WON },
+];
 
 export function DashboardPage() {
   const { t, i18n } = useTranslation();
-  const [period, setPeriod] = useState<DashboardPeriod>('30d');
-  const [source, setSource] = useState<LeadSource | ''>('');
-  const [ownerId, setOwnerId] = useState('');
-  const [segment, setSegment] = useState('');
-  const reveal = useDashboardFirstReveal();
-
-  const filters = {
-    period,
-    ...(source ? { source } : {}),
-    ...(ownerId ? { ownerId } : {}),
-    ...(segment.trim() ? { segment: segment.trim() } : {}),
-  };
-
-  const members = useQuery({
-    queryKey: ['organizations', 'members'],
-    queryFn: fetchOrganizationMembers,
-  });
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const firstName = user?.name?.split(/\s+/)[0] ?? '';
+  const [q, setQ] = useState('');
+  const [status, setStatus] = useState<LeadStatus | ''>('');
+  const [view, setView] = useState<'list' | 'kanban'>('list');
 
   const summary = useQuery({
-    queryKey: ['dashboard', 'summary', filters],
-    queryFn: () => fetchDashboardSummary(filters),
+    queryKey: ['dashboard', 'summary', { period: '30d' }],
+    queryFn: () => fetchDashboardSummary({ period: '30d' }),
   });
-  const charts = useQuery({
-    queryKey: ['dashboard', 'charts', filters],
-    queryFn: () => fetchDashboardCharts(filters),
+
+  const leadsQuery = useLeads({
+    page: 1,
+    pageSize: 10,
+    q: q.trim() || undefined,
+    status: status || undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
   });
 
   const data = summary.data;
-  const loadingSummary = summary.isLoading || !data;
-  const loadingCharts = charts.isLoading || !charts.data;
+  const leads = leadsQuery.data?.data ?? [];
+  const meta = leadsQuery.data?.meta;
 
-  const avgScore = useMemo(() => {
-    const buckets = charts.data?.byScore ?? [];
-    if (buckets.length === 0) return 0;
-    const mid: Record<string, number> = {
-      '0-29': 15,
-      '30-59': 45,
-      '60-79': 70,
-      '80-100': 90,
-    };
-    let total = 0;
-    let weight = 0;
-    for (const row of buckets) {
-      total += (mid[row.bucket] ?? 50) * row.count;
-      weight += row.count;
-    }
-    return weight > 0 ? total / weight : 0;
-  }, [charts.data?.byScore]);
+  const greeting = useMemo(() => {
+    const key = greetingKey();
+    return t(`principal.greeting.${key}`, { name: firstName });
+  }, [firstName, i18n.language, t]);
 
   if (summary.isError) {
     return <Alert tone="error">{t('dashboard.loadError')}</Alert>;
   }
 
-  const primaryRec = data?.recommendations?.[0];
-
   return (
-    <DashboardFirstReveal
-      active={reveal.active}
-      origin={reveal.origin}
-      durationMs={reveal.durationMs}
-      onComplete={reveal.onRevealComplete}
-    >
-      <div className="space-y-6" key={i18n.language}>
-      <PageHeader
-        eyebrow={t('nav.groupOverview')}
-        title={t('dashboard.title')}
-        description={t('dashboard.subtitle')}
-      />
-
-      <DashboardWave delay={0}>
-        <Card className="p-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
-            {t('dashboard.filters')}
-          </p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Select
-              label={t('dashboard.period')}
-              value={period}
-              onChange={(event) => setPeriod(event.target.value as DashboardPeriod)}
-            >
-              <option value="7d">{t('dashboard.period7d')}</option>
-              <option value="30d">{t('dashboard.period30d')}</option>
-              <option value="90d">{t('dashboard.period90d')}</option>
-              <option value="all">{t('dashboard.periodAll')}</option>
-            </Select>
-            <Select
-              label={t('dashboard.source')}
-              value={source}
-              onChange={(event) => setSource(event.target.value as LeadSource | '')}
-            >
-              <option value="">{t('dashboard.allSources')}</option>
-              {Object.values(LeadSource).map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </Select>
-            <Select
-              label={t('dashboard.owner')}
-              value={ownerId}
-              onChange={(event) => setOwnerId(event.target.value)}
-            >
-              <option value="">{t('dashboard.allOwners')}</option>
-              {(members.data ?? []).map((member) => (
-                <option key={member.user.id} value={member.user.id}>
-                  {member.user.name}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label={t('dashboard.segment')}
-              placeholder={t('dashboard.allSegments')}
-              value={segment}
-              onChange={(event) => setSegment(event.target.value)}
-            />
-          </div>
-        </Card>
-      </DashboardWave>
-
-      <BentoGrid className="lg:auto-rows-fr">
-        <BentoItem span={4}>
-          <DashboardWave delay={0.05}>
-            <ActionNextCard
-              loading={loadingSummary}
-              overdue={data?.overdueFollowUps[0] ?? null}
-              opportunity={data?.topOpportunities[0] ?? null}
-              recommendationHref={primaryRec?.href}
-            />
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={3}>
-          <DashboardWave delay={0.1}>
-            <HeroKpiCard
-              loading={loadingSummary}
-              conversionRate={data?.conversionRate ?? 0}
-              won={data?.won ?? 0}
-              newLeads={data?.newLeads ?? 0}
-              originRef={reveal.setOriginEl}
-            />
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={5} className="lg:row-span-2">
-          <DashboardWave delay={0.12}>
-            <LeadsMapCard
-              loading={loadingCharts}
-              pins={charts.data?.mapPins ?? []}
-              cities={charts.data?.byCity ?? []}
-            />
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={4}>
-          <DashboardWave delay={0.18}>
-            <AccentBarChart loading={loadingCharts} data={charts.data?.byStatus ?? []} />
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={3}>
-          <DashboardWave delay={0.22}>
-            <GaugePair
-              loading={loadingSummary}
-              approachRate={data?.approachRate ?? 0}
-              meetingRate={data?.meetingRate ?? 0}
-            />
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={4}>
-          <DashboardWave delay={0.28}>
-            <Card surface="accent" className="h-full">
-              <CardHeader title={t('dashboard.recommendations')} />
-              <CardContent className="space-y-3">
-                {loadingSummary ? (
-                  <Skeleton className="h-24" />
-                ) : !data.recommendations || data.recommendations.length === 0 ? (
-                  <p className="text-sm text-zinc-500">{t('dashboard.recommendationsEmpty')}</p>
-                ) : (
-                  data.recommendations.map((rec) => (
-                    <Link
-                      key={rec.code}
-                      to={rec.href}
-                      className="flex items-start justify-between gap-3 rounded-control border border-white/10 bg-white/[0.03] p-3 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-zinc-50">
-                          {t(`dashboard.rec.${rec.code}`, { count: rec.count })}
-                        </p>
-                        <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
-                          {rec.severity}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-xs font-semibold tabular-nums text-brand-300">
-                        {rec.count}
-                      </span>
-                    </Link>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={4}>
-          <DashboardWave delay={0.32}>
-            <Card surface="bento" className="h-full">
-              <CardHeader
-                title={t('dashboard.topOpportunities')}
-                description={t('dashboard.topOpportunitiesDesc')}
-              />
-              <CardContent className="space-y-3">
-                {!data || data.topOpportunities.length === 0 ? (
-                  <p className="text-sm text-zinc-500">{t('dashboard.noLeads')}</p>
-                ) : (
-                  data.topOpportunities.map((lead) => (
-                    <Link
-                      key={lead.id}
-                      to={`/leads/${lead.id}`}
-                      className="flex items-center justify-between gap-3 rounded-control border border-white/[0.08] p-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-50">
-                          {lead.companyName}
-                        </p>
-                        <p className="text-xs text-zinc-500">{lead.city ?? t('common.dash')}</p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <LeadStatusBadge status={lead.status} />
-                        <ScoreBadge score={lead.score} />
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </DashboardWave>
-        </BentoItem>
-
-        <BentoItem span={4}>
-          <DashboardWave delay={0.36}>
-            <PerformanceGauges
-              loading={loadingSummary || loadingCharts}
-              conversionRate={data?.conversionRate ?? 0}
-              avgScore={avgScore}
-            />
-          </DashboardWave>
-        </BentoItem>
-      </BentoGrid>
-
-      <DashboardWave delay={0.4}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            label={t('dashboard.totalLeads')}
-            value={data?.totalLeads ?? 0}
-            animateValue={loadingSummary ? undefined : (data?.totalLeads ?? 0)}
-            hint={t('dashboard.newLeads')}
-            icon={Users}
-            loading={loadingSummary}
+    <div className="space-y-6" key={i18n.language}>
+      {/* Hero — Principal Facilitey */}
+      <Card surface="default" className="overflow-hidden !border-white/[0.08]">
+        <CardContent className="relative p-6 sm:p-8">
+          <div
+            className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgb(113_113_122_/_0.12),transparent_60%)]"
+            aria-hidden
           />
-          <MetricCard
-            label={t('dashboard.newLeads')}
-            value={data?.newLeads ?? 0}
-            animateValue={loadingSummary ? undefined : (data?.newLeads ?? 0)}
-            icon={UserPlus}
-            loading={loadingSummary}
-          />
-          <MetricCard
-            label={t('dashboard.won')}
-            value={data?.won ?? 0}
-            animateValue={loadingSummary ? undefined : (data?.won ?? 0)}
-            icon={Handshake}
-            loading={loadingSummary}
-          />
-          <MetricCard
-            label={t('dashboard.overdueTasks')}
-            value={data?.overdueTasks ?? 0}
-            animateValue={loadingSummary ? undefined : (data?.overdueTasks ?? 0)}
-            icon={AlertTriangle}
-            loading={loadingSummary}
-          />
-        </div>
-      </DashboardWave>
-
-      <DashboardWave delay={0.45}>
-        <details className="group rounded-panel border border-white/[0.08] bg-zinc-900/40 open:bg-zinc-900/60">
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-zinc-300 marker:content-none [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center justify-between gap-3">
-              {t('dashboard.moreMetrics')}
-              <Target className="h-4 w-4 text-zinc-500 transition group-open:rotate-90" aria-hidden />
-            </span>
-          </summary>
-          <div className="grid grid-cols-1 gap-4 border-t border-white/[0.06] p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label={t('dashboard.meetings')}
-              value={data?.meetings ?? 0}
-              animateValue={loadingSummary ? undefined : (data?.meetings ?? 0)}
-              icon={Users}
-              loading={loadingSummary}
-            />
-            <MetricCard
-              label={t('dashboard.proposals')}
-              value={data?.proposals ?? 0}
-              animateValue={loadingSummary ? undefined : (data?.proposals ?? 0)}
-              icon={FileText}
-              loading={loadingSummary}
-            />
-            <MetricCard
-              label={t('dashboard.lost')}
-              value={data?.lost ?? 0}
-              animateValue={loadingSummary ? undefined : (data?.lost ?? 0)}
-              icon={AlertTriangle}
-              loading={loadingSummary}
-            />
-            <MetricCard
-              label={t('dashboard.followUpRate')}
-              value={`${data?.followUpRate ?? 0}%`}
-              animateValue={loadingSummary ? undefined : (data?.followUpRate ?? 0)}
-              animateSuffix="%"
-              icon={Target}
-              loading={loadingSummary}
-            />
-            <MetricCard
-              label={t('dashboard.lossRate')}
-              value={`${data?.lossRate ?? 0}%`}
-              animateValue={loadingSummary ? undefined : (data?.lossRate ?? 0)}
-              animateSuffix="%"
-              icon={AlertTriangle}
-              loading={loadingSummary}
-            />
-          </div>
-        </details>
-      </DashboardWave>
-
-      <DashboardWave delay={0.5}>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader title={t('dashboard.overdueFollowUps')} />
-            <CardContent className="space-y-3">
-              {!data || data.overdueFollowUps.length === 0 ? (
-                <p className="text-sm text-zinc-500">{t('dashboard.noOverdue')}</p>
-              ) : (
-                data.overdueFollowUps.map((item) => (
-                  <Link
-                    key={item.id}
-                    to={`/leads/${item.id}`}
-                    className="flex items-center justify-between rounded-control border border-red-500/25 bg-red-500/[0.07] p-3 transition-colors hover:bg-red-500/15"
-                  >
-                    <span className="text-sm font-medium text-zinc-50">{item.companyName}</span>
-                    <span className="text-xs text-red-300">{formatDate(item.nextContactAt)}</span>
-                  </Link>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader title={t('dashboard.upcoming')} />
-            <CardContent className="space-y-3">
-              {!data || data.upcomingFollowUps.length === 0 ? (
-                <p className="text-sm text-zinc-500">{t('dashboard.noFollowUps')}</p>
-              ) : (
-                data.upcomingFollowUps.map((item) => (
-                  <Link
-                    key={item.id}
-                    to={`/leads/${item.id}`}
-                    className="flex items-center justify-between rounded-control border border-white/[0.08] p-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
-                  >
-                    <span className="text-sm font-medium text-zinc-50">{item.companyName}</span>
-                    <span className="text-xs text-zinc-500">{formatDate(item.nextContactAt)}</span>
-                  </Link>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardWave>
-
-      <DashboardWave delay={0.55}>
-        <Card surface="bento">
-          <CardHeader title={t('dashboard.conversionBySource')} />
-          <CardContent>
-            {!data || data.conversionBySource.length === 0 ? (
-              <p className="text-sm text-zinc-500">{t('dashboard.noLeads')}</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-white/[0.08] text-xs uppercase tracking-[0.12em] text-zinc-500">
-                      <th className="px-3 py-2 font-medium">{t('dashboard.source')}</th>
-                      <th className="px-3 py-2 font-medium">{t('dashboard.sourceTotal')}</th>
-                      <th className="px-3 py-2 font-medium">{t('dashboard.sourceWon')}</th>
-                      <th className="px-3 py-2 font-medium">{t('dashboard.sourceLost')}</th>
-                      <th className="px-3 py-2 font-medium">{t('dashboard.conversion')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.conversionBySource.map((row) => (
-                      <tr key={row.source} className="border-b border-white/[0.06]">
-                        <td className="px-3 py-2 text-zinc-100">{row.source}</td>
-                        <td className="px-3 py-2 tabular-nums text-zinc-300">{row.total}</td>
-                        <td className="px-3 py-2 tabular-nums text-emerald-400">{row.won}</td>
-                        <td className="px-3 py-2 tabular-nums text-red-400">{row.lost}</td>
-                        <td className="px-3 py-2 tabular-nums text-zinc-300">
-                          {row.conversionRate}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
+            <div>
+              <p className="text-sm font-medium text-zinc-400">{greeting}</p>
+              <h1 className="mt-2 max-w-[22ch] text-balance text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+                {t('principal.headline')}
+              </h1>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-3">
+                <StatLine
+                  icon={<Users className="h-4 w-4 text-zinc-300" />}
+                  loading={summary.isLoading}
+                  label={t('principal.statNew', { count: data?.newLeads ?? 0 })}
+                />
+                <StatLine
+                  icon={<CheckCircle2 className="h-4 w-4 text-sky-400" />}
+                  loading={summary.isLoading}
+                  label={t('principal.statContacted', { count: data?.contacted ?? 0 })}
+                />
+                <StatLine
+                  icon={<Clock3 className="h-4 w-4 text-amber-400" />}
+                  loading={summary.isLoading}
+                  label={t('principal.statFollowUps', {
+                    count: data?.overdueFollowUps?.length ?? data?.overdueTasks ?? 0,
+                  })}
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </DashboardWave>
-      </div>
-    </DashboardFirstReveal>
+            </div>
+            <div className="flex flex-col gap-3 lg:items-end">
+              <p className="max-w-xs text-sm leading-relaxed text-zinc-400 lg:text-right">
+                {t('principal.ctaHint')}
+              </p>
+              <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:flex-col">
+                <Button
+                  size="lg"
+                  className="w-full uppercase tracking-wide sm:min-w-[220px]"
+                  onClick={() => navigate('/search')}
+                >
+                  {t('principal.searchClients')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:min-w-[220px]"
+                  onClick={() => navigate('/tasks')}
+                >
+                  <Clock3 className="h-4 w-4" aria-hidden />
+                  {t('principal.viewFollowUps')}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Seus clientes */}
+      <Card className="overflow-hidden">
+        <div className="border-b border-white/[0.08] px-5 py-5 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-zinc-50">
+                {t('principal.clientsTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-zinc-400">{t('principal.clientsDesc')}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                aria-hidden
+              />
+              <input
+                value={q}
+                onChange={(event) => setQ(event.target.value)}
+                placeholder={t('principal.clientsSearch')}
+                aria-label={t('principal.clientsSearch')}
+                className="field-control h-11 w-full rounded-control pl-9 pr-3 text-sm"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => navigate('/leads')}>
+                {t('principal.filters')}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/imports')}>
+                {t('principal.import')}
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/leads')}>
+                {t('principal.export')}
+              </Button>
+              <Button onClick={() => navigate('/leads')}>
+                <UserPlus className="h-4 w-4" aria-hidden />
+                {t('principal.newClient')}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setStatus(tab.status)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
+                    status === tab.status
+                      ? 'bg-zinc-800 text-zinc-50'
+                      : 'border border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200',
+                  )}
+                >
+                  {t(`principal.tab.${tab.key}`)}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 rounded-control border border-white/[0.08] p-1">
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium',
+                  view === 'list' ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400',
+                )}
+                onClick={() => setView('list')}
+              >
+                <List className="h-4 w-4" aria-hidden />
+                {t('principal.viewList')}
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium',
+                  view === 'kanban' ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400',
+                )}
+                onClick={() => {
+                  setView('kanban');
+                  navigate('/pipeline');
+                }}
+              >
+                <KanbanSquare className="h-4 w-4" aria-hidden />
+                {t('principal.viewKanban')}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/[0.08] text-xs font-medium uppercase tracking-wide text-zinc-500">
+                <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colClient')}</th>
+                <th className="px-3 py-3 font-semibold">{t('principal.colCity')}</th>
+                <th className="px-3 py-3 font-semibold">{t('principal.colStatus')}</th>
+                <th className="px-3 py-3 font-semibold">{t('principal.colScore')}</th>
+                <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colActions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leadsQuery.isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8">
+                    <Skeleton className="h-24 w-full" />
+                  </td>
+                </tr>
+              ) : leads.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-16 text-center text-sm text-zinc-500">
+                    {t('principal.emptyClients')}
+                  </td>
+                </tr>
+              ) : (
+                leads.map((lead) => (
+                  <tr
+                    key={lead.id}
+                    className="border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+                  >
+                    <td className="px-5 py-3.5 sm:px-6">
+                      <Link
+                        to={`/leads/${lead.id}`}
+                        className="font-semibold text-zinc-50 hover:underline"
+                      >
+                        {lead.companyName}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-3.5 text-zinc-400">{lead.city ?? '—'}</td>
+                    <td className="px-3 py-3.5">
+                      <LeadStatusBadge status={lead.status} />
+                    </td>
+                    <td className="px-3 py-3.5 tabular-nums text-zinc-300">{lead.score ?? '—'}</td>
+                    <td className="px-5 py-3.5 sm:px-6">
+                      <Link
+                        to={`/leads/${lead.id}`}
+                        className="text-sm font-semibold text-zinc-300 hover:text-zinc-50"
+                      >
+                        {t('principal.open')}
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] px-5 py-3 text-sm text-zinc-500 sm:px-6">
+          <p>
+            {t('principal.showing', {
+              from: leads.length ? 1 : 0,
+              to: leads.length,
+              total: meta?.total ?? leads.length,
+            })}
+          </p>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/leads')}>
+            {t('principal.seeAll')}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function StatLine({
+  icon,
+  label,
+  loading,
+}: {
+  icon: ReactNode;
+  label: string;
+  loading?: boolean;
+}) {
+  if (loading) return <Skeleton className="h-5 w-48" />;
+  return (
+    <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80">
+        {icon}
+      </span>
+      {label}
+    </div>
   );
 }

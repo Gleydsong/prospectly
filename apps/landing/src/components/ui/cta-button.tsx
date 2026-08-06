@@ -11,9 +11,9 @@ export type CtaSize = 'sm' | 'md' | 'lg' | 'icon';
 const variants: Record<CtaVariant, string> = {
   primary: 'cta-primary',
   secondary:
-    'border border-[color:var(--cta-secondary-border)] bg-[color:var(--cta-secondary-bg)] text-[color:var(--cta-secondary-ink)] hover:bg-[color:var(--cta-secondary-hover)]',
+    'cta-secondary border border-[color:var(--cta-secondary-border)] bg-[color:var(--cta-secondary-bg)] text-[color:var(--cta-secondary-ink)] hover:bg-[color:var(--cta-secondary-hover)]',
   glass:
-    'border border-[color:var(--cta-glass-border)] bg-[color:var(--cta-glass-bg)] text-[color:var(--cta-glass-ink)] shadow-[inset_0_1px_0_0_var(--cta-glass-inset)] backdrop-blur-md hover:bg-[color:var(--cta-glass-hover)]',
+    'cta-glass border border-[color:var(--cta-glass-border)] bg-[color:var(--cta-glass-bg)] text-[color:var(--cta-glass-ink)] shadow-[inset_0_1px_0_0_var(--cta-glass-inset)] backdrop-blur-md hover:bg-[color:var(--cta-glass-hover)]',
   outline:
     'border border-[color:var(--border)] bg-transparent text-[color:var(--ink)] hover:bg-[color:var(--cta-ghost-hover)]',
   ghost:

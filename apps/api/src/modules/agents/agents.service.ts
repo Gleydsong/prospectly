@@ -24,7 +24,6 @@ export type CrmActionCode =
   | 'RESPECT_DNC'
   | 'ENRICH_CONTACT'
   | 'FOLLOW_UP_OVERDUE'
-  | 'CREATE_PAGE'
   | 'PRIORITIZE_OUTREACH'
   | 'ADVANCE_PIPELINE'
   | 'RUN_WEBSITE_ANALYSIS'
@@ -66,20 +65,13 @@ export class AgentsService {
 
   async suggestCrm(organizationId: string, leadId: string) {
     const lead = await this.loadLead(organizationId, leadId);
-    const [overdueCount, pageCount, nextStage] = await Promise.all([
+    const [overdueCount, nextStage] = await Promise.all([
       this.prisma.task.count({
         where: {
           organizationId,
           leadId,
           status: { in: ['OPEN', 'IN_PROGRESS'] },
           dueAt: { lt: new Date() },
-        },
-      }),
-      this.prisma.conversionPage.count({
-        where: {
-          organizationId,
-          leadId,
-          status: { not: 'ARCHIVED' },
         },
       }),
       this.resolveNextStage(organizationId, lead.stageId, lead.stage?.order ?? null),
@@ -99,7 +91,6 @@ export class AgentsService {
       hasWebsite: Boolean(lead.website?.trim()),
       hasWebsiteAnalysis: Boolean(lead.websiteRecord?.analyses?.[0]),
       overdueCount,
-      pageCount,
       score,
       status: lead.status,
       staleDays,
@@ -305,7 +296,6 @@ export class AgentsService {
     hasWebsite: boolean;
     hasWebsiteAnalysis: boolean;
     overdueCount: number;
-    pageCount: number;
     score: number;
     status: LeadStatus;
     staleDays: number;
@@ -340,15 +330,6 @@ export class AgentsService {
         rationale: `${input.overdueCount} tarefa(s) em atraso neste lead.`,
         severity: 'critical',
         href: () => `/tasks`,
-      };
-    }
-
-    if (input.pageCount === 0 && input.score >= 70 && EARLY_STATUS.has(input.status)) {
-      return {
-        actionCode: 'CREATE_PAGE',
-        rationale: 'Lead de alto potencial sem página de proposta.',
-        severity: 'warn',
-        href: (id) => `/pages/new?leadId=${id}`,
       };
     }
 

@@ -229,10 +229,7 @@ model Organization {
   scoreConfigs       ScoreConfiguration[]
   integrations       Integration[]
   auditLogs          AuditLog[]
-  conversionPages    ConversionPage[]
-  conversionEvents   ConversionEvent[]
   usageLedgers       UsageLedger[]
-  domainBindings     DomainBinding[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -364,7 +361,6 @@ model Lead {
   campaignLeads      CampaignLead[]
   campaignActivities CampaignActivity[]
   searchResults      SearchResult[]
-  conversionPages   ConversionPage[]
 
   @@unique([organizationId, source, externalId])
   @@unique([organizationId, domain])
@@ -849,47 +845,6 @@ model WaitlistEntry {
   @@index([createdAt])
 }
 
-// ---------- Conversion Studio (Prospectly Pages) ----------
-
-enum ConversionPageStatus {
-  DRAFT
-  PREVIEW
-  PUBLISHED
-  ARCHIVED
-}
-
-enum ConversionPageTemplate {
-  HTML
-  AURORA
-}
-
-enum ConversionGenerationStatus {
-  IDLE
-  QUEUED
-  RUNNING
-  SUCCEEDED
-  FAILED
-}
-
-enum ConversionGenerationMode {
-  TEMPLATE
-  AI_LEAD
-  AI_DESCRIBE
-  AI_GOOGLE
-  AI_REFINE
-  TEMPLATE_FALLBACK
-}
-
-enum ConversionEventType {
-  page_view
-  cta_click
-  form_started
-  form_submitted
-  page_published
-  page_unpublished
-  page_version_restored
-}
-
 enum UsageMeterKey {
   SEARCHES
   PUBLISHED_PAGES
@@ -897,133 +852,6 @@ enum UsageMeterKey {
   VERSION_HISTORY
   CSV_EXPORT
   AI_GENERATIONS
-}
-
-model ConversionPage {
-  id               String               @id @default(uuid())
-  organizationId   String
-  leadId           String?
-  title            String
-  status           ConversionPageStatus @default(DRAFT)
-  publicSlug       String               @unique
-  publishedVersion Int?
-  draftRevision    Int                  @default(1)
-  draftBlocks      Json                 @default("[]")
-  draftHtml        String?              @db.Text
-  draftTemplate    ConversionPageTemplate @default(HTML)
-  generationStatus ConversionGenerationStatus @default(IDLE)
-  generationMode   ConversionGenerationMode?
-  generationError  String?
-  generationStartedAt  DateTime?
-  generationFinishedAt DateTime?
-  generationPromptVersion String?
-  generationInput  Json?
-  createdById      String?
-  updatedById      String?
-  publishedAt      DateTime?
-  archivedAt       DateTime?
-  analyticsPixelEnabled Boolean         @default(false)
-  analyticsConsentLabel String?
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  deletedAt        DateTime?
-
-  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  lead         Lead?                    @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  versions     ConversionPageVersion[]
-  events       ConversionEvent[]
-  submissions  ConversionFormSubmission[]
-  assets       ConversionPageAsset[]
-
-  @@index([organizationId, status])
-  @@index([organizationId, leadId])
-  @@index([organizationId, updatedAt])
-  @@index([organizationId, deletedAt])
-}
-
-model ConversionPageVersion {
-  id             String   @id @default(uuid())
-  pageId         String
-  organizationId String
-  version        Int
-  blocks         Json
-  html           String?  @db.Text
-  template       ConversionPageTemplate @default(HTML)
-  title          String
-  createdById    String?
-  changeNote     String?
-  createdAt      DateTime @default(now())
-
-  page ConversionPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, version])
-  @@index([organizationId, pageId])
-  @@index([organizationId, createdAt])
-}
-
-model ConversionPageAsset {
-  id             String   @id @default(uuid())
-  pageId         String
-  organizationId String
-  url            String
-  altText        String?
-  contentType    String?
-  byteSize       Int?
-  createdAt      DateTime @default(now())
-
-  page ConversionPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, pageId])
-}
-
-model ConversionEvent {
-  id               String              @id @default(uuid())
-  organizationId   String
-  pageId           String
-  version          Int?
-  type             ConversionEventType
-  metadata         Json?
-  channel          String?
-  createdAt        DateTime            @default(now())
-
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  page         ConversionPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, pageId, createdAt])
-  @@index([organizationId, type, createdAt])
-  @@index([pageId, type, createdAt])
-}
-
-model ConversionFormSubmission {
-  id             String   @id @default(uuid())
-  organizationId String
-  pageId         String
-  version        Int?
-  payload        Json
-  leadId         String?
-  createdAt      DateTime @default(now())
-
-  page ConversionPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, pageId, createdAt])
-  @@index([pageId, createdAt])
-}
-
-model DomainBinding {
-  id                String    @id @default(uuid())
-  organizationId    String
-  hostname          String
-  pageId            String?
-  verificationToken String
-  verifiedAt        DateTime?
-  lastCheckedAt     DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([hostname])
-  @@index([organizationId])
 }
 
 model UsageLedger {

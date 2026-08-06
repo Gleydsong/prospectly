@@ -34,7 +34,7 @@ export function EnterExplainerPage({ locale }: { locale: Locale }) {
   ] as const;
 
   return (
-    <div>
+    <div className="landing-v2 landing-light-page landing-enter-v2">
       <section className="hero-wash relative overflow-hidden border-b border-[color:var(--border)]">
         <div className="mx-auto grid max-w-shell items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8 lg:py-20">
           <div className="text-center lg:col-span-5 lg:text-left">

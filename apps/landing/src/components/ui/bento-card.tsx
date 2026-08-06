@@ -92,7 +92,7 @@ export function BentoCard({
 /** Ícone em disco para vitrines compactas. */
 export function BentoIconDisk({ children }: { children: ReactNode }) {
   return (
-    <span className="flex h-14 w-14 items-center justify-center rounded-panel border border-white/12 bg-white/[0.07] text-white/85">
+      <span className="bento-icon-disk flex h-14 w-14 items-center justify-center rounded-panel border border-white/12 bg-white/[0.07] text-white/85">
       {children}
     </span>
   );
@@ -111,7 +111,7 @@ export function BentoChip({
   return (
     <span
       className={[
-        'inline-flex items-center gap-1.5 rounded-control border px-3 py-2 text-xs font-medium',
+        'bento-chip inline-flex items-center gap-1.5 rounded-control border px-3 py-2 text-xs font-medium',
         dim
           ? 'border-white/5 bg-white/[0.02] text-white/35'
           : 'border-white/10 bg-white/[0.06] text-white/80',

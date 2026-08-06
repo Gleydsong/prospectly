@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function PricingPage() {
   const locale = 'pt' as const;
   return (
-    <section className="hero-wash mx-auto max-w-shell px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+    <section className="landing-v2 landing-light-page landing-pricing-v2 hero-wash mx-auto max-w-shell px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
       <Reveal>
         <h1 className="text-center text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl">
           {t(locale, 'pricingTitle')}

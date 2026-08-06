@@ -26,7 +26,7 @@ export function ProtectedRoute() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-sm text-zinc-400">
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] text-sm text-zinc-400">
         A carregar…
       </div>
     );

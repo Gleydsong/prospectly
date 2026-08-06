@@ -53,42 +53,92 @@ html.dark {
   --theme-y: 50%;
   --theme-r: 100%;
   --theme-reveal-ms: 720ms;
+
+  --chrome-bg: rgb(9 10 12 / 0.8);
+  --chrome-sidebar: rgb(21 24 29 / 0.95);
+  --chrome-overlay: rgb(9 10 12 / 0.8);
+  --surface-card: #15181d;
+  --surface-hover: #20242b;
+  --surface-subtle: #101317;
+  --status-neutral-bg: rgb(255 255 255 / 0.08);
+  --status-neutral-ink: #d1d5db;
+  --status-success-bg: rgb(16 185 129 / 0.14);
+  --status-success-ink: #6ee7b7;
+  --status-warning-bg: rgb(245 158 11 / 0.14);
+  --status-warning-ink: #fbbf24;
+  --status-danger-bg: rgb(239 68 68 / 0.14);
+  --status-danger-ink: #fca5a5;
+  --status-info-bg: rgb(59 130 246 / 0.14);
+  --status-info-ink: #93c5fd;
+  --status-purple-bg: rgb(168 85 247 / 0.14);
+  --status-purple-ink: #d8b4fe;
 }
 
-/* Light: inverte escala zinc para que bg-zinc-950 / text-zinc-50 virem superfícies claras. */
+/* Light operacional — fundo azul muito claro e acento CINZA estrutural. */
 html.light {
   color-scheme: light;
-  --zinc-50: 15 18 22;
-  --zinc-100: 30 35 42;
-  --zinc-200: 55 62 74;
-  --zinc-300: 90 98 112;
-  --zinc-400: 110 118 132;
-  --zinc-500: 124 133 147;
-  --zinc-600: 166 174 186;
-  --zinc-700: 211 216 223;
-  --zinc-800: 226 230 236;
-  --zinc-900: 241 244 248;
-  --zinc-950: 248 250 252;
+  /* Neutros frios, com contraste alto para leitura de dados operacionais. */
+  --zinc-50: 24 24 27;
+  --zinc-100: 39 39 42;
+  --zinc-200: 63 63 70;
+  --zinc-300: 82 82 91;
+  --zinc-400: 113 113 122;
+  --zinc-500: 82 101 128;
+  --zinc-600: 148 163 184;
+  --zinc-700: 203 213 225;
+  --zinc-800: 226 232 240;
+  --zinc-900: 241 248 251;
+  --zinc-950: 255 255 255;
 
-  --bg: #eef1f6;
+  --bg: #f3fafc;
   --bg-raised: #ffffff;
-  --bg-sunken: #e4e8ef;
-  --ink: #15181d;
-  --ink-muted: #5c6573;
-  --border: rgb(15 23 42 / 0.1);
-  --border-strong: rgb(15 23 42 / 0.16);
-  --cta-secondary-bg: rgb(15 23 42 / 0.04);
-  --cta-secondary-border: rgb(15 23 42 / 0.1);
-  --cta-secondary-ink: #15181d;
-  --cta-secondary-hover: rgb(15 23 42 / 0.08);
-  --cta-ghost-hover: rgb(15 23 42 / 0.06);
-  --cta-glass-bg: rgb(255 255 255 / 0.72);
-  --cta-glass-border: rgb(15 23 42 / 0.12);
-  --cta-glass-ink: #15181d;
-  --cta-glass-hover: rgb(255 255 255 / 0.9);
-  --cta-glass-inset: rgb(255 255 255 / 0.6);
-  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.35) inset,
-    0 14px 36px -12px rgb(37 99 235 / 0.45);
+  --bg-sunken: #e8f2f5;
+  --ink: #101828;
+  --ink-muted: #526987;
+  /* Acento cinza — substitui o verde da referência Facilitey. */
+  --accent: #3f3f46;
+  --accent-hover: #27272a;
+  --ring: rgb(52 58 64 / 0.28);
+  --border: #d8e4eb;
+  --border-strong: #b8cbd6;
+  --cta-secondary-bg: rgb(255 255 255 / 0.5);
+  --cta-secondary-border: rgb(24 24 27 / 0.12);
+  --cta-secondary-ink: #18181b;
+  --cta-secondary-hover: rgb(255 255 255 / 0.72);
+  --cta-ghost-hover: rgb(24 24 27 / 0.06);
+  /* Glass iOS — translúcido. */
+  --cta-glass-bg: rgb(255 255 255 / 0.48);
+  --cta-glass-border: rgb(255 255 255 / 0.62);
+  --cta-glass-ink: #18181b;
+  --cta-glass-hover: rgb(255 255 255 / 0.68);
+  --cta-glass-inset: rgb(255 255 255 / 0.85);
+  /* Primary = cinza escuro glass (nunca verde). */
+  --cta-primary-from: #3f3f46;
+  --cta-primary-to: #18181b;
+  --cta-primary-border: rgb(255 255 255 / 0.22);
+  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.28) inset,
+    0 12px 28px -12px rgb(24 24 27 / 0.45);
+  --cta-primary-hover-from: #52525b;
+  --cta-primary-hover-to: #27272a;
+
+  --chrome-bg: rgb(255 255 255 / 0.94);
+  --chrome-sidebar: rgb(255 255 255 / 0.98);
+  --chrome-overlay: rgb(16 24 40 / 0.28);
+  --surface-card: #ffffff;
+  --surface-hover: #f0f6f8;
+  --surface-subtle: #f7fbfc;
+  --status-neutral-bg: #eef2f5;
+  --status-neutral-ink: #475569;
+  --status-success-bg: #e8faf3;
+  --status-success-ink: #087f5b;
+  --status-warning-bg: #fff7df;
+  --status-warning-ink: #b45309;
+  --status-danger-bg: #fff0f0;
+  --status-danger-ink: #b42318;
+  --status-info-bg: #edf4ff;
+  --status-info-ink: #1d4ed8;
+  --status-purple-bg: #f4f0ff;
+  --status-purple-ink: #6d28d9;
 }
 
 @layer base {
@@ -118,8 +168,9 @@ html.light {
 
   html.light body::before {
     background:
-      radial-gradient(80% 50% at 50% -10%, rgb(59 130 246 / 0.09) 0%, transparent 70%),
-      radial-gradient(60% 40% at 100% 0%, rgb(15 23 42 / 0.04) 0%, transparent 70%);
+      radial-gradient(80% 50% at 50% -8%, rgb(170 231 220 / 0.22) 0%, transparent 68%),
+      radial-gradient(50% 40% at 100% 0%, rgb(125 211 252 / 0.1) 0%, transparent 70%),
+      radial-gradient(45% 30% at 0% 100%, rgb(186 230 253 / 0.12) 0%, transparent 65%);
   }
 
   #root {
@@ -131,8 +182,16 @@ html.light {
     @apply outline-none ring-2 ring-brand-400/45 ring-offset-2 ring-offset-zinc-950;
   }
 
+  html.light :focus-visible {
+    --tw-ring-color: rgb(63 63 70 / 0.35);
+  }
+
   ::selection {
     background: rgb(96 165 250 / 0.28);
+  }
+
+  html.light ::selection {
+    background: rgb(63 63 70 / 0.18);
   }
 
   ::-webkit-scrollbar {
@@ -152,11 +211,11 @@ html.light {
   }
 
   html.light ::-webkit-scrollbar-thumb {
-    background-color: rgb(15 23 42 / 0.18);
+    background-color: rgb(63 63 70 / 0.22);
   }
 
   html.light ::-webkit-scrollbar-thumb:hover {
-    background-color: rgb(15 23 42 / 0.28);
+    background-color: rgb(63 63 70 / 0.35);
   }
 }
 
@@ -180,7 +239,17 @@ html.light {
   }
 
   html.light .surface-bento {
-    background: linear-gradient(180deg, #ffffff 0%, #f5f7fa 58%, #eef1f6 100%);
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.88) 0%,
+      rgb(252 250 255 / 0.82) 55%,
+      rgb(245 241 252 / 0.78) 100%
+    );
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.75),
+      0 18px 40px -28px rgb(46 26 74 / 0.16);
   }
 
   .surface-bento::before,
@@ -200,8 +269,8 @@ html.light {
 
   html.light .surface-bento::before {
     background:
-      radial-gradient(90% 60% at 30% -10%, rgb(59 130 246 / 0.08) 0%, transparent 62%),
-      radial-gradient(60% 40% at 100% 0%, rgb(15 23 42 / 0.03) 0%, transparent 70%);
+      radial-gradient(90% 60% at 30% -10%, rgb(255 255 255 / 0.65) 0%, transparent 62%),
+      radial-gradient(60% 40% at 100% 0%, rgb(113 113 122 / 0.06) 0%, transparent 70%);
   }
 
   .surface-bento::after {
@@ -213,7 +282,7 @@ html.light {
   }
 
   html.light .surface-bento::after {
-    background-image: radial-gradient(rgb(15 23 42 / 0.05) 1px, transparent 1px);
+    background-image: radial-gradient(rgb(63 63 70 / 0.06) 1px, transparent 1px);
   }
 
   .surface-bento > * {
@@ -227,7 +296,12 @@ html.light {
   }
 
   html.light .surface-bento-accent {
-    background: linear-gradient(180deg, #f0f5fc 0%, #e8eef8 58%, #e2e8f2 100%);
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 0.92) 0%,
+      rgb(248 246 252 / 0.88) 58%,
+      rgb(242 238 250 / 0.84) 100%
+    );
   }
 
   /* Borda luminosa de 1px em superfícies premium. */
@@ -236,10 +310,49 @@ html.light {
   }
 
   html.light .hairline {
-    box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.1);
+    box-shadow: inset 0 0 0 1px rgb(24 24 27 / 0.1);
   }
 
-  /* Primary azul (acento opcional). */
+  /*
+   * Theme toggle — glass iOS (Control Center).
+   */
+  .theme-toggle-ios {
+    border-radius: 9999px;
+    border: 1px solid rgb(255 255 255 / 0.28);
+    background: rgb(255 255 255 / 0.14);
+    color: rgb(241 242 244 / 0.92);
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.35),
+      0 8px 24px -10px rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .theme-toggle-ios:hover {
+    background: rgb(255 255 255 / 0.22);
+    color: #ffffff;
+  }
+
+  html.light .theme-toggle-ios {
+    border-color: rgb(255 255 255 / 0.7);
+    background: rgb(255 255 255 / 0.5);
+    color: #3f3f46;
+    box-shadow:
+      inset 0 1px 0 0 rgb(255 255 255 / 0.9),
+      0 10px 28px -12px rgb(24 24 27 / 0.2);
+  }
+
+  html.light .theme-toggle-ios:hover {
+    background: rgb(255 255 255 / 0.72);
+    color: #18181b;
+  }
+
+  /* Primary — dark: cobalto; light: cinza escuro glass. */
   .cta-primary {
     border: 1px solid var(--cta-primary-border);
     background-color: var(--cta-primary-to);
@@ -260,20 +373,33 @@ html.light {
     );
   }
 
+  html.light .cta-primary {
+    background-image: none;
+    background-color: rgb(24 24 27 / 0.88);
+    backdrop-filter: blur(22px) saturate(160%);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+  }
+
+  html.light .cta-primary:hover {
+    background-color: rgb(24 24 27 / 0.95);
+  }
+
   .cta-primary:disabled,
   .cta-primary[aria-disabled='true'] {
     box-shadow: none;
     opacity: 0.6;
   }
 
-  /* Glass CTA — mesmo sistema da landing. */
+  /* Glass CTA — iOS frosted (blur + saturate + inset). */
   .cta-glass {
     border: 1px solid var(--cta-glass-border);
     background: var(--cta-glass-bg);
     color: var(--cta-glass-ink);
-    box-shadow: inset 0 1px 0 0 var(--cta-glass-inset);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+      inset 0 1px 0 0 var(--cta-glass-inset),
+      0 8px 24px -12px rgb(0 0 0 / 0.28);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
   }
 
   .cta-glass:hover {
@@ -284,6 +410,24 @@ html.light {
   .cta-glass[aria-disabled='true'] {
     box-shadow: none;
     opacity: 0.6;
+  }
+
+  /* Campos de formulário — estilo Facilitey (light: branco + borda cinza). */
+  .field-control {
+    border: 1px solid rgb(var(--zinc-700) / 1);
+    background: rgb(var(--zinc-950) / 1);
+    color: rgb(var(--zinc-50) / 1);
+  }
+
+  html.light .field-control {
+    border-color: rgb(24 24 27 / 0.12);
+    background: rgb(255 255 255 / 0.9);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.8);
+  }
+
+  html.light .field-control:focus {
+    border-color: rgb(63 63 70 / 0.45);
+    --tw-ring-color: rgb(63 63 70 / 0.15);
   }
 }
 
@@ -310,9 +454,15 @@ html.light {
 
 /*
  * Theme liquid reveal — View Transitions API.
- * Círculo expandindo a partir do toggle (~720ms), com mid-frame elipse
- * para aproximar o blob do vídeo de referência.
+ * Máscara radial com borda suave (~28px) a partir do toggle (~720ms),
+ * aproximando o wipe líquido/blob do vídeo de referência.
  */
+@property --theme-reveal-size {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
 html.theme-revealing::view-transition-old(root),
 html.theme-revealing::view-transition-new(root) {
   animation: none;
@@ -326,14 +476,26 @@ html.theme-revealing::view-transition-old(root) {
 html.theme-revealing::view-transition-new(root) {
   z-index: 9999;
   animation: theme-liquid-reveal var(--theme-reveal-ms) cubic-bezier(0.22, 1, 0.36, 1) both;
+  -webkit-mask-image: radial-gradient(
+    circle at var(--theme-x) var(--theme-y),
+    #000 0%,
+    #000 calc(var(--theme-reveal-size) - 32px),
+    transparent var(--theme-reveal-size)
+  );
+  mask-image: radial-gradient(
+    circle at var(--theme-x) var(--theme-y),
+    #000 0%,
+    #000 calc(var(--theme-reveal-size) - 32px),
+    transparent var(--theme-reveal-size)
+  );
 }
 
 @keyframes theme-liquid-reveal {
   from {
-    clip-path: circle(0px at var(--theme-x) var(--theme-y));
+    --theme-reveal-size: 0px;
   }
   to {
-    clip-path: circle(var(--theme-r) at var(--theme-x) var(--theme-y));
+    --theme-reveal-size: var(--theme-r);
   }
 }
 
@@ -341,32 +503,86 @@ html.theme-revealing::view-transition-new(root) {
   html.theme-revealing::view-transition-old(root),
   html.theme-revealing::view-transition-new(root) {
     animation: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
   }
 }
 
-/* Light: overlays brancos (border/bg white/opacity) viram tinta escura sutil. */
+/* Light: overlays brancos → cinza translúcido (chrome / nav / hovers). */
 html.light .border-white\/\[0\.08\],
 html.light .border-white\/\[0\.1\],
 html.light .border-white\/10 {
-  border-color: rgb(15 23 42 / 0.1);
+  border-color: rgb(24 24 27 / 0.1);
 }
 
 html.light .border-white\/\[0\.12\],
-html.light .border-white\/\[0\.16\] {
-  border-color: rgb(15 23 42 / 0.14);
+html.light .border-white\/\[0\.16\],
+html.light .border-white\/20 {
+  border-color: rgb(24 24 27 / 0.14);
 }
 
 html.light .bg-white\/\[0\.04\],
-html.light .bg-white\/\[0\.06\] {
-  background-color: rgb(15 23 42 / 0.04);
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/\[0\.07\] {
+  background-color: rgb(24 24 27 / 0.05);
 }
 
+html.light .hover\:bg-white\/\[0\.05\]:hover,
 html.light .hover\:bg-white\/\[0\.06\]:hover {
-  background-color: rgb(15 23 42 / 0.06);
+  background-color: rgb(24 24 27 / 0.08);
 }
 
 html.light .bg-noise {
-  background-image: radial-gradient(rgb(15 23 42 / 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgb(63 63 70 / 0.06) 1px, transparent 1px);
+}
+
+/* Cards default/elevated — vidro branco lavanda. */
+html.light .shadow-panel,
+html.light .shadow-elevated {
+  box-shadow:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.7),
+    0 18px 40px -24px rgb(46 26 74 / 0.14);
+}
+
+html.light .rounded-panel.bg-zinc-900,
+html.light .rounded-panel.bg-zinc-800 {
+  background-color: rgb(255 255 255 / 0.78);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+
+html.light .auth-shell-panel {
+  background:
+    radial-gradient(ellipse 70% 55% at 85% 15%, rgb(113 113 122 / 0.08), transparent 55%),
+    radial-gradient(ellipse 45% 35% at 0% 90%, rgb(255 255 255 / 0.55), transparent 50%),
+    linear-gradient(180deg, #ebe4f4 0%, #f5f1fb 100%);
+}
+
+/* Confirm email / auth card — grelha + glow cinza/lavanda. */
+html.light .auth-confirm {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgb(24 24 27 / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(24 24 27 / 0.04) 1px, transparent 1px),
+    radial-gradient(ellipse 50% 40% at 50% 0%, rgb(113 113 122 / 0.14), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 100% 100%, rgb(139 92 246 / 0.1), transparent 65%);
+  background-size:
+    28px 28px,
+    28px 28px,
+    auto,
+    auto;
+}
+
+html.dark .auth-confirm {
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.03) 1px, transparent 1px),
+    radial-gradient(ellipse 50% 40% at 50% 0%, rgb(113 113 122 / 0.2), transparent 70%);
+  background-size:
+    28px 28px,
+    28px 28px,
+    auto;
 }
 
 @keyframes dashboard-pin-pulse {
@@ -406,4 +622,53 @@ html.light .bg-noise {
 .dashboard-map-progress {
   transform-origin: left center;
   animation: dashboard-progress-fill 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Compatibility layer for existing page markup while screens migrate to tokens. */
+html.light .text-zinc-50 { color: var(--ink) !important; }
+html.light .text-zinc-100,
+html.light .text-zinc-200,
+html.light .text-zinc-300 { color: var(--ink) !important; }
+html.light .text-zinc-400,
+html.light .text-zinc-500 { color: var(--ink-muted) !important; }
+html.light .text-zinc-600 { color: #64748b !important; }
+html.light .bg-zinc-950 { background-color: var(--bg) !important; }
+html.light .bg-zinc-900,
+html.light .bg-zinc-800 { background-color: var(--surface-card) !important; }
+html.light .bg-zinc-700 { background-color: var(--surface-hover) !important; }
+html.light .border-zinc-800,
+html.light .border-zinc-700,
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\],
+html.light .border-white\/10 { border-color: var(--border) !important; }
+html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
+html.light .placeholder\:text-zinc-500::placeholder { color: var(--ink-muted); }
+html.light .hover\:bg-white\/\[0\.05\]:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: var(--surface-hover) !important; }
+html.light .text-brand-300,
+html.light .text-brand-400 { color: var(--accent) !important; }
+html.light .bg-brand-500 { background-color: var(--accent) !important; }
+html.light .shadow-panel,
+html.light .shadow-elevated,
+html.light .shadow-soft { box-shadow: 0 12px 30px -22px rgb(16 24 40 / 0.28), 0 1px 2px rgb(16 24 40 / 0.06); }
+
+html.light .surface-bento,
+html.light .surface-bento-accent {
+  background: linear-gradient(145deg, #ffffff 0%, #f7fbfc 62%, #edf8f4 100%);
+  box-shadow: 0 18px 40px -28px rgb(16 24 40 / 0.24);
+}
+
+html.light .auth-shell-panel {
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 0.96), rgb(235 248 249 / 0.94)),
+    radial-gradient(ellipse 70% 55% at 85% 15%, rgb(170 231 220 / 0.22), transparent 55%);
+}
+
+html.light .auth-confirm {
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgb(16 24 40 / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(16 24 40 / 0.045) 1px, transparent 1px),
+    radial-gradient(ellipse 50% 40% at 50% 0%, rgb(170 231 220 / 0.3), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 100% 100%, rgb(186 230 253 / 0.16), transparent 65%);
 }

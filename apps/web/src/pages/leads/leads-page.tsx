@@ -108,34 +108,35 @@ export function LeadsPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow={t('nav.groupQualify')}
+        eyebrow={t('nav.clientes')}
         title={t('leads.title')}
-        description="Gerencie e qualifique suas oportunidades"
+        description={t('principal.clientsDesc')}
         actions={
           <>
-            <Button variant="secondary" onClick={() => setExportOpen(true)}>
+            <Button variant="outline" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" aria-hidden />
               {t('leads.export')}
             </Button>
             <Button onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden />
-              Novo lead
+              {t('principal.newClient')}
             </Button>
           </>
         }
       />
 
-      <Card className="p-4">
+      <Card className="overflow-hidden">
+        <div className="space-y-4 border-b border-white/[0.08] p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_170px_auto]">
           <div className="flex gap-2">
             <Input
-              placeholder="Buscar por nome, e-mail ou domínio…"
+              placeholder={t('principal.clientsSearch')}
               value={q}
               onChange={(event) => setQ(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') applySearch();
               }}
-              aria-label="Buscar leads"
+              aria-label={t('nav.searchClients')}
             />
           </div>
           <Select
@@ -165,35 +166,42 @@ export function LeadsPage() {
             <option value="yes">Com site</option>
             <option value="no">Sem site</option>
           </Select>
-          <Button variant="secondary" onClick={applySearch}>
+          <Button variant="outline" onClick={applySearch}>
             Buscar
           </Button>
         </div>
-      </Card>
+        </div>
 
       {exportMessage ? <Alert tone="success">{exportMessage}</Alert> : null}
 
       {query.isLoading ? (
-        <Card className="p-5">
+        <div className="p-5">
           <TableSkeleton rows={8} columns={5} />
-        </Card>
+        </div>
       ) : query.isError ? (
-        <Alert tone="error">Erro ao carregar leads. Tente novamente.</Alert>
+        <div className="p-5">
+          <Alert tone="error">Erro ao carregar leads. Tente novamente.</Alert>
+        </div>
       ) : leads.length === 0 ? (
+        <div className="p-5">
         <EmptyState
           title="Nenhum lead encontrado"
           description="Ajuste os filtros ou crie o primeiro lead manualmente."
           action={
             <Button onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden />
-              Novo lead
+              {t('principal.newClient')}
             </Button>
           }
         />
+        </div>
       ) : (
         <>
-          {actionError ? <Alert tone="error">{actionError}</Alert> : null}
-          <Card className="overflow-hidden">
+          {actionError ? (
+            <div className="px-5 pt-4">
+              <Alert tone="error">{actionError}</Alert>
+            </div>
+          ) : null}
             <ul className="divide-y divide-zinc-800 md:hidden">
               {leads.map((lead) => (
                 <li key={lead.id}>
@@ -301,12 +309,14 @@ export function LeadsPage() {
               </tbody>
             </table>
             </div>
-          </Card>
           {meta ? (
-            <Pagination page={meta.page} totalPages={meta.totalPages} total={meta.total} onPageChange={setPage} />
+            <div className="border-t border-white/[0.08] px-4 py-3">
+              <Pagination page={meta.page} totalPages={meta.totalPages} total={meta.total} onPageChange={setPage} />
+            </div>
           ) : null}
         </>
       )}
+      </Card>
 
       <LeadFormModal open={modalOpen} onClose={() => setModalOpen(false)} />
 

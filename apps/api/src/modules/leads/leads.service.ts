@@ -9,7 +9,7 @@ import { LeadSource, Prisma } from '@prisma/client';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { EntitlementService } from '../conversion-studio/entitlement.service';
+import { EntitlementService } from '../billing/entitlement.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {

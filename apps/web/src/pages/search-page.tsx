@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
-import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
@@ -155,7 +154,7 @@ function buildResultsCsv(results: ProspectingSearchResult[]): string {
 
 function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
   return (
-    <div className="space-y-2 rounded-control bg-brand-500/15 p-3 text-sm text-brand-200" role="status">
+    <div className="space-y-2 rounded-control bg-zinc-800/60 p-3 text-sm text-zinc-300" role="status">
       <p>
         Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s),{' '}
         {summary.invalid} inválido(s) e {summary.conflicts} possível(is) duplicado(s).
@@ -401,15 +400,23 @@ export function SearchPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        eyebrow={t('nav.groupDiscover')}
-        title={t('leads.search')}
-        description="Encontre negócios locais por nicho e localização no Brasil e na Europa."
-        actions={<SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />}
-      />
+      <Card className="overflow-hidden">
+        <CardContent className="space-y-5 p-6 sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 max-w-2xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                {t('search.highIntentEyebrow')}
+              </p>
+              <h1 className="mt-2 text-balance text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+                {t('search.highIntentTitle')}
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                {t('search.highIntentDesc')}
+              </p>
+            </div>
+            <div className="shrink-0">{<SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />}</div>
+          </div>
 
-      <Card>
-        <CardContent className="space-y-4">
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
               <Select label="País" error={errors.country?.message} {...register('country')}>
@@ -572,7 +579,7 @@ export function SearchPage() {
               {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
               {planLabel(plan)}
             </p>
-            <Link to="/settings" className="text-brand-300 hover:underline">
+            <Link to="/settings" className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline">
               Ver todos os planos →
             </Link>
           </div>

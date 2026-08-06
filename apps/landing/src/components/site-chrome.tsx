@@ -2,15 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
 import { CtaButton } from '@/components/ui/cta-button';
 import { prefix, t, type Locale } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
+const LIGHT_THEME_PATHS = new Set([
+  '/',
+  '/faq',
+  '/pricing',
+  '/entrar',
+  '/en',
+  '/en/faq',
+  '/en/pricing',
+  '/en/enter',
+]);
+
 export function SiteHeader({ locale }: { locale: Locale }) {
   const p = prefix(locale);
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const isLightThemePage = pathname ? LIGHT_THEME_PATHS.has(pathname) : false;
+  const isEnterPage = pathname === enterExplainerUrl(locale);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -28,7 +43,13 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const close = () => setMenuOpen(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)]/90 backdrop-blur-md">
+    <header
+      className={[
+        'sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color:var(--bg)]/90 backdrop-blur-md',
+        isLightThemePage ? 'site-chrome-light' : '',
+        isEnterPage ? 'site-chrome-enter' : '',
+      ].join(' ')}
+    >
       <div className="mx-auto flex h-16 max-w-shell items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href={p || '/'}
@@ -131,9 +152,12 @@ export function SiteHeader({ locale }: { locale: Locale }) {
 
 export function SiteFooter({ locale }: { locale: Locale }) {
   const p = prefix(locale);
+  const pathname = usePathname();
+  const isLightThemePage = pathname ? LIGHT_THEME_PATHS.has(pathname) : false;
+  const isEnterPage = pathname === enterExplainerUrl(locale);
 
   return (
-    <footer className="mt-16 border-t border-[color:var(--border)]">
+    <footer className={['mt-16 border-t border-[color:var(--border)]', isLightThemePage ? 'site-chrome-light' : '', isEnterPage ? 'site-chrome-enter' : ''].join(' ')}>
       <div className="mx-auto flex max-w-shell flex-col items-center gap-6 px-4 py-10 text-center sm:px-6 lg:px-8">
         <div className="flex flex-col items-center">
           <BrandLogo locale={locale} />

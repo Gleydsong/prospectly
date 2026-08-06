@@ -4,6 +4,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 
+import { ThemeProvider } from '@/features/theme/theme-provider';
+
 const TEST_GOOGLE_CLIENT_ID =
   (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim() ||
   'test-google-client-id.apps.googleusercontent.com';
@@ -48,7 +50,11 @@ export function renderWithProviders(
     ) : (
       tree
     );
-    return <QueryClientProvider client={queryClient}>{withOauth}</QueryClientProvider>;
+    return (
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>{withOauth}</QueryClientProvider>
+      </ThemeProvider>
+    );
   }
 
   return {

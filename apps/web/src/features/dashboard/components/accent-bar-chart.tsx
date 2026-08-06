@@ -13,17 +13,27 @@ import {
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTheme } from '@/features/theme/theme-provider';
 import { getLeadStatusShortLabel, getLeadStatusLabel } from '@/lib/lead-status';
 import type { LeadStatus } from '@/types';
 
-const AXIS_TICK = { fontSize: 11, fill: 'rgb(var(--zinc-400))' } as const;
+const AXIS_TICK = { fontSize: 11, fill: '#7C8593' } as const;
 
-const TOOLTIP_STYLE = {
-  background: 'rgb(var(--zinc-900))',
-  border: '1px solid var(--border)',
+const TOOLTIP_STYLE_DARK = {
+  background: '#15181D',
+  border: '1px solid rgb(255 255 255 / 0.1)',
   borderRadius: 14,
-  color: 'rgb(var(--zinc-50))',
+  color: '#F1F2F4',
   fontSize: 12,
+} as const;
+
+const TOOLTIP_STYLE_LIGHT = {
+  background: 'rgb(255 255 255 / 0.88)',
+  border: '1px solid rgb(24 24 27 / 0.1)',
+  borderRadius: 14,
+  color: '#18181b',
+  fontSize: 12,
+  backdropFilter: 'blur(16px) saturate(160%)',
 } as const;
 
 interface AccentBarChartProps {
@@ -33,8 +43,12 @@ interface AccentBarChartProps {
 
 export function AccentBarChart({ loading, data }: AccentBarChartProps) {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const reduceMotion = useReducedMotion();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const tooltipStyle = theme === 'light' ? TOOLTIP_STYLE_LIGHT : TOOLTIP_STYLE_DARK;
+  const idleBarFill = theme === 'light' ? 'rgb(24 24 27 / 0.12)' : 'rgb(255 255 255 / 0.14)';
+  const cursorFill = theme === 'light' ? 'rgb(24 24 27 / 0.04)' : 'rgb(255 255 255 / 0.04)';
 
   const chartData = useMemo(
     () =>
@@ -51,7 +65,9 @@ export function AccentBarChart({ loading, data }: AccentBarChartProps) {
     if (chartData.length === 0) return -1;
     let best = 0;
     for (let i = 1; i < chartData.length; i += 1) {
-      if (chartData[i].count > chartData[best].count) best = i;
+      const current = chartData[i];
+      const selected = chartData[best];
+      if (current && selected && current.count > selected.count) best = i;
     }
     return best;
   }, [chartData]);
@@ -87,8 +103,8 @@ export function AccentBarChart({ loading, data }: AccentBarChartProps) {
               />
               <YAxis allowDecimals={false} tick={AXIS_TICK} width={32} />
               <Tooltip
-                cursor={{ fill: 'rgb(255 255 255 / 0.04)' }}
-                contentStyle={TOOLTIP_STYLE}
+                cursor={{ fill: cursorFill }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number) => [value, t('dashboard.leadsSeries')]}
                 labelFormatter={(_, payload) => {
                   const row = payload?.[0]?.payload as
@@ -109,7 +125,7 @@ export function AccentBarChart({ loading, data }: AccentBarChartProps) {
                 {chartData.map((entry, index) => (
                   <Cell
                     key={entry.status}
-                    fill={index === highlight ? '#60a5fa' : 'rgb(255 255 255 / 0.14)'}
+                    fill={index === highlight ? '#60a5fa' : idleBarFill}
                     style={
                       index === highlight
                         ? { filter: 'drop-shadow(0 0 10px rgb(96 165 250 / 0.45))' }

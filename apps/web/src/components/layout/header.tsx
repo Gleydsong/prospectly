@@ -25,7 +25,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/[0.08] bg-zinc-950/80 px-4 backdrop-blur-xl lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-white/[0.08] bg-[var(--chrome-bg)] px-4 backdrop-blur-xl lg:px-6">
       <button
         className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-zinc-300 hover:bg-white/[0.06] lg:hidden"
         onClick={onMenuClick}

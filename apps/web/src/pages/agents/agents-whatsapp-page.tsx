@@ -63,7 +63,8 @@ export function AgentsWhatsappPage() {
     const list = templates.data?.data ?? [];
     if (!list.length || templateId) return;
     const whatsapp = list.find((item) => item.category.toUpperCase() === 'WHATSAPP');
-    setTemplateId((whatsapp ?? list[0]).id);
+    const initialTemplate = whatsapp ?? list[0];
+    if (initialTemplate) setTemplateId(initialTemplate.id);
   }, [templates.data, templateId]);
 
   useEffect(() => {

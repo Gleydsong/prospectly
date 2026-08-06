@@ -2,6 +2,8 @@ import { Building2, Filter, Lock, MapPinned, Search, ShieldCheck } from 'lucide-
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ThemeToggle } from '@/features/theme/theme-toggle';
+
 interface AuthShellProps {
   title: string;
   subtitle: string;
@@ -37,20 +39,24 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   ] as const;
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 lg:grid lg:grid-cols-2">
-      <aside className="relative overflow-hidden border-b border-zinc-800 bg-[radial-gradient(ellipse_70%_55%_at_85%_15%,rgb(96_165_250_/_0.16),transparent_55%),radial-gradient(ellipse_45%_35%_at_0%_90%,rgb(250_250_250_/_0.04),transparent_50%),linear-gradient(180deg,#09090b_0%,#18181b_100%)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
+    <div className="relative min-h-[100dvh] bg-[color:var(--bg)] lg:grid lg:grid-cols-2">
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <ThemeToggle />
+      </div>
+
+      <aside className="auth-shell-panel relative overflow-hidden border-b border-[color:var(--border)] bg-[color:var(--surface-card)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
         <div className="mx-auto flex h-full max-w-lg flex-col justify-center lg:mx-0">
           <div className="flex items-center gap-3">
             <span className="cta-glass flex h-11 w-11 items-center justify-center rounded-control">
               <Building2 className="h-5 w-5" aria-hidden />
             </span>
-            <p className="text-lg font-semibold tracking-tight text-zinc-50">{t('auth.brandName')}</p>
+            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">{t('auth.brandName')}</p>
           </div>
 
-          <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl">
+          <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
             {t('auth.brandManifesto')}
           </h1>
-          <p className="mt-4 max-w-[42ch] text-base leading-relaxed text-zinc-400">
+          <p className="mt-4 max-w-[42ch] text-base leading-relaxed text-[color:var(--ink-muted)]">
             {t('auth.brandManifestoBody')}
           </p>
 
@@ -61,8 +67,8 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
                   <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-zinc-50">{benefitTitle}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-zinc-400">{body}</p>
+                  <p className="text-sm font-semibold text-[color:var(--ink)]">{benefitTitle}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">{body}</p>
                 </div>
               </li>
             ))}
@@ -84,16 +90,16 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       <main className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12 lg:py-14">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-zinc-50">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400">{subtitle}</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{title}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{subtitle}</p>
           </div>
 
           {children}
 
-          <ul className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 pt-6">
+          <ul className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border)] pt-6">
             {trustItems.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-                <Icon className="h-3.5 w-3.5 text-brand-400" aria-hidden />
+              <li key={label} className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
+                <Icon className="h-3.5 w-3.5 text-[color:var(--accent)]" aria-hidden />
                 {label}
               </li>
             ))}

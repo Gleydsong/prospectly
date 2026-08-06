@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
+import { ThemeProvider } from '@/features/theme/theme-provider';
 import { ForgotPasswordPage } from './forgot-password-page';
 
 vi.mock('@/features/auth/api', () => ({
@@ -13,11 +14,13 @@ vi.mock('@/features/auth/api', () => ({
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter>
-        <ForgotPasswordPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <ForgotPasswordPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   );
 
 describe('ForgotPasswordPage', () => {

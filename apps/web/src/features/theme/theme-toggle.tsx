@@ -17,8 +17,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <button
       type="button"
       className={cn(
-        'theme-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-zinc-400 transition-colors',
-        'hover:bg-white/[0.06] hover:text-zinc-100',
+        'theme-toggle theme-toggle-ios inline-flex h-11 w-11 shrink-0 items-center justify-center',
         className,
       )}
       onClick={(event) => {

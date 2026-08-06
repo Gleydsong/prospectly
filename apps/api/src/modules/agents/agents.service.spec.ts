@@ -12,9 +12,6 @@ function makePrisma(overrides: Record<string, unknown> = {}) {
     task: {
       count: jest.fn().mockResolvedValue(0),
     },
-    conversionPage: {
-      count: jest.fn().mockResolvedValue(0),
-    },
     pipeline: {
       findFirst: jest.fn(),
     },
@@ -159,7 +156,6 @@ describe('AgentsService', () => {
       updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     });
     (prisma.task.count as jest.Mock).mockResolvedValue(0);
-    (prisma.conversionPage.count as jest.Mock).mockResolvedValue(1);
     (prisma.pipelineStage.findFirst as jest.Mock)
       .mockResolvedValueOnce({ id: 'stage-1', order: 0, pipelineId: 'pipe-1' })
       .mockResolvedValueOnce({ id: 'stage-2', name: 'Qualified', order: 1 });
