@@ -251,7 +251,7 @@ export class DashboardService {
   async charts(organizationId: string, query: QueryDashboardDto = { period: '30d' }) {
     const baseWhere = this.buildLeadWhere(organizationId, query);
 
-    const [byStatus, bySegment, byCity, bySource, scoreBuckets] = await Promise.all([
+    const [byStatus, bySegment, byCity, bySource, scoreBuckets, mapPins] = await Promise.all([
       this.prisma.lead.groupBy({ by: ['status'], where: baseWhere, _count: true }),
       this.prisma.lead.groupBy({ by: ['segment'], where: baseWhere, _count: true }),
       this.prisma.lead.groupBy({
@@ -287,6 +287,24 @@ export class DashboardService {
           }
         GROUP BY bucket
       `,
+      this.prisma.lead.findMany({
+        where: {
+          ...baseWhere,
+          latitude: { not: null },
+          longitude: { not: null },
+        },
+        select: {
+          id: true,
+          companyName: true,
+          city: true,
+          latitude: true,
+          longitude: true,
+          score: true,
+          status: true,
+        },
+        orderBy: { score: 'desc' },
+        take: 80,
+      }),
     ]);
 
     return {
@@ -297,6 +315,20 @@ export class DashboardService {
       byCity: byCity.map((row) => ({ city: row.city, count: row._count })),
       bySource: bySource.map((row) => ({ source: row.source, count: row._count })),
       byScore: scoreBuckets.map((row) => ({ bucket: row.bucket, count: Number(row.count) })),
+      mapPins: mapPins
+        .filter(
+          (pin): pin is typeof pin & { latitude: number; longitude: number } =>
+            pin.latitude != null && pin.longitude != null,
+        )
+        .map((pin) => ({
+          id: pin.id,
+          companyName: pin.companyName,
+          city: pin.city,
+          latitude: pin.latitude,
+          longitude: pin.longitude,
+          score: pin.score,
+          status: pin.status,
+        })),
     };
   }
 

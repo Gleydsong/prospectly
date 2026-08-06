@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Globe, Mail, MapPin, Phone, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
+import { WebsiteAnalysisPanel } from '@/features/leads/components/website-analysis-panel';
 import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
@@ -59,21 +60,18 @@ export function LeadDetailPage() {
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [analysisMessage, setAnalysisMessage] = useState<string | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
 
   const createActivity = useCreateActivity(id);
   const createTask = useCreateTaskForLead(id);
   const analyzeMutation = useMutation({
     mutationFn: () => requestLeadWebsiteAnalysis(id),
     onSuccess: async () => {
-      setAnalysisMessage(t('leads.analysisQueued', { defaultValue: 'Análise enfileirada.' }));
+      setAnalysisError(null);
       await leadQuery.refetch();
-      window.setTimeout(() => {
-        void leadQuery.refetch();
-      }, 2500);
     },
     onError: (error) => {
-      setAnalysisMessage(getApiErrorMessage(error));
+      setAnalysisError(getApiErrorMessage(error));
     },
   });
 
@@ -84,6 +82,34 @@ export function LeadDetailPage() {
   const taskForm = useForm<z.infer<typeof taskSchema>>({
     resolver: zodResolver(taskSchema),
     defaultValues: { priority: 'MEDIUM' },
+  });
+
+  const latestAnalysisStatus = leadQuery.data?.websiteRecord?.analyses?.[0]?.status;
+  const analysisPending =
+    latestAnalysisStatus === 'PENDING' || latestAnalysisStatus === 'RUNNING';
+
+  useEffect(() => {
+    if (analysisPending && analysisError) {
+      setAnalysisError(null);
+    }
+  }, [analysisPending, analysisError]);
+
+  // Poll enquanto a análise está na fila/rodando (worker BullMQ).
+  useQuery({
+    queryKey: [
+      'leads',
+      id,
+      'analysis-poll',
+      leadQuery.data?.websiteRecord?.analyses?.[0]?.id,
+      latestAnalysisStatus,
+    ],
+    queryFn: async () => {
+      await leadQuery.refetch();
+      return true;
+    },
+    enabled: Boolean(id) && analysisPending,
+    refetchInterval: analysisPending ? 2000 : false,
+    refetchIntervalInBackground: false,
   });
 
   if (leadQuery.isLoading) {
@@ -113,8 +139,6 @@ export function LeadDetailPage() {
   const latestAnalysis = lead.websiteRecord?.analyses?.[0];
   const latestScore = lead.scores?.[0];
   const safeWebsite = lead.website ? sanitizeExternalUrl(lead.website) : null;
-  const analysisPending =
-    latestAnalysis?.status === 'PENDING' || latestAnalysis?.status === 'RUNNING';
 
   return (
     <div className="space-y-5">
@@ -225,18 +249,17 @@ export function LeadDetailPage() {
                   className="w-full"
                   loading={analyzeMutation.isPending || analysisPending}
                   onClick={() => {
-                    setAnalysisMessage(null);
+                    setAnalysisError(null);
                     analyzeMutation.mutate();
                   }}
                   disabled={!lead.website}
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden />
-                  {lead.website ? 'Verificar / enriquecer' : 'Enriquecer (requer website)'}
+                  {lead.website ? 'Verificar site' : 'Verificar (precisa de website)'}
                 </Button>
                 {!lead.website ? (
                   <p className="mt-2 text-xs text-zinc-500">
-                    Sem URL cadastrada a análise automática não roda. Confirme manualmente ou importe
-                    detalhes seletivos do provedor.
+                    Sem URL cadastrada não dá para checar o site automaticamente.
                   </p>
                 ) : null}
               </div>
@@ -347,7 +370,7 @@ export function LeadDetailPage() {
                     variant="outline"
                     loading={analyzeMutation.isPending || analysisPending}
                     onClick={() => {
-                      setAnalysisMessage(null);
+                      setAnalysisError(null);
                       analyzeMutation.mutate();
                     }}
                   >
@@ -358,44 +381,11 @@ export function LeadDetailPage() {
               }
             />
             <CardContent>
-              {analysisMessage ? (
-                <p className="mb-3 text-sm text-zinc-300" role="status">
-                  {analysisMessage}
-                </p>
-              ) : null}
-              {latestAnalysis ? (
-                <div className="space-y-3">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">
-                    Status: {latestAnalysis.status}
-                  </p>
-                  <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                    <AnalysisItem label="Status HTTP" value={latestAnalysis.httpStatus?.toString() ?? '—'} />
-                    <AnalysisItem label="HTTPS" value={boolLabel(latestAnalysis.https)} />
-                    <AnalysisItem
-                      label="Resposta"
-                      value={latestAnalysis.responseTimeMs ? `${latestAnalysis.responseTimeMs} ms` : '—'}
-                    />
-                    <AnalysisItem label="Responsivo" value={boolLabel(latestAnalysis.hasViewport)} />
-                    <AnalysisItem label="Formulário" value={boolLabel(latestAnalysis.hasContactForm)} />
-                    <AnalysisItem label="Título" value={latestAnalysis.title ?? '—'} />
-                  </dl>
-                </div>
-              ) : (
-                <p className="text-sm text-zinc-500">
-                  {lead.website
-                    ? 'Ainda sem análise. Use Reanalisar ou aguarde o processamento automático.'
-                    : 'Nenhum website cadastrado para analisar. A ausência na fonte é observação, não prova.'}
-                </p>
-              )}
-              {latestAnalysis && latestAnalysis.issues.length > 0 ? (
-                <ul className="mt-3 space-y-1">
-                  {latestAnalysis.issues.map((issue) => (
-                    <li key={issue.id}>
-                      <Badge tone={issue.severity === 'CRITICAL' ? 'red' : 'amber'}>{issue.message}</Badge>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+              <WebsiteAnalysisPanel
+                hasWebsite={Boolean(lead.website)}
+                analysis={latestAnalysis}
+                errorMessage={analysisError}
+              />
             </CardContent>
           </Card>
 
@@ -563,23 +553,6 @@ function InfoRow({
       </div>
     </div>
   );
-}
-
-function AnalysisItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs font-medium uppercase text-zinc-400">{label}</dt>
-      <dd className="truncate text-zinc-200" title={value}>
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function boolLabel(value?: boolean | null): string {
-  if (value === true) return 'Sim';
-  if (value === false) return 'Não';
-  return '—';
 }
 
 const SOURCE_LABEL: Record<string, string> = {
