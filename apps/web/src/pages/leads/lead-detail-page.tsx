@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
+import { LeadContactChannels } from '@/features/leads/components/lead-contact-channels';
 import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
@@ -134,6 +135,16 @@ export function LeadDetailPage() {
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
           <CreateProposalButton leadId={lead.id} companyName={lead.companyName} />
+          <Button size="sm" variant="secondary" onClick={() => navigate(`/agents/crm?leadId=${lead.id}`)}>
+            Agent CRM
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => navigate(`/agents/whatsapp?leadId=${lead.id}`)}
+          >
+            1ª mensagem WhatsApp
+          </Button>
         </div>
       </div>
 
@@ -208,13 +219,31 @@ export function LeadDetailPage() {
                   <p className="text-xs text-zinc-500">{lead.websiteStatusReason}</p>
                 ) : null}
               </dl>
-              {lead.missingFields && lead.missingFields.length > 0 ? (
+              <LeadContactChannels
+                lead={{
+                  companyName: lead.companyName,
+                  email: lead.email,
+                  website: lead.website,
+                  phone: lead.phone,
+                  whatsapp: lead.whatsapp,
+                  city: lead.city,
+                  doNotContact: lead.doNotContact,
+                  recommendedAction: lead.scores?.[0]?.recommendedAction,
+                }}
+              />
+              {lead.missingFields &&
+              lead.missingFields.filter((field) => !CONTACT_MISSING_FIELDS.has(field)).length >
+                0 ? (
                 <div className="mt-3">
                   <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Dados ausentes</p>
                   <div className="flex flex-wrap gap-1">
-                    {lead.missingFields.map((field) => (
-                      <Badge key={field} tone="amber">{MISSING_FIELD_LABEL[field] ?? field}</Badge>
-                    ))}
+                    {lead.missingFields
+                      .filter((field) => !CONTACT_MISSING_FIELDS.has(field))
+                      .map((field) => (
+                        <Badge key={field} tone="amber">
+                          {MISSING_FIELD_LABEL[field] ?? field}
+                        </Badge>
+                      ))}
                   </div>
                 </div>
               ) : null}
@@ -607,6 +636,8 @@ const MISSING_FIELD_LABEL: Record<string, string> = {
   city: 'Cidade',
   category: 'Categoria',
 };
+
+const CONTACT_MISSING_FIELDS = new Set(['email', 'website', 'whatsapp', 'phone']);
 
 function CreateProposalButton({ leadId }: { leadId: string; companyName: string }) {
   const navigate = useNavigate();
