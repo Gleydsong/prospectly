@@ -19,8 +19,6 @@ export function PlanLimitsNotice() {
           {usage.publishedPages}/{limits.publishedPages} publicadas
           {' · '}
           {usage.pageDrafts}/{limits.pageDrafts} rascunhos
-          {' · '}
-          {usage.aiGenerations}/{limits.aiGenerations} IA
           {!features.custom_domain ? ' · domínio próprio no Lifetime' : ''}
         </p>
         <Link to="/settings" className="min-h-11 inline-flex items-center text-brand-300 hover:underline">

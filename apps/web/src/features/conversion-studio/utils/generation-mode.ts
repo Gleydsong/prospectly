@@ -1,12 +1,11 @@
-/** User-facing label for Conversion Studio generation modes (React Aura pipeline). */
+/** User-facing label for Conversion Studio draft origin (manual / template). */
 export function generationModeLabel(mode?: string | null): string {
-  if (!mode) return 'React Aura';
-  if (mode === 'TEMPLATE' || mode === 'TEMPLATE_FALLBACK' || mode.startsWith('AI_')) {
-    return 'React Aura';
-  }
-  return 'React Aura';
+  if (!mode) return 'Manual';
+  const normalized = mode.trim().toLowerCase();
+  if (normalized.includes('template')) return 'Modelo';
+  return 'Manual';
 }
 
 export function generationFormatLabel(): string {
-  return 'React Aura';
+  return 'Blocos';
 }

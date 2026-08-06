@@ -1,4 +1,5 @@
 import {
+  Bot,
   CheckSquare,
   FileUp,
   KanbanSquare,
@@ -48,6 +49,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: 'nav.groupConvert',
     items: [
+      { to: '/agents', labelKey: 'nav.agents', icon: Bot },
       { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
       { to: '/pages', labelKey: 'nav.pages', icon: PanelsTopLeft },
       { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
@@ -66,6 +68,9 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/imports/, labelKey: 'nav.imports' },
   { pattern: /^\/leads/, labelKey: 'nav.leads' },
   { pattern: /^\/pipeline/, labelKey: 'nav.pipeline' },
+  { pattern: /^\/agents\/crm/, labelKey: 'agents.crm.title' },
+  { pattern: /^\/agents\/whatsapp/, labelKey: 'agents.whatsapp.title' },
+  { pattern: /^\/agents/, labelKey: 'nav.agents' },
   { pattern: /^\/campaigns/, labelKey: 'nav.campaigns' },
   { pattern: /^\/pages/, labelKey: 'nav.pages' },
   { pattern: /^\/tasks/, labelKey: 'nav.tasks' },

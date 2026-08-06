@@ -23,6 +23,7 @@
     "closeMenu": "Fechar menu",
     "campaigns": "Campanhas",
     "pages": "Pages",
+    "agents": "Agents",
     "groupOverview": "Visão geral",
     "groupDiscover": "Encontrar",
     "groupQualify": "Qualificar",
@@ -524,6 +525,68 @@
       "LOST": "Perdido",
       "NO_RESPONSE": "Sem resposta",
       "OPT_OUT": "Opt-out"
+    }
+  },
+  "agents": {
+    "title": "Agents",
+    "subtitle": "Assistentes determinísticos — próxima ação no CRM e 1ª mensagem WhatsApp, sem envio automático.",
+    "open": "Abrir",
+    "back": "Voltar",
+    "loadError": "Não foi possível carregar os agents.",
+    "pickLead": "Escolher lead",
+    "searchLead": "Buscar lead",
+    "searchLeadPlaceholder": "Nome ou cidade…",
+    "changeLead": "Trocar lead",
+    "catalog": {
+      "crm-next-action": {
+        "name": "Agent CRM",
+        "description": "Sugere a próxima ação e o estágio do pipeline para um lead."
+      },
+      "whatsapp-first-message": {
+        "name": "Agent WhatsApp",
+        "description": "Monta a 1ª mensagem a partir de template + lead (wa.me com texto)."
+      }
+    },
+    "crm": {
+      "title": "Agent CRM",
+      "subtitle": "Próxima ação sugerida com base em score, estágio, tarefas e páginas.",
+      "selectedLead": "Lead selecionado",
+      "nextAction": "Próxima ação",
+      "currentStage": "Estágio atual",
+      "suggestedStage": "Estágio sugerido",
+      "noStage": "Sem estágio",
+      "noSuggestedStage": "Nenhum estágio seguinte",
+      "openHref": "Abrir ação",
+      "openLead": "Abrir lead",
+      "moveStage": "Mover estágio",
+      "suggestError": "Não foi possível sugerir a ação.",
+      "applySuccess": "Estágio atualizado.",
+      "applyError": "Não foi possível mover o estágio.",
+      "actions": {
+        "RESPECT_DNC": "Respeitar não contatar",
+        "ENRICH_CONTACT": "Enriquecer contacto",
+        "FOLLOW_UP_OVERDUE": "Follow-up em atraso",
+        "CREATE_PAGE": "Criar página de proposta",
+        "PRIORITIZE_OUTREACH": "Priorizar outreach",
+        "ADVANCE_PIPELINE": "Avançar pipeline",
+        "RUN_WEBSITE_ANALYSIS": "Analisar website",
+        "ENRICH_PROFILE": "Completar perfil",
+        "NURTURE": "Nutrir relacionamento"
+      }
+    },
+    "whatsapp": {
+      "title": "Agent WhatsApp",
+      "subtitle": "1ª mensagem via template — você copia ou abre o WhatsApp. Sem disparo automático.",
+      "compose": "1ª mensagem",
+      "template": "Template",
+      "preview": "Prévia da mensagem",
+      "assistedNote": "Modo assistido: a Prospectly não envia WhatsApp automaticamente.",
+      "copy": "Copiar",
+      "copied": "Mensagem copiada.",
+      "copyError": "Não foi possível copiar.",
+      "open": "Abrir WhatsApp",
+      "noPhone": "Sem telefone",
+      "buildError": "Não foi possível montar a mensagem."
     }
   }
 }

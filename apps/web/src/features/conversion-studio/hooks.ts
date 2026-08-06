@@ -5,11 +5,9 @@ import {
   createConversionPage,
   fetchEntitlements,
   fetchPageMetrics,
-  generateLandingPage,
   getConversionPage,
   listConversionPages,
   publishConversionPage,
-  refineLandingPage,
   restoreConversionPageVersion,
   updateConversionPageDraft,
 } from './services/api';
@@ -56,27 +54,6 @@ export function useCreateConversionPage() {
     mutationFn: createConversionPage,
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['conversion-pages'] });
-    },
-  });
-}
-
-export function useGenerateLandingPage() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: generateLandingPage,
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['conversion-pages'] });
-    },
-  });
-}
-
-export function useRefineLandingPage(id: string) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (instruction: string) => refineLandingPage(id, { instruction }),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ['conversion-pages', id] });
-      await client.invalidateQueries({ queryKey: ['conversion-pages', 'entitlements'] });
     },
   });
 }

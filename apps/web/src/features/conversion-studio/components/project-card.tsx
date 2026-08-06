@@ -74,7 +74,7 @@ export function ProjectCard({ page }: { page: ConversionPageSummary }) {
             </div>
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-900 to-zinc-950 px-6 text-center">
-              <p className="text-sm text-zinc-500">Gerando com React Aura…</p>
+              <p className="text-sm text-zinc-500">Sem prévia ainda</p>
             </div>
           )}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-zinc-950 to-transparent" />

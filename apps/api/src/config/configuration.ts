@@ -85,7 +85,7 @@ export const configuration = () => ({
   },
   sentryDsn: process.env.SENTRY_DSN,
   landingAi: {
-    provider: process.env.LANDING_AI_PROVIDER ?? 'ollama',
+    provider: process.env.LANDING_AI_PROVIDER ?? 'template',
     baseUrl: process.env.LANDING_AI_BASE_URL ?? 'http://127.0.0.1:11434',
     model: process.env.LANDING_AI_MODEL ?? 'llama3.1',
     timeoutMs: parseInt(process.env.LANDING_AI_TIMEOUT_MS ?? '120000', 10),

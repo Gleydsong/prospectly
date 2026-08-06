@@ -35,6 +35,7 @@ import { OpsModule } from './modules/ops/ops.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { ConversionStudioModule } from './modules/conversion-studio/conversion-studio.module';
+import { AgentsModule } from './modules/agents/agents.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { ConversionStudioModule } from './modules/conversion-studio/conversion-s
     CampaignsModule,
     IntegrationsModule,
     ConversionStudioModule,
+    AgentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

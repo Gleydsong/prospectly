@@ -63,6 +63,15 @@ const PublicConversionPage = lazy(() =>
     default: m.PublicConversionPage,
   })),
 );
+const AgentsPage = lazy(() =>
+  import('@/pages/agents/agents-page').then((m) => ({ default: m.AgentsPage })),
+);
+const AgentsCrmPage = lazy(() =>
+  import('@/pages/agents/agents-crm-page').then((m) => ({ default: m.AgentsCrmPage })),
+);
+const AgentsWhatsappPage = lazy(() =>
+  import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
+);
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -140,6 +149,30 @@ export function App() {
           <Route path="leads" element={<LeadsPage />} />
           <Route path="leads/:id" element={<LeadDetailPage />} />
           <Route path="pipeline" element={<PipelinePage />} />
+          <Route
+            path="agents"
+            element={
+              <LazyPage>
+                <AgentsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="agents/crm"
+            element={
+              <LazyPage>
+                <AgentsCrmPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="agents/whatsapp"
+            element={
+              <LazyPage>
+                <AgentsWhatsappPage />
+              </LazyPage>
+            }
+          />
           <Route
             path="pages"
             element={

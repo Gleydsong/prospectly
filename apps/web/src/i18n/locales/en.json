@@ -23,6 +23,7 @@
     "closeMenu": "Close menu",
     "campaigns": "Campaigns",
     "pages": "Pages",
+    "agents": "Agents",
     "groupOverview": "Overview",
     "groupDiscover": "Find",
     "groupQualify": "Qualify",
@@ -524,6 +525,68 @@
       "LOST": "Lost",
       "NO_RESPONSE": "No response",
       "OPT_OUT": "Opt-out"
+    }
+  },
+  "agents": {
+    "title": "Agents",
+    "subtitle": "Deterministic assistants — CRM next action and WhatsApp first message, no auto-send.",
+    "open": "Open",
+    "back": "Back",
+    "loadError": "Could not load agents.",
+    "pickLead": "Pick a lead",
+    "searchLead": "Search lead",
+    "searchLeadPlaceholder": "Name or city…",
+    "changeLead": "Change lead",
+    "catalog": {
+      "crm-next-action": {
+        "name": "CRM Agent",
+        "description": "Suggests the next action and pipeline stage for a lead."
+      },
+      "whatsapp-first-message": {
+        "name": "WhatsApp Agent",
+        "description": "Builds the first message from template + lead (wa.me with text)."
+      }
+    },
+    "crm": {
+      "title": "CRM Agent",
+      "subtitle": "Suggested next action based on score, stage, tasks, and pages.",
+      "selectedLead": "Selected lead",
+      "nextAction": "Next action",
+      "currentStage": "Current stage",
+      "suggestedStage": "Suggested stage",
+      "noStage": "No stage",
+      "noSuggestedStage": "No next stage",
+      "openHref": "Open action",
+      "openLead": "Open lead",
+      "moveStage": "Move stage",
+      "suggestError": "Could not suggest an action.",
+      "applySuccess": "Stage updated.",
+      "applyError": "Could not move stage.",
+      "actions": {
+        "RESPECT_DNC": "Respect do-not-contact",
+        "ENRICH_CONTACT": "Enrich contact",
+        "FOLLOW_UP_OVERDUE": "Overdue follow-up",
+        "CREATE_PAGE": "Create proposal page",
+        "PRIORITIZE_OUTREACH": "Prioritize outreach",
+        "ADVANCE_PIPELINE": "Advance pipeline",
+        "RUN_WEBSITE_ANALYSIS": "Analyze website",
+        "ENRICH_PROFILE": "Complete profile",
+        "NURTURE": "Nurture relationship"
+      }
+    },
+    "whatsapp": {
+      "title": "WhatsApp Agent",
+      "subtitle": "First message via template — copy or open WhatsApp. No auto-send.",
+      "compose": "First message",
+      "template": "Template",
+      "preview": "Message preview",
+      "assistedNote": "Assisted mode: Prospectly does not send WhatsApp automatically.",
+      "copy": "Copy",
+      "copied": "Message copied.",
+      "copyError": "Could not copy.",
+      "open": "Open WhatsApp",
+      "noPhone": "No phone",
+      "buildError": "Could not build the message."
     }
   }
 }
