@@ -8,18 +8,18 @@ type BrandLogoProps = {
 
 export function BrandLogo({ locale, priority = false }: BrandLogoProps) {
   return (
-    <span className="inline-flex items-center gap-2.5">
+    <span className="inline-flex items-center gap-0.5" aria-label={t(locale, 'brand')}>
       <Image
         src="/brand/prospectly-mark-v2.svg"
         width={32}
         height={32}
         alt=""
         aria-hidden
-        className="h-8 w-8 shrink-0"
+        className="-mr-0.5 h-8 w-8 shrink-0"
         priority={priority}
       />
       <span className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">
-        {t(locale, 'brand')}
+        rospectly
       </span>
     </span>
   );

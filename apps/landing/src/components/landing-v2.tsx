@@ -36,7 +36,19 @@ const BENEFITS = [
 const AUDIENCES = ['Agências de marketing', 'Designers', 'Desenvolvedores', 'Social media', 'Fotógrafos', 'Consultores', 'Prestadores de serviço'] as const;
 
 function V2Brand() {
-  return <span className="landing-v2-brand" aria-label="Prospectly"><Image src="/brand/prospectly-mark-v2.svg" width={34} height={34} alt="" aria-hidden priority /><span>prospectly<span>.</span></span></span>;
+  return (
+    <span className="landing-v2-brand" aria-label="Prospectly">
+      <Image
+        src="/brand/prospectly-mark-v2.svg"
+        width={34}
+        height={34}
+        alt=""
+        aria-hidden
+        priority
+      />
+      <span className="landing-v2-brand-word">rospectly</span>
+    </span>
+  );
 }
 
 export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'home' | 'how' | 'section' }) {

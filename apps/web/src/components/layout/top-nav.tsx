@@ -97,12 +97,10 @@ export function TopNav() {
         <Link
           to="/"
           aria-label="Prospectly"
-          className="inline-flex shrink-0 items-center gap-0 text-lg font-bold tracking-tight text-[color:var(--ink)]"
+          className="inline-flex shrink-0 items-center gap-0 text-lg font-semibold tracking-tight text-[color:var(--ink)]"
         >
           <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-          <span className="-ml-0.5 leading-none">
-            rospectly<span className="text-[color:var(--accent)]"></span>
-          </span>
+          <span className="-ml-0.5 leading-none">rospectly</span>
         </Link>
 
         <nav className="ml-2 hidden items-center gap-0.5 lg:flex" aria-label={t('nav.mainNav')}>
@@ -196,11 +194,9 @@ export function TopNav() {
           />
           <aside className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] backdrop-blur-xl">
             <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
-              <span className="inline-flex items-center gap-0 text-lg font-bold text-[color:var(--ink)]">
+              <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
                 <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-                <span className="-ml-0.5 leading-none">
-                  rospectly<span className="text-[color:var(--accent)]">.</span>
-                </span>
+                <span className="-ml-0.5 leading-none">rospectly</span>
               </span>
               <button
                 type="button"
