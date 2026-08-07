@@ -9,7 +9,7 @@ export function readStoredTheme(): ThemeMode {
   } catch {
     /* private mode / blocked storage */
   }
-  return 'dark';
+  return 'light';
 }
 
 export function writeStoredTheme(theme: ThemeMode): void {

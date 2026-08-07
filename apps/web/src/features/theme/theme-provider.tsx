@@ -26,8 +26,8 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
-    if (typeof document === 'undefined') return 'dark';
-    return document.documentElement.classList.contains('light') ? 'light' : readStoredTheme();
+    if (typeof document === 'undefined') return 'light';
+    return document.documentElement.classList.contains('dark') ? 'dark' : readStoredTheme();
   });
 
   useEffect(() => {

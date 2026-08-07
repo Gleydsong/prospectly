@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="pt" class="dark">
+<html lang="pt" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f0ebf7" />
     <meta
       name="description"
       content="Prospectly - plataforma inteligente para prospecção de clientes locais"
@@ -14,15 +14,20 @@
       (function () {
         try {
           var t = localStorage.getItem('prospectly:theme');
-          if (t === 'light') {
+          if (t === 'dark') {
+            document.documentElement.classList.remove('light');
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+            document.documentElement.dataset.theme = 'dark';
+            var meta = document.querySelector('meta[name="color-scheme"]');
+            if (meta) meta.setAttribute('content', 'dark');
+            var theme = document.querySelector('meta[name="theme-color"]');
+            if (theme) theme.setAttribute('content', '#090a0c');
+          } else {
             document.documentElement.classList.remove('dark');
             document.documentElement.classList.add('light');
             document.documentElement.style.colorScheme = 'light';
             document.documentElement.dataset.theme = 'light';
-            var meta = document.querySelector('meta[name="color-scheme"]');
-            if (meta) meta.setAttribute('content', 'light');
-            var theme = document.querySelector('meta[name="theme-color"]');
-            if (theme) theme.setAttribute('content', '#f0ebf7');
           }
         } catch (e) {}
       })();

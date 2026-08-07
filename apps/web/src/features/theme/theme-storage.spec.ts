@@ -9,13 +9,13 @@ describe('theme-storage', () => {
     delete document.documentElement.dataset.theme;
   });
 
-  it('defaults to dark when nothing stored', () => {
-    expect(readStoredTheme()).toBe('dark');
+  it('defaults to light when nothing stored', () => {
+    expect(readStoredTheme()).toBe('light');
   });
 
-  it('persists and reads light theme', () => {
-    writeStoredTheme('light');
-    expect(readStoredTheme()).toBe('light');
+  it('persists and reads dark theme', () => {
+    writeStoredTheme('dark');
+    expect(readStoredTheme()).toBe('dark');
   });
 
   it('applyThemeClass toggles html classes and color-scheme', () => {
