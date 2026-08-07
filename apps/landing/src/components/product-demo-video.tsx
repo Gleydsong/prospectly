@@ -11,14 +11,71 @@ import {
   MapPin,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type ProductDemoVideoProps = {
   locale: 'pt' | 'en';
   className?: string;
 };
 
+const VIDEO_SRC = '/videos/product-demo-flow.mp4';
+const POSTER_SRC = '/videos/product-demo-flow-poster.png';
+
 export function ProductDemoVideo({ locale, className }: ProductDemoVideoProps) {
+  const reduceMotion = useReducedMotion();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const useVideo = !reduceMotion && !videoFailed;
+
+  useEffect(() => {
+    if (!useVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+    const play = () => {
+      void el.play().catch(() => setVideoFailed(true));
+    };
+    play();
+  }, [useVideo]);
+
+  const ariaLabel =
+    locale === 'pt'
+      ? 'Demonstração animada do fluxo claro do Prospectly'
+      : 'Animated preview of Prospectly’s clear workflow';
+
+  if (useVideo) {
+    return (
+      <div
+        className={['product-demo-motion', 'product-demo-motion--video', className]
+          .filter(Boolean)
+          .join(' ')}
+        role="img"
+        aria-label={ariaLabel}
+      >
+        <video
+          ref={videoRef}
+          className="product-demo-motion-video"
+          src={VIDEO_SRC}
+          poster={POSTER_SRC}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="metadata"
+          onError={() => setVideoFailed(true)}
+          aria-hidden
+        />
+      </div>
+    );
+  }
+
+  return <ProductDemoFallback locale={locale} className={className} ariaLabel={ariaLabel} />;
+}
+
+function ProductDemoFallback({
+  locale,
+  className,
+  ariaLabel,
+}: ProductDemoVideoProps & { ariaLabel: string }) {
   const reduceMotion = useReducedMotion();
   const [activeStep, setActiveStep] = useState(0);
 
@@ -31,33 +88,35 @@ export function ProductDemoVideo({ locale, className }: ProductDemoVideoProps) {
   }, [reduceMotion]);
 
   const steps = [
-    { label: 'Defina', title: 'Escolha seu foco', icon: Funnel },
-    { label: 'Encontre', title: 'Receba oportunidades', icon: MagnifyingGlass },
-    { label: 'Organize', title: 'Prepare o próximo passo', icon: ListChecks },
+    { label: locale === 'pt' ? 'Defina' : 'Define', title: locale === 'pt' ? 'Escolha seu foco' : 'Choose your focus', icon: Funnel },
+    { label: locale === 'pt' ? 'Encontre' : 'Find', title: locale === 'pt' ? 'Receba oportunidades' : 'Get opportunities', icon: MagnifyingGlass },
+    { label: locale === 'pt' ? 'Organize' : 'Organize', title: locale === 'pt' ? 'Prepare o próximo passo' : 'Prepare the next step', icon: ListChecks },
   ] as const;
   const current = steps[activeStep];
 
   return (
     <div
-      className={["product-demo-motion", className].filter(Boolean).join(' ')}
+      className={['product-demo-motion', className].filter(Boolean).join(' ')}
       role="img"
-      aria-label={
-        locale === 'pt'
-          ? 'Demonstração animada do fluxo claro do Prospectly'
-          : 'Animated preview of Prospectly’s clear workflow'
-      }
+      aria-label={ariaLabel}
     >
       <div className="product-demo-motion-glow" aria-hidden="true" />
       <div className="product-demo-motion-topbar">
-        <span className="product-demo-motion-brand">prospectly<span>.</span></span>
-        <span className="product-demo-motion-status"><i /> Fluxo de prospecção</span>
+        <span className="product-demo-motion-brand">
+          prospectly<span>.</span>
+        </span>
+        <span className="product-demo-motion-status">
+          <i /> {locale === 'pt' ? 'Fluxo de prospecção' : 'Prospecting flow'}
+        </span>
       </div>
       <div className="product-demo-motion-progress" aria-hidden="true">
         <motion.i animate={{ scaleX: (activeStep + 1) / steps.length }} transition={{ duration: 0.45 }} />
       </div>
       <div className="product-demo-motion-heading">
         <div>
-          <span className="product-demo-motion-eyebrow">0{activeStep + 1} · {current.label.toUpperCase()}</span>
+          <span className="product-demo-motion-eyebrow">
+            0{activeStep + 1} · {current.label.toUpperCase()}
+          </span>
           <h3>{current.title}</h3>
         </div>
         <span className="product-demo-motion-count">0{activeStep + 1} / 03</span>
@@ -71,12 +130,12 @@ export function ProductDemoVideo({ locale, className }: ProductDemoVideoProps) {
           exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
           transition={{ duration: 0.3 }}
         >
-          {activeStep === 0 ? <ProfileStep /> : null}
-          {activeStep === 1 ? <ResultsStep /> : null}
-          {activeStep === 2 ? <OrganizeStep /> : null}
+          {activeStep === 0 ? <ProfileStep locale={locale} /> : null}
+          {activeStep === 1 ? <ResultsStep locale={locale} /> : null}
+          {activeStep === 2 ? <OrganizeStep locale={locale} /> : null}
         </motion.div>
       </AnimatePresence>
-      <div className="product-demo-motion-tabs" role="tablist" aria-label="Etapas do fluxo">
+      <div className="product-demo-motion-tabs" role="tablist" aria-label={locale === 'pt' ? 'Etapas do fluxo' : 'Flow steps'}>
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
@@ -96,26 +155,82 @@ export function ProductDemoVideo({ locale, className }: ProductDemoVideoProps) {
   );
 }
 
-function ProfileStep() {
-  return <div className="product-demo-fields">
-    <div className="product-demo-field"><span>Segmento</span><strong><Buildings weight="bold" aria-hidden /> Clínicas odontológicas</strong></div>
-    <div className="product-demo-field"><span>Localização</span><strong><MapPin weight="bold" aria-hidden /> Curitiba, PR</strong></div>
-    <div className="product-demo-filter"><Funnel weight="bold" aria-hidden /> Sem website reportado <Check weight="bold" aria-hidden /></div>
-    <div className="product-demo-action">Continuar <ArrowRight weight="bold" aria-hidden /></div>
-  </div>;
+function ProfileStep({ locale }: { locale: 'pt' | 'en' }) {
+  return (
+    <div className="product-demo-fields">
+      <div className="product-demo-field">
+        <span>{locale === 'pt' ? 'Segmento' : 'Segment'}</span>
+        <strong>
+          <Buildings weight="bold" aria-hidden />{' '}
+          {locale === 'pt' ? 'Clínicas odontológicas' : 'Dental clinics'}
+        </strong>
+      </div>
+      <div className="product-demo-field">
+        <span>{locale === 'pt' ? 'Localização' : 'Location'}</span>
+        <strong>
+          <MapPin weight="bold" aria-hidden /> Curitiba, PR
+        </strong>
+      </div>
+      <div className="product-demo-filter">
+        <Funnel weight="bold" aria-hidden />{' '}
+        {locale === 'pt' ? 'Sem website reportado' : 'No website reported'}{' '}
+        <Check weight="bold" aria-hidden />
+      </div>
+      <div className="product-demo-action">
+        {locale === 'pt' ? 'Continuar' : 'Continue'} <ArrowRight weight="bold" aria-hidden />
+      </div>
+    </div>
+  );
 }
 
-function ResultsStep() {
-  return <div className="product-demo-results">
-    <div className="product-demo-result-summary"><span><MagnifyingGlass weight="bold" aria-hidden /> 18 empresas encontradas</span><strong>3 selecionadas</strong></div>
-    {['Clínica Centro Sul', 'Odonto Bairro Alto', 'Smile Estação'].map((name, index) => <div className="product-demo-result-row" key={name}><span className="product-demo-check"><Check weight="bold" aria-hidden /></span><strong>{name}</strong><small>{[92, 88, 84][index]}% alinhamento</small></div>)}
-  </div>;
+function ResultsStep({ locale }: { locale: 'pt' | 'en' }) {
+  return (
+    <div className="product-demo-results">
+      <div className="product-demo-result-summary">
+        <span>
+          <MagnifyingGlass weight="bold" aria-hidden />{' '}
+          {locale === 'pt' ? '18 empresas encontradas' : '18 businesses found'}
+        </span>
+        <strong>{locale === 'pt' ? '3 selecionadas' : '3 selected'}</strong>
+      </div>
+      {['Clínica Centro Sul', 'Odonto Bairro Alto', 'Smile Estação'].map((name, index) => (
+        <div className="product-demo-result-row" key={name}>
+          <span className="product-demo-check">
+            <Check weight="bold" aria-hidden />
+          </span>
+          <strong>{name}</strong>
+          <small>
+            {[92, 88, 84][index]}% {locale === 'pt' ? 'alinhamento' : 'fit'}
+          </small>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function OrganizeStep() {
-  return <div className="product-demo-organize">
-    <div className="product-demo-organize-head"><span>Lista qualificada</span><strong>3 leads</strong></div>
-    {['Revisar presença digital', 'Criar diagnóstico', 'Preparar abordagem'].map((task) => <div className="product-demo-task" key={task}><CheckCircle weight="fill" aria-hidden /><span>{task}</span><small>Hoje</small></div>)}
-    <div className="product-demo-next-step">Próximo passo claro <ArrowRight weight="bold" aria-hidden /></div>
-  </div>;
+function OrganizeStep({ locale }: { locale: 'pt' | 'en' }) {
+  const tasks =
+    locale === 'pt'
+      ? ['Revisar presença digital', 'Criar diagnóstico', 'Preparar abordagem']
+      : ['Review digital presence', 'Create diagnosis', 'Prepare outreach'];
+
+  return (
+    <div className="product-demo-organize">
+      <div className="product-demo-organize-head">
+        <span>{locale === 'pt' ? 'Lista qualificada' : 'Qualified list'}</span>
+        <strong>3 leads</strong>
+      </div>
+      {tasks.map((task) => (
+        <div className="product-demo-task" key={task}>
+          <CheckCircle weight="fill" aria-hidden />
+          <span>{task}</span>
+          <small>{locale === 'pt' ? 'Hoje' : 'Today'}</small>
+        </div>
+      ))}
+      <div className="product-demo-next-step">
+        {locale === 'pt' ? 'Próximo passo claro' : 'Clear next step'}{' '}
+        <ArrowRight weight="bold" aria-hidden />
+      </div>
+    </div>
+  );
 }
