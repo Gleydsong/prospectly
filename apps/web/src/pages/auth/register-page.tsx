@@ -106,7 +106,7 @@ export function RegisterPage() {
     if (offer === 'credits-2000' || offer === 'credits-5000') {
       try {
         const checkout = await createCreditCheckout({ offer });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'credits' });
         return;
       } catch {
         navigate(`/settings?offer=${offer}`, { replace: true });

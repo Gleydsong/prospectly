@@ -70,8 +70,10 @@ export function LeadsPage() {
   const meta = query.data?.meta;
 
   const applySearch = () => {
+    const term = q.trim();
     setPage(1);
-    setSearch(q.trim());
+    setSearch(term);
+    navigate(term ? `/leads?q=${encodeURIComponent(term)}` : '/leads', { replace: true });
   };
 
   const toggleExportColumn = (column: ExportableLeadColumn) => {

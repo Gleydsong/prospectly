@@ -4,6 +4,11 @@ import { Composition, Folder, Still } from 'remotion';
 import { VIDEO } from './config/dimensions';
 import { PRICING_VIDEO_DURATION } from './config/pricing-timing';
 import {
+  PRODUCT_DEMO_DURATION,
+  PRODUCT_DEMO_FPS,
+  PRODUCT_DEMO_SIZE,
+} from './config/product-demo-timing';
+import {
   CREATE_FREE_ACCOUNT_DURATION,
   HOW_TO_CREATE_ACCOUNT_DURATION,
 } from './config/signup-timing';
@@ -11,6 +16,7 @@ import { DEMO_EXTRA_FRAMES, PROMO_DURATION_IN_FRAMES, SCENE_FRAMES } from './con
 import { CreateFreeAccount } from './CreateFreeAccount';
 import { HowToCreateAccount } from './HowToCreateAccount';
 import { PricingPromo } from './PricingPromo';
+import { ProductDemoFlow } from './ProductDemoFlow';
 import { ProspectlyPromo } from './ProspectlyPromo';
 import { SocialCarousel } from './SocialCarousel';
 import {
@@ -80,6 +86,15 @@ export const RemotionRoot: React.FC = () => {
         fps={1}
         width={1080}
         height={1350}
+      />
+
+      <Composition
+        id="ProductDemoFlow"
+        component={ProductDemoFlow}
+        durationInFrames={PRODUCT_DEMO_DURATION}
+        fps={PRODUCT_DEMO_FPS}
+        width={PRODUCT_DEMO_SIZE.width}
+        height={PRODUCT_DEMO_SIZE.height}
       />
 
       <Folder name="Test-Scenes">

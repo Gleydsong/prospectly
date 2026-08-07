@@ -84,9 +84,6 @@ export function TopNav() {
 
   const runSearch = () => {
     const term = q.trim();
-    // #region agent log
-    fetch('http://127.0.0.1:7630/ingest/c7c9c504-20a7-4cfc-acc9-dd1b0f490dbf',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'db2c61'},body:JSON.stringify({sessionId:'db2c61',runId:'post-fix',hypothesisId:'A',location:'top-nav.tsx:runSearch',message:'nav search submit',data:{term,target:term?`/leads?q=${encodeURIComponent(term)}`:'/leads'},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!term) {
       navigate('/leads');
       return;
