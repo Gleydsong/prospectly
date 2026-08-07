@@ -188,7 +188,7 @@ export class BillingService {
     organizationId: string,
     offer: CreditOffer,
   ): Promise<CheckoutResult> {
-    const org = await this.requireOrg(organizationId);
+    await this.requireOrg(organizationId);
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
 
