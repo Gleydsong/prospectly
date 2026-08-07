@@ -165,18 +165,23 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   async applyWebhookEvent(payload: unknown, type: string): Promise<WebhookApplyResult> {
     const body = payload as AbacateWebhookBody;
     const eventId = body.id ?? 'unknown';
-    const data = (body.data ?? {}) as Record<string, unknown>;
+    const rawData = (body.data ?? {}) as Record<string, unknown>;
 
     switch (type) {
-      case 'transparent.completed':
+      case 'transparent.completed': {
+        // Abacate v2 nests charge fields under data.transparent (see docs samples).
+        const data = this.normalizeTransparentData(rawData);
         if (this.isCreditPayment(data)) await this.creditPurchases.completeFromWebhook(data);
         else await this.onTransparentCompleted(data);
         return { handled: true, eventId, type };
+      }
       case 'transparent.refunded':
-      case 'transparent.lost':
+      case 'transparent.lost': {
+        const data = this.normalizeTransparentData(rawData);
         if (this.isCreditPayment(data)) await this.creditPurchases.refundFromWebhook(data);
         else await this.onTransparentRevoked(data, type);
         return { handled: true, eventId, type };
+      }
       case 'subscription.completed':
       case 'subscription.renewed':
         await this.onSubscriptionActive(data);
@@ -399,7 +404,48 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     return out;
   }
 
+  /**
+   * Abacate webhook v2 puts the charge under `data.transparent` and often omits
+   * `metadata` entirely. Flatten so id/externalId/metadata resolve consistently
+   * with our legacy flat fixtures and create-response shape.
+   */
+  private normalizeTransparentData(data: Record<string, unknown>): Record<string, unknown> {
+    const nested = data.transparent;
+    if (!nested || typeof nested !== 'object' || Array.isArray(nested)) {
+      return data;
+    }
+    const charge = nested as Record<string, unknown>;
+    const { transparent: _nested, ...rest } = data;
+    const nestedMeta =
+      charge.metadata && typeof charge.metadata === 'object' && !Array.isArray(charge.metadata)
+        ? (charge.metadata as Record<string, unknown>)
+        : {};
+    const topMeta =
+      rest.metadata && typeof rest.metadata === 'object' && !Array.isArray(rest.metadata)
+        ? (rest.metadata as Record<string, unknown>)
+        : {};
+    return {
+      ...charge,
+      ...rest,
+      id: typeof charge.id === 'string' ? charge.id : rest.id,
+      externalId:
+        typeof charge.externalId === 'string'
+          ? charge.externalId
+          : typeof rest.externalId === 'string'
+            ? rest.externalId
+            : undefined,
+      metadata: { ...nestedMeta, ...topMeta },
+    };
+  }
+
   private isCreditPayment(data: Record<string, unknown>): boolean {
-    return Boolean(this.readMetadata(data).purchaseId);
+    const metadata = this.readMetadata(data);
+    if (metadata.purchaseId) return true;
+    if (metadata.offer?.startsWith('credits-')) return true;
+    // Official transparent.* samples omit metadata; credit checkouts use this externalId shape.
+    if (typeof data.externalId === 'string' && /^org:[^:]+:credits:/.test(data.externalId)) {
+      return true;
+    }
+    return false;
   }
 }
