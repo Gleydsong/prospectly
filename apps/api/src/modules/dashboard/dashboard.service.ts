@@ -350,7 +350,7 @@ export class DashboardService {
       items.push({
         code: 'FREE_SEARCH_QUOTA',
         count: Math.max(0, FREE_SEARCH_LIMIT - input.searchCount),
-        href: '/settings',
+        href: '/credits',
         severity: input.searchCount >= FREE_SEARCH_LIMIT ? 'warning' : 'info',
       });
     }

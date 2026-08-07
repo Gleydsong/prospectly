@@ -135,7 +135,7 @@ export class ProspectingService {
 
     if (typeof this.billing.consumeCreditForSearch === 'function') {
       try {
-        await this.billing.consumeCreditForSearch(organizationId);
+        await this.billing.consumeCreditForSearch(organizationId, search.id);
       } catch (error) {
         await this.prisma.search.delete({ where: { id: search.id } }).catch(() => undefined);
         throw error;

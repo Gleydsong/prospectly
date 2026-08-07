@@ -51,7 +51,10 @@ function createService(overrides: Record<string, unknown> = {}) {
     resolve: jest.fn(() => provider),
   };
   const ingestion = { ingest: jest.fn() };
-  const billing = { assertCanCreateSearch: jest.fn().mockResolvedValue(undefined) };
+  const billing = {
+    assertCanCreateSearch: jest.fn().mockResolvedValue(undefined),
+    consumeCreditForSearch: jest.fn().mockResolvedValue(undefined),
+  };
 
   return {
     prisma,
@@ -72,13 +75,14 @@ function createService(overrides: Record<string, unknown> = {}) {
 
 describe('ProspectingService', () => {
   it('creates a pending search and queues a durable job using the search id', async () => {
-    const { prisma, queue, service } = createService();
+    const { prisma, queue, service, billing } = createService();
     const search = { id: 'search-1', status: 'PENDING' };
     prisma.search.create.mockResolvedValue(search);
     queue.add.mockResolvedValue(undefined);
 
     await expect(service.create('org-1', 'user-1', searchInput)).resolves.toEqual(search);
 
+    expect(billing.consumeCreditForSearch).toHaveBeenCalledWith('org-1', 'search-1');
     expect(prisma.search.create).toHaveBeenCalledWith({
       data: {
         organizationId: 'org-1',
