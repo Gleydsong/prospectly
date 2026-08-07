@@ -21,6 +21,40 @@ function initials(name: string | undefined): string {
     .join('');
 }
 
+function UserAvatar({
+  name,
+  avatarUrl,
+  label,
+}: {
+  name?: string;
+  avatarUrl?: string | null;
+  label: string;
+}) {
+  const [broken, setBroken] = useState(false);
+  const showPhoto = Boolean(avatarUrl) && !broken;
+
+  return (
+    <Link
+      to="/settings"
+      className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--ink)] text-xs font-bold text-white ring-1 ring-[color:var(--border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+      title={name}
+      aria-label={label}
+    >
+      {showPhoto ? (
+        <img
+          src={avatarUrl!}
+          alt=""
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <span aria-hidden>{initials(name)}</span>
+      )}
+    </Link>
+  );
+}
+
 export function TopNav() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -148,13 +182,11 @@ export function TopNav() {
           <Bell className="h-4 w-4" aria-hidden />
         </button>
 
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--ink)] text-xs font-bold text-white"
-          aria-hidden
-          title={user?.name}
-        >
-          {initials(user?.name)}
-        </div>
+        <UserAvatar
+          name={user?.name}
+          avatarUrl={user?.avatarUrl}
+          label={t('nav.account', { name: user?.name ?? '' })}
+        />
 
         <button
           type="button"

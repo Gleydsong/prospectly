@@ -16,7 +16,11 @@ vi.mock('@/features/billing/api', () => ({
 
 vi.mock('@/stores/auth.store', () => ({
   useAuthStore: () => ({
-    user: { name: 'Test User', organizationName: 'Org' },
+    user: {
+      name: 'Test User',
+      organizationName: 'Org',
+      avatarUrl: 'https://example.com/avatar.jpg',
+    },
     clear: vi.fn(),
   }),
 }));
@@ -40,5 +44,22 @@ describe('TopNav', () => {
 
     expect(screen.getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
     expect(screen.getByRole('navigation', { name: /navegação principal|main navigation/i })).toBeInTheDocument();
+  });
+
+  it('shows user avatar photo when avatarUrl is present', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    const avatar = screen.getByRole('link', { name: /conta de test user|test user's account/i });
+    expect(avatar).toHaveAttribute('href', '/settings');
+    expect(avatar.querySelector('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
   });
 });

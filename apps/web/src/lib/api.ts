@@ -78,9 +78,10 @@ export function getApiErrorMessage(error: unknown): string {
 }
 
 export async function bootstrapSession(): Promise<boolean> {
-  const { accessToken, user, setAuth, setBootstrapped, clear } = useAuthStore.getState();
+  const { accessToken, user, setAuth, setBootstrapped, updateUser, clear } = useAuthStore.getState();
   if (accessToken) {
     setBootstrapped(true);
+    void syncProfileAvatar(updateUser);
     return true;
   }
   if (!user) {
@@ -98,10 +99,30 @@ export async function bootstrapSession(): Promise<boolean> {
     );
     setAuth({ user, accessToken: response.data.accessToken });
     setBootstrapped(true);
+    void syncProfileAvatar(updateUser);
     return true;
   } catch {
     clear();
     setBootstrapped(true);
     return false;
+  }
+}
+
+async function syncProfileAvatar(
+  updateUser: (patch: Partial<{ avatarUrl?: string | null; name?: string; emailVerifiedAt?: string | null }>) => void,
+): Promise<void> {
+  try {
+    const { data } = await api.get<{
+      avatarUrl?: string | null;
+      name?: string;
+      emailVerifiedAt?: string | null;
+    }>('/users/me');
+    updateUser({
+      avatarUrl: data.avatarUrl ?? null,
+      ...(data.name ? { name: data.name } : {}),
+      emailVerifiedAt: data.emailVerifiedAt ?? null,
+    });
+  } catch {
+    /* ignore — avatar stays as cached */
   }
 }

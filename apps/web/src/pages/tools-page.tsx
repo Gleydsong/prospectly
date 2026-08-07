@@ -34,19 +34,21 @@ function ToolCard({
   openLabel: string;
 }) {
   return (
-    <Card className="flex h-full flex-col transition-colors hover:border-white/20">
-      <CardContent className="flex h-full flex-col p-5">
-        <h3 className="text-base font-bold tracking-tight text-zinc-50">{title}</h3>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-400">{description}</p>
-        <Link
-          to={to}
-          className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-zinc-300 hover:text-zinc-50"
-        >
-          {openLabel}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
-      </CardContent>
-    </Card>
+    <Link
+      to={to}
+      className="group block h-full rounded-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)]"
+    >
+      <Card interactive className="h-full">
+        <CardContent className="flex h-full flex-col p-5">
+          <h3 className="text-base font-bold tracking-tight text-[color:var(--ink)]">{title}</h3>
+          <p className="mt-2 flex-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">{description}</p>
+          <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--accent)] transition-colors group-hover:text-[color:var(--accent-hover)]">
+            {openLabel}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
@@ -62,11 +64,11 @@ export function ToolsPage() {
       />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold text-zinc-50">{t('tools.quickAccess')}</h2>
+        <h2 className="text-sm font-bold text-[color:var(--ink)]">{t('tools.quickAccess')}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {QUICK.map((tool) => (
             <ToolCard
-              key={tool.to}
+              key={`quick-${tool.to}`}
               to={tool.to}
               title={t(tool.titleKey)}
               description={t(tool.descKey)}
@@ -77,7 +79,7 @@ export function ToolsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-bold text-zinc-50">{t('tools.available')}</h2>
+        <h2 className="text-sm font-bold text-[color:var(--ink)]">{t('tools.available')}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {ALL.map((tool) => (
             <ToolCard

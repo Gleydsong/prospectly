@@ -20,12 +20,15 @@ export function EmailVerificationBanner() {
   if (!user || verified) return null;
 
   return (
-    <div className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 lg:px-6">
+    <div className="border-b border-amber-500/60 bg-amber-200 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100 lg:px-6">
       <div className="flex flex-wrap items-center gap-3">
-        <Mail className="h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+        <Mail className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
         <p className="min-w-0 flex-1">
           {t('auth.verifyBanner', { email: user.email })}{' '}
-          <Link to="/settings#email" className="underline underline-offset-2 hover:text-white">
+          <Link
+            to="/settings#email"
+            className="font-medium text-amber-900 underline underline-offset-2 hover:text-amber-700 dark:text-inherit dark:hover:text-white"
+          >
             {t('auth.verifyBannerLink')}
           </Link>
         </p>
@@ -39,7 +42,7 @@ export function EmailVerificationBanner() {
           {resend.isSuccess ? t('auth.verifyResent') : t('auth.verifyResend')}
         </Button>
         {resend.isError ? (
-          <span className="text-xs text-red-300" role="alert">
+          <span className="text-xs text-red-700 dark:text-red-300" role="alert">
             {getApiErrorMessage(resend.error)}
           </span>
         ) : null}
