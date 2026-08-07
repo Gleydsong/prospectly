@@ -46,4 +46,15 @@ export class AgentsWhatsappVariantsDto {
   @Min(3)
   @Max(5)
   count?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Generation seed so "Gerar de novo" rotates fallback packs / Ollama wording. Default 0.',
+    default: 0,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  seed?: number;
 }

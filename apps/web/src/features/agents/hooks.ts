@@ -41,10 +41,10 @@ export function useWhatsappFirstMessage(leadId: string | undefined, templateId: 
   });
 }
 
-export function useWhatsappVariants(leadId: string | undefined, count = 4) {
+export function useWhatsappVariants(leadId: string | undefined, count = 4, seed = 0) {
   return useQuery({
-    queryKey: ['agents', 'whatsapp', 'variants', leadId, count],
-    queryFn: () => fetchWhatsappVariants({ leadId: leadId!, count }),
+    queryKey: ['agents', 'whatsapp', 'variants', leadId, count, seed],
+    queryFn: () => fetchWhatsappVariants({ leadId: leadId!, count, seed }),
     enabled: Boolean(leadId),
   });
 }

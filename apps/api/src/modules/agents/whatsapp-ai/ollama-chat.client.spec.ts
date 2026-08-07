@@ -5,7 +5,7 @@ describe('OllamaChatClient', () => {
     companyName: 'Acme',
     city: 'Recife',
     segment: 'Food',
-    ownerName: 'Ana',
+    senderName: 'Ana',
   };
 
   afterEach(() => {
