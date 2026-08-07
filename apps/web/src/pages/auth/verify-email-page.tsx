@@ -6,7 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/features/theme/theme-toggle';
-import { verifyEmail } from '@/features/auth/api';
+import { resendVerification, verifyEmail } from '@/features/auth/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -28,6 +28,10 @@ export function VerifyEmailPage() {
       setStatus('ok');
     },
     onError: () => setStatus('error'),
+  });
+
+  const resend = useMutation({
+    mutationFn: resendVerification,
   });
 
   useEffect(() => {
@@ -72,9 +76,20 @@ export function VerifyEmailPage() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2">
-          <Button className="w-full" size="lg" onClick={() => window.location.reload()}>
-            {t('auth.resendLink')}
+          <Button
+            className="w-full"
+            size="lg"
+            loading={resend.isPending}
+            disabled={resend.isPending}
+            onClick={() => resend.mutate()}
+          >
+            {resend.isSuccess ? t('auth.verifyResent') : t('auth.resendLink')}
           </Button>
+          {resend.isError ? (
+            <p className="text-center text-xs text-red-400" role="alert">
+              {getApiErrorMessage(resend.error)}
+            </p>
+          ) : null}
           <Link
             to="/login"
             className="inline-flex h-11 w-full items-center justify-center rounded-control border border-[color:var(--border)] text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)]"
