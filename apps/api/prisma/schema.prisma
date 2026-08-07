@@ -161,6 +161,16 @@ enum CreditPurchaseStatus {
   FAILED
 }
 
+/// Reasons for credit balance movements. SEARCH_CONSUME + SIGNUP_BONUS are wired today;
+/// PURCHASE/REFUND reserved for purchase ledger; AI_CONSUME for future AI billing.
+enum CreditLedgerReason {
+  SEARCH_CONSUME
+  SIGNUP_BONUS
+  PURCHASE
+  REFUND
+  AI_CONSUME
+}
+
 // ---------- Identity & tenancy ----------
 
 model User {
@@ -221,7 +231,7 @@ model Organization {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
   deletedAt             DateTime?
-  creditBalance         Int              @default(0)
+  creditBalance         Int              @default(400)
 
   members      OrganizationMember[]
   leads        Lead[]
@@ -240,6 +250,7 @@ model Organization {
   auditLogs          AuditLog[]
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -647,6 +658,7 @@ model Search {
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   results      SearchResult[]
+  creditLedgerEntries CreditLedgerEntry[]
 
   @@index([organizationId, createdAt])
   @@index([status, jobDispatchedAt])
@@ -876,9 +888,35 @@ model CreditPurchase {
   updatedAt         DateTime              @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ledgerEntries CreditLedgerEntry[]
 
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
+}
+
+/// Append-only ledger of credit balance changes (audit of consumo / future purchase+AI).
+model CreditLedgerEntry {
+  id             String             @id @default(uuid())
+  organizationId String
+  reason         CreditLedgerReason
+  /// Negative for consumption, positive for credit.
+  delta          Int
+  balanceAfter   Int
+  searchId       String?
+  purchaseId     String?
+  idempotencyKey String
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  search       Search?        @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  purchase     CreditPurchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, reason, createdAt])
+  @@index([searchId])
+  @@index([purchaseId])
 }
 
 /// Public product waitlist (landing signup — not org CRM leads).

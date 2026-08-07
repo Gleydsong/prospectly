@@ -103,23 +103,50 @@ export class BillingService {
     }
   }
 
-  async consumeCreditForSearch(organizationId: string): Promise<void> {
+  async consumeCreditForSearch(organizationId: string, searchId: string): Promise<void> {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) return;
 
     const searchCount = await this.prisma.search.count({ where: { organizationId } });
     if (searchCount <= FREE_SEARCH_LIMIT) return;
 
-    const consumed = await this.prisma.organization.updateMany({
-      where: { id: organizationId, creditBalance: { gt: 0 } },
-      data: { creditBalance: { decrement: 1 } },
-    });
-    if (consumed.count !== 1) {
-      throw new ForbiddenException({
-        code: 'ENTITLEMENT_CREDITS',
-        message: 'No credits remaining. Purchase a credit package to continue.',
+    const idempotencyKey = `search-consume:${searchId}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.creditLedgerEntry.findUnique({
+        where: {
+          organizationId_idempotencyKey: { organizationId, idempotencyKey },
+        },
       });
-    }
+      if (existing) return;
+
+      const consumed = await tx.organization.updateMany({
+        where: { id: organizationId, creditBalance: { gt: 0 } },
+        data: { creditBalance: { decrement: 1 } },
+      });
+      if (consumed.count !== 1) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_CREDITS',
+          message: 'No credits remaining. Purchase a credit package to continue.',
+        });
+      }
+
+      const updated = await tx.organization.findFirstOrThrow({
+        where: { id: organizationId },
+        select: { creditBalance: true },
+      });
+
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId,
+          reason: 'SEARCH_CONSUME',
+          delta: -1,
+          balanceAfter: updated.creditBalance,
+          searchId,
+          idempotencyKey,
+        },
+      });
+    });
   }
 
   async createCheckoutSession(

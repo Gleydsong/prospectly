@@ -15,7 +15,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { MailService } from '../../common/mail/mail.service';
-import { TERMS_VERSION } from '../billing/billing.constants';
+import { SIGNUP_BONUS_CREDITS, TERMS_VERSION } from '../billing/billing.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
@@ -576,7 +576,21 @@ export class AuthService {
 
     return this.prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
-        data: { name: input.organizationName, slug },
+        data: {
+          name: input.organizationName,
+          slug,
+          creditBalance: SIGNUP_BONUS_CREDITS,
+        },
+      });
+
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId: organization.id,
+          reason: 'SIGNUP_BONUS',
+          delta: SIGNUP_BONUS_CREDITS,
+          balanceAfter: SIGNUP_BONUS_CREDITS,
+          idempotencyKey: `signup-bonus:${organization.id}`,
+        },
       });
 
       const createdUser = await tx.user.create({

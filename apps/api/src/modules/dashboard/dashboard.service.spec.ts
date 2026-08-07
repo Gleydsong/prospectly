@@ -75,7 +75,7 @@ describe('DashboardService', () => {
         expect.objectContaining({ code: 'HIGH_POTENTIAL_IDLE', count: 3, href: '/leads?status=QUALIFIED' }),
         expect.objectContaining({ code: 'STALE_LEADS', count: 2 }),
         expect.objectContaining({ code: 'OVERDUE_FOLLOW_UPS', count: 1 }),
-        expect.objectContaining({ code: 'FREE_SEARCH_QUOTA' }),
+        expect.objectContaining({ code: 'FREE_SEARCH_QUOTA', href: '/credits' }),
       ]),
     );
     expect(result.rates.period).toBe('7d');

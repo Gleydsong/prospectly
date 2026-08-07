@@ -42,6 +42,7 @@ const makePrisma = () => {
     },
     pipeline: { create: jest.fn() },
     pipelineStage: { createMany: jest.fn() },
+    creditLedgerEntry: { create: jest.fn().mockResolvedValue({}) },
     refreshToken: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -163,6 +164,22 @@ describe('AuthService', () => {
         data: expect.objectContaining({ locale: 'en' }),
       }),
     );
+    expect(orgCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: 'Agency',
+        creditBalance: 400,
+      }),
+    });
+    expect(
+      (prisma as unknown as { creditLedgerEntry: { create: jest.Mock } }).creditLedgerEntry.create,
+    ).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reason: 'SIGNUP_BONUS',
+        delta: 400,
+        balanceAfter: 400,
+        idempotencyKey: 'signup-bonus:org1',
+      }),
+    });
     expect(result.user.locale).toBe('en');
   });
 
@@ -409,6 +426,11 @@ describe('AuthService', () => {
         }),
       }),
     );
+    expect(orgCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        creditBalance: 400,
+      }),
+    });
     expect(result.user.organizationId).toBe('org-g');
     expect(result.accessToken).toBe('token');
   });
