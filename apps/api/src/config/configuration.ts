@@ -88,8 +88,9 @@ export const configuration = () => ({
   whatsappAi: {
     enabled: process.env.WHATSAPP_AI_ENABLED !== 'false',
     baseUrl: process.env.WHATSAPP_AI_BASE_URL ?? 'http://127.0.0.1:11434',
-    model: process.env.WHATSAPP_AI_MODEL ?? 'llama3.2',
-    timeoutMs: parseInt(process.env.WHATSAPP_AI_TIMEOUT_MS ?? '8000', 10),
+    // Qwen3 is stronger for PT-BR prospecting copy than llama3.2; override via WHATSAPP_AI_MODEL.
+    model: process.env.WHATSAPP_AI_MODEL ?? 'qwen3:8b',
+    timeoutMs: parseInt(process.env.WHATSAPP_AI_TIMEOUT_MS ?? '30000', 10),
     apiKey: process.env.WHATSAPP_AI_API_KEY ?? '',
   },
 });
