@@ -28,6 +28,17 @@ test.describe('landing routes', () => {
 });
 
 test.describe('landing navigation', () => {
+  test('home shows only the V2 header (no legacy SiteHeader)', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toHaveCount(1);
+    await expect(page.getByRole('banner')).toHaveCount(1);
+    await expect(page.getByRole('link', { name: 'Preços', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Início', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Como funciona', exact: true }),
+    ).toBeVisible();
+  });
+
   test('desktop navigation opens the benefits page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop navigation is covered in the desktop project');
     await page.goto('/');
