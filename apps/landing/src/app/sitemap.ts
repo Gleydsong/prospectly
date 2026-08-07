@@ -38,6 +38,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.9,
     },
+    ...['beneficios', 'para-quem-e', 'duvidas'].map((path) => ({
+      url: `${base}/v2/${path}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
   );
 
   for (const path of intentPaths) {
