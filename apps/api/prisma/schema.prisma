@@ -236,6 +236,7 @@ model Organization {
   campaignActivities CampaignActivity[]
   scoreConfigs       ScoreConfiguration[]
   integrations       Integration[]
+  pluginTokens       PluginToken[]
   auditLogs          AuditLog[]
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
@@ -810,6 +811,22 @@ model Integration {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, provider])
+}
+
+model PluginToken {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  tokenHash      String    @unique
+  tokenPrefix    String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, revokedAt])
 }
 
 model AuditLog {

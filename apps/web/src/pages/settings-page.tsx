@@ -34,17 +34,21 @@ import {
   type InviteRole,
   type OrgMember,
 } from '@/features/organizations/api';
-import { fetchIntegrations, upsertWebhookIntegration } from '@/features/integrations/api';
+import {
+  createPluginToken,
+  fetchPluginTokens,
+  revokePluginToken,
+  upsertWebhookIntegration,
+} from '@/features/integrations/api';
 import { setAppLocale } from '@/i18n';
 import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
 import { assignStripeRedirect } from '@/lib/safe-url';
-import { cn, formatDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
 
-const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
 const INVITE_ROLES: InviteRole[] = [Role.ADMIN, Role.SALES, Role.MEMBER, Role.VIEWER];
 
 function canManageOrg(role: Role | string | undefined): boolean {
@@ -183,46 +187,55 @@ function InviteMemberModal({
 function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [pluginName, setPluginName] = useState('Meu agente de prospecção');
+  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [pluginError, setPluginError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [url, setUrl] = useState('');
   const [label, setLabel] = useState('');
   const [enabled, setEnabled] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [webhookMessage, setWebhookMessage] = useState<string | null>(null);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
 
-  const integrations = useQuery({
-    queryKey: ['integrations'],
-    queryFn: fetchIntegrations,
+  const tokens = useQuery({
+    queryKey: ['plugin-tokens'],
+    queryFn: fetchPluginTokens,
     enabled: canManage,
   });
 
-  const webhook = integrations.data?.find((row) => row.provider === 'WEBHOOK');
-  const webhookId = webhook?.id;
-  const webhookUrl = webhook?.url ?? '';
-  const webhookLabel = webhook?.label ?? '';
-  const webhookEnabled = webhook?.status === 'ENABLED';
+  const createToken = useMutation({
+    mutationFn: () => createPluginToken(pluginName),
+    onSuccess: async (data) => {
+      setGeneratedToken(data.token);
+      setPluginError(null);
+      await queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] });
+    },
+    onError: () => setPluginError(t('settings.pluginKeyError')),
+  });
 
   useEffect(() => {
-    if (!webhookId) return;
-    setUrl(webhookUrl);
-    setLabel(webhookLabel);
-    setEnabled(webhookEnabled);
-  }, [webhookId, webhookUrl, webhookLabel, webhookEnabled]);
+    if (!generatedToken) return undefined;
+    const timeout = window.setTimeout(() => {
+      setGeneratedToken(null);
+      setCopied(false);
+    }, 15_000);
+    return () => window.clearTimeout(timeout);
+  }, [generatedToken]);
 
-  const save = useMutation({
-    mutationFn: () =>
-      upsertWebhookIntegration({
-        url: url.trim(),
-        label: label.trim() || undefined,
-        enabled,
-      }),
-    onSuccess: async () => {
-      setMessage(t('settings.webhookSaved'));
-      setError(null);
-      await queryClient.invalidateQueries({ queryKey: ['integrations'] });
+  const revokeToken = useMutation({
+    mutationFn: revokePluginToken,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] }),
+  });
+
+  const saveWebhook = useMutation({
+    mutationFn: () => upsertWebhookIntegration({ url: url.trim(), label: label.trim() || undefined, enabled }),
+    onSuccess: () => {
+      setWebhookMessage(t('settings.webhookSaved'));
+      setWebhookError(null);
     },
     onError: (err) => {
-      setMessage(null);
-      setError(getApiErrorMessage(err) || t('settings.webhookError'));
+      setWebhookMessage(null);
+      setWebhookError(getApiErrorMessage(err) || t('settings.webhookError'));
     },
   });
 
@@ -230,54 +243,74 @@ function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
 
   return (
     <Card>
-      <CardHeader title={t('settings.integrationsTitle')} description={t('settings.integrationsDesc')} />
-      <CardContent className="space-y-4">
-        {integrations.isLoading ? (
-          <Skeleton className="h-24" />
-        ) : (
-          <>
-            {!webhook && !url ? (
-              <p className="text-sm text-zinc-500">{t('settings.webhookEmpty')}</p>
-            ) : null}
+      <CardHeader title={t('settings.pluginsTitle')} description={t('settings.pluginsDesc')} />
+      <CardContent className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ['Cursor', t('settings.pluginCursor')],
+            ['Codex', t('settings.pluginCodex')],
+            ['Notion', t('settings.pluginNotion')],
+            [t('settings.pluginAgents'), t('settings.pluginAgentsDesc')],
+          ].map(([name, description]) => (
+            <div key={name} className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-3">
+              <p className="text-sm font-semibold text-[color:var(--ink)]">{name}</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--ink-muted)]">{description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-card)] p-4">
+          <div className="flex flex-wrap items-end gap-3">
             <Input
-              label={t('settings.webhookUrl')}
-              type="url"
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://hooks.example.com/prospectly"
-              required
+              className="min-w-[min(100%,22rem)] flex-1"
+              label={t('settings.pluginName')}
+              value={pluginName}
+              onChange={(event) => setPluginName(event.target.value)}
+              maxLength={80}
             />
-            <Input
-              label={t('settings.webhookLabel')}
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              maxLength={120}
-            />
-            <label className="flex items-center gap-2 text-sm text-zinc-200">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
-                checked={enabled}
-                onChange={(event) => setEnabled(event.target.checked)}
-              />
+            <Button type="button" loading={createToken.isPending} disabled={!pluginName.trim()} onClick={() => createToken.mutate()}>
+              {t('settings.generatePluginKey')}
+            </Button>
+          </div>
+          {pluginError ? <p className="mt-3 text-sm text-red-700" role="alert">{pluginError}</p> : null}
+          {generatedToken ? (
+            <div className="mt-4 rounded-control border border-sky-200 bg-sky-50 p-3">
+              <p className="text-sm font-semibold text-sky-900">{t('settings.pluginKeyCreated')}</p>
+              <p className="mt-1 text-xs text-sky-800">{t('settings.pluginKeyWarning')}</p>
+              <div className="mt-3 flex gap-2">
+                <code className="min-w-0 flex-1 overflow-x-auto rounded-control bg-white px-3 py-2 text-xs text-slate-700">{generatedToken}</code>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void navigator.clipboard.writeText(generatedToken).then(() => setCopied(true))}>
+                  {copied ? t('settings.copied') : t('settings.copyPluginKey')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {!tokens.isLoading && tokens.data?.length ? (
+            <div className="mt-4 space-y-2 border-t border-[color:var(--border)] pt-4">
+              {tokens.data.map((token) => (
+                <div key={token.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                  <span className="text-[color:var(--ink)]">{token.name} <code className="text-xs text-[color:var(--ink-muted)]">{token.tokenPrefix}</code></span>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => revokeToken.mutate(token.id)}>{t('settings.revokePluginKey')}</Button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <details className="rounded-panel border border-[color:var(--border)] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">{t('settings.webhookSection')}</summary>
+          <div className="mt-4 space-y-4">
+            <Input label={t('settings.webhookUrl')} type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://hooks.example.com/prospectly" />
+            <Input label={t('settings.webhookLabel')} value={label} onChange={(event) => setLabel(event.target.value)} maxLength={120} />
+            <label className="flex items-center gap-2 text-sm text-[color:var(--ink-muted)]">
+              <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
               {enabled ? t('settings.webhookEnabled') : t('settings.webhookDisabled')}
             </label>
-            {message ? <p className="text-sm text-brand-300">{message}</p> : null}
-            {error ? (
-              <p className="text-sm text-red-300" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              loading={save.isPending}
-              disabled={!url.trim()}
-              onClick={() => save.mutate()}
-            >
-              {t('settings.webhookSave')}
-            </Button>
-          </>
-        )}
+            {webhookMessage ? <p className="text-sm text-emerald-700">{webhookMessage}</p> : null}
+            {webhookError ? <p className="text-sm text-red-700" role="alert">{webhookError}</p> : null}
+            <Button type="button" loading={saveWebhook.isPending} disabled={!url.trim()} onClick={() => saveWebhook.mutate()}>{t('settings.webhookSave')}</Button>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );
@@ -334,9 +367,6 @@ export function SettingsPage() {
         updateUser({
           email: profile.email,
           emailVerifiedAt: profile.emailVerifiedAt ?? null,
-          name: profile.name,
-          locale: profile.locale,
-          avatarUrl: profile.avatarUrl,
         });
       })
       .catch(() => undefined);
@@ -420,7 +450,11 @@ export function SettingsPage() {
 
   const creditCheckout = useMutation({
     mutationFn: (offer: 'credits-2000' | 'credits-5000') => createCreditCheckout({ offer }),
-    onSuccess: (data) => handleCheckoutResult(data),
+    onSuccess: (data) =>
+      handleCheckoutResult(data, {
+        purpose: 'credits',
+        baselineCreditBalance: billing.data?.creditBalance ?? 0,
+      }),
     onError: () => setBillingError(t('settings.billingError')),
   });
 
@@ -498,7 +532,6 @@ export function SettingsPage() {
     (avatarPreview ?? null) !== (user?.avatarUrl ?? null);
 
   const orgDirty = orgName.trim() !== (orgQuery.data?.name ?? user?.organizationName ?? '');
-  const isActive = billing.data?.planStatus === 'ACTIVE';
   const confirmWord = i18n.language.startsWith('en') ? 'DELETE' : 'EXCLUIR';
 
   return (
@@ -511,8 +544,8 @@ export function SettingsPage() {
       <Card>
         <CardHeader title={t('settings.profileTitle')} description={t('settings.profileDesc')} />
         <CardContent className="space-y-5">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative">
+          <div className="space-y-5">
+            <div className="relative mx-auto w-fit">
               <div
                 className={cn(
                   'flex h-20 w-20 items-center justify-center overflow-hidden rounded-full',
@@ -541,7 +574,7 @@ export function SettingsPage() {
                 onChange={(event) => void onPickAvatar(event.target.files?.[0])}
               />
             </div>
-            <div className="min-w-0 flex-1 space-y-3">
+            <div className="space-y-3">
               <Input
                 label={t('settings.memberName')}
                 value={name}
@@ -650,34 +683,21 @@ export function SettingsPage() {
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader title={t('settings.billingTitle')} description={t('settings.billingDesc')} />
+        <CardHeader title={t('settings.creditsTitle')} />
         <CardContent className="space-y-4">
           {billing.isLoading ? (
             <Skeleton className="h-16" />
           ) : (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4 text-sm text-[color:var(--ink-muted)]">
-              <span>
-                <span className="text-[color:var(--ink-muted)]">{t('settings.planLabel')}: </span>
-                <strong className="text-[color:var(--ink)]">{billing.data?.plan ?? 'FREE'}</strong>
-              </span>
-              <Badge tone={isActive ? 'brand' : 'slate'}>
-                {billing.data?.planStatus ?? 'INACTIVE'}
-              </Badge>
-              {billing.data?.planCurrency ? (
-                <span className="text-[color:var(--ink-muted)]">{billing.data.planCurrency}</span>
-              ) : null}
-              {!isActive ? (
-                <span className="text-[color:var(--ink-muted)]">
-                  {t('settings.freeSearches', { count: billing.data?.freeSearchLimit ?? 3 })}
-                </span>
-              ) : null}
-              {billing.data?.currentPeriodEnd ? (
-                <span className="text-[color:var(--ink-muted)]">
-                  {t('settings.periodEnd', {
-                    date: formatDate(billing.data.currentPeriodEnd),
-                  })}
-                </span>
-              ) : null}
+            <div className="flex items-center justify-between gap-4 rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
+              <div>
+                <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.availableCredits')}</p>
+                <p className="mt-1 text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
+                  {billing.data?.creditBalance ?? 0}
+                </p>
+              </div>
+              <p className="max-w-[15rem] text-right text-xs leading-5 text-[color:var(--ink-muted)]">
+                {t('settings.creditsUsageHint')}
+              </p>
             </div>
           )}
 
@@ -761,14 +781,6 @@ export function SettingsPage() {
                 {t('settings.cancelSubscription')}
               </Button>
             ) : null}
-            <a
-              className="inline-flex items-center text-sm font-medium text-brand-400 hover:text-brand-300"
-              href={`${LANDING_URL}/pricing`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t('settings.viewPricing')}
-            </a>
           </div>
           {!emailVerified && !creditPurchaseOpen ? <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p> : null}
         </CardContent>

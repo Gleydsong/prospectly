@@ -68,10 +68,9 @@ export function TopNav() {
     staleTime: 60_000,
   });
 
-  const creditsLabel =
-    billing.data?.plan === 'FREE'
-      ? t('nav.creditsFree', { count: billing.data.freeSearchLimit ?? 3 })
-      : t('nav.creditsPlan', { plan: billing.data?.plan ?? '—' });
+  const creditsLabel = t('nav.creditsBalance', {
+    count: billing.data?.creditBalance ?? 0,
+  });
 
   const handleLogout = async () => {
     try {
@@ -85,6 +84,9 @@ export function TopNav() {
 
   const runSearch = () => {
     const term = q.trim();
+    // #region agent log
+    fetch('http://127.0.0.1:7630/ingest/c7c9c504-20a7-4cfc-acc9-dd1b0f490dbf',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'db2c61'},body:JSON.stringify({sessionId:'db2c61',runId:'post-fix',hypothesisId:'A',location:'top-nav.tsx:runSearch',message:'nav search submit',data:{term,target:term?`/leads?q=${encodeURIComponent(term)}`:'/leads'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!term) {
       navigate('/leads');
       return;
@@ -143,7 +145,7 @@ export function TopNav() {
         <div className="flex-1" />
 
         <form
-          className="relative hidden w-full max-w-[220px] sm:block"
+          className="relative hidden w-[220px] shrink-0 sm:block"
           onSubmit={(event) => {
             event.preventDefault();
             runSearch();
@@ -164,7 +166,7 @@ export function TopNav() {
 
         <Link
           to="/settings"
-          className="hidden items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-200 sm:inline-flex"
+          className="hidden items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm sm:inline-flex"
           title={t('nav.credits')}
         >
           <Coins className="h-3.5 w-3.5" aria-hidden />
@@ -175,9 +177,11 @@ export function TopNav() {
 
         <button
           type="button"
-          className="theme-toggle-ios hidden h-10 w-10 items-center justify-center sm:inline-flex"
+          className="theme-toggle-ios hidden h-10 w-10 items-center justify-center opacity-50 sm:inline-flex"
           aria-label={t('nav.notifications')}
           title={t('nav.notifications')}
+          disabled
+          aria-disabled="true"
         >
           <Bell className="h-4 w-4" aria-hidden />
         </button>

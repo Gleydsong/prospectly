@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Download, Globe, Plus, Trash2 } from 'lucide-react';
 
 import { Alert } from '@/components/ui/alert';
@@ -33,9 +33,11 @@ import { LeadFormModal } from './lead-form-modal';
 export function LeadsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialQ = (searchParams.get('q') ?? '').trim();
   const [page, setPage] = useState(1);
-  const [q, setQ] = useState('');
-  const [search, setSearch] = useState('');
+  const [q, setQ] = useState(initialQ);
+  const [search, setSearch] = useState(initialQ);
   const [status, setStatus] = useState<LeadStatus | ''>('');
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -45,6 +47,14 @@ export function LeadsPage() {
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const deleteLead = useDeleteLead();
+
+
+  useEffect(() => {
+    const urlQ = (searchParams.get('q') ?? '').trim();
+    setQ(urlQ);
+    setSearch(urlQ);
+    setPage(1);
+  }, [searchParams]);
 
   const query = useLeads({
     page,

@@ -11,6 +11,7 @@ vi.mock('@/features/billing/api', () => ({
     plan: 'FREE',
     planStatus: 'INACTIVE',
     freeSearchLimit: 3,
+    creditBalance: 2500,
   })),
 }));
 
@@ -61,5 +62,20 @@ describe('TopNav', () => {
     const avatar = screen.getByRole('link', { name: /conta de test user|test user's account/i });
     expect(avatar).toHaveAttribute('href', '/settings');
     expect(avatar.querySelector('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
+  });
+
+  it('shows the current credit balance with the credit label', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(/2[,.]?500 créditos/i)).toBeInTheDocument();
   });
 });

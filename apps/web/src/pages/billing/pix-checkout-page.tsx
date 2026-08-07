@@ -6,9 +6,15 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getBillingStatus } from '@/features/billing/api';
+import type { PixCheckoutMeta } from '@/features/billing/handle-checkout';
 import type { CheckoutResult } from '@/features/billing/types';
 
-type PixPayload = Extract<CheckoutResult, { mode: 'pix' }>;
+type PixPayload = Extract<CheckoutResult, { mode: 'pix' }> & PixCheckoutMeta;
+
+const CREDITS_BY_AMOUNT: Record<number, number> = {
+  1499: 2000,
+  3499: 5000,
+};
 
 function formatBrl(centavos: number): string {
   return (centavos / 100).toLocaleString('pt-BR', {
@@ -17,11 +23,27 @@ function formatBrl(centavos: number): string {
   });
 }
 
+function isPixPaid(
+  pix: PixPayload | null,
+  status: { planStatus: string; plan: string; creditBalance: number } | undefined,
+  baselineOverride: number | null,
+): boolean {
+  if (!status) return false;
+  if (status.planStatus === 'ACTIVE' && status.plan === 'LIFETIME') return true;
+  if (pix?.purpose !== 'credits') return false;
+  const expected = CREDITS_BY_AMOUNT[pix.amountCentavos];
+  const baseline =
+    typeof pix.baselineCreditBalance === 'number' ? pix.baselineCreditBalance : baselineOverride;
+  if (!expected || baseline === null) return false;
+  return status.creditBalance >= baseline + expected;
+}
+
 export function PixCheckoutPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [pix, setPix] = useState<PixPayload | null>(null);
   const [copied, setCopied] = useState(false);
+  const [capturedBaseline, setCapturedBaseline] = useState<number | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem('prospectly.pixCheckout');
@@ -46,13 +68,22 @@ export function PixCheckoutPage() {
     queryFn: getBillingStatus,
     enabled: Boolean(pix),
     refetchInterval: (query) => {
-      const data = query.state.data;
-      if (data?.planStatus === 'ACTIVE' && data.plan === 'LIFETIME') return false;
+      if (isPixPaid(pix, query.state.data, capturedBaseline)) return false;
       return 2500;
     },
   });
 
-  const paid = status.data?.planStatus === 'ACTIVE' && status.data.plan === 'LIFETIME';
+  useEffect(() => {
+    if (
+      status.data &&
+      capturedBaseline === null &&
+      typeof pix?.baselineCreditBalance !== 'number'
+    ) {
+      setCapturedBaseline(status.data.creditBalance);
+    }
+  }, [status.data, capturedBaseline, pix?.baselineCreditBalance]);
+
+  const paid = isPixPaid(pix, status.data, capturedBaseline);
 
   useEffect(() => {
     if (!paid) return;

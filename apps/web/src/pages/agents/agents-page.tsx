@@ -1,6 +1,6 @@
 import { Bot, MessageCircle, Workflow } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAgentsCatalog } from '@/features/agents/hooks';
 import { getApiErrorMessage } from '@/lib/api';
+import { resolveInternalRedirect } from '@/lib/safe-url';
 
 const ICONS = {
   'crm-next-action': Workflow,
@@ -16,6 +17,7 @@ const ICONS = {
 
 export function AgentsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const catalog = useAgentsCatalog();
 
   return (
@@ -44,15 +46,22 @@ export function AgentsPage() {
                   title={t(`agents.catalog.${agent.id}.name`, { defaultValue: agent.name })}
                   action={<Icon className="h-5 w-5 text-brand-300" aria-hidden />}
                 />
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <p className="text-sm text-zinc-400">
                     {t(`agents.catalog.${agent.id}.description`, {
                       defaultValue: agent.description,
                     })}
                   </p>
-                  <Link to={agent.path}>
-                    <Button size="sm">{t('agents.open')}</Button>
-                  </Link>
+                  <Button
+                    size="sm"
+                    className="min-w-[6.5rem] px-5"
+                    onClick={() => {
+                      const path = resolveInternalRedirect(agent.path, '/agents');
+                      navigate(path);
+                    }}
+                  >
+                    {t('agents.open')}
+                  </Button>
                 </CardContent>
               </Card>
             );

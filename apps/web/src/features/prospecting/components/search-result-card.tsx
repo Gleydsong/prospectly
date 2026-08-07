@@ -2,6 +2,7 @@ import { ExternalLink, Globe, MapPin, Phone, Send, Star } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import type { ProspectingSearchResult } from '@/types';
 
@@ -35,6 +36,7 @@ export function SearchResultCard({
   const signal = computeResultOpportunitySignal(result.websitePresence, business, imported);
   const hasWebsite = result.websitePresence === 'WEBSITE_FOUND';
   const location = [business.city, business.state].filter(Boolean).join(', ');
+  const safeWebsite = business.website ? sanitizeExternalUrl(business.website) : null;
 
   return (
     <article
@@ -127,9 +129,9 @@ export function SearchResultCard({
           <Send className="h-3.5 w-3.5" aria-hidden />
           {imported ? 'No CRM' : 'Enviar para CRM'}
         </Button>
-        {business.website ? (
+        {safeWebsite ? (
           <a
-            href={business.website}
+            href={safeWebsite}
             target="_blank"
             rel="noreferrer noopener"
             className="inline-flex h-8 items-center gap-1.5 rounded-control border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50"
