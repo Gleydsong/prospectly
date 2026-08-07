@@ -696,7 +696,7 @@
       },
       "whatsapp-first-message": {
         "name": "Agent WhatsApp",
-        "description": "Monta a 1ª mensagem a partir de template + lead (wa.me com texto)."
+        "description": "Gera variantes de 1ª mensagem (IA ou modelo local) e monta wa.me — sem envio automático."
       }
     },
     "crm": {
@@ -727,7 +727,7 @@
     },
     "whatsapp": {
       "title": "Agent WhatsApp",
-      "subtitle": "1ª mensagem via template — você copia ou abre o WhatsApp. Sem disparo automático.",
+      "subtitle": "3–5 variantes de 1ª mensagem (IA local ou modelo pronto). Você escolhe, edita, copia ou abre o WhatsApp. Sem disparo automático.",
       "compose": "1ª mensagem",
       "template": "Template",
       "preview": "Prévia da mensagem",
@@ -737,7 +737,20 @@
       "copyError": "Não foi possível copiar.",
       "open": "Abrir WhatsApp",
       "noPhone": "Sem telefone",
-      "buildError": "Não foi possível montar a mensagem."
+      "buildError": "Não foi possível montar a mensagem.",
+      "generateAgain": "Gerar de novo",
+      "sourceOllama": "IA",
+      "sourceFallback": "Modelo local",
+      "variantsError": "Não foi possível gerar variantes.",
+      "useSavedTemplate": "Usar template guardado",
+      "hideSavedTemplates": "Voltar às variantes",
+      "angles": {
+        "direto": "Direto",
+        "curiosidade": "Curiosidade",
+        "prova_social": "Prova social",
+        "dor_site": "Dor do site",
+        "oferta_leve": "Oferta leve"
+      }
     }
   }
 }

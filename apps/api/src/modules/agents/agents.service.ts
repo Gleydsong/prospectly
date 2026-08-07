@@ -12,6 +12,12 @@ import {
 } from '../campaigns/domain/template-variables';
 import { TemplatesService } from '../campaigns/application/templates.service';
 import { PipelinesService } from '../pipelines/pipelines.service';
+import { buildDeterministicWhatsappVariants } from './whatsapp-ai/deterministic-variants';
+import { OllamaChatClient } from './whatsapp-ai/ollama-chat.client';
+import {
+  clampVariantCount,
+  type WhatsappVariantSource,
+} from './whatsapp-ai/whatsapp-ai.types';
 
 export type AgentCatalogItem = {
   id: 'crm-next-action' | 'whatsapp-first-message';
@@ -46,7 +52,8 @@ const AGENT_CATALOG: AgentCatalogItem[] = [
   {
     id: 'whatsapp-first-message',
     name: 'Agent WhatsApp',
-    description: 'Monta a 1ª mensagem a partir de template + lead (wa.me com texto).',
+    description:
+      'Gera 3–5 variantes de 1ª mensagem (Ollama ou fallback) e monta wa.me — sem envio automático.',
     path: '/agents/whatsapp',
   },
 ];
@@ -57,6 +64,7 @@ export class AgentsService {
     private readonly prisma: PrismaService,
     private readonly pipelines: PipelinesService,
     private readonly templates: TemplatesService,
+    private readonly ollama: OllamaChatClient,
   ) {}
 
   catalog() {
@@ -191,6 +199,42 @@ export class AgentsService {
       canOpen: Boolean(waLink),
       autoSend: false,
       messageSent: false,
+    };
+  }
+
+  async whatsappVariants(organizationId: string, leadId: string, count?: number) {
+    const lead = await this.loadLead(organizationId, leadId);
+    const phoneRaw = (lead.phone ?? lead.whatsapp)?.trim() || null;
+    const digits = phoneRaw ? phoneRaw.replace(/\D/g, '') : '';
+
+    if (lead.doNotContact) {
+      throw new BadRequestException('Lead is marked do-not-contact.');
+    }
+
+    const variantCount = clampVariantCount(count);
+    const leadContext = {
+      companyName: lead.companyName,
+      tradeName: lead.tradeName,
+      city: lead.city,
+      segment: lead.segment,
+      website: lead.website,
+      ownerName: lead.owner?.name ?? null,
+    };
+
+    const fromOllama = await this.ollama.generateVariants(leadContext, variantCount);
+    const source: WhatsappVariantSource = fromOllama ? 'ollama' : 'fallback';
+    const variants =
+      fromOllama ?? buildDeterministicWhatsappVariants(leadContext, variantCount);
+
+    return {
+      leadId: lead.id,
+      companyName: lead.companyName,
+      phone: phoneRaw,
+      digits: digits || null,
+      source,
+      variants,
+      autoSend: false as const,
+      messageSent: false as const,
     };
   }
 

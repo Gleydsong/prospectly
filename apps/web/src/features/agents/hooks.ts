@@ -4,6 +4,7 @@ import {
   applyCrmAction,
   buildWhatsappFirstMessage,
   fetchAgentsCatalog,
+  fetchWhatsappVariants,
   suggestCrmAction,
 } from './api';
 
@@ -37,5 +38,13 @@ export function useWhatsappFirstMessage(leadId: string | undefined, templateId: 
         templateId: templateId || undefined,
       }),
     enabled: Boolean(leadId && templateId),
+  });
+}
+
+export function useWhatsappVariants(leadId: string | undefined, count = 4) {
+  return useQuery({
+    queryKey: ['agents', 'whatsapp', 'variants', leadId, count],
+    queryFn: () => fetchWhatsappVariants({ leadId: leadId!, count }),
+    enabled: Boolean(leadId),
   });
 }

@@ -9,6 +9,7 @@ import {
   AgentsCrmApplyDto,
   AgentsLeadDto,
   AgentsWhatsappFirstMessageDto,
+  AgentsWhatsappVariantsDto,
 } from './dto/agents.dto';
 
 @ApiTags('agents')
@@ -46,5 +47,14 @@ export class AgentsController {
     @Body() dto: AgentsWhatsappFirstMessageDto,
   ) {
     return this.agents.whatsappFirstMessage(organizationId, dto.leadId, dto.templateId);
+  }
+
+  @Post('whatsapp/variants')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  whatsappVariants(
+    @CurrentOrg() organizationId: string,
+    @Body() dto: AgentsWhatsappVariantsDto,
+  ) {
+    return this.agents.whatsappVariants(organizationId, dto.leadId, dto.count);
   }
 }

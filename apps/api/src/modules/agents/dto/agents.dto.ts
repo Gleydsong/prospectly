@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class AgentsLeadDto {
   @ApiProperty()
@@ -31,4 +32,18 @@ export class AgentsWhatsappFirstMessageDto {
   @IsOptional()
   @IsUUID('4')
   templateId?: string;
+}
+
+export class AgentsWhatsappVariantsDto {
+  @ApiProperty()
+  @IsUUID('4')
+  leadId!: string;
+
+  @ApiPropertyOptional({ description: 'Number of variants (3-5). Default 4.', default: 4 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(3)
+  @Max(5)
+  count?: number;
 }

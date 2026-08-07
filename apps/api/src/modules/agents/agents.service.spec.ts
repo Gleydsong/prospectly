@@ -3,6 +3,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AgentsService } from './agents.service';
 import type { PipelinesService } from '../pipelines/pipelines.service';
 import type { TemplatesService } from '../campaigns/application/templates.service';
+import type { OllamaChatClient } from './whatsapp-ai/ollama-chat.client';
 
 function makePrisma(overrides: Record<string, unknown> = {}) {
   return {
@@ -34,12 +35,18 @@ describe('AgentsService', () => {
     get: jest.fn(),
   } as unknown as TemplatesService;
 
+  const ollama = {
+    generateVariants: jest.fn().mockResolvedValue(null),
+    isEnabled: jest.fn().mockReturnValue(true),
+  } as unknown as OllamaChatClient;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (ollama.generateVariants as jest.Mock).mockResolvedValue(null);
   });
 
   it('catalog returns fixed agents', () => {
-    const service = new AgentsService(makePrisma() as never, pipelines, templates);
+    const service = new AgentsService(makePrisma() as never, pipelines, templates, ollama);
     const result = service.catalog();
     expect(result.data.map((item) => item.id)).toEqual([
       'crm-next-action',
@@ -50,7 +57,7 @@ describe('AgentsService', () => {
   it('suggestCrm throws when lead missing', async () => {
     const prisma = makePrisma();
     (prisma.lead.findFirst as jest.Mock).mockResolvedValue(null);
-    const service = new AgentsService(prisma as never, pipelines, templates);
+    const service = new AgentsService(prisma as never, pipelines, templates, ollama);
     await expect(service.suggestCrm('org-1', 'lead-1')).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -76,7 +83,7 @@ describe('AgentsService', () => {
       .mockResolvedValueOnce({ id: 'stage-1', order: 0, pipelineId: 'pipe-1' })
       .mockResolvedValueOnce({ id: 'stage-2', name: 'Qualified', order: 1 });
 
-    const service = new AgentsService(prisma as never, pipelines, templates);
+    const service = new AgentsService(prisma as never, pipelines, templates, ollama);
     const result = await service.suggestCrm('org-1', 'lead-1');
     expect(result.actionCode).toBe('RESPECT_DNC');
     expect(result.canApplyStage).toBe(false);
@@ -109,7 +116,7 @@ describe('AgentsService', () => {
       body: 'Olá {{companyName}}, sou {{ownerName}}.',
     });
 
-    const service = new AgentsService(prisma as never, pipelines, templates);
+    const service = new AgentsService(prisma as never, pipelines, templates, ollama);
     const result = await service.whatsappFirstMessage('org-1', 'lead-1', 'tpl-1');
 
     expect(result.body).toBe('Olá Barbearia Norte, sou Gui.');
@@ -131,7 +138,7 @@ describe('AgentsService', () => {
       owner: null,
       updatedAt: new Date(),
     });
-    const service = new AgentsService(prisma as never, pipelines, templates);
+    const service = new AgentsService(prisma as never, pipelines, templates, ollama);
     await expect(
       service.whatsappFirstMessage('org-1', 'lead-1', 'tpl-1'),
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -166,7 +173,7 @@ describe('AgentsService', () => {
       stage: { id: 'stage-2', name: 'Qualified' },
     });
 
-    const service = new AgentsService(prisma as never, pipelines, templates);
+    const service = new AgentsService(prisma as never, pipelines, templates, ollama);
     const result = await service.applyCrm('org-1', 'user-1', 'lead-1');
     expect(pipelines.moveLeadToStage).toHaveBeenCalledWith(
       'org-1',
@@ -175,5 +182,66 @@ describe('AgentsService', () => {
       'user-1',
     );
     expect(result.applied).toBe(true);
+  });
+
+  describe('whatsappVariants', () => {
+    function leadFixture(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'lead-1',
+        companyName: 'Salão Resenha',
+        tradeName: null,
+        doNotContact: false,
+        phone: '+5581987950071',
+        whatsapp: null,
+        email: null,
+        city: 'Recife',
+        segment: 'Beleza',
+        website: null,
+        stageId: null,
+        stage: null,
+        websiteRecord: null,
+        owner: { id: 'u1', name: 'Gui' },
+        updatedAt: new Date(),
+        score: 40,
+        status: 'NEW',
+        ...overrides,
+      };
+    }
+
+    it('rejects DNC leads', async () => {
+      const prisma = makePrisma();
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue(leadFixture({ doNotContact: true }));
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      await expect(service.whatsappVariants('org-1', 'lead-1')).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+    });
+
+    it('uses deterministic fallback when ollama returns null', async () => {
+      const prisma = makePrisma();
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue(leadFixture());
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      const result = await service.whatsappVariants('org-1', 'lead-1', 3);
+      expect(result.source).toBe('fallback');
+      expect(result.variants).toHaveLength(3);
+      expect(result.variants[0]?.body).toContain('Salão Resenha');
+      expect(result.autoSend).toBe(false);
+    });
+
+    it('uses ollama variants when available and clamps count', async () => {
+      const prisma = makePrisma();
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue(leadFixture());
+      (ollama.generateVariants as jest.Mock).mockResolvedValue([
+        { id: 'o1', angle: 'direto', label: 'Direto', body: 'IA direto' },
+        { id: 'o2', angle: 'curiosidade', label: 'Curiosidade', body: 'IA curiosidade' },
+        { id: 'o3', angle: 'prova_social', label: 'Prova social', body: 'IA prova' },
+        { id: 'o4', angle: 'dor_site', label: 'Dor do site', body: 'IA dor' },
+      ]);
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      const result = await service.whatsappVariants('org-1', 'lead-1', 99);
+      expect(ollama.generateVariants).toHaveBeenCalledWith(expect.any(Object), 5);
+      expect(result.source).toBe('ollama');
+      expect(result.variants[0]?.body).toBe('IA direto');
+    });
   });
 });

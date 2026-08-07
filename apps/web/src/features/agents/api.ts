@@ -55,6 +55,31 @@ export type WhatsappFirstMessageResult = {
   messageSent: false;
 };
 
+export type WhatsappVariantAngle =
+  | 'direto'
+  | 'curiosidade'
+  | 'prova_social'
+  | 'dor_site'
+  | 'oferta_leve';
+
+export type WhatsappVariant = {
+  id: string;
+  angle: WhatsappVariantAngle;
+  label: string;
+  body: string;
+};
+
+export type WhatsappVariantsResult = {
+  leadId: string;
+  companyName: string;
+  phone: string | null;
+  digits: string | null;
+  source: 'ollama' | 'fallback';
+  variants: WhatsappVariant[];
+  autoSend: false;
+  messageSent: false;
+};
+
 export async function fetchAgentsCatalog(): Promise<{ data: AgentCatalogItem[] }> {
   const { data } = await api.get<{ data: AgentCatalogItem[] }>('/agents');
   return data;
@@ -81,5 +106,13 @@ export async function buildWhatsappFirstMessage(input: {
     '/agents/whatsapp/first-message',
     input,
   );
+  return data;
+}
+
+export async function fetchWhatsappVariants(input: {
+  leadId: string;
+  count?: number;
+}): Promise<WhatsappVariantsResult> {
+  const { data } = await api.post<WhatsappVariantsResult>('/agents/whatsapp/variants', input);
   return data;
 }
