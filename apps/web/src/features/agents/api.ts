@@ -75,6 +75,7 @@ export type WhatsappVariantsResult = {
   phone: string | null;
   digits: string | null;
   source: 'ollama' | 'fallback';
+  seed?: number;
   variants: WhatsappVariant[];
   autoSend: false;
   messageSent: false;
@@ -112,6 +113,7 @@ export async function buildWhatsappFirstMessage(input: {
 export async function fetchWhatsappVariants(input: {
   leadId: string;
   count?: number;
+  seed?: number;
 }): Promise<WhatsappVariantsResult> {
   const { data } = await api.post<WhatsappVariantsResult>('/agents/whatsapp/variants', input);
   return data;
