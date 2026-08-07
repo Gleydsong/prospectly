@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next';
 const base = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const sharedPaths = ['', '/pricing', '/faq', '/privacy', '/terms', '/cookies'];
+  const sharedPaths = ['/pricing', '/faq', '/privacy', '/terms', '/cookies'];
   const intentPaths = [
     '/prospeccao-b2b',
     '/lista-de-empresas',
@@ -17,13 +17,28 @@ export default function sitemap(): MetadataRoute.Sitemap {
   for (const locale of locales) {
     for (const path of sharedPaths) {
       entries.push({
-        url: `${base}${locale}${path || '/'}`,
+        url: `${base}${locale}${path}`,
         lastModified,
-        changeFrequency: path === '' ? 'weekly' : 'monthly',
-        priority: path === '' ? 1 : 0.7,
+        changeFrequency: 'monthly',
+        priority: 0.7,
       });
     }
   }
+
+  entries.push(
+    {
+      url: `${base}/v2`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 1,
+    },
+    {
+      url: `${base}/v2/como-funciona`,
+      lastModified,
+      changeFrequency: 'monthly',
+      priority: 0.9,
+    },
+  );
 
   for (const path of intentPaths) {
     entries.push({

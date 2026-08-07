@@ -1,112 +1,66 @@
 'use client';
 
-import { Check } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { Check, Coins, Crown } from '@phosphor-icons/react';
 import { BentoSurface } from '@/components/ui/bento-card';
 import { CtaButton } from '@/components/ui/cta-button';
-import { t, type Locale } from '@/lib/i18n';
-import {
-  appRegisterUrl,
-  CURRENCY_LABELS,
-  DISPLAY_PRICES,
-  type BillingInterval,
-  type Currency,
-} from '@/lib/pricing';
+import { appLoginUrl, type CreditOffer } from '@/lib/pricing';
+import type { Locale } from '@/lib/i18n';
 
-const CURRENCY_KEY = 'prospectly_currency';
+type Offer = {
+  id: CreditOffer;
+  title: string;
+  description: string;
+  price: string;
+  suffix?: string;
+  cta: string;
+  featured?: boolean;
+};
 
-function detectCurrency(locale: Locale): Currency {
-  if (typeof navigator === 'undefined') return locale === 'pt' ? 'BRL' : 'EUR';
-  const lang = navigator.language?.toLowerCase() ?? '';
-  if (lang.includes('pt-br') || lang.includes('pt_br')) return 'BRL';
-  if (
-    lang.startsWith('pt') ||
-    lang.startsWith('es') ||
-    lang.startsWith('de') ||
-    lang.startsWith('fr') ||
-    lang.startsWith('it') ||
-    lang.startsWith('nl')
-  ) {
-    return 'EUR';
-  }
-  if (lang.startsWith('en-us')) return 'USD';
-  return locale === 'pt' ? 'BRL' : 'EUR';
-}
+const offersByLocale: Record<Locale, Offer[]> = {
+  pt: [
+    { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 14,99', cta: 'Comprar créditos' },
+    { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 34,99', cta: 'Comprar créditos' },
+    { id: 'unlimited', title: 'Ilimitado', description: 'Buscas sem limite e leads preservados por 60 dias.', price: 'R$ 99,90', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
+  ],
+  en: [
+    { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 14.99', cta: 'Buy credits' },
+    { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 34.99', cta: 'Buy credits' },
+    { id: 'unlimited', title: 'Unlimited', description: 'Unlimited searches and leads preserved for 60 days.', price: 'R$ 99.90', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
+  ],
+};
+
+const features: Record<Locale, string[]> = {
+  pt: ['Busca focada em qualidade', 'PDF estratégico por contato'],
+  en: ['Quality-focused search', 'Strategic PDF per contact'],
+};
 
 export function PricingCard({ locale }: { locale: Locale }) {
-  const [interval, setInterval] = useState<BillingInterval>('monthly');
-  const [currency, setCurrency] = useState<Currency>(locale === 'pt' ? 'BRL' : 'EUR');
-
-  useEffect(() => {
-    const saved = localStorage.getItem(CURRENCY_KEY) as Currency | null;
-    if (saved && (saved === 'BRL' || saved === 'EUR' || saved === 'USD')) {
-      setCurrency(saved);
-      return;
-    }
-    setCurrency(detectCurrency(locale));
-  }, [locale]);
-
-  const price = DISPLAY_PRICES[interval][currency];
-  const features = t(locale, 'planFeatures').split('|');
-
   return (
-    <BentoSurface className="mx-auto max-w-xl p-8 sm:p-10">
-      <div className="relative flex gap-1 rounded-control border border-white/10 bg-white/[0.04] p-1">
-        {(['monthly', 'lifetime'] as const).map((value) => (
-          <CtaButton
-            key={value}
-            type="button"
-            size="md"
-            variant={interval === value ? 'primary' : 'ghost'}
-            onClick={() => setInterval(value)}
-            className="min-h-11 flex-1 font-medium !shadow-none"
+    <div className="mx-auto max-w-6xl">
+      <div className="grid gap-4 lg:grid-cols-3">
+        {offersByLocale[locale].map((offer) => (
+          <BentoSurface
+            key={offer.id}
+            className={`flex min-h-[382px] flex-col p-6 sm:p-7 ${offer.featured ? 'border border-emerald-400/80 bg-emerald-50/80 shadow-[0_14px_35px_rgba(16,185,129,0.08)]' : 'border border-[color:var(--border)] bg-white'}`}
           >
-            {t(locale, value)}
-          </CtaButton>
+            <div className="flex items-start justify-between">
+              {offer.featured ? <Crown weight="duotone" className="h-7 w-7 text-emerald-600" aria-hidden /> : <Coins weight="duotone" className="h-7 w-7 text-amber-500" aria-hidden />}
+              {offer.featured ? <span className="rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">{locale === 'pt' ? 'Melhor escolha' : 'Best choice'}</span> : null}
+            </div>
+            <h2 className="mt-8 text-xl font-semibold tracking-tight text-[color:var(--ink)]">{offer.title}</h2>
+            <p className="mt-3 min-h-12 text-sm leading-6 text-[color:var(--ink-muted)]">{offer.description}</p>
+            <p className="mt-7 text-3xl font-bold tracking-tight text-[color:var(--ink)]">
+              {offer.price}
+              {offer.suffix ? <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">{offer.suffix}</span> : null}
+            </p>
+            <ul className="mt-6 space-y-2 text-sm text-[color:var(--ink-muted)]">
+              {features[locale].map((feature) => <li key={feature} className="flex items-center gap-2"><Check weight="bold" className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{feature}</li>)}
+            </ul>
+            <CtaButton href={appLoginUrl(offer.id)} className="mt-auto w-full bg-[#050817] text-white hover:bg-[#1a2033]">{offer.cta}</CtaButton>
+          </BentoSurface>
         ))}
       </div>
-
-      <label className="relative mt-6 block text-sm text-[color:var(--bento-ink-muted)]">
-        {t(locale, 'currency')}
-        <select
-          className="focus-ring bento-field mt-2 w-full rounded-control px-3 py-2.5"
-          value={currency}
-          onChange={(e) => {
-            const next = e.target.value as Currency;
-            setCurrency(next);
-            localStorage.setItem(CURRENCY_KEY, next);
-          }}
-        >
-          {(Object.keys(CURRENCY_LABELS) as Currency[]).map((code) => (
-            <option key={code} value={code}>
-              {CURRENCY_LABELS[code]}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <p className="relative mt-8 font-mono text-xs uppercase tracking-[0.16em] text-brand-400">
-        {t(locale, 'planName')}
-      </p>
-      <p className="relative mt-3 text-5xl font-semibold tracking-tighter text-[color:var(--bento-ink)]">
-        {price.formatted}
-        <span className="ml-2 text-base font-normal tracking-normal text-[color:var(--bento-ink-muted)]">
-          {interval === 'monthly' ? t(locale, 'perMonth') : t(locale, 'oneTime')}
-        </span>
-      </p>
-
-      <ul className="relative mt-8 space-y-3 text-sm text-[color:var(--bento-ink)]">
-        {features.map((feature) => (
-          <li key={feature} className="flex gap-3">
-            <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" aria-hidden />
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
-
-      <CtaButton href={appRegisterUrl(interval, currency)} className="relative mt-10 w-full">
-        {interval === 'monthly' ? t(locale, 'ctaMonthly') : t(locale, 'ctaLifetime')}
-      </CtaButton>
-    </BentoSurface>
+      <p className="mt-5 text-center text-xs text-[color:var(--ink-muted)]">{locale === 'pt' ? 'Pagamento processado com segurança.' : 'Payments are securely processed.'}</p>
+    </div>
   );
 }

@@ -30,8 +30,12 @@ export function appRegisterUrl(plan: BillingInterval, currency: Currency): strin
   return `${base}/register?${params.toString()}`;
 }
 
-export function appLoginUrl(): string {
-  return `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:5173'}/login`;
+export type CreditOffer = 'credits-2000' | 'credits-5000' | 'unlimited';
+
+export function appLoginUrl(offer?: CreditOffer): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:5173';
+  const params = offer ? `?offer=${encodeURIComponent(offer)}` : '';
+  return `${base}/login${params}`;
 }
 
 /** Temporary “Entrar” destination while the app is not live. */
