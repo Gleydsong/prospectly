@@ -28,8 +28,8 @@ describe('OllamaChatClient', () => {
       get: jest.fn((key: string) => {
         if (key === 'whatsappAi.enabled') return true;
         if (key === 'whatsappAi.baseUrl') return 'http://127.0.0.1:11434';
-        if (key === 'whatsappAi.model') return 'llama3.2';
-        if (key === 'whatsappAi.timeoutMs') return 5000;
+        if (key === 'whatsappAi.model') return 'qwen3:8b';
+        if (key === 'whatsappAi.timeoutMs') return 30000;
         return undefined;
       }),
     };

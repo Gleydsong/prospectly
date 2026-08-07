@@ -35,8 +35,8 @@ export class OllamaChatClient {
     const baseUrl = (
       this.config.get<string>('whatsappAi.baseUrl') ?? 'http://127.0.0.1:11434'
     ).replace(/\/$/, '');
-    const model = this.config.get<string>('whatsappAi.model') ?? 'llama3.2';
-    const timeoutMs = Number(this.config.get<number>('whatsappAi.timeoutMs') ?? 8000);
+    const model = this.config.get<string>('whatsappAi.model') ?? 'qwen3:8b';
+    const timeoutMs = Number(this.config.get<number>('whatsappAi.timeoutMs') ?? 30000);
     const apiKey = this.config.get<string>('whatsappAi.apiKey') ?? '';
     const generationSeed = Number.isFinite(seed) ? Math.abs(Math.floor(seed)) : 0;
 
