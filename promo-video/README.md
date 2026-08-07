@@ -31,6 +31,17 @@ npm run render:pricing   # → out/precos.mp4
 
 Composição: `PricingPromo` — motion graphics do Starter (mensal, vitalício e moedas).
 
+## Product demo (landing hero)
+
+Loop light-theme do fluxo Defina → Encontre → Organize (1280×720, 12s).
+
+```bash
+npm run render:product-demo   # → out/product-demo-flow.mp4
+# copiar para apps/landing/public/videos/
+```
+
+Composição: `ProductDemoFlow`. Tokens em `src/config/light-theme.ts`.
+
 ## Estrutura
 
 - `src/config/` — dimensões, cores, timing, assets
