@@ -1,18 +1,14 @@
 'use client';
 
-import { useReducedMotion, motion } from 'motion/react';
 import { MagnifyingGlass, Funnel, Path, EnvelopeSimple } from '@phosphor-icons/react';
 import { ProductDemoVideo } from '@/components/product-demo-video';
+import { HeroMotion } from '@/components/motion';
 import { BentoCard, BentoIconDisk, BentoSurface } from '@/components/ui/bento-card';
 import { CtaButton } from '@/components/ui/cta-button';
 import { WaitlistForm } from '@/components/waitlist-form';
 import { prefix, t, type Locale } from '@/lib/i18n';
 
-const ease = [0.16, 1, 0.3, 1] as const;
-
 export function EnterExplainerPage({ locale }: { locale: Locale }) {
-  const reduce = useReducedMotion();
-  const animate = !reduce;
   const p = prefix(locale);
 
   const steps = [
@@ -37,100 +33,39 @@ export function EnterExplainerPage({ locale }: { locale: Locale }) {
     <div className="landing-v2 landing-light-page landing-enter-v2">
       <section className="hero-wash relative overflow-hidden border-b border-[color:var(--border)]">
         <div className="mx-auto grid max-w-shell items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8 lg:py-20">
-          <div className="text-center lg:col-span-5 lg:text-left">
-            {animate ? (
-              <motion.p
-                className="inline-flex items-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-1.5 text-xs font-semibold tracking-wide text-accent"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease }}
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                </span>
-                {t(locale, 'enterBadge')}
-              </motion.p>
-            ) : (
-              <p className="inline-flex items-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-1.5 text-xs font-semibold tracking-wide text-accent">
-                {t(locale, 'enterBadge')}
-              </p>
-            )}
+          <HeroMotion className="text-center lg:col-span-5 lg:text-left">
+            <p className="inline-flex items-center gap-2 rounded-control border border-[color:var(--border)] bg-[color:var(--bg-raised)] px-3 py-1.5 text-xs font-semibold tracking-wide text-accent">
+              <span className="relative flex h-2 w-2" aria-hidden>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              </span>
+              {t(locale, 'enterBadge')}
+            </p>
 
-            {animate ? (
-              <motion.h1
-                className="mt-5 max-w-[16ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl lg:text-5xl lg:mx-0 mx-auto"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.65, delay: 0.08, ease }}
-              >
-                {t(locale, 'enterTitle')}
-              </motion.h1>
-            ) : (
-              <h1 className="mx-auto mt-5 max-w-[16ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl lg:mx-0 lg:text-5xl">
-                {t(locale, 'enterTitle')}
-              </h1>
-            )}
+            <h1 className="mx-auto mt-5 max-w-[16ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] md:text-4xl lg:mx-0 lg:text-5xl">
+              {t(locale, 'enterTitle')}
+            </h1>
 
-            {animate ? (
-              <motion.p
-                className="mx-auto mt-5 max-w-[42ch] text-base leading-relaxed text-[color:var(--ink-muted)] md:text-lg lg:mx-0"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.16, ease }}
-              >
-                {t(locale, 'enterLead')}
-              </motion.p>
-            ) : (
-              <p className="mx-auto mt-5 max-w-[42ch] text-base leading-relaxed text-[color:var(--ink-muted)] md:text-lg lg:mx-0">
-                {t(locale, 'enterLead')}
-              </p>
-            )}
+            <p className="mx-auto mt-5 max-w-[42ch] text-base leading-relaxed text-[color:var(--ink-muted)] md:text-lg lg:mx-0">
+              {t(locale, 'enterLead')}
+            </p>
 
-            {animate ? (
-              <motion.div
-                className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.55, delay: 0.24, ease }}
-              >
-                <CtaButton href="#lista-espera-entrar">
-                  <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
-                  {t(locale, 'enterCtaWaitlist')}
-                </CtaButton>
-                <CtaButton href={p || '/'} variant="secondary">
-                  {t(locale, 'enterCtaHome')}
-                </CtaButton>
-              </motion.div>
-            ) : (
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                <CtaButton href="#lista-espera-entrar">
-                  <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
-                  {t(locale, 'enterCtaWaitlist')}
-                </CtaButton>
-                <CtaButton href={p || '/'} variant="secondary">
-                  {t(locale, 'enterCtaHome')}
-                </CtaButton>
-              </div>
-            )}
-          </div>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+              <CtaButton href="#lista-espera-entrar">
+                <EnvelopeSimple weight="bold" className="h-4 w-4" aria-hidden />
+                {t(locale, 'enterCtaWaitlist')}
+              </CtaButton>
+              <CtaButton href={p || '/'} variant="secondary">
+                {t(locale, 'enterCtaHome')}
+              </CtaButton>
+            </div>
+          </HeroMotion>
 
-          {animate ? (
-            <motion.div
-              className="lg:col-span-7"
-              initial={{ opacity: 0, scale: 0.96, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.75, delay: 0.12, ease }}
-            >
-              <BentoSurface decor={false} className="relative aspect-video">
-                <ProductDemoVideo locale={locale} className="absolute inset-0" />
-              </BentoSurface>
-            </motion.div>
-          ) : (
-            <BentoSurface decor={false} className="relative aspect-video lg:col-span-7">
+          <HeroMotion className="lg:col-span-7">
+            <BentoSurface decor={false} className="relative aspect-video">
               <ProductDemoVideo locale={locale} className="absolute inset-0" />
             </BentoSurface>
-          )}
+          </HeroMotion>
         </div>
       </section>
 

@@ -48,7 +48,6 @@ export function LeadsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const deleteLead = useDeleteLead();
 
-
   useEffect(() => {
     const urlQ = (searchParams.get('q') ?? '').trim();
     setQ(urlQ);

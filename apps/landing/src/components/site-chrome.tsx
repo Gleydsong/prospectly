@@ -41,6 +41,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   }, [menuOpen]);
 
   const close = () => setMenuOpen(false);
+  const ctaHref = isEnterPage ? '#lista-espera-entrar' : enterExplainerUrl(locale);
 
   return (
     <header
@@ -60,48 +61,64 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           <BrandLogo locale={locale} priority />
         </Link>
 
-        <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
-          <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
-            {t(locale, 'navHome')}
-          </CtaButton>
-          <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
-            {t(locale, 'navFaq')}
-          </CtaButton>
-          <CtaButton href={`${p}/pricing`} variant="ghost" size="sm" className="font-medium">
-            {t(locale, 'navPricing')}
-          </CtaButton>
-          <CtaButton
-            href={enterExplainerUrl(locale)}
-            variant="ghost"
-            size="sm"
-            className="font-medium"
-          >
-            {t(locale, 'navLogin')}
-          </CtaButton>
-          <CtaButton href={enterExplainerUrl(locale)} variant="glass" size="sm" className="ml-1 font-medium">
-            {t(locale, 'navCta')}
-          </CtaButton>
-        </nav>
+        {isEnterPage ? (
+          <nav className="flex items-center gap-1 text-sm sm:gap-2">
+            <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
+              {t(locale, 'navHome')}
+            </CtaButton>
+            <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+              {t(locale, 'navFaq')}
+            </CtaButton>
+            <CtaButton href={ctaHref} variant="glass" size="sm" className="ml-1 font-medium">
+              {t(locale, 'navCta')}
+            </CtaButton>
+          </nav>
+        ) : (
+          <>
+            <nav className="hidden items-center gap-1 text-sm md:flex sm:gap-2">
+              <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
+                {t(locale, 'navHome')}
+              </CtaButton>
+              <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+                {t(locale, 'navFaq')}
+              </CtaButton>
+              <CtaButton href={`${p}/pricing`} variant="ghost" size="sm" className="font-medium">
+                {t(locale, 'navPricing')}
+              </CtaButton>
+              <CtaButton
+                href={enterExplainerUrl(locale)}
+                variant="ghost"
+                size="sm"
+                className="font-medium"
+              >
+                {t(locale, 'navLogin')}
+              </CtaButton>
+              <CtaButton href={ctaHref} variant="glass" size="sm" className="ml-1 font-medium">
+                {t(locale, 'navCta')}
+              </CtaButton>
+            </nav>
 
-        <div className="flex items-center gap-2 md:hidden">
-          <CtaButton href={enterExplainerUrl(locale)} variant="glass" size="sm" className="font-medium">
-            {t(locale, 'navCta')}
-          </CtaButton>
-          <CtaButton
-            type="button"
-            variant="secondary"
-            size="icon"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-nav"
-            aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            {menuOpen ? <X weight="bold" className="h-5 w-5" /> : <List weight="bold" className="h-5 w-5" />}
-          </CtaButton>
-        </div>
+            <div className="flex items-center gap-2 md:hidden">
+              <CtaButton href={ctaHref} variant="glass" size="sm" className="font-medium">
+                {t(locale, 'navCta')}
+              </CtaButton>
+              <CtaButton
+                type="button"
+                variant="secondary"
+                size="icon"
+                aria-expanded={menuOpen}
+                aria-controls="mobile-nav"
+                aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                {menuOpen ? <X weight="bold" className="h-5 w-5" /> : <List weight="bold" className="h-5 w-5" />}
+              </CtaButton>
+            </div>
+          </>
+        )}
       </div>
 
-      {menuOpen ? (
+      {!isEnterPage && menuOpen ? (
         <div
           id="mobile-nav"
           className="border-t border-[color:var(--border)] bg-[color:var(--bg)] md:hidden"

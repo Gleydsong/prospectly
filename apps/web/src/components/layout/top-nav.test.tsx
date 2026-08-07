@@ -78,4 +78,22 @@ describe('TopNav', () => {
 
     expect(await screen.findByText(/2[,.]?500 créditos/i)).toBeInTheDocument();
   });
+
+  it('links the search clients control to the leads page', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('link', { name: /buscar clientes|search clients/i })).toHaveAttribute(
+      'href',
+      '/leads',
+    );
+  });
 });

@@ -25,50 +25,53 @@ export function ProductDemoVideo({ locale, className }: ProductDemoVideoProps) {
   const reduceMotion = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
-  const useVideo = !reduceMotion && !videoFailed;
+  const [videoReady, setVideoReady] = useState(false);
+  const preferVideo = reduceMotion !== true && !videoFailed;
 
   useEffect(() => {
-    if (!useVideo) return;
+    if (!preferVideo) return;
     const el = videoRef.current;
     if (!el) return;
-    const play = () => {
-      void el.play().catch(() => setVideoFailed(true));
-    };
-    play();
-  }, [useVideo]);
+    void el.play().then(() => setVideoReady(true)).catch(() => setVideoFailed(true));
+  }, [preferVideo]);
 
   const ariaLabel =
     locale === 'pt'
       ? 'Demonstração animada do fluxo claro do Prospectly'
       : 'Animated preview of Prospectly’s clear workflow';
 
-  if (useVideo) {
-    return (
-      <div
-        className={['product-demo-motion', 'product-demo-motion--video', className]
-          .filter(Boolean)
-          .join(' ')}
-        role="img"
-        aria-label={ariaLabel}
-      >
-        <video
-          ref={videoRef}
-          className="product-demo-motion-video"
-          src={VIDEO_SRC}
-          poster={POSTER_SRC}
-          muted
-          playsInline
-          loop
-          autoPlay
-          preload="metadata"
-          onError={() => setVideoFailed(true)}
-          aria-hidden
-        />
-      </div>
-    );
+  if (!preferVideo) {
+    return <ProductDemoFallback locale={locale} className={className} ariaLabel={ariaLabel} />;
   }
 
-  return <ProductDemoFallback locale={locale} className={className} ariaLabel={ariaLabel} />;
+  return (
+    <div
+      className={['product-demo-motion', 'product-demo-motion--video', className]
+        .filter(Boolean)
+        .join(' ')}
+      role="img"
+      aria-label={ariaLabel}
+    >
+      {!videoReady ? (
+        <ProductDemoFallback locale={locale} className="absolute inset-0" ariaLabel={ariaLabel} />
+      ) : null}
+      <video
+        ref={videoRef}
+        className="product-demo-motion-video"
+        src={VIDEO_SRC}
+        poster={POSTER_SRC}
+        muted
+        playsInline
+        loop
+        autoPlay
+        preload="auto"
+        onPlaying={() => setVideoReady(true)}
+        onError={() => setVideoFailed(true)}
+        aria-hidden
+        style={{ opacity: videoReady ? 1 : 0 }}
+      />
+    </div>
+  );
 }
 
 function ProductDemoFallback({

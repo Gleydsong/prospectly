@@ -60,7 +60,6 @@ export function TopNav() {
   const navigate = useNavigate();
   const { user, clear } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [q, setQ] = useState('');
 
   const billing = useQuery({
     queryKey: ['billing', 'status'],
@@ -80,16 +79,6 @@ export function TopNav() {
     }
     clear();
     navigate('/login', { replace: true });
-  };
-
-  const runSearch = () => {
-    const term = q.trim();
-    if (!term) {
-      navigate('/leads');
-      return;
-    }
-    navigate(`/leads?q=${encodeURIComponent(term)}`);
-    setMobileOpen(false);
   };
 
   return (
@@ -121,7 +110,7 @@ export function TopNav() {
                 cn(
                   'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
+                    ? 'border border-sky-200 bg-sky-50 font-semibold text-sky-700 shadow-sm'
                     : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
                 )
               }
@@ -129,7 +118,7 @@ export function TopNav() {
               {({ isActive }) => (
                 <>
                   <item.icon
-                    className={cn('h-4 w-4', isActive ? 'text-zinc-200' : 'text-current')}
+                    className={cn('h-4 w-4', isActive ? 'text-sky-700' : 'text-current')}
                     aria-hidden
                   />
                   {t(item.labelKey)}
@@ -141,25 +130,17 @@ export function TopNav() {
 
         <div className="flex-1" />
 
-        <form
-          className="relative hidden w-[220px] shrink-0 sm:block"
-          onSubmit={(event) => {
-            event.preventDefault();
-            runSearch();
-          }}
+        <Link
+          to="/leads"
+          className="cta-primary relative hidden h-10 w-[220px] shrink-0 items-center gap-2 rounded-full pl-9 pr-3 text-sm font-semibold transition-[transform,background-color,box-shadow] hover:-translate-y-px active:translate-y-0 sm:inline-flex"
+          aria-label={t('nav.searchClients')}
         >
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--ink-muted)]"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/90"
             aria-hidden
           />
-          <input
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-            placeholder={t('nav.searchClients')}
-            aria-label={t('nav.searchClients')}
-            className="field-control h-10 w-full rounded-full pl-9 pr-3 text-sm"
-          />
-        </form>
+          <span className="truncate">{t('nav.searchClients')}</span>
+        </Link>
 
         <Link
           to="/settings"
