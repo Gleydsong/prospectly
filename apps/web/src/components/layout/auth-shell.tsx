@@ -1,8 +1,9 @@
-import { Building2, Filter, Lock, MapPinned, Search, ShieldCheck } from 'lucide-react';
+import { Filter, Lock, MapPinned, Search, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeToggle } from '@/features/theme/theme-toggle';
+import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
 
 interface AuthShellProps {
   title: string;
@@ -46,11 +47,11 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 
       <aside className="auth-shell-panel relative overflow-hidden border-b border-[color:var(--border)] bg-[color:var(--surface-card)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
         <div className="mx-auto flex h-full max-w-lg flex-col justify-center lg:mx-0">
-          <div className="flex items-center gap-3">
-            <span className="cta-glass flex h-11 w-11 items-center justify-center rounded-control">
-              <Building2 className="h-5 w-5" aria-hidden />
+          <div className="flex items-center gap-1">
+            <span className="cta-glass flex h-11 w-11 items-center justify-center rounded-control p-1.5">
+              <img src={prospectlyMark} alt="" aria-hidden className="h-full w-full object-contain" />
             </span>
-            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">{t('auth.brandName')}</p>
+            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">rospectly</p>
           </div>
 
           <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
