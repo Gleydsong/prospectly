@@ -322,7 +322,7 @@ describe('Prospecting HTTP integration', () => {
     expect(queue.add).not.toHaveBeenCalled();
   });
 
-  it('defaults country to BR, accepts European free-text regions, and rejects invalid BR regions', async () => {
+  it('defaults country to BR and rejects non-BR countries and invalid BR regions', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/searches')
       .send({ categories: ['restaurant'], city: 'São Paulo', state: 'SP', onlyWithoutWebsite: true })
@@ -345,15 +345,7 @@ describe('Prospecting HTTP integration', () => {
         state: 'Lisboa',
         onlyWithoutWebsite: true,
       })
-      .expect(202);
-
-    expect(prisma.search.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          input: expect.objectContaining({ country: 'PT', city: 'Lisboa', state: 'Lisboa' }),
-        }),
-      }),
-    );
+      .expect(400);
 
     await request(app.getHttpServer())
       .post('/api/v1/searches')
@@ -378,7 +370,7 @@ describe('Prospecting HTTP integration', () => {
       .expect(400);
   });
 
-  it('processes a Portuguese search end-to-end and imports with country PT', async () => {
+  it('processes a Brazilian search end-to-end and imports with country BR', async () => {
     searches.set(SEARCH_ID, {
       id: SEARCH_ID,
       organizationId: 'org-1',
@@ -386,21 +378,21 @@ describe('Prospecting HTTP integration', () => {
       provider: 'OPENSTREETMAP',
       input: {
         category: 'restaurant',
-        city: 'Lisboa',
-        state: 'Lisboa',
-        country: 'PT',
+        city: 'Curitiba',
+        state: 'PR',
+        country: 'BR',
         onlyWithoutWebsite: true,
       },
       status: 'PENDING',
     });
     provider.search.mockResolvedValue([
       {
-        externalId: 'node/pt-1',
-        companyName: 'Tasca Lisboa',
-        city: 'Lisboa',
-        state: 'Lisboa',
-        country: 'PT',
-        phone: '+351 21 000 0000',
+        externalId: 'node/br-1',
+        companyName: 'Café Batel',
+        city: 'Curitiba',
+        state: 'PR',
+        country: 'BR',
+        phone: '+55 41 3000 0000',
         source: 'OPENSTREETMAP',
         websitePresence: 'NO_WEBSITE_REPORTED',
       },
@@ -415,9 +407,9 @@ describe('Prospecting HTTP integration', () => {
     expect(provider.search).toHaveBeenCalledWith({
       category: 'restaurant',
       categories: ['restaurant'],
-      city: 'Lisboa',
-      state: 'Lisboa',
-      country: 'PT',
+      city: 'Curitiba',
+      state: 'PR',
+      country: 'BR',
       onlyWithoutWebsite: true,
       limit: DEFAULT_SEARCH_RESULT_LIMIT,
     });
@@ -425,7 +417,7 @@ describe('Prospecting HTTP integration', () => {
 
     const storedResult = [...results.values()][0];
     expect(storedResult?.normalizedData).toEqual(
-      expect.objectContaining({ country: 'PT', city: 'Lisboa', state: 'Lisboa' }),
+      expect.objectContaining({ country: 'BR', city: 'Curitiba', state: 'PR' }),
     );
 
     ingestion.ingest.mockResolvedValue({ status: 'IMPORTED', lead: { id: LEAD_ID } });
@@ -438,10 +430,10 @@ describe('Prospecting HTTP integration', () => {
       'org-1',
       'user-1',
       expect.objectContaining({
-        companyName: 'Tasca Lisboa',
-        country: 'PT',
-        city: 'Lisboa',
-        state: 'Lisboa',
+        companyName: 'Café Batel',
+        country: 'BR',
+        city: 'Curitiba',
+        state: 'PR',
       }),
     );
   });

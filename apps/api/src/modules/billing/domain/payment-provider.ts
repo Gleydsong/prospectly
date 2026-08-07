@@ -1,6 +1,8 @@
 export type PaymentProviderId = 'STRIPE' | 'ABACATE';
 
-export type BillingCurrency = 'BRL' | 'EUR' | 'USD';
+/** Brazil-only billing currency. */
+export type BillingCurrency = 'BRL';
+export type PaymentMethod = 'pix' | 'card';
 export type BillingInterval = 'monthly' | 'lifetime';
 export type CreditOffer = 'credits-2000' | 'credits-5000';
 
@@ -24,7 +26,7 @@ export type CheckoutRequest = {
   existingCustomerId?: string | null;
 };
 
-/** Resposta discriminada: redirect (Stripe / assinatura BR) ou PIX in-app (créditos BR). */
+/** Resposta discriminada: redirect (Stripe cartão) ou PIX in-app (Abacate). */
 export type CheckoutResult =
   | {
       mode: 'redirect';

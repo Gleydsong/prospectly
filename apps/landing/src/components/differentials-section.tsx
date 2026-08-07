@@ -33,7 +33,7 @@ function SearchVisual({ locale }: { locale: Locale }) {
         </BentoChip>
         <BentoChip dim>
           <Globe weight="bold" className="h-3.5 w-3.5" aria-hidden />
-          {locale === 'pt' ? 'Europa' : 'Europe'}
+          {locale === 'pt' ? 'Brasil' : 'Brazil'}
         </BentoChip>
       </div>
     </div>

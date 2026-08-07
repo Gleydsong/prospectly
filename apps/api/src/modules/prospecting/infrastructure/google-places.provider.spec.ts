@@ -192,18 +192,18 @@ describe('GooglePlacesProvider', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('uses regionCode PT and Portuguese language for Lisbon searches', async () => {
+  it('uses regionCode BR and Portuguese language for Brazil searches', async () => {
     const fetchMock = jest.fn().mockResolvedValue(
       jsonResponse({
         places: [
           {
-            id: 'ChIJLisboa',
-            displayName: { text: 'Pastelaria Lisboa' },
-            formattedAddress: 'Lisboa, Portugal',
-            internationalPhoneNumber: '+351 21 000 0000',
+            id: 'ChIJCuritiba',
+            displayName: { text: 'Padaria Batel' },
+            formattedAddress: 'Curitiba, PR, Brasil',
+            internationalPhoneNumber: '+55 41 3000 0000',
             addressComponents: [
-              { longText: 'Lisboa', types: ['locality'] },
-              { longText: 'Lisboa', shortText: 'Lisboa', types: ['administrative_area_level_1'] },
+              { longText: 'Curitiba', types: ['locality'] },
+              { longText: 'Paraná', shortText: 'PR', types: ['administrative_area_level_1'] },
             ],
           },
         ],
@@ -218,23 +218,23 @@ describe('GooglePlacesProvider', () => {
 
     const results = await provider.search({
       category: 'bakery',
-      city: 'Lisboa',
-      state: 'Lisboa',
-      country: 'PT',
+      city: 'Curitiba',
+      state: 'PR',
+      country: 'BR',
       onlyWithoutWebsite: false,
     });
 
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
-    expect(body.regionCode).toBe('PT');
-    expect(body.languageCode).toBe('pt-PT');
-    expect(body.textQuery).toContain('Lisboa');
-    expect(body.textQuery).toContain('Portugal');
+    expect(body.regionCode).toBe('BR');
+    expect(body.languageCode).toBe('pt-BR');
+    expect(body.textQuery).toContain('Curitiba');
+    expect(body.textQuery).toContain('Brasil');
     expect(results).toEqual([
       expect.objectContaining({
-        companyName: 'Pastelaria Lisboa',
-        country: 'PT',
-        state: 'Lisboa',
-        city: 'Lisboa',
+        companyName: 'Padaria Batel',
+        country: 'BR',
+        state: 'PR',
+        city: 'Curitiba',
       }),
     ]);
   });

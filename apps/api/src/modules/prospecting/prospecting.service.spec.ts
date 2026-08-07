@@ -99,54 +99,55 @@ describe('ProspectingService', () => {
     );
   });
 
-  it('persists European country and free-text region on create, then passes them to the provider', async () => {
+  it('persists Brazilian neighborhood on create, then passes it to the provider', async () => {
     const { prisma, queue, provider, service } = createService();
-    const europeanInput = {
+    const brazilInput = {
       categories: ['restaurant' as const],
       category: 'restaurant' as const,
-      city: 'Lisboa',
-      state: 'Lisboa',
-      country: 'PT' as const,
+      city: 'Curitiba',
+      neighborhood: 'Batel',
+      state: 'PR',
+      country: 'BR' as const,
       onlyWithoutWebsite: true,
     };
-    prisma.search.create.mockResolvedValue({ id: 'search-pt', status: 'PENDING' });
+    prisma.search.create.mockResolvedValue({ id: 'search-br', status: 'PENDING' });
     queue.add.mockResolvedValue(undefined);
 
-    await service.create('org-1', 'user-1', europeanInput);
+    await service.create('org-1', 'user-1', brazilInput);
 
     expect(prisma.search.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        input: { ...europeanInput, limit: DEFAULT_SEARCH_RESULT_LIMIT },
+        input: { ...brazilInput, limit: DEFAULT_SEARCH_RESULT_LIMIT },
       }),
     });
 
     prisma.search.findUnique.mockResolvedValue({
-      id: 'search-pt',
+      id: 'search-br',
       organizationId: 'org-1',
       provider: 'OPENSTREETMAP',
-      input: europeanInput,
+      input: brazilInput,
     });
     provider.search.mockResolvedValue([
       {
-        externalId: 'node/pt-1',
-        companyName: 'Tasca Lisboa',
-        city: 'Lisboa',
-        state: 'Lisboa',
-        country: 'PT',
+        externalId: 'node/br-1',
+        companyName: 'Café Batel',
+        city: 'Curitiba',
+        state: 'PR',
+        country: 'BR',
         source: 'OPENSTREETMAP',
         websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
       },
     ]);
 
-    await service.process('search-pt');
+    await service.process('search-br');
 
     expect(provider.search).toHaveBeenCalledWith({
-      ...europeanInput,
+      ...brazilInput,
       limit: DEFAULT_SEARCH_RESULT_LIMIT,
     });
     expect(prisma.searchResult.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { searchId_externalId: { searchId: 'search-pt', externalId: 'node/pt-1' } },
+        where: { searchId_externalId: { searchId: 'search-br', externalId: 'node/br-1' } },
       }),
     );
   });

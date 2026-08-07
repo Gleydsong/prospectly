@@ -26,6 +26,8 @@ export type SearchUsage = {
 
 export type CreditOffer = 'credits-2000' | 'credits-5000';
 
+export type PaymentMethod = 'pix' | 'card';
+
 export type BillingStatus = {
   searchUsage: SearchUsage;
   plan: string;

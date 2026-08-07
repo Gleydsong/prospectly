@@ -12,7 +12,8 @@ import { StripePaymentProvider } from './infrastructure/stripe.payment-provider'
 
 describe('BillingService', () => {
   let service: BillingService;
-  const prisma = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prisma: any = {
     organization: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -27,15 +28,16 @@ describe('BillingService', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
     },
-    $transaction: jest.fn(async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)),
     billingWebhookEvent: {
       create: jest.fn().mockResolvedValue({}),
       delete: jest.fn().mockResolvedValue({}),
     },
   };
+  prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
 
   const stripeProvider = {
     createCheckout: jest.fn(),
+    createCreditCheckout: jest.fn(),
     createPortal: jest.fn(),
     verifyAndParseWebhook: jest.fn(),
     applyWebhookEvent: jest.fn(),
@@ -43,6 +45,7 @@ describe('BillingService', () => {
 
   const abacateProvider = {
     createCheckout: jest.fn(),
+    createCreditCheckout: jest.fn(),
     cancelSubscription: jest.fn(),
     verifyAndParseWebhook: jest.fn(),
     applyWebhookEvent: jest.fn(),
@@ -138,7 +141,7 @@ describe('BillingService', () => {
     );
   });
 
-  it('routes EUR monthly checkout to Stripe redirect', async () => {
+  it('routes card monthly checkout to Stripe redirect', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       name: 'Acme',
@@ -153,7 +156,13 @@ describe('BillingService', () => {
       externalCustomerId: 'cus_1',
     });
 
-    const result = await service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'EUR');
+    const result = await service.createCheckoutSession(
+      'org1',
+      'a@b.com',
+      'monthly',
+      'BRL',
+      'card',
+    );
     expect(result).toEqual(
       expect.objectContaining({ mode: 'redirect', url: 'https://checkout.stripe.com/test' }),
     );
@@ -161,7 +170,7 @@ describe('BillingService', () => {
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('routes BRL lifetime checkout to Abacate PIX', async () => {
+  it('routes PIX lifetime checkout to Abacate', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       name: 'Acme',
@@ -177,13 +186,19 @@ describe('BillingService', () => {
       amountCentavos: 39900,
     });
 
-    const result = await service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL');
+    const result = await service.createCheckoutSession(
+      'org1',
+      'a@b.com',
+      'lifetime',
+      'BRL',
+      'pix',
+    );
     expect(result.mode).toBe('pix');
     expect(abacateProvider.createCheckout).toHaveBeenCalled();
     expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('rejects cross-provider checkout when org already bound', async () => {
+  it('rejects cross-provider plan checkout when org already bound', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       paymentProvider: 'STRIPE',
@@ -191,7 +206,7 @@ describe('BillingService', () => {
       deletedAt: null,
     });
     await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL'),
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'pix'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -204,7 +219,7 @@ describe('BillingService', () => {
       deletedAt: null,
     });
     await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL'),
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
     expect(stripeProvider.createCheckout).not.toHaveBeenCalled();

@@ -4,6 +4,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
+import { CreditPurchaseService } from '../credit-purchase.service';
 import { StripePaymentProvider } from './stripe.payment-provider';
 
 describe('StripePaymentProvider', () => {
@@ -22,6 +23,12 @@ describe('StripePaymentProvider', () => {
     syncMonthlyStatus: jest.fn(),
   };
 
+  const creditPurchases = {
+    attachPayment: jest.fn(),
+    completeFromWebhook: jest.fn(),
+    refundFromWebhook: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     activation.activateLifetime.mockResolvedValue({});
@@ -32,6 +39,7 @@ describe('StripePaymentProvider', () => {
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: PrismaService, useValue: prisma },
         { provide: BillingActivationService, useValue: activation },
+        { provide: CreditPurchaseService, useValue: creditPurchases },
       ],
     }).compile();
     provider = module.get(StripePaymentProvider);
@@ -76,7 +84,7 @@ describe('StripePaymentProvider', () => {
 
     expect(activation.activateLifetime).toHaveBeenCalledWith({
       organizationId: 'org_1',
-      currency: 'EUR',
+      currency: 'BRL',
       provider: PaymentProvider.STRIPE,
       stripeCustomerId: 'cus_1',
     });
@@ -93,7 +101,7 @@ describe('StripePaymentProvider', () => {
             payment_status: 'no_payment_required',
             customer: 'cus_1',
             subscription: 'sub_1',
-            metadata: { organizationId: 'org_1', interval: 'monthly', currency: 'EUR' },
+            metadata: { organizationId: 'org_1', interval: 'monthly', currency: 'BRL' },
           },
         },
       },
@@ -102,7 +110,7 @@ describe('StripePaymentProvider', () => {
 
     expect(activation.activateMonthly).toHaveBeenCalledWith({
       organizationId: 'org_1',
-      currency: 'EUR',
+      currency: 'BRL',
       provider: PaymentProvider.STRIPE,
       stripeCustomerId: 'cus_1',
       stripeSubscriptionId: 'sub_1',

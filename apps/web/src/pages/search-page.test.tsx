@@ -238,7 +238,7 @@ describe('SearchPage', () => {
     renderPage();
 
     expect(screen.getByText(/Restaurante \/ Lisbon/)).toBeInTheDocument();
-    expect(screen.getByText(/Brasil e na Europa/)).toBeInTheDocument();
+    expect(screen.getByText(/Brasil/)).toBeInTheDocument();
     expect(screen.queryByText(/OPENSTREETMAP|GOOGLE_PLACES/)).not.toBeInTheDocument();
   });
 

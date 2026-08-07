@@ -67,7 +67,7 @@ const faqPt: FaqItem[] = [
     category: 'product',
     question: 'Funciona fora do Brasil?',
     answer:
-      'Sim. A busca cobre cidades no Brasil e na Europa, conforme a cobertura do provedor. A interface aceita português e inglês.',
+      'A busca cobre cidades no Brasil, conforme a cobertura do provedor de mapas. A interface aceita português e inglês.',
   },
   {
     id: 'first-search',
@@ -123,14 +123,14 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'No Brasil o checkout é em BRL. Exemplos atuais: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
+      'Checkout apenas em BRL (Brasil). PIX via AbacatePay ou cartão (crédito/débito) via Stripe. Exemplos: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'Como cancelo a assinatura mensal?',
     answer:
-      'Pelo portal de cobrança ligado à sua conta (Stripe ou AbacatePay, conforme o meio de pagamento). Pacotes de créditos não têm renovação para cancelar.',
+      'Cartão Stripe: use o portal de cobrança. PIX mensal (Abacate): cancele no app em Créditos. Pacotes de créditos não têm renovação.',
   },
   {
     id: 'sources',
@@ -210,7 +210,7 @@ const faqEn: FaqItem[] = [
     category: 'product',
     question: 'Does it work outside Brazil?',
     answer:
-      'Yes. Search covers cities in Brazil and Europe based on provider coverage. The UI supports Portuguese and English.',
+      'Search covers cities in Brazil based on map provider coverage. The UI supports Portuguese and English.',
   },
   {
     id: 'first-search',
@@ -266,14 +266,14 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'Checkout in Brazil is in BRL. Current examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
+      'Checkout is BRL only (Brazil). PIX via AbacatePay or card (credit/debit) via Stripe. Examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'How do I cancel a monthly plan?',
     answer:
-      'Through the billing portal linked to your account (Stripe or AbacatePay, depending on payment method). Credit packs have no renewal to cancel.',
+      'Stripe card: use the billing portal. Monthly PIX (Abacate): cancel in-app under Credits. Credit packs have no renewal.',
   },
   {
     id: 'sources',

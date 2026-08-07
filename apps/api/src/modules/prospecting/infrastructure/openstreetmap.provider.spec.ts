@@ -442,17 +442,17 @@ describe('OpenStreetMapProvider', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('uses Portuguese countrycodes and region query for Lisboa', async () => {
+  it('uses Brazilian countrycodes and region query for Curitiba', async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse([
           {
-            osm_id: 5326784,
+            osm_id: 297514,
             osm_type: 'relation',
-            display_name: 'Lisboa, Portugal',
-            address: { city: 'Lisboa', state: 'Lisboa', country_code: 'pt' },
+            display_name: 'Curitiba, Paraná, Brasil',
+            address: { city: 'Curitiba', state: 'Paraná', country_code: 'br' },
             extratags: { admin_level: '8', place: 'city' },
-            boundingbox: ['38.69', '38.80', '-9.23', '-9.08'],
+            boundingbox: ['-25.65', '-25.34', '-49.38', '-49.18'],
           },
         ]),
       )
@@ -461,16 +461,16 @@ describe('OpenStreetMapProvider', () => {
     await expect(
       createProvider().search({
         category: 'restaurant',
-        city: 'Lisboa',
-        state: 'Lisboa',
-        country: 'PT',
+        city: 'Curitiba',
+        state: 'PR',
+        country: 'BR',
         onlyWithoutWebsite: true,
       }),
     ).resolves.toEqual([]);
 
     const nominatimUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
-    expect(nominatimUrl.searchParams.get('countrycodes')).toBe('pt');
-    expect(nominatimUrl.searchParams.get('q')).toBe('Lisboa, Lisboa, Portugal');
+    expect(nominatimUrl.searchParams.get('countrycodes')).toBe('br');
+    expect(nominatimUrl.searchParams.get('q')).toBe('Curitiba, PR, Brasil');
   });
 });
 

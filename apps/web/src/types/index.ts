@@ -300,65 +300,13 @@ export const BRAZILIAN_STATE_CODES = [
 
 export type BrazilianStateCode = (typeof BRAZILIAN_STATE_CODES)[number];
 
-/** Brazil + broad European ISO 3166-1 alpha-2 list for prospecting search. */
-export const PROSPECTING_COUNTRY_CODES = [
-  'BR',
-  'AD', 'AL', 'AT', 'BA', 'BE', 'BG', 'BY', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES',
-  'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC',
-  'MD', 'ME', 'MK', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'RU', 'SE', 'SI', 'SK',
-  'SM', 'UA', 'VA', 'XK',
-] as const;
+/** Brazil-only prospecting (ISO 3166-1 alpha-2). */
+export const PROSPECTING_COUNTRY_CODES = ['BR'] as const;
 
 export type ProspectingCountryCode = (typeof PROSPECTING_COUNTRY_CODES)[number];
 
 export const PROSPECTING_COUNTRIES = [
   { value: 'BR', label: 'Brasil' },
-  { value: 'AD', label: 'Andorra' },
-  { value: 'AL', label: 'Albânia' },
-  { value: 'AT', label: 'Áustria' },
-  { value: 'BA', label: 'Bósnia e Herzegovina' },
-  { value: 'BE', label: 'Bélgica' },
-  { value: 'BG', label: 'Bulgária' },
-  { value: 'BY', label: 'Bielorrússia' },
-  { value: 'CH', label: 'Suíça' },
-  { value: 'CY', label: 'Chipre' },
-  { value: 'CZ', label: 'Chéquia' },
-  { value: 'DE', label: 'Alemanha' },
-  { value: 'DK', label: 'Dinamarca' },
-  { value: 'EE', label: 'Estónia' },
-  { value: 'ES', label: 'Espanha' },
-  { value: 'FI', label: 'Finlândia' },
-  { value: 'FR', label: 'França' },
-  { value: 'GB', label: 'Reino Unido' },
-  { value: 'GR', label: 'Grécia' },
-  { value: 'HR', label: 'Croácia' },
-  { value: 'HU', label: 'Hungria' },
-  { value: 'IE', label: 'Irlanda' },
-  { value: 'IS', label: 'Islândia' },
-  { value: 'IT', label: 'Itália' },
-  { value: 'LI', label: 'Listenstaine' },
-  { value: 'LT', label: 'Lituânia' },
-  { value: 'LU', label: 'Luxemburgo' },
-  { value: 'LV', label: 'Letónia' },
-  { value: 'MC', label: 'Mónaco' },
-  { value: 'MD', label: 'Moldávia' },
-  { value: 'ME', label: 'Montenegro' },
-  { value: 'MK', label: 'Macedónia do Norte' },
-  { value: 'MT', label: 'Malta' },
-  { value: 'NL', label: 'Países Baixos' },
-  { value: 'NO', label: 'Noruega' },
-  { value: 'PL', label: 'Polónia' },
-  { value: 'PT', label: 'Portugal' },
-  { value: 'RO', label: 'Roménia' },
-  { value: 'RS', label: 'Sérvia' },
-  { value: 'RU', label: 'Rússia' },
-  { value: 'SE', label: 'Suécia' },
-  { value: 'SI', label: 'Eslovénia' },
-  { value: 'SK', label: 'Eslováquia' },
-  { value: 'SM', label: 'San Marino' },
-  { value: 'UA', label: 'Ucrânia' },
-  { value: 'VA', label: 'Vaticano' },
-  { value: 'XK', label: 'Kosovo' },
 ] as const satisfies readonly { value: ProspectingCountryCode; label: string }[];
 
 export type SearchStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';

@@ -1,5 +1,5 @@
 export type Locale = 'pt' | 'en';
-export type Currency = 'BRL' | 'EUR' | 'USD';
+export type Currency = 'BRL';
 export type BillingInterval = 'monthly' | 'lifetime';
 
 export const DISPLAY_PRICES: Record<
@@ -8,26 +8,20 @@ export const DISPLAY_PRICES: Record<
 > = {
   monthly: {
     BRL: { amount: 49.99, formatted: 'R$ 49,99' },
-    EUR: { amount: 10, formatted: '€ 10' },
-    USD: { amount: 10, formatted: '$ 10' },
   },
   // Legacy key kept for register?plan=lifetime deep-links; maps to credit packs UX.
   lifetime: {
     BRL: { amount: 19.99, formatted: 'R$ 19,99' },
-    EUR: { amount: 19.99, formatted: '€ 19.99' },
-    USD: { amount: 19.99, formatted: '$ 19.99' },
   },
 };
 
 export const CURRENCY_LABELS: Record<Currency, string> = {
   BRL: 'BRL (Brasil)',
-  EUR: 'EUR (Europa)',
-  USD: 'USD',
 };
 
-export function appRegisterUrl(plan: BillingInterval, currency: Currency): string {
+export function appRegisterUrl(plan: BillingInterval, method: 'pix' | 'card' = 'pix'): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:5173';
-  const params = new URLSearchParams({ plan, currency, acceptTerms: '1' });
+  const params = new URLSearchParams({ plan, method, acceptTerms: '1' });
   return `${base}/register?${params.toString()}`;
 }
 

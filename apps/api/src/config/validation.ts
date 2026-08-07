@@ -91,11 +91,8 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   for (const key of [
     'STRIPE_PRICE_MONTHLY_BRL',
-    'STRIPE_PRICE_MONTHLY_EUR',
-    'STRIPE_PRICE_MONTHLY_USD',
-    'STRIPE_PRICE_LIFETIME_BRL',
-    'STRIPE_PRICE_LIFETIME_EUR',
-    'STRIPE_PRICE_LIFETIME_USD',
+    'STRIPE_PRICE_CREDITS_2000_BRL',
+    'STRIPE_PRICE_CREDITS_5000_BRL',
     'STRIPE_SUCCESS_URL',
     'STRIPE_CANCEL_URL',
     'ABACATE_API_KEY',
@@ -120,6 +117,15 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
       typeof lifetimeAmount === 'number' ? lifetimeAmount : Number(lifetimeAmount);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_LIFETIME_AMOUNT_CENTAVOS must be a positive integer');
+    }
+  }
+
+  const monthlyAmount = config.ABACATE_MONTHLY_AMOUNT_CENTAVOS;
+  if (monthlyAmount !== undefined) {
+    const parsed =
+      typeof monthlyAmount === 'number' ? monthlyAmount : Number(monthlyAmount);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('ABACATE_MONTHLY_AMOUNT_CENTAVOS must be a positive integer');
     }
   }
 
