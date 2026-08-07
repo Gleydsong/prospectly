@@ -24,14 +24,35 @@ Serviço ativo criado via plugin (free / frankfurt):
 | Campo | Valor |
 |-------|-------|
 | Nome | `prospectly` |
-| URL | https://prospectly-d34m.onrender.com |
+| URL Render | https://prospectly-d34m.onrender.com |
+| Domínio | https://prospectlyonboard.com (Namecheap) |
 | Dashboard | https://dashboard.render.com/web/srv-d9ql5njm8hqs738m8bu0 |
 | Build | `pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build` |
 | Start | `pnpm --filter @prospectly/landing start` |
+| Env | `NEXT_PUBLIC_LANDING_URL=https://prospectlyonboard.com` |
 
 Serviços legado a apagar no Dashboard (duplicados / quebrados): `prospectly-mvp` (suspenso), `prospectly-landing` (corepack EROFS), `prospectly-lp`, `prospectly-site`.
 
 Após ter URL da API/app reais, setar `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`, `WAITLIST_API_URL` e redesploy (build-time para `NEXT_PUBLIC_*`).
+
+### Domínio Namecheap → Render
+
+Plugin Render **não** cria custom domains — fazer no Dashboard + DNS:
+
+1. [Dashboard do serviço](https://dashboard.render.com/web/srv-d9ql5njm8hqs738m8bu0) → **Settings** → **Custom Domains** → add:
+   - `prospectlyonboard.com`
+   - `www.prospectlyonboard.com`
+2. Namecheap → **Domain List** → **Manage** `prospectlyonboard.com` → **Advanced DNS**:
+   - Remover `AAAA` (Render não usa IPv6), A/`CNAME`/Redirect antigos de `@` e `www`.
+   - Adicionar:
+
+| Type | Host | Value | TTL |
+|------|------|-------|-----|
+| A | `@` | `216.24.57.1` | 1 min (depois Automatic) |
+| CNAME | `www` | `prospectly-d34m.onrender.com` | 1 min |
+
+3. Voltar ao Render e esperar verificação + HTTPS automático.
+4. Docs oficiais: [Namecheap DNS](https://render.com/docs/configure-namecheap-dns).
 
 API health check: `GET /health/ready` (Postgres + Redis).
 
