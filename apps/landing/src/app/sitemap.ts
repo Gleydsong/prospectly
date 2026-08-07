@@ -27,19 +27,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   entries.push(
     {
-      url: `${base}/v2`,
+      url: `${base}/`,
       lastModified,
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: `${base}/v2/como-funciona`,
+      url: `${base}/como-funciona`,
       lastModified,
       changeFrequency: 'monthly',
       priority: 0.9,
     },
     ...['beneficios', 'para-quem-e', 'duvidas'].map((path) => ({
-      url: `${base}/v2/${path}`,
+      url: `${base}/${path}`,
       lastModified,
       changeFrequency: 'monthly' as const,
       priority: 0.8,
