@@ -47,7 +47,7 @@ describe('CreateSearchDto validation', () => {
     );
   });
 
-  it('accepts Portugal with a free-text region', async () => {
+  it('rejects Portugal after Brazil-only geo restriction', async () => {
     await expect(
       transform({
         categories: ['bakery'],
@@ -56,14 +56,7 @@ describe('CreateSearchDto validation', () => {
         state: 'Lisboa',
         onlyWithoutWebsite: true,
       }),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        categories: ['bakery'],
-        country: 'PT',
-        city: 'Lisboa',
-        state: 'Lisboa',
-      }),
-    );
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('rejects empty categories', async () => {
@@ -100,7 +93,7 @@ describe('CreateSearchDto validation', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('rejects unsupported country codes', async () => {
+  it('rejects unsupported country codes including former European markets', async () => {
     await expect(
       transform({
         categories: ['restaurant'],
@@ -110,15 +103,13 @@ describe('CreateSearchDto validation', () => {
         onlyWithoutWebsite: true,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-  });
 
-  it('rejects empty region for European countries', async () => {
     await expect(
       transform({
         categories: ['restaurant'],
         country: 'PT',
         city: 'Lisboa',
-        state: '   ',
+        state: 'Lisboa',
         onlyWithoutWebsite: true,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);

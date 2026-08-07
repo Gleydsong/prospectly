@@ -400,7 +400,14 @@
     "subscribe": "Subscribe / buy",
     "subscribeMonthly": "Subscribe unlimited (card)",
     "subscribeLifetimePix": "Buy credits with PIX",
-    "stripePortal": "Stripe portal",
+    "stripePortal": "Card portal (Stripe)",
+    "choosePaymentMethod": "How do you want to pay?",
+    "choosePaymentMethodHint": "PIX via AbacatePay or credit/debit card via Stripe. BRL only.",
+    "payWithPix": "PIX",
+    "payWithPixHint": "Instant QR code. Unlimited via PIX lasts 30 days (no auto-renew).",
+    "payWithCard": "Card",
+    "payWithCardHint": "Credit or debit via Stripe Checkout.",
+    "packFeaturePixMonthly": "Monthly PIX = 30 days of access",
     "cancelSubscription": "Cancel subscription",
     "viewPricing": "See pricing",
     "privacyTitle": "Privacy (LGPD)",
@@ -494,7 +501,7 @@
   "search": {
     "highIntentEyebrow": "High-intent search",
     "highIntentTitle": "Find the next right client.",
-    "highIntentDesc": "One search at a time. Find local businesses by niche and location in Brazil and across Europe."
+    "highIntentDesc": "One search at a time. Find local businesses by niche and location in Brazil."
   },
   "pipeline": {
     "subtitle": "{{name}} — drag or use Move to stage",

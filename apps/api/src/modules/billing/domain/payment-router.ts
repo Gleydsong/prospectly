@@ -1,6 +1,6 @@
-import type { BillingCurrency, PaymentProviderId } from './payment-provider';
+import type { PaymentMethod, PaymentProviderId } from './payment-provider';
 
-export function resolvePaymentProviderId(currency: BillingCurrency): PaymentProviderId {
-  if (currency === 'BRL') return 'ABACATE';
-  return 'STRIPE';
+/** Brazil-only routing: PIX → Abacate, card → Stripe. */
+export function resolvePaymentProviderId(method: PaymentMethod): PaymentProviderId {
+  return method === 'pix' ? 'ABACATE' : 'STRIPE';
 }

@@ -15,6 +15,7 @@ export class CreditPurchaseService {
     organizationId: string;
     offer: CreditOffer;
     externalId: string;
+    provider?: PaymentProvider;
   }) {
     const pack = CREDIT_PACKAGES[input.offer];
     return this.prisma.creditPurchase.create({
@@ -24,7 +25,7 @@ export class CreditPurchaseService {
         credits: pack.credits,
         amountCentavos: pack.amountCentavos,
         currency: 'BRL',
-        provider: PaymentProvider.ABACATE,
+        provider: input.provider ?? PaymentProvider.ABACATE,
         externalId: input.externalId,
       },
     });

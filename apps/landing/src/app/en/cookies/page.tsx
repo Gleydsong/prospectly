@@ -12,7 +12,7 @@ export default function EnCookiesPage() {
       <p className="mt-3 text-sm text-[color:var(--ink-muted)]">Last updated: 25 July 2026</p>
       <div className="mt-8 space-y-4 text-base leading-relaxed text-[color:var(--ink-muted)]">
         <p>
-          We use essential cookies / localStorage for currency preference and the consent banner.
+          We use essential cookies / localStorage for locale preference and the consent banner.
           Third-party analytics is{' '}
           <strong className="text-[color:var(--ink)]">off by default</strong>. Portuguese version:
           /cookies.

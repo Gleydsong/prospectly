@@ -18,6 +18,7 @@ import type {
   BillingInterval,
   CreditOffer,
   CheckoutResult,
+  PaymentMethod,
   PaymentProviderId,
 } from './domain/payment-provider';
 import { resolvePaymentProviderId } from './domain/payment-router';
@@ -154,15 +155,19 @@ export class BillingService {
     userEmail: string,
     interval: BillingInterval,
     currency: BillingCurrency,
+    paymentMethod: PaymentMethod,
   ): Promise<CheckoutResult> {
+    if (currency !== 'BRL') {
+      throw new BadRequestException('Only BRL billing is supported');
+    }
     const org = await this.requireOrg(organizationId);
     if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
       throw new BadRequestException(
         'Organization already has an active lifetime plan. Further checkouts are not allowed.',
       );
     }
-    const providerId = resolvePaymentProviderId(currency);
-    this.assertProviderCompatible(org, providerId);
+    const providerId = resolvePaymentProviderId(paymentMethod);
+    this.assertPlanProviderCompatible(org, providerId);
 
     const provider =
       providerId === 'ABACATE' ? this.abacateProvider : this.stripeProvider;
@@ -187,7 +192,7 @@ export class BillingService {
       customerEmail: userEmail,
       customerName: org.name,
       interval,
-      currency,
+      currency: 'BRL',
       successUrl,
       cancelUrl,
       existingCustomerId,
@@ -214,22 +219,41 @@ export class BillingService {
   async createCreditCheckoutSession(
     organizationId: string,
     offer: CreditOffer,
+    paymentMethod: PaymentMethod,
   ): Promise<CheckoutResult> {
     await this.requireOrg(organizationId);
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
 
+    const providerId = resolvePaymentProviderId(paymentMethod);
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
-    const purchase = await this.creditPurchases.createPending({ organizationId, offer, externalId });
+    const purchase = await this.creditPurchases.createPending({
+      organizationId,
+      offer,
+      externalId,
+      provider: providerId === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+    });
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
+    const successUrl = `${frontendUrl}/billing/success`;
+    const cancelUrl = `${frontendUrl}/billing/cancel`;
     try {
-      return await this.abacateProvider.createCreditCheckout({
+      if (providerId === 'ABACATE') {
+        return await this.abacateProvider.createCreditCheckout({
+          organizationId,
+          offer,
+          purchaseId: purchase.id,
+          externalId,
+          successUrl,
+          cancelUrl,
+        });
+      }
+      return await this.stripeProvider.createCreditCheckout({
         organizationId,
         offer,
         purchaseId: purchase.id,
         externalId,
-        successUrl: `${frontendUrl}/billing/success`,
-        cancelUrl: `${frontendUrl}/billing/cancel`,
+        successUrl,
+        cancelUrl,
       });
     } catch (error) {
       await this.prisma.creditPurchase.update({
@@ -244,7 +268,7 @@ export class BillingService {
     const org = await this.requireOrg(organizationId);
     if (org.paymentProvider === PaymentProvider.ABACATE) {
       throw new BadRequestException(
-        'Customer portal is only available for Stripe (EUR/USD). Cancel via API for Abacate subscriptions.',
+        'Customer portal is only available for Stripe card subscriptions. Cancel PIX plans via the cancel endpoint.',
       );
     }
     if (!org.stripeCustomerId) {
@@ -253,7 +277,7 @@ export class BillingService {
 
     const returnUrl =
       this.config.get<string>('stripe.portalReturnUrl') ??
-      `${this.config.get<string>('frontendUrl')}/settings`;
+      `${this.config.get<string>('frontendUrl')}/credits`;
 
     return this.stripeProvider.createPortal({
       organizationId,
@@ -269,12 +293,17 @@ export class BillingService {
     }
 
     if (org.paymentProvider === PaymentProvider.ABACATE) {
-      if (!org.abacateSubscriptionId) {
-        throw new BadRequestException('No Abacate subscription for this organization');
+      if (org.abacateSubscriptionId) {
+        await this.abacateProvider.cancelSubscription({
+          organizationId,
+          externalSubscriptionId: org.abacateSubscriptionId,
+        });
+        return { canceled: true };
       }
-      await this.abacateProvider.cancelSubscription({
+      // PIX monthly (transparent, no recurring subscription id): cancel locally.
+      await this.activation.syncMonthlyStatus({
         organizationId,
-        externalSubscriptionId: org.abacateSubscriptionId,
+        status: PlanStatus.CANCELED,
       });
       return { canceled: true };
     }
@@ -283,8 +312,6 @@ export class BillingService {
       throw new BadRequestException('No Stripe subscription for this organization');
     }
 
-    // Stripe: cancel via portal is preferred; API cancel not exposed here yet.
-    // Mark intent by requiring portal — keep explicit error for Stripe.
     throw new BadRequestException(
       'Cancel Stripe subscriptions via the customer portal',
     );
@@ -333,16 +360,16 @@ export class BillingService {
     return { received: true };
   }
 
-  private assertProviderCompatible(org: Organization, next: PaymentProviderId): void {
+  private assertPlanProviderCompatible(org: Organization, next: PaymentProviderId): void {
     if (!org.paymentProvider) return;
     if (org.paymentProvider === next) return;
     if (org.planStatus === PlanStatus.ACTIVE) {
       throw new ForbiddenException(
-        'Organization already has an active plan on another payment provider. Currency/gateway migration is not supported.',
+        'Organization already has an active plan on another payment provider. Gateway migration is not supported.',
       );
     }
     throw new ForbiddenException(
-      'Organization is bound to another payment provider. Use the same currency as the existing gateway.',
+      'Organization is bound to another payment provider for plans. Use the same payment method as the existing gateway.',
     );
   }
 

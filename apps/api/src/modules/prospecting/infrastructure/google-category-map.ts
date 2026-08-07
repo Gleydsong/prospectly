@@ -11,25 +11,6 @@ const LABEL_BY_VALUE = Object.fromEntries(
 
 const LANGUAGE_BY_COUNTRY: Partial<Record<ProspectingCountryCode, string>> = {
   BR: 'pt-BR',
-  PT: 'pt-PT',
-  ES: 'es',
-  FR: 'fr',
-  DE: 'de',
-  IT: 'it',
-  NL: 'nl',
-  PL: 'pl',
-  RO: 'ro',
-  SE: 'sv',
-  NO: 'no',
-  DK: 'da',
-  FI: 'fi',
-  GR: 'el',
-  HU: 'hu',
-  CZ: 'cs',
-  SK: 'sk',
-  HR: 'hr',
-  UA: 'uk',
-  RU: 'ru',
 };
 
 export function googleLanguageCode(country: ProspectingCountryCode): string {

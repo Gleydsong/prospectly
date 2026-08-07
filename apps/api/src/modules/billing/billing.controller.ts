@@ -46,6 +46,7 @@ export class BillingController {
       user.email,
       dto.interval,
       dto.currency,
+      dto.paymentMethod,
     );
   }
 
@@ -57,7 +58,11 @@ export class BillingController {
     @CurrentOrg() organizationId: string,
     @Body() dto: CreateCreditCheckoutDto,
   ) {
-    return this.billing.createCreditCheckoutSession(organizationId, dto.offer);
+    return this.billing.createCreditCheckoutSession(
+      organizationId,
+      dto.offer,
+      dto.paymentMethod,
+    );
   }
 
   @ApiBearerAuth()

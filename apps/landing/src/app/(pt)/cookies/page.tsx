@@ -17,8 +17,8 @@ export default function CookiesPage() {
           Cookies essenciais
         </h2>
         <p>
-          Necessários para preferência de moeda (localStorage no browser), consentimento do banner e
-          funcionamento do site. Não exigem consentimento adicional além da transparência.
+          Necessários para preferência de idioma e consentimento do banner (localStorage no
+          browser) e funcionamento do site. Não exigem consentimento adicional além da transparência.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Analytics

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Coins, Crown } from 'lucide-react';
+import { Check, Coins, CreditCard, Crown, QrCode } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -16,6 +16,7 @@ import {
   getBillingStatus,
 } from '@/features/auth/api';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
+import type { PaymentMethod } from '@/features/billing/types';
 import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -36,6 +37,11 @@ export function CreditsPage() {
       ? value
       : null;
   });
+  const [pendingOffer, setPendingOffer] = useState<CreditOfferId | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(() => {
+    const value = searchParams.get('method');
+    return value === 'pix' || value === 'card' ? value : null;
+  });
 
   const billing = useQuery({
     queryKey: ['billing', 'status'],
@@ -43,7 +49,8 @@ export function CreditsPage() {
   });
 
   const creditCheckout = useMutation({
-    mutationFn: (offer: 'credits-2000' | 'credits-5000') => createCreditCheckout({ offer }),
+    mutationFn: (input: { offer: 'credits-2000' | 'credits-5000'; paymentMethod: PaymentMethod }) =>
+      createCreditCheckout(input),
     onSuccess: (data) =>
       handleCheckoutResult(data, {
         purpose: 'credits',
@@ -53,7 +60,8 @@ export function CreditsPage() {
   });
 
   const planCheckout = useMutation({
-    mutationFn: () => createCheckoutSession({ interval: 'monthly', currency: 'BRL' }),
+    mutationFn: (method: PaymentMethod) =>
+      createCheckoutSession({ interval: 'monthly', currency: 'BRL', paymentMethod: method }),
     onSuccess: (data) => handleCheckoutResult(data, { purpose: 'plan' }),
     onError: () => setBillingError(t('settings.billingError')),
   });
@@ -74,6 +82,18 @@ export function CreditsPage() {
   });
 
   const checkoutPending = creditCheckout.isPending || planCheckout.isPending;
+
+  const startCheckout = (offer: CreditOfferId, method: PaymentMethod) => {
+    setCreditOffer(offer);
+    setPaymentMethod(method);
+    setBillingError(null);
+    setPendingOffer(null);
+    if (offer === 'unlimited') {
+      planCheckout.mutate(method);
+      return;
+    }
+    creditCheckout.mutate({ offer, paymentMethod: method });
+  };
 
   const offers = [
     {
@@ -138,6 +158,55 @@ export function CreditsPage() {
             </p>
           ) : null}
 
+          {pendingOffer ? (
+            <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
+              <p className="text-sm font-medium text-[color:var(--ink)]">{t('settings.choosePaymentMethod')}</p>
+              <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{t('settings.choosePaymentMethodHint')}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-auto justify-start gap-3 px-4 py-3"
+                  disabled={!emailVerified || checkoutPending}
+                  loading={checkoutPending && paymentMethod === 'pix'}
+                  onClick={() => startCheckout(pendingOffer, 'pix')}
+                >
+                  <QrCode className="h-5 w-5 shrink-0" aria-hidden />
+                  <span className="text-left">
+                    <span className="block font-semibold">{t('settings.payWithPix')}</span>
+                    <span className="block text-xs font-normal text-[color:var(--ink-muted)]">
+                      {t('settings.payWithPixHint')}
+                    </span>
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-auto justify-start gap-3 px-4 py-3"
+                  disabled={!emailVerified || checkoutPending}
+                  loading={checkoutPending && paymentMethod === 'card'}
+                  onClick={() => startCheckout(pendingOffer, 'card')}
+                >
+                  <CreditCard className="h-5 w-5 shrink-0" aria-hidden />
+                  <span className="text-left">
+                    <span className="block font-semibold">{t('settings.payWithCard')}</span>
+                    <span className="block text-xs font-normal text-[color:var(--ink-muted)]">
+                      {t('settings.payWithCardHint')}
+                    </span>
+                  </span>
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="mt-3"
+                onClick={() => setPendingOffer(null)}
+              >
+                {t('common.cancel')}
+              </Button>
+            </div>
+          ) : null}
+
           <div className="grid gap-3 lg:grid-cols-3">
             {offers.map((offer) => {
               const pending = checkoutPending && creditOffer === offer.id;
@@ -188,6 +257,12 @@ export function CreditsPage() {
                       <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
                       {t('settings.packFeaturePdf')}
                     </li>
+                    {offer.id === 'unlimited' ? (
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                        {t('settings.packFeaturePixMonthly')}
+                      </li>
+                    ) : null}
                   </ul>
 
                   <Button
@@ -196,13 +271,8 @@ export function CreditsPage() {
                     disabled={!emailVerified || checkoutPending}
                     loading={pending}
                     onClick={() => {
-                      setCreditOffer(offer.id);
                       setBillingError(null);
-                      if (offer.id === 'unlimited') {
-                        planCheckout.mutate();
-                        return;
-                      }
-                      creditCheckout.mutate(offer.id);
+                      setPendingOffer(offer.id);
                     }}
                   >
                     {offer.cta}

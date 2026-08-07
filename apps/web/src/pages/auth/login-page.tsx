@@ -30,9 +30,9 @@ export function LoginPage() {
     const value = searchParams.get('plan');
     return value === 'lifetime' || value === 'monthly' ? value : null;
   }, [searchParams]);
-  const currency = useMemo(() => {
-    const value = searchParams.get('currency');
-    return value === 'BRL' || value === 'EUR' || value === 'USD' ? value : 'BRL';
+  const paymentMethod = useMemo(() => {
+    const value = searchParams.get('method');
+    return value === 'pix' || value === 'card' ? value : 'pix';
   }, [searchParams]);
   const offer = useMemo(() => {
     const value = searchParams.get('offer');
@@ -62,33 +62,41 @@ export function LoginPage() {
 
     if (plan) {
       try {
-        const checkout = await createCheckoutSession({ interval: plan, currency });
+        const checkout = await createCheckoutSession({
+          interval: plan,
+          currency: 'BRL',
+          paymentMethod,
+        });
         handleCheckoutResult(checkout);
         return;
       } catch {
-        navigate(`/credits?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
+        navigate(`/credits?upgrade=1&plan=${plan}&method=${paymentMethod}`, { replace: true });
         return;
       }
     }
 
     if (offer === 'credits-2000' || offer === 'credits-5000') {
       try {
-        const checkout = await createCreditCheckout({ offer });
+        const checkout = await createCreditCheckout({ offer, paymentMethod });
         handleCheckoutResult(checkout, { purpose: 'credits' });
         return;
       } catch {
-        navigate(`/credits?offer=${offer}`, { replace: true });
+        navigate(`/credits?offer=${offer}&method=${paymentMethod}`, { replace: true });
         return;
       }
     }
 
     if (offer === 'unlimited') {
       try {
-        const checkout = await createCheckoutSession({ interval: 'monthly', currency: 'BRL' });
+        const checkout = await createCheckoutSession({
+          interval: 'monthly',
+          currency: 'BRL',
+          paymentMethod,
+        });
         handleCheckoutResult(checkout);
         return;
       } catch {
-        navigate('/credits?offer=unlimited', { replace: true });
+        navigate(`/credits?offer=unlimited&method=${paymentMethod}`, { replace: true });
         return;
       }
     }
@@ -115,7 +123,7 @@ export function LoginPage() {
   const registerHref = offer
     ? `/register?offer=${offer}`
     : plan
-      ? `/register?plan=${plan}&currency=${currency}`
+      ? `/register?plan=${plan}&method=${paymentMethod}`
       : '/register';
 
   return (

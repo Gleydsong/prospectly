@@ -83,7 +83,7 @@ describe('BillingActivationService', () => {
     prisma.organization.update.mockResolvedValue({});
     await service.activateMonthly({
       organizationId: 'org1',
-      currency: 'EUR',
+      currency: 'BRL',
       provider: PaymentProvider.STRIPE,
       stripeSubscriptionId: 'sub_1',
     });
@@ -105,7 +105,7 @@ describe('BillingActivationService', () => {
     });
     await service.activateMonthly({
       organizationId: 'org1',
-      currency: 'EUR',
+      currency: 'BRL',
       provider: PaymentProvider.STRIPE,
       stripeSubscriptionId: 'sub_attack',
     });

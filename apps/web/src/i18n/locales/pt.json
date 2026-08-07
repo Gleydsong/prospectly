@@ -400,8 +400,18 @@
     "subscribe": "Assinar / comprar",
     "subscribeMonthly": "Assinar ilimitado (cartão)",
     "subscribeLifetimePix": "Comprar créditos com PIX",
-    "stripePortal": "Portal Stripe",
+    "stripePortal": "Portal do cartão (Stripe)",
+    "choosePaymentMethod": "Como prefere pagar?",
+    "choosePaymentMethodHint": "PIX via AbacatePay ou cartão de crédito/débito via Stripe. Cobrança apenas em BRL.",
+    "payWithPix": "PIX",
+    "payWithPixHint": "QR Code instantâneo. Ilimitado PIX vale 30 dias (sem renovação automática).",
+    "payWithCard": "Cartão",
+    "payWithCardHint": "Crédito ou débito via Stripe Checkout.",
+    "packFeaturePixMonthly": "PIX mensal = 30 dias de acesso",
+    "freeSearches": "Demo grátis: {{count}} buscas",
     "cancelSubscription": "Cancelar assinatura",
+    "billingError": "Não foi possível iniciar o pagamento. Tente de novo.",
+    "billingEmailHint": "Confirme seu e-mail para adicionar créditos com segurança.",
     "viewPricing": "Ver preços",
     "privacyTitle": "Privacidade (LGPD)",
     "privacyDesc": "Direitos do titular, exportação e exclusão de conta",
@@ -494,7 +504,7 @@
   "search": {
     "highIntentEyebrow": "Busca de alta intenção",
     "highIntentTitle": "Encontre o próximo cliente certo.",
-    "highIntentDesc": "Uma busca por vez. Encontre empresas locais por nicho e localização no Brasil e na Europa."
+    "highIntentDesc": "Uma busca por vez. Encontre empresas locais por nicho e localização no Brasil."
   },
   "pipeline": {
     "subtitle": "{{name}} — arraste ou use Mover para etapa",

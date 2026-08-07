@@ -59,15 +59,11 @@ export const configuration = () => ({
     portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL,
     prices: {
       monthly: {
-        // Deprecated for new BRL checkouts (AbacatePay). Kept for legacy Stripe BRL orgs.
         brl: process.env.STRIPE_PRICE_MONTHLY_BRL ?? '',
-        eur: process.env.STRIPE_PRICE_MONTHLY_EUR ?? '',
-        usd: process.env.STRIPE_PRICE_MONTHLY_USD ?? '',
       },
-      lifetime: {
-        brl: process.env.STRIPE_PRICE_LIFETIME_BRL ?? '',
-        eur: process.env.STRIPE_PRICE_LIFETIME_EUR ?? '',
-        usd: process.env.STRIPE_PRICE_LIFETIME_USD ?? '',
+      credits: {
+        'credits-2000': process.env.STRIPE_PRICE_CREDITS_2000_BRL ?? '',
+        'credits-5000': process.env.STRIPE_PRICE_CREDITS_5000_BRL ?? '',
       },
     },
   },
@@ -75,9 +71,14 @@ export const configuration = () => ({
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
     webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY ?? '',
+    /** @deprecated Legacy Abacate CARD subscriptions — kept for cancel of old orgs. */
     productMonthlyBrl: process.env.ABACATE_PRODUCT_MONTHLY_BRL ?? '',
     lifetimeAmountCentavos: parseInt(
       process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900',
+      10,
+    ),
+    monthlyAmountCentavos: parseInt(
+      process.env.ABACATE_MONTHLY_AMOUNT_CENTAVOS ?? '4999',
       10,
     ),
     successUrl: process.env.ABACATE_SUCCESS_URL,

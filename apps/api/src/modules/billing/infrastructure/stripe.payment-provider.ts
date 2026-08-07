@@ -10,9 +10,13 @@ import Stripe from 'stripe';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
+import { CreditPurchaseService } from '../credit-purchase.service';
+import { CREDIT_PACKAGES } from '../credit-purchase.constants';
 import type {
   BillingCurrency,
   BillingInterval,
+  CreditCheckoutRequest,
+  CreditOffer,
   CheckoutRequest,
   CheckoutResult,
   ParsedWebhookEvent,
@@ -30,6 +34,7 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService,
     private readonly activation: BillingActivationService,
+    private readonly creditPurchases: CreditPurchaseService,
   ) {
     const secret = this.config.get<string>('stripe.secretKey');
     this.stripe = secret ? new Stripe(secret) : null;
@@ -43,19 +48,35 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
   }
 
   resolvePriceId(interval: BillingInterval, currency: BillingCurrency): string {
-    if (currency === 'BRL') {
-      throw new BadRequestException('BRL checkout is handled by AbacatePay');
+    if (currency !== 'BRL') {
+      throw new BadRequestException('Only BRL Stripe checkout is supported');
     }
-    const key = `stripe.prices.${interval}.${currency.toLowerCase()}` as const;
-    const priceId = this.config.get<string>(key);
+    if (interval !== 'monthly') {
+      throw new BadRequestException('Stripe card checkout supports monthly plans only');
+    }
+    const priceId = this.config.get<string>('stripe.prices.monthly.brl');
     if (!priceId) {
-      throw new BadRequestException(`Price not configured for ${interval}/${currency}`);
+      throw new BadRequestException('STRIPE_PRICE_MONTHLY_BRL is not configured');
+    }
+    return priceId;
+  }
+
+  resolveCreditPriceId(offer: CreditOffer): string {
+    const priceId = this.config.get<string>(`stripe.prices.credits.${offer}`);
+    if (!priceId) {
+      throw new BadRequestException(`Stripe price not configured for ${offer}`);
     }
     return priceId;
   }
 
   async createCheckout(input: CheckoutRequest): Promise<CheckoutResult> {
     const stripe = this.requireStripe();
+    if (input.currency !== 'BRL') {
+      throw new BadRequestException('Only BRL Stripe checkout is supported');
+    }
+    if (input.interval !== 'monthly') {
+      throw new BadRequestException('Stripe card checkout supports monthly plans only');
+    }
     const priceId = this.resolvePriceId(input.interval, input.currency);
     let customerId = input.existingCustomerId ?? undefined;
 
@@ -69,7 +90,7 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
     }
 
     const session = await stripe.checkout.sessions.create({
-      mode: input.interval === 'monthly' ? 'subscription' : 'payment',
+      mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: input.successUrl,
@@ -78,23 +99,12 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
       metadata: {
         organizationId: input.organizationId,
         interval: input.interval,
-        currency: input.currency,
+        currency: 'BRL',
+        purpose: 'plan',
       },
-      ...(input.interval === 'monthly'
-        ? {
-            subscription_data: {
-              metadata: { organizationId: input.organizationId, currency: input.currency },
-            },
-          }
-        : {
-            payment_intent_data: {
-              metadata: {
-                organizationId: input.organizationId,
-                currency: input.currency,
-                interval: input.interval,
-              },
-            },
-          }),
+      subscription_data: {
+        metadata: { organizationId: input.organizationId, currency: 'BRL' },
+      },
     });
 
     if (!session.url) {
@@ -106,6 +116,51 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
       url: session.url,
       provider: 'STRIPE',
       externalCustomerId: customerId,
+      externalCheckoutId: session.id,
+    };
+  }
+
+  async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
+    const stripe = this.requireStripe();
+    const priceId = this.resolveCreditPriceId(input.offer);
+    const pack = CREDIT_PACKAGES[input.offer];
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: undefined,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+      client_reference_id: input.organizationId,
+      metadata: {
+        organizationId: input.organizationId,
+        purchaseId: input.purchaseId,
+        offer: input.offer,
+        credits: String(pack.credits),
+        currency: 'BRL',
+        purpose: 'credits',
+        externalId: input.externalId,
+      },
+      payment_intent_data: {
+        metadata: {
+          organizationId: input.organizationId,
+          purchaseId: input.purchaseId,
+          offer: input.offer,
+          purpose: 'credits',
+        },
+      },
+    });
+
+    if (!session.url) {
+      throw new BadRequestException('Stripe did not return a checkout URL');
+    }
+
+    await this.creditPurchases.attachPayment(input.purchaseId, session.id);
+
+    return {
+      mode: 'redirect',
+      url: session.url,
+      provider: 'STRIPE',
       externalCheckoutId: session.id,
     };
   }
@@ -189,14 +244,25 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
       return;
     }
 
+    if (session.metadata?.purpose === 'credits' || session.metadata?.purchaseId) {
+      await this.creditPurchases.completeFromWebhook({
+        id: session.id,
+        metadata: {
+          purchaseId: session.metadata.purchaseId ?? '',
+          organizationId,
+          offer: session.metadata.offer ?? '',
+        },
+      });
+      return;
+    }
+
     const interval = (session.metadata?.interval ??
       (session.mode === 'subscription' ? 'monthly' : 'lifetime')) as BillingInterval;
-    const currency = (session.metadata?.currency ?? session.currency?.toUpperCase() ?? 'EUR') as
-      | BillingCurrency;
+    const currency = 'BRL' as BillingCurrency;
 
     const customerId = typeof session.customer === 'string' ? session.customer : undefined;
 
-    if (interval === 'lifetime' || session.mode === 'payment') {
+    if (interval === 'lifetime' || (session.mode === 'payment' && !session.metadata?.purchaseId)) {
       const previous = await this.activation.activateLifetime({
         organizationId,
         currency,

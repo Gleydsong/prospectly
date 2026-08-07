@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentProvider, PlanStatus } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -65,7 +65,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       return this.createLifetimePix(input);
     }
 
-    return this.createMonthlySubscription(input);
+    return this.createMonthlyPix(input);
   }
 
   async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
@@ -225,18 +225,16 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     };
   }
 
-  private async createMonthlySubscription(input: CheckoutRequest): Promise<CheckoutResult> {
-    const productId = this.config.get<string>('abacate.productMonthlyBrl');
-    if (!productId) {
-      throw new ServiceUnavailableException('ABACATE_PRODUCT_MONTHLY_BRL is not configured');
+  private async createMonthlyPix(input: CheckoutRequest): Promise<CheckoutResult> {
+    const amountCentavos = this.config.get<number>('abacate.monthlyAmountCentavos');
+    if (!amountCentavos || amountCentavos < 1) {
+      throw new ServiceUnavailableException('ABACATE_MONTHLY_AMOUNT_CENTAVOS is not configured');
     }
 
-    const checkout = await this.client.createSubscriptionCheckout({
-      productId,
-      returnUrl: input.cancelUrl,
-      completionUrl: input.successUrl,
-      externalId: `org:${input.organizationId}:monthly`,
-      customerId: input.existingCustomerId,
+    const charge = await this.client.createTransparentPix({
+      amountCentavos,
+      description: 'Prospectly Ilimitado (30 dias)',
+      externalId: `org:${input.organizationId}:monthly:${Date.now()}`,
       metadata: {
         organizationId: input.organizationId,
         interval: 'monthly',
@@ -244,16 +242,18 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       },
     });
 
-    if (!checkout.url) {
-      throw new ServiceUnavailableException('AbacatePay did not return a checkout URL');
+    if (!charge.brCode || !charge.brCodeBase64) {
+      throw new ServiceUnavailableException('AbacatePay did not return PIX codes');
     }
 
     return {
-      mode: 'redirect',
-      url: checkout.url,
+      mode: 'pix',
       provider: 'ABACATE',
-      externalCustomerId: checkout.customerId ?? undefined,
-      externalCheckoutId: checkout.id,
+      brCode: charge.brCode,
+      brCodeBase64: charge.brCodeBase64,
+      externalPaymentId: charge.id,
+      amountCentavos: charge.amount ?? amountCentavos,
+      expiresAt: charge.expiresAt ?? undefined,
     };
   }
 
@@ -265,6 +265,25 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     }
 
     const paymentId = typeof data.id === 'string' ? data.id : undefined;
+    const metadata = this.readMetadata(data);
+
+    if (metadata.interval === 'monthly') {
+      const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await this.activation.activateMonthly({
+        organizationId,
+        currency: 'BRL',
+        provider: PaymentProvider.ABACATE,
+        currentPeriodEnd: periodEnd,
+      });
+      if (paymentId) {
+        await this.prisma.organization.update({
+          where: { id: organizationId },
+          data: { abacatePaymentId: paymentId },
+        });
+      }
+      return;
+    }
+
     const previous = await this.activation.activateLifetime({
       organizationId,
       currency: 'BRL',
@@ -302,6 +321,20 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
 
     if (!organizationId) {
       this.logger.warn(`Abacate ${type} without organization mapping`);
+      return;
+    }
+
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org) return;
+
+    if (org.plan === OrgPlan.STARTER_MONTHLY && org.paymentProvider === PaymentProvider.ABACATE) {
+      this.logger.warn(
+        `Revoking monthly PIX entitlement for org ${organizationId} after Abacate ${type}`,
+      );
+      await this.activation.syncMonthlyStatus({
+        organizationId,
+        status: PlanStatus.CANCELED,
+      });
       return;
     }
 

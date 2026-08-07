@@ -35,6 +35,8 @@ describe('AbacatePaymentProvider', () => {
   const prisma = {
     organization: {
       findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
     },
   };
   const creditPurchases = {
@@ -47,6 +49,7 @@ describe('AbacatePaymentProvider', () => {
     const map: Record<string, string | number> = {
       'abacate.webhookSecret': 'whsec_test',
       'abacate.lifetimeAmountCentavos': 39900,
+      'abacate.monthlyAmountCentavos': 4999,
       'abacate.productMonthlyBrl': 'prod_monthly',
     };
     return map[key];
@@ -67,7 +70,7 @@ describe('AbacatePaymentProvider', () => {
     provider = module.get(AbacatePaymentProvider);
   });
 
-  it('creates lifetime PIX (transparent) and never monthly transparent', async () => {
+  it('creates lifetime PIX (transparent)', async () => {
     client.createTransparentPix.mockResolvedValue({
       id: 'pix_1',
       amount: 39900,
@@ -90,11 +93,12 @@ describe('AbacatePaymentProvider', () => {
     expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
   });
 
-  it('creates monthly subscription redirect with CARD methods', async () => {
-    client.createSubscriptionCheckout.mockResolvedValue({
-      id: 'bill_1',
-      url: 'https://app.abacatepay.com/pay/bill_1',
-      customerId: 'cust_1',
+  it('creates monthly PIX (transparent 30-day)', async () => {
+    client.createTransparentPix.mockResolvedValue({
+      id: 'pix_m1',
+      amount: 4999,
+      brCode: '000201',
+      brCodeBase64: 'data:image/png;base64,abc',
     });
 
     const result = await provider.createCheckout({
@@ -106,17 +110,14 @@ describe('AbacatePaymentProvider', () => {
       cancelUrl: 'https://app/cancel',
     });
 
-    expect(result).toEqual(
+    expect(result.mode).toBe('pix');
+    expect(client.createTransparentPix).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: 'redirect',
-        url: 'https://app.abacatepay.com/pay/bill_1',
-        provider: 'ABACATE',
+        amountCentavos: 4999,
+        metadata: expect.objectContaining({ interval: 'monthly' }),
       }),
     );
-    expect(client.createSubscriptionCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({ productId: 'prod_monthly' }),
-    );
-    expect(client.createTransparentPix).not.toHaveBeenCalled();
+    expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
   });
 
   it('creates a PIX checkout with the selected credit offer metadata', async () => {
@@ -203,6 +204,11 @@ describe('AbacatePaymentProvider', () => {
   });
 
   it('revokes lifetime on transparent.refunded', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: 'LIFETIME',
+      paymentProvider: PaymentProvider.ABACATE,
+    });
     await provider.applyWebhookEvent(
       {
         id: 'log_refund',
@@ -224,6 +230,11 @@ describe('AbacatePaymentProvider', () => {
 
   it('revokes lifetime on transparent.lost via abacatePaymentId lookup', async () => {
     prisma.organization.findFirst.mockResolvedValue({ id: 'org1' });
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: 'LIFETIME',
+      paymentProvider: PaymentProvider.ABACATE,
+    });
     await provider.applyWebhookEvent(
       {
         id: 'log_lost',
