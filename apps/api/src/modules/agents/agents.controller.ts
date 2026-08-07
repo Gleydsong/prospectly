@@ -44,17 +44,30 @@ export class AgentsController {
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   whatsappFirstMessage(
     @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: AgentsWhatsappFirstMessageDto,
   ) {
-    return this.agents.whatsappFirstMessage(organizationId, dto.leadId, dto.templateId);
+    return this.agents.whatsappFirstMessage(
+      organizationId,
+      user.id,
+      dto.leadId,
+      dto.templateId,
+    );
   }
 
   @Post('whatsapp/variants')
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   whatsappVariants(
     @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: AgentsWhatsappVariantsDto,
   ) {
-    return this.agents.whatsappVariants(organizationId, dto.leadId, dto.count);
+    return this.agents.whatsappVariants(
+      organizationId,
+      user.id,
+      dto.leadId,
+      dto.count,
+      dto.seed,
+    );
   }
 }

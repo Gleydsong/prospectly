@@ -35,9 +35,10 @@ export function AgentsWhatsappPage() {
   const [previewTouched, setPreviewTouched] = useState(false);
   const [copyOk, setCopyOk] = useState(false);
   const [showSavedTemplates, setShowSavedTemplates] = useState(false);
+  const [generation, setGeneration] = useState(0);
 
   const templates = useMessageTemplates({ page: 1, pageSize: 50 });
-  const variants = useWhatsappVariants(leadId, 4);
+  const variants = useWhatsappVariants(leadId, 4, generation);
   const message = useWhatsappFirstMessage(
     leadId && showSavedTemplates && templateId ? leadId : undefined,
     templateId || undefined,
@@ -106,6 +107,7 @@ export function AgentsWhatsappPage() {
     setPreviewTouched(false);
     setSelectedVariantId('');
     setShowSavedTemplates(false);
+    setGeneration(0);
     setSearchParams({ leadId: id });
   }
 
@@ -219,7 +221,8 @@ export function AgentsWhatsappPage() {
                   loading={variants.isFetching}
                   onClick={() => {
                     setPreviewTouched(false);
-                    void variants.refetch();
+                    setSelectedVariantId('');
+                    setGeneration((current) => current + 1);
                   }}
                   data-testid="whatsapp-regenerate"
                 >

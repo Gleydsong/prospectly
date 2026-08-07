@@ -1,13 +1,13 @@
 import { buildDeterministicWhatsappVariants } from './deterministic-variants';
 
 describe('buildDeterministicWhatsappVariants', () => {
-  it('returns requested count with personalized company and city', () => {
+  it('returns requested count with personalized company, city and logged-in sender', () => {
     const variants = buildDeterministicWhatsappVariants(
       {
         companyName: 'Salão Resenha',
         city: 'Recife',
         segment: 'Beleza',
-        ownerName: 'Gui',
+        senderName: 'Gui',
       },
       4,
     );
@@ -25,7 +25,20 @@ describe('buildDeterministicWhatsappVariants', () => {
       5,
     );
     const dor = variants.find((item) => item.angle === 'dor_site');
-    expect(dor?.body).toMatch(/presença digital|WhatsApp/i);
-    expect(dor?.body).not.toMatch(/dei uma olhada no site/i);
+    expect(dor?.body).toMatch(/presença digital|WhatsApp|descoberta online|canal digital/i);
+    expect(dor?.body).not.toMatch(/dei uma olhada rápida no site/i);
+  });
+
+  it('rotates packs by seed so regenerate yields different copy', () => {
+    const lead = {
+      companyName: 'Restaurante Max Matuto',
+      city: 'Cabo de Santo Agostinho',
+      senderName: 'Ana',
+    };
+    const a = buildDeterministicWhatsappVariants(lead, 4, 0);
+    const b = buildDeterministicWhatsappVariants(lead, 4, 1);
+    expect(a[0]?.body).not.toBe(b[0]?.body);
+    expect(a[0]?.id).not.toBe(b[0]?.id);
+    expect(b.every((item) => item.body.includes('Ana'))).toBe(true);
   });
 });

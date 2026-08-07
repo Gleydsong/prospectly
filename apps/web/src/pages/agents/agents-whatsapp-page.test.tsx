@@ -9,52 +9,11 @@ import '@/i18n';
 import { AgentsWhatsappPage } from './agents-whatsapp-page';
 
 const mocks = vi.hoisted(() => ({
-  refetch: vi.fn(),
+  useWhatsappVariants: vi.fn(),
 }));
 
 vi.mock('@/features/agents/hooks', () => ({
-  useWhatsappVariants: () => ({
-    data: {
-      leadId: 'lead-1',
-      companyName: 'Salão Resenha',
-      phone: '+5581987950071',
-      digits: '5581987950071',
-      source: 'fallback',
-      variants: [
-        {
-          id: 'fallback-direto-1',
-          angle: 'direto',
-          label: 'Direto',
-          body: 'Olá! Vi o Salão Resenha em Recife.',
-        },
-        {
-          id: 'fallback-curiosidade-2',
-          angle: 'curiosidade',
-          label: 'Curiosidade',
-          body: 'Oi! Curiosidade rápida sobre o Salão Resenha.',
-        },
-        {
-          id: 'fallback-prova_social-3',
-          angle: 'prova_social',
-          label: 'Prova social',
-          body: 'Olá! Negócios em Recife parecidos com o Salão Resenha.',
-        },
-        {
-          id: 'fallback-dor_site-4',
-          angle: 'dor_site',
-          label: 'Dor do site',
-          body: 'Oi! Notei que o Salão Resenha ainda não aparece com presença digital.',
-        },
-      ],
-      autoSend: false,
-      messageSent: false,
-    },
-    isLoading: false,
-    isFetching: false,
-    isError: false,
-    error: null,
-    refetch: mocks.refetch,
-  }),
+  useWhatsappVariants: (...args: unknown[]) => mocks.useWhatsappVariants(...args),
   useWhatsappFirstMessage: () => ({
     data: undefined,
     isLoading: false,
@@ -80,6 +39,45 @@ vi.mock('@/features/leads/api', () => ({
   fetchLeads: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
+function variantPack(seed: number) {
+  return {
+    leadId: 'lead-1',
+    companyName: 'Salão Resenha',
+    phone: '+5581987950071',
+    digits: '5581987950071',
+    source: 'fallback' as const,
+    seed,
+    variants: [
+      {
+        id: `fallback-${seed}-direto-1`,
+        angle: 'direto',
+        label: 'Direto',
+        body: seed === 0 ? 'Olá! Vi o Salão Resenha em Recife.' : 'Oi! Falo com o Salão Resenha.',
+      },
+      {
+        id: `fallback-${seed}-curiosidade-2`,
+        angle: 'curiosidade',
+        label: 'Curiosidade',
+        body: 'Oi! Curiosidade rápida sobre o Salão Resenha.',
+      },
+      {
+        id: `fallback-${seed}-prova_social-3`,
+        angle: 'prova_social',
+        label: 'Prova social',
+        body: 'Olá! Negócios em Recife parecidos com o Salão Resenha.',
+      },
+      {
+        id: `fallback-${seed}-dor_site-4`,
+        angle: 'dor_site',
+        label: 'Dor do site',
+        body: 'Oi! Notei que o Salão Resenha ainda não aparece com presença digital.',
+      },
+    ],
+    autoSend: false as const,
+    messageSent: false as const,
+  };
+}
+
 function Wrapper({
   children,
   initialEntry = '/agents/whatsapp?leadId=lead-1',
@@ -101,7 +99,14 @@ function Wrapper({
 describe('AgentsWhatsappPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.refetch.mockResolvedValue(undefined);
+    mocks.useWhatsappVariants.mockImplementation((_leadId?: string, _count?: number, seed = 0) => ({
+      data: variantPack(seed),
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }));
   });
 
   it('renders variants and fills preview from selection', async () => {
@@ -123,7 +128,7 @@ describe('AgentsWhatsappPage', () => {
     });
   });
 
-  it('allows editing preview and triggers regenerate', async () => {
+  it('allows editing preview and bumps generation on regenerate', async () => {
     const user = userEvent.setup();
     render(
       <Wrapper>
@@ -137,6 +142,14 @@ describe('AgentsWhatsappPage', () => {
     expect(preview).toHaveValue('Mensagem editada');
 
     await user.click(screen.getByTestId('whatsapp-regenerate'));
-    expect(mocks.refetch).toHaveBeenCalled();
+
+    await waitFor(() => {
+      const lastCall = mocks.useWhatsappVariants.mock.calls.at(-1);
+      expect(lastCall?.[2]).toBe(1);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('whatsapp-preview')).toHaveValue('Oi! Falo com o Salão Resenha.');
+    });
   });
 });

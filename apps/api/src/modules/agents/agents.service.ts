@@ -16,6 +16,7 @@ import { buildDeterministicWhatsappVariants } from './whatsapp-ai/deterministic-
 import { OllamaChatClient } from './whatsapp-ai/ollama-chat.client';
 import {
   clampVariantCount,
+  normalizeSeed,
   type WhatsappVariantSource,
 } from './whatsapp-ai/whatsapp-ai.types';
 
@@ -162,6 +163,7 @@ export class AgentsService {
 
   async whatsappFirstMessage(
     organizationId: string,
+    actorUserId: string,
     leadId: string,
     templateId?: string,
   ) {
@@ -177,7 +179,12 @@ export class AgentsService {
       ? await this.templates.get(organizationId, templateId)
       : await this.resolveDefaultWhatsappTemplate(organizationId);
 
-    const values = this.leadTemplateValues(lead);
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: { name: true },
+    });
+
+    const values = this.leadTemplateValues(lead, actor?.name);
     const rendered = renderTemplate(template.body, values);
     const waLink =
       digits.length > 0
@@ -202,7 +209,13 @@ export class AgentsService {
     };
   }
 
-  async whatsappVariants(organizationId: string, leadId: string, count?: number) {
+  async whatsappVariants(
+    organizationId: string,
+    actorUserId: string,
+    leadId: string,
+    count?: number,
+    seed?: number,
+  ) {
     const lead = await this.loadLead(organizationId, leadId);
     const phoneRaw = (lead.phone ?? lead.whatsapp)?.trim() || null;
     const digits = phoneRaw ? phoneRaw.replace(/\D/g, '') : '';
@@ -211,20 +224,31 @@ export class AgentsService {
       throw new BadRequestException('Lead is marked do-not-contact.');
     }
 
+    const actor = await this.prisma.user.findUnique({
+      where: { id: actorUserId },
+      select: { name: true },
+    });
+
     const variantCount = clampVariantCount(count);
+    const generationSeed = normalizeSeed(seed);
     const leadContext = {
       companyName: lead.companyName,
       tradeName: lead.tradeName,
       city: lead.city,
       segment: lead.segment,
       website: lead.website,
-      ownerName: lead.owner?.name ?? null,
+      senderName: actor?.name?.trim() || null,
     };
 
-    const fromOllama = await this.ollama.generateVariants(leadContext, variantCount);
+    const fromOllama = await this.ollama.generateVariants(
+      leadContext,
+      variantCount,
+      generationSeed,
+    );
     const source: WhatsappVariantSource = fromOllama ? 'ollama' : 'fallback';
     const variants =
-      fromOllama ?? buildDeterministicWhatsappVariants(leadContext, variantCount);
+      fromOllama ??
+      buildDeterministicWhatsappVariants(leadContext, variantCount, generationSeed);
 
     return {
       leadId: lead.id,
@@ -232,6 +256,7 @@ export class AgentsService {
       phone: phoneRaw,
       digits: digits || null,
       source,
+      seed: generationSeed,
       variants,
       autoSend: false as const,
       messageSent: false as const,
@@ -310,16 +335,19 @@ export class AgentsService {
     return any;
   }
 
-  private leadTemplateValues(lead: {
-    companyName: string;
-    tradeName?: string | null;
-    email?: string | null;
-    phone?: string | null;
-    whatsapp?: string | null;
-    city?: string | null;
-    website?: string | null;
-    owner?: { name: string } | null;
-  }): TemplateVariableValues {
+  private leadTemplateValues(
+    lead: {
+      companyName: string;
+      tradeName?: string | null;
+      email?: string | null;
+      phone?: string | null;
+      whatsapp?: string | null;
+      city?: string | null;
+      website?: string | null;
+      owner?: { name: string } | null;
+    },
+    senderName?: string | null,
+  ): TemplateVariableValues {
     return {
       companyName: lead.companyName,
       tradeName: lead.tradeName,
@@ -328,7 +356,7 @@ export class AgentsService {
       phone: lead.phone ?? lead.whatsapp,
       city: lead.city,
       website: lead.website,
-      ownerName: lead.owner?.name,
+      ownerName: senderName?.trim() || lead.owner?.name,
     };
   }
 
