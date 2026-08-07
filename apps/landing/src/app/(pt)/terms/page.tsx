@@ -31,9 +31,9 @@ export default function TermsPage() {
           3. Planos e pagamento
         </h2>
         <p>
-          O plano Starter pode ser mensal (assinatura) ou vitalício (pagamento único). Cobranças via
-          Stripe. Cancelamento da assinatura mensal pelo Customer Portal. Plano vitalício não gera
-          renovação automática.
+          Oferecemos pacotes de créditos (pagamento único) e assinatura ilimitada mensal. Cobranças
+          via Stripe e/ou PIX conforme o meio escolhido. Cancelamento da assinatura mensal pelo
+          Customer Portal. Créditos não geram renovação automática.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           4. Uso aceitável

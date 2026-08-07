@@ -153,7 +153,12 @@ export class CreateSearchDto {
   @IsIn([...SEARCH_RESULT_LIMITS])
   limit?: SearchResultLimit;
 
-  @ApiPropertyOptional({ enum: PROSPECTING_PROVIDER_IDS, default: 'OPENSTREETMAP' })
+  @ApiPropertyOptional({
+    enum: PROSPECTING_PROVIDER_IDS,
+    deprecated: true,
+    description:
+      'Ignored: searches always fan out to every available provider (OSM + Google) and merge results.',
+  })
   @IsOptional()
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
   @IsIn([...PROSPECTING_PROVIDER_IDS])

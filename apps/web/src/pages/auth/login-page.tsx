@@ -66,7 +66,7 @@ export function LoginPage() {
         handleCheckoutResult(checkout);
         return;
       } catch {
-        navigate(`/settings?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
+        navigate(`/credits?upgrade=1&plan=${plan}&currency=${currency}`, { replace: true });
         return;
       }
     }
@@ -77,7 +77,7 @@ export function LoginPage() {
         handleCheckoutResult(checkout, { purpose: 'credits' });
         return;
       } catch {
-        navigate(`/settings?offer=${offer}`, { replace: true });
+        navigate(`/credits?offer=${offer}`, { replace: true });
         return;
       }
     }
@@ -88,13 +88,13 @@ export function LoginPage() {
         handleCheckoutResult(checkout);
         return;
       } catch {
-        navigate('/settings?upgrade=1&plan=monthly&currency=BRL', { replace: true });
+        navigate('/credits?offer=unlimited', { replace: true });
         return;
       }
     }
 
     if (offer) {
-      navigate(`/settings?offer=${offer}`, { replace: true });
+      navigate(`/credits?offer=${offer}`, { replace: true });
       return;
     }
 

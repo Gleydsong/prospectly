@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono, Outfit } from 'next/font/google';
-import { DISPLAY_PRICES } from '@/lib/pricing';
 import './globals.css';
 
 const outfit = Outfit({
@@ -18,8 +17,8 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001'),
   icons: {
-    icon: [{ url: '/brand/prospectly-mark.png', type: 'image/png' }],
-    apple: [{ url: '/brand/prospectly-mark.png', type: 'image/png' }],
+    icon: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
   },
   title: {
     default: 'Prospectly | Encontre empresas para prospectar no Brasil',
@@ -60,15 +59,21 @@ const jsonLd = {
       offers: [
         {
           '@type': 'Offer',
-          price: DISPLAY_PRICES.monthly.BRL.amount,
+          price: 9.99,
           priceCurrency: 'BRL',
-          name: 'Starter mensal',
+          name: '2.000 créditos',
         },
         {
           '@type': 'Offer',
-          price: DISPLAY_PRICES.lifetime.BRL.amount,
+          price: 19.99,
           priceCurrency: 'BRL',
-          name: 'Starter vitalício',
+          name: '5.000 créditos',
+        },
+        {
+          '@type': 'Offer',
+          price: 49.99,
+          priceCurrency: 'BRL',
+          name: 'Ilimitado mensal',
         },
       ],
     },

@@ -22,7 +22,7 @@ const content: IntentPageContent = {
     },
     {
       heading: 'Como começar',
-      body: 'Entre na lista de espera para criar sua primeira lista quando o acesso abrir. O plano Free prevê 3 buscas para validar o nicho antes do Starter.',
+      body: 'Entre na lista de espera para criar sua primeira lista quando o acesso abrir. O plano Free prevê 3 buscas para validar o nicho antes de comprar créditos ou assinar o ilimitado.',
     },
   ],
   ctaPrimary: 'Criar minha primeira lista',

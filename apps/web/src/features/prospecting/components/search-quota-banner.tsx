@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 
 const PLAN_LABEL: Record<string, string> = {
   FREE: 'Gratuito',
-  STARTER_MONTHLY: 'Starter',
-  LIFETIME: 'Lifetime',
+  STARTER_MONTHLY: 'Ilimitado',
+  LIFETIME: 'Ilimitado',
 };
 
 export function planLabel(plan?: string): string {
@@ -53,7 +53,7 @@ export function SearchQuotaBanner({ usage, plan }: { usage?: SearchUsage; plan?:
       {depleted ? (
         <p className="mt-1.5 text-xs text-amber-300">
           Limite atingido.{' '}
-          <Link to="/settings" className="underline hover:text-amber-200">
+          <Link to="/credits" className="underline hover:text-amber-200">
             Ver todos os planos
           </Link>
         </p>

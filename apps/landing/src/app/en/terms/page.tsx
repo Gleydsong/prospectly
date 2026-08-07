@@ -19,8 +19,9 @@ export default function EnTermsPage() {
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">Plans</h2>
         <p>
-          Starter may be monthly (subscription) or lifetime (one-time). Billing via Stripe. Cancel
-          monthly plans in the Customer Portal.
+          We offer credit packs (one-time) and a monthly unlimited subscription. Billing via Stripe
+          and/or PIX depending on the method. Cancel monthly plans in the Customer Portal. Credits
+          do not auto-renew.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Acceptable use

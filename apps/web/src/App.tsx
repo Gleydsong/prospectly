@@ -27,6 +27,9 @@ const ImportsPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/pages/settings-page').then((m) => ({ default: m.SettingsPage })),
 );
+const CreditsPage = lazy(() =>
+  import('@/pages/credits-page').then((m) => ({ default: m.CreditsPage })),
+);
 const SettingsPrivacyPage = lazy(() =>
   import('@/pages/settings-privacy-page').then((m) => ({ default: m.SettingsPrivacyPage })),
 );
@@ -48,9 +51,7 @@ const AgentsCrmPage = lazy(() =>
 const AgentsWhatsappPage = lazy(() =>
   import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
 );
-const ToolsPage = lazy(() =>
-  import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })),
-);
+const ToolsPage = lazy(() => import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -147,6 +148,14 @@ export function App() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignDetailPage />} />
+          <Route
+            path="credits"
+            element={
+              <LazyPage>
+                <CreditsPage />
+              </LazyPage>
+            }
+          />
           <Route
             path="settings"
             element={

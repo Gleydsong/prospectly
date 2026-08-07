@@ -214,7 +214,7 @@ describe('OpenStreetMapProvider', () => {
     expect(overpassBody).toContain('node["tourism"="hotel"]');
   });
 
-  it('retries Overpass on a configured mirror after the primary endpoint fails', async () => {
+  it('fails over Overpass to the next mirror after a single primary failure', async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse([
@@ -226,8 +226,6 @@ describe('OpenStreetMapProvider', () => {
           },
         ]),
       )
-      .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
-      .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
       .mockResolvedValueOnce(httpResponse(504, { error: 'gateway timeout' }))
       .mockResolvedValueOnce(jsonResponse({ elements: [] }));
 
@@ -249,8 +247,10 @@ describe('OpenStreetMapProvider', () => {
     ).resolves.toEqual([]);
 
     const overpassUrls = fetchMock.mock.calls.slice(1).map(([url]) => String(url));
-    expect(overpassUrls).toContain('https://overpass.primary.test/interpreter');
-    expect(overpassUrls).toContain('https://overpass.mirror.test/interpreter');
+    expect(overpassUrls).toEqual([
+      'https://overpass.primary.test/interpreter',
+      'https://overpass.mirror.test/interpreter',
+    ]);
   });
 
   it('rejects a same-UF relation for a different city and matches normalized municipality fields', async () => {

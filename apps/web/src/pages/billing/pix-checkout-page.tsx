@@ -12,8 +12,8 @@ import type { CheckoutResult } from '@/features/billing/types';
 type PixPayload = Extract<CheckoutResult, { mode: 'pix' }> & PixCheckoutMeta;
 
 const CREDITS_BY_AMOUNT: Record<number, number> = {
-  1499: 2000,
-  3499: 5000,
+  999: 2000,
+  1999: 5000,
 };
 
 function formatBrl(centavos: number): string {
@@ -48,18 +48,18 @@ export function PixCheckoutPage() {
   useEffect(() => {
     const raw = sessionStorage.getItem('prospectly.pixCheckout');
     if (!raw) {
-      navigate('/settings', { replace: true });
+      navigate('/credits', { replace: true });
       return;
     }
     try {
       const parsed = JSON.parse(raw) as PixPayload;
       if (parsed.mode !== 'pix' || !parsed.brCode) {
-        navigate('/settings', { replace: true });
+        navigate('/credits', { replace: true });
         return;
       }
       setPix(parsed);
     } catch {
-      navigate('/settings', { replace: true });
+      navigate('/credits', { replace: true });
     }
   }, [navigate]);
 
@@ -142,7 +142,7 @@ export function PixCheckoutPage() {
             {t('billing.pixWaiting')}
           </p>
 
-          <Button type="button" variant="ghost" onClick={() => navigate('/settings')}>
+          <Button type="button" variant="ghost" onClick={() => navigate('/credits')}>
             {t('common.back')}
           </Button>
         </CardContent>

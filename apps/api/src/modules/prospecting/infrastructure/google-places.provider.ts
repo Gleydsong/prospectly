@@ -181,33 +181,41 @@ export class GooglePlacesProvider implements SearchProvider {
       Math.max(1, Math.min(this.options.resultLimit, requestedLimit)),
     );
 
-    const merged = new Map<string, NormalizedBusiness>();
-    for (const category of categories) {
-      const response = await this.requestTextSearch({
-        textQuery: mapCategoryToGoogleTextQuery(
-          category,
-          input.city,
-          region,
-          country,
-          input.neighborhood,
-        ),
-        languageCode: googleLanguageCode(country),
-        regionCode: country,
-        maxResultCount: perCategoryLimit,
-      });
+    const categoryBatches = await Promise.all(
+      categories.map(async (category) => {
+        const response = await this.requestTextSearch({
+          textQuery: mapCategoryToGoogleTextQuery(
+            category,
+            input.city,
+            region,
+            country,
+            input.neighborhood,
+          ),
+          languageCode: googleLanguageCode(country),
+          regionCode: country,
+          maxResultCount: perCategoryLimit,
+        });
 
-      for (const place of response.places ?? []) {
-        const business = normalizePlace(place, input.city.trim(), region, country);
-        if (!business) continue;
-        if (
-          input.onlyWithoutWebsite &&
-          business.websitePresence !== WebsitePresence.NO_WEBSITE_REPORTED
-        ) {
-          continue;
+        const businesses: NormalizedBusiness[] = [];
+        for (const place of response.places ?? []) {
+          const business = normalizePlace(place, input.city.trim(), region, country);
+          if (!business) continue;
+          if (
+            input.onlyWithoutWebsite &&
+            business.websitePresence !== WebsitePresence.NO_WEBSITE_REPORTED
+          ) {
+            continue;
+          }
+          businesses.push({ ...business, category });
         }
-        if (merged.has(business.externalId)) continue;
-        merged.set(business.externalId, { ...business, category });
-      }
+        return businesses;
+      }),
+    );
+
+    const merged = new Map<string, NormalizedBusiness>();
+    for (const business of categoryBatches.flat()) {
+      if (merged.has(business.externalId)) continue;
+      merged.set(business.externalId, business);
     }
 
     return [...merged.values()];

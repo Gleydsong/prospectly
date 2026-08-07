@@ -5,7 +5,7 @@ import { getFaqItems } from '@/lib/faq-content';
 export const metadata: Metadata = {
   title: 'FAQ - Search, plans, and privacy questions',
   description:
-    'Answers about Prospectly: no-website filter, OpenStreetMap, Google Places, Starter plans, privacy, and how to start with 3 free searches.',
+    'Answers about Prospectly: no-website filter, OpenStreetMap, Google Places, credits and unlimited plan, privacy, and how to start with 3 free searches.',
 };
 
 export default function FaqPageEn() {

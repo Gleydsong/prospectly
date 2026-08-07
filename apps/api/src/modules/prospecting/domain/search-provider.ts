@@ -87,6 +87,9 @@ export function countryDisplayName(country: ProspectingCountryCode): string {
 export const PROSPECTING_PROVIDER_IDS = ['OPENSTREETMAP', 'GOOGLE_PLACES'] as const;
 export type ProspectingProviderId = (typeof PROSPECTING_PROVIDER_IDS)[number];
 
+/** Persisted when a search fan-outs to every available map provider. */
+export const COMBINED_SEARCH_PROVIDER = 'COMBINED';
+
 export interface SearchProviderInput {
   category: string;
   categories?: string[];
@@ -122,6 +125,12 @@ export const SEARCH_PROVIDER_REGISTRY = 'SEARCH_PROVIDER_REGISTRY';
 
 export function isProspectingProviderId(value: unknown): value is ProspectingProviderId {
   return typeof value === 'string' && (PROSPECTING_PROVIDER_IDS as readonly string[]).includes(value);
+}
+
+export function isStoredSearchProvider(
+  value: unknown,
+): value is ProspectingProviderId | typeof COMBINED_SEARCH_PROVIDER {
+  return isProspectingProviderId(value) || value === COMBINED_SEARCH_PROVIDER;
 }
 
 export class InMemorySearchProviderRegistry implements SearchProviderRegistry {

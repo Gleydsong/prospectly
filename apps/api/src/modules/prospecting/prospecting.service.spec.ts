@@ -175,9 +175,9 @@ describe('ProspectingService', () => {
     });
   });
 
-  it('rejects unavailable Google Places provider when key is missing', async () => {
+  it('rejects create when no search providers are available', async () => {
     const { prisma, registry, service } = createService();
-    registry.isAvailable.mockReturnValue(false);
+    registry.list.mockReturnValue([]);
 
     await expect(
       service.create('org-1', 'user-1', { ...searchInput, provider: 'GOOGLE_PLACES' }),

@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/features/theme/theme-toggle';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { NAV_GROUPS, TOP_NAV_ITEMS } from './nav-items';
+import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
 
 function initials(name: string | undefined): string {
   if (!name) return '?';
@@ -93,14 +94,18 @@ export function TopNav() {
           <Menu className="h-5 w-5" />
         </button>
 
-        <Link to="/" className="shrink-0 text-lg font-bold tracking-tight text-[color:var(--ink)]">
-          prospectly<span className="text-[color:var(--accent)]">.</span>
+        <Link
+          to="/"
+          aria-label="Prospectly"
+          className="inline-flex shrink-0 items-center gap-0 text-lg font-bold tracking-tight text-[color:var(--ink)]"
+        >
+          <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
+          <span className="-ml-0.5 leading-none">
+            rospectly<span className="text-[color:var(--accent)]"></span>
+          </span>
         </Link>
 
-        <nav
-          className="ml-2 hidden items-center gap-0.5 lg:flex"
-          aria-label={t('nav.mainNav')}
-        >
+        <nav className="ml-2 hidden items-center gap-0.5 lg:flex" aria-label={t('nav.mainNav')}>
           {TOP_NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -143,7 +148,7 @@ export function TopNav() {
         </Link>
 
         <Link
-          to="/settings"
+          to="/credits"
           className="hidden items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm sm:inline-flex"
           title={t('nav.credits')}
         >
@@ -191,8 +196,11 @@ export function TopNav() {
           />
           <aside className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] backdrop-blur-xl">
             <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
-              <span className="text-lg font-bold text-[color:var(--ink)]">
-                prospectly<span className="text-[color:var(--accent)]">.</span>
+              <span className="inline-flex items-center gap-0 text-lg font-bold text-[color:var(--ink)]">
+                <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
+                <span className="-ml-0.5 leading-none">
+                  rospectly<span className="text-[color:var(--accent)]">.</span>
+                </span>
               </span>
               <button
                 type="button"

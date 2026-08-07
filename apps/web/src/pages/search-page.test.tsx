@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => ({
   useSearches: vi.fn(),
   useSearch: vi.fn(),
   useSearchResults: vi.fn(),
-  useSearchProviders: vi.fn(),
   useProspectingCategories: vi.fn(),
   useGeoRegions: vi.fn(),
   useGeoCities: vi.fn(),
@@ -25,7 +24,6 @@ vi.mock('@/features/prospecting/hooks', () => ({
   useSearches: mocks.useSearches,
   useSearch: mocks.useSearch,
   useSearchResults: mocks.useSearchResults,
-  useSearchProviders: mocks.useSearchProviders,
   useProspectingCategories: mocks.useProspectingCategories,
   useGeoRegions: mocks.useGeoRegions,
   useGeoCities: mocks.useGeoCities,
@@ -87,14 +85,6 @@ function processingSearch(status: 'PROCESSING' | 'FAILED' | 'COMPLETED' = 'PROCE
 describe('SearchPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.useSearchProviders.mockReturnValue({
-      data: [
-        { id: 'OPENSTREETMAP', label: 'OpenStreetMap', available: true },
-        { id: 'GOOGLE_PLACES', label: 'Google Places', available: true },
-      ],
-      isLoading: false,
-      isError: false,
-    });
     mocks.useProspectingCategories.mockReturnValue({
       data: {
         plan: 'FREE',
@@ -203,7 +193,6 @@ describe('SearchPage', () => {
       neighborhood: 'Pinheiros',
       state: 'SP',
       country: 'BR',
-      provider: 'OPENSTREETMAP',
       onlyWithoutWebsite: false,
       limit: 40,
     });
@@ -273,7 +262,6 @@ describe('SearchPage', () => {
       city: 'Lisbon',
       state: 'Lisbon',
       country: 'PT',
-      provider: 'OPENSTREETMAP',
       onlyWithoutWebsite: false,
       limit: 20,
     });

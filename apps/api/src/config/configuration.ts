@@ -16,9 +16,10 @@ export const configuration = () => ({
   },
   openStreetMap: {
     nominatimUrl: process.env.OSM_NOMINATIM_URL ?? 'https://nominatim.openstreetmap.org/search',
-    overpassUrl: process.env.OSM_OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter',
+    overpassUrl: process.env.OSM_OVERPASS_URL ?? 'https://lz4.overpass-api.de/api/interpreter',
     userAgent: process.env.OSM_USER_AGENT ?? 'Prospectly/1.0 (https://prospectly.dev)',
-    timeoutMs: parseInt(process.env.OSM_TIMEOUT_MS ?? '45000', 10),
+    // Keep client abort below typical overloaded-public-mirror hangs; fail over mirrors instead.
+    timeoutMs: parseInt(process.env.OSM_TIMEOUT_MS ?? '20000', 10),
     resultLimit: parseInt(process.env.OSM_RESULT_LIMIT ?? '100', 10),
   },
   googlePlaces: {

@@ -7,14 +7,15 @@ export const DISPLAY_PRICES: Record<
   Record<Currency, { amount: number; formatted: string }>
 > = {
   monthly: {
-    BRL: { amount: 49, formatted: 'R$ 49' },
+    BRL: { amount: 49.99, formatted: 'R$ 49,99' },
     EUR: { amount: 10, formatted: '€ 10' },
     USD: { amount: 10, formatted: '$ 10' },
   },
+  // Legacy key kept for register?plan=lifetime deep-links; maps to credit packs UX.
   lifetime: {
-    BRL: { amount: 399, formatted: 'R$ 399' },
-    EUR: { amount: 99, formatted: '€ 99' },
-    USD: { amount: 99, formatted: '$ 99' },
+    BRL: { amount: 19.99, formatted: 'R$ 19,99' },
+    EUR: { amount: 19.99, formatted: '€ 19.99' },
+    USD: { amount: 19.99, formatted: '$ 19.99' },
   },
 };
 

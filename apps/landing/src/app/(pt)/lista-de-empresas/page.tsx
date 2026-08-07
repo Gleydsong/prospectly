@@ -22,7 +22,7 @@ const content: IntentPageContent = {
     },
     {
       heading: 'Validar antes de escalar',
-      body: 'Use as 3 buscas do Free no seu nicho. Se a lista fizer sentido, avance para o Starter mensal ou vitalício.',
+      body: 'Use as 3 buscas do Free no seu nicho. Se a lista fizer sentido, avance para créditos ou o plano ilimitado.',
     },
   ],
   ctaPrimary: 'Criar minha primeira lista',

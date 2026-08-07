@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, ChevronDown, Copy, Coins, Trash2, UserPlus } from 'lucide-react';
+import { Camera, Copy, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,13 @@ import { Modal } from '@/components/ui/modal';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  cancelBillingSubscription,
   changeEmail,
-  createBillingPortal,
-  createCreditCheckout,
-  getBillingStatus,
   getProfile,
   logout,
   requestDataDeletion,
   requestDataExport,
   updateProfile,
 } from '@/features/auth/api';
-import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import {
   fetchCurrentOrganization,
   fetchOrganizationMembers,
@@ -44,7 +39,6 @@ import { setAppLocale } from '@/i18n';
 import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
-import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
@@ -322,7 +316,6 @@ export function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
   const clearAuth = useAuthStore((state) => state.clear);
-  const [searchParams] = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? '');
@@ -334,13 +327,6 @@ export function SettingsPage() {
   const [orgName, setOrgName] = useState(user?.organizationName ?? '');
   const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [orgError, setOrgError] = useState<string | null>(null);
-
-  const [billingError, setBillingError] = useState<string | null>(null);
-  const [creditOffer, setCreditOffer] = useState<'credits-2000' | 'credits-5000' | null>(() => {
-    const value = searchParams.get('offer');
-    return value === 'credits-2000' || value === 'credits-5000' ? value : null;
-  });
-  const [creditPurchaseOpen, setCreditPurchaseOpen] = useState(() => Boolean(creditOffer));
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -384,11 +370,6 @@ export function SettingsPage() {
   const members = useQuery({
     queryKey: ['organizations', 'members'],
     queryFn: fetchOrganizationMembers,
-  });
-
-  const billing = useQuery({
-    queryKey: ['billing', 'status'],
-    queryFn: getBillingStatus,
   });
 
   const saveProfile = useMutation({
@@ -446,31 +427,6 @@ export function SettingsPage() {
       setEmailMessage(null);
       setEmailError(getApiErrorMessage(err) || t('settings.emailChangeError'));
     },
-  });
-
-  const creditCheckout = useMutation({
-    mutationFn: (offer: 'credits-2000' | 'credits-5000') => createCreditCheckout({ offer }),
-    onSuccess: (data) =>
-      handleCheckoutResult(data, {
-        purpose: 'credits',
-        baselineCreditBalance: billing.data?.creditBalance ?? 0,
-      }),
-    onError: () => setBillingError(t('settings.billingError')),
-  });
-
-  const portal = useMutation({
-    mutationFn: createBillingPortal,
-    onSuccess: (data) => assignStripeRedirect(data.url),
-    onError: () => setBillingError(t('settings.billingError')),
-  });
-
-  const cancelSub = useMutation({
-    mutationFn: cancelBillingSubscription,
-    onSuccess: async () => {
-      setBillingError(null);
-      await queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
-    },
-    onError: () => setBillingError(t('settings.billingError')),
   });
 
   const exportData = useMutation({
@@ -679,110 +635,6 @@ export function SettingsPage() {
           {manage && !emailVerified ? (
             <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <CardHeader title={t('settings.creditsTitle')} />
-        <CardContent className="space-y-4">
-          {billing.isLoading ? (
-            <Skeleton className="h-16" />
-          ) : (
-            <div className="flex items-center justify-between gap-4 rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
-              <div>
-                <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.availableCredits')}</p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
-                  {billing.data?.creditBalance ?? 0}
-                </p>
-              </div>
-              <p className="max-w-[15rem] text-right text-xs leading-5 text-[color:var(--ink-muted)]">
-                {t('settings.creditsUsageHint')}
-              </p>
-            </div>
-          )}
-
-          {billingError ? (
-            <p className="rounded-control border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="alert">
-              {billingError}
-            </p>
-          ) : null}
-
-          <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-card)] p-4 shadow-panel">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-[color:var(--surface-muted)] text-[color:var(--ink)]">
-                  <Coins className="h-5 w-5" aria-hidden />
-                </span>
-                <div>
-                  <p className="font-semibold text-[color:var(--ink)]">{t('settings.creditPackages')}</p>
-                  <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{t('settings.creditPackagesDesc')}</p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                aria-expanded={creditPurchaseOpen}
-                onClick={() => setCreditPurchaseOpen((open) => !open)}
-              >
-                {creditPurchaseOpen ? t('common.close') : t('settings.addCredits')}
-                <ChevronDown className={cn('h-4 w-4 transition-transform', creditPurchaseOpen && 'rotate-180')} aria-hidden />
-              </Button>
-            </div>
-
-            {creditPurchaseOpen ? (
-              <div className="mt-4 border-t border-[color:var(--border)] pt-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(['credits-2000', 'credits-5000'] as const).map((offer) => (
-                    <button
-                      key={offer}
-                      type="button"
-                      className={cn(
-                        'rounded-panel border p-4 text-left transition-[border-color,background,box-shadow] hover:border-[color:var(--border-strong)] hover:shadow-panel',
-                        creditOffer === offer ? 'border-[color:var(--border-strong)] bg-[color:var(--surface-muted)]' : 'border-[color:var(--border)] bg-[color:var(--surface-card)]',
-                      )}
-                      disabled={!emailVerified || creditCheckout.isPending}
-                      onClick={() => {
-                        setCreditOffer(offer);
-                        creditCheckout.mutate(offer);
-                      }}
-                    >
-                      <span className="block text-sm font-semibold text-[color:var(--ink)]">{offer === 'credits-2000' ? '2.000 créditos' : '5.000 créditos'}</span>
-                      <span className="mt-1 block text-sm text-[color:var(--ink-muted)]">{offer === 'credits-2000' ? 'R$ 14,99' : 'R$ 34,99'}</span>
-                      {creditCheckout.isPending && creditOffer === offer ? <span className="mt-2 block text-xs text-[color:var(--ink-muted)]">{t('settings.billingPreparing')}</span> : null}
-                    </button>
-                  ))}
-                </div>
-                {!emailVerified ? <p className="mt-3 text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p> : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {billing.data?.canOpenPortal ? (
-              <Button
-                type="button"
-                variant="secondary"
-                loading={portal.isPending}
-                disabled={!emailVerified}
-                onClick={() => portal.mutate()}
-              >
-                {t('settings.stripePortal')}
-              </Button>
-            ) : null}
-            {billing.data?.canCancelSubscription ? (
-              <Button
-                type="button"
-                variant="outline"
-                loading={cancelSub.isPending}
-                disabled={!emailVerified}
-                onClick={() => cancelSub.mutate()}
-              >
-                {t('settings.cancelSubscription')}
-              </Button>
-            ) : null}
-          </div>
-          {!emailVerified && !creditPurchaseOpen ? <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p> : null}
         </CardContent>
       </Card>
 

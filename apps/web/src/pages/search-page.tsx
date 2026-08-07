@@ -25,7 +25,6 @@ import {
   useProspectingCategories,
   useSearch,
   useSearches,
-  useSearchProviders,
   useSearchResults,
 } from '@/features/prospecting/hooks';
 import { planLabel, SearchQuotaBanner } from '@/features/prospecting/components/search-quota-banner';
@@ -59,7 +58,6 @@ const searchSchema = z
     city: z.string().max(120).default(''),
     neighborhood: z.string().max(120).default(''),
     state: z.string().max(120).default(''),
-    provider: z.enum(['OPENSTREETMAP', 'GOOGLE_PLACES']).default('OPENSTREETMAP'),
     limit: z.number(),
     onlyWithoutWebsite: z.boolean(),
   })
@@ -212,7 +210,6 @@ export function SearchPage() {
   const [importSummary, setImportSummary] = useState<SearchImportSummary | null>(null);
 
   const searchesQuery = useSearches({ page: historyPage, pageSize: 10 });
-  const providersQuery = useSearchProviders();
   const categoriesQuery = useProspectingCategories();
   const billingQuery = useBillingStatus();
   const searchQuery = useSearch(selectedSearchId);
@@ -224,9 +221,6 @@ export function SearchPage() {
   const deleteSearch = useDeleteSearch();
   const importResults = useImportSearchResults();
 
-  const availableProviders = providersQuery.data ?? [
-    { id: 'OPENSTREETMAP' as const, label: 'OpenStreetMap', available: true },
-  ];
   const categoryOptions: ProspectingCategoryOption[] =
     categoriesQuery.data?.categories ??
     PROSPECTING_CATEGORIES.map((category) => ({ ...category, available: true }));
@@ -247,7 +241,6 @@ export function SearchPage() {
       city: '',
       neighborhood: '',
       state: '',
-      provider: 'OPENSTREETMAP',
       limit: DEFAULT_SEARCH_RESULT_LIMIT,
       onlyWithoutWebsite: false,
     },
@@ -328,7 +321,6 @@ export function SearchPage() {
         country: values.country,
         city: values.city,
         state: stateForSearch,
-        provider: values.provider,
         onlyWithoutWebsite: values.onlyWithoutWebsite,
         limit: values.limit as SearchResultLimit,
         ...(neighborhood ? { neighborhood } : {}),
@@ -517,7 +509,7 @@ export function SearchPage() {
               </p>
             ) : null}
 
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-zinc-300">Quantidade</span>
                 <div className="flex gap-1" role="group" aria-label="Quantidade de resultados">
@@ -537,21 +529,6 @@ export function SearchPage() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div className="w-44">
-                <Select
-                  aria-label="Fonte"
-                  className="h-8"
-                  error={errors.provider?.message}
-                  {...register('provider')}
-                >
-                  {availableProviders.map((provider) => (
-                    <option key={provider.id} value={provider.id}>
-                      {provider.label}
-                    </option>
-                  ))}
-                </Select>
               </div>
 
               <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
@@ -579,7 +556,7 @@ export function SearchPage() {
               {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
               {planLabel(plan)}
             </p>
-            <Link to="/settings" className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline">
+            <Link to="/credits" className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline">
               Ver todos os planos →
             </Link>
           </div>
@@ -692,7 +669,7 @@ export function SearchPage() {
                   <Pagination {...resultPage.meta} onPageChange={changeResultsPage} />
                 ) : null}
                 <p className="text-xs text-zinc-500">
-                  Dados ©{' '}
+                  Resultados combinados de OpenStreetMap e Google Places quando disponíveis. Dados ©{' '}
                   <a
                     href="https://www.openstreetmap.org/copyright"
                     target="_blank"
@@ -701,7 +678,7 @@ export function SearchPage() {
                   >
                     colaboradores do OpenStreetMap
                   </a>
-                  , sob a ODbL.
+                  {' '}(ODbL) e Google, conforme a fonte de cada resultado.
                 </p>
               </>
             )}

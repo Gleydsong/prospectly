@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ConfidenceLevel, LeadSource, LeadStatus, OrgPlan, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
@@ -26,11 +27,12 @@ import {
   listCategoryOptions,
 } from './domain/category-entitlements';
 import type { NormalizedBusiness } from './domain/normalized-business';
+import { mergeProviderResults } from './domain/merge-search-results';
 import {
+  COMBINED_SEARCH_PROVIDER,
   isProspectingCountryCode,
-  isProspectingProviderId,
+  isStoredSearchProvider,
   SEARCH_PROVIDER_REGISTRY,
-  type ProspectingProviderId,
   type SearchProviderInput,
   type SearchProviderRegistry,
 } from './domain/search-provider';
@@ -65,6 +67,8 @@ export interface SearchImportSummary {
 
 @Injectable()
 export class ProspectingService {
+  private readonly logger = new Logger(ProspectingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(PROSPECTING_QUEUE) private readonly queue: Queue<RunSearchJobData>,
@@ -92,10 +96,17 @@ export class ProspectingService {
   async create(organizationId: string, userId: string, dto: CreateSearchDto, correlationId?: string) {
     await this.billing.assertCanCreateSearch(organizationId);
 
-    const providerId: ProspectingProviderId = dto.provider ?? 'OPENSTREETMAP';
-    if (!this.providers.isAvailable(providerId)) {
-      throw new BadRequestException(`Search provider unavailable: ${providerId}`);
+    const availableProviders = this.providers.list().filter((provider) => provider.available);
+    if (availableProviders.length === 0) {
+      throw new BadRequestException('No search providers available');
     }
+
+    // Always fan-out to every available map source for denser, merged results.
+    // Legacy single-provider values remain accepted on the DTO but are ignored.
+    const providerId =
+      availableProviders.length > 1
+        ? COMBINED_SEARCH_PROVIDER
+        : availableProviders[0]!.id;
 
     const categories = [...new Set(dto.categories.map((category) => category.trim()))];
     await this.assertCategoriesAllowed(organizationId, categories);
@@ -218,32 +229,82 @@ export class ProspectingService {
       data: { status: SearchStatus.PROCESSING, error: null, completedAt: null },
     });
 
-    if (!isProspectingProviderId(search.provider)) {
+    if (!isStoredSearchProvider(search.provider)) {
       throw new BadRequestException('Invalid persisted search provider');
     }
 
     const input = this.readSearchInput(search.input);
-    const provider = this.providers.resolve(search.provider);
     const categories = this.resolveCategories(input);
-    const businesses = await provider.search({
-      ...input,
-      category: categories[0]!,
-      categories,
-    });
+    const providerIds = this.providers
+      .list()
+      .filter((entry) => entry.available)
+      .map((entry) => entry.id);
 
-    const merged = new Map<string, NormalizedBusiness>();
-    for (const business of businesses) {
-      if (merged.has(business.externalId)) continue;
-      merged.set(business.externalId, {
-        ...business,
-        category: business.category ?? categories[0],
-      });
+    if (providerIds.length === 0) {
+      throw new BadRequestException('No search providers available');
     }
 
-    const results = [...merged.values()];
+    const startedAt = Date.now();
+    const settled = await Promise.allSettled(
+      providerIds.map(async (providerId) => {
+        const providerStartedAt = Date.now();
+        try {
+          const businesses = await this.providers.resolve(providerId).search({
+            ...input,
+            category: categories[0]!,
+            categories,
+          });
+          this.logger.log({
+            message: 'Search provider completed',
+            searchId,
+            providerId,
+            resultCount: businesses.length,
+            durationMs: Date.now() - providerStartedAt,
+          });
+          return businesses;
+        } catch (error) {
+          this.logger.warn({
+            message: 'Search provider failed',
+            searchId,
+            providerId,
+            durationMs: Date.now() - providerStartedAt,
+            reason: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }
+      }),
+    );
+    this.logger.log({
+      message: 'Combined search providers settled',
+      searchId,
+      providerIds,
+      durationMs: Date.now() - startedAt,
+      fulfilled: settled.filter((result) => result.status === 'fulfilled').length,
+      rejected: settled.filter((result) => result.status === 'rejected').length,
+    });
+
+    const batches = settled.flatMap((result) =>
+      result.status === 'fulfilled' ? [result.value] : [],
+    );
+    if (batches.length === 0) {
+      const firstFailure = settled.find((result) => result.status === 'rejected');
+      throw firstFailure && firstFailure.status === 'rejected'
+        ? firstFailure.reason
+        : new Error('Search provider is temporarily unavailable. Please try again later.');
+    }
+
+    const merged = mergeProviderResults(
+      batches.flatMap((businesses) =>
+        businesses.map((business) => ({
+          ...business,
+          category: business.category ?? categories[0],
+        })),
+      ),
+    );
+
     const filtered = input.onlyWithoutWebsite
-      ? results.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
-      : results;
+      ? merged.filter((business) => business.websitePresence === WebsitePresence.NO_WEBSITE_REPORTED)
+      : merged;
     const capped = filtered.slice(0, input.limit ?? DEFAULT_SEARCH_RESULT_LIMIT);
 
     await this.persistResults(searchId, capped);

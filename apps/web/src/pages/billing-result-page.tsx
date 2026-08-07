@@ -14,8 +14,8 @@ export function BillingSuccessPage() {
           Seu plano será ativado em instantes via webhook Stripe.
           {sessionId ? ` Sessão: ${sessionId.slice(0, 16)}…` : null}
         </p>
-        <Link to="/settings" className="mt-6 inline-block">
-          <Button type="button">Ir para configurações</Button>
+        <Link to="/credits" className="mt-6 inline-block">
+          <Button type="button">Ir para créditos</Button>
         </Link>
       </div>
     </div>
@@ -31,7 +31,7 @@ export function BillingCancelPage() {
           Nenhuma cobrança foi feita. Você pode tentar de novo quando quiser.
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link to="/settings?upgrade=1">
+          <Link to="/credits">
             <Button type="button">Tentar novamente</Button>
           </Link>
           <Link to="/">

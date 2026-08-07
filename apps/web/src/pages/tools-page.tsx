@@ -41,7 +41,9 @@ function ToolCard({
       <Card interactive className="h-full">
         <CardContent className="flex h-full flex-col p-5">
           <h3 className="text-base font-bold tracking-tight text-[color:var(--ink)]">{title}</h3>
-          <p className="mt-2 flex-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">{description}</p>
+          <p className="mt-2 flex-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">
+            {description}
+          </p>
           <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--accent)] transition-colors group-hover:text-sky-700">
             {openLabel}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />

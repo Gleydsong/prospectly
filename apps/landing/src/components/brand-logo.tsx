@@ -10,7 +10,7 @@ export function BrandLogo({ locale, priority = false }: BrandLogoProps) {
   return (
     <span className="inline-flex items-center gap-2.5">
       <Image
-        src="/brand/prospectly-mark.png"
+        src="/brand/prospectly-mark-v2.svg"
         width={32}
         height={32}
         alt=""

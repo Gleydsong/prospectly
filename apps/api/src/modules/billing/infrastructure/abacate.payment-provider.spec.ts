@@ -121,15 +121,15 @@ describe('AbacatePaymentProvider', () => {
 
   it('creates a PIX checkout with the selected credit offer metadata', async () => {
     client.createTransparentPix.mockResolvedValue({
-      id: 'pix_credits_1', amount: 1499, brCode: '000201', brCodeBase64: 'data:image/png;base64,abc',
+      id: 'pix_credits_1', amount: 999, brCode: '000201', brCodeBase64: 'data:image/png;base64,abc',
     });
     const result = await provider.createCreditCheckout({
       organizationId: 'org1', offer: 'credits-2000', purchaseId: 'purchase_1',
       externalId: 'org:org1:credits:purchase_1', successUrl: 'https://app/success', cancelUrl: 'https://app/cancel',
     });
-    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 1499 }));
+    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 999 }));
     expect(client.createTransparentPix).toHaveBeenCalledWith(expect.objectContaining({
-      amountCentavos: 1499,
+      amountCentavos: 999,
       metadata: expect.objectContaining({ purchaseId: 'purchase_1', offer: 'credits-2000', credits: '2000' }),
     }));
     expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');

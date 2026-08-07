@@ -356,7 +356,8 @@ body {
 .landing-v2-header { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #e5e7e9; background: rgb(255 255 255 / .92); backdrop-filter: blur(14px); }
 .landing-v2-header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 68px; gap: 24px; }
 .landing-v2-brand-link { color: var(--v2-ink); text-decoration: none; }
-.landing-v2-brand { display: inline-flex; align-items: baseline; font-size: 22px; font-weight: 700; letter-spacing: -.065em; line-height: 1; }
+.landing-v2-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 22px; font-weight: 700; letter-spacing: -.065em; line-height: 1; }
+.landing-v2-brand img { width: 34px; height: 34px; }
 .landing-v2-brand span { color: var(--v2-green); }
 .landing-v2-desktop-nav { display: flex; align-items: center; gap: 30px; margin-left: auto; margin-right: 22px; font-size: 14px; font-weight: 600; }
 .landing-v2-desktop-nav a,
@@ -460,8 +461,8 @@ body {
 .landing-v2-audience-proof span { color: #7c8389; font-size: 12px; }
 
 .landing-v2-final-cta { position: relative; isolation: isolate; min-height: 530px; overflow: hidden; color: #fff; }
-.landing-v2-final-image { z-index: -2; object-fit: cover; object-position: center 58%; filter: saturate(.8); }
-.landing-v2-final-overlay { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(25 29 33 / .94) 0%, rgb(25 29 33 / .8) 45%, rgb(25 29 33 / .38) 100%); }
+.landing-v2-final-image { z-index: -2; object-fit: cover; object-position: center 58%; filter: saturate(.8); pointer-events: none; }
+.landing-v2-final-overlay { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(25 29 33 / .94) 0%, rgb(25 29 33 / .8) 45%, rgb(25 29 33 / .38) 100%); pointer-events: none; }
 .landing-v2-final-content { display: flex; min-height: 530px; flex-direction: column; justify-content: center; align-items: flex-start; padding-block: 80px; }
 .landing-v2-final-content .landing-v2-kicker { color: #c2c7cb; }
 .landing-v2-final-content h2 { max-width: 11ch; margin: 20px 0 0; font-size: clamp(2.7rem, 5vw, 5.4rem); font-weight: 700; letter-spacing: -.075em; line-height: .96; text-wrap: balance; }

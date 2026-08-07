@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Prospectly</title>
+  <defs>
+    <linearGradient id="surface" x1="72" y1="40" x2="444" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EAF3FA"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="146" y1="106" x2="386" y2="402" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B9D8EF"/>
+      <stop offset="1" stop-color="#709AC0"/>
+    </linearGradient>
+    <filter id="shadow" x="28" y="28" width="456" height="456" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#526779" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="48" y="48" width="416" height="416" rx="112" fill="url(#surface)"/>
+    <rect x="48.75" y="48.75" width="414.5" height="414.5" rx="111.25" stroke="#D4E2EC" stroke-width="1.5"/>
+  </g>
+  <path d="M158 365V147C158 134.85 167.85 125 180 125H264C325.89 125 366 157.38 366 208.5C366 259.62 325.89 292 264 292H211V365H158Z" fill="#263541"/>
+  <path d="M211 167V250H259C292.16 250 309 235.85 309 208.5C309 181.15 292.16 167 259 167H211Z" fill="url(#surface)"/>
+  <circle cx="365" cy="365" r="34" fill="url(#accent)"/>
+  <circle cx="365" cy="365" r="11" fill="#FFFFFF"/>
+</svg>

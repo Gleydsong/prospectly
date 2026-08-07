@@ -18,14 +18,14 @@ type Offer = {
 
 const offersByLocale: Record<Locale, Offer[]> = {
   pt: [
-    { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 14,99', cta: 'Comprar créditos' },
-    { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 34,99', cta: 'Comprar créditos' },
-    { id: 'unlimited', title: 'Ilimitado', description: 'Buscas sem limite e leads preservados por 60 dias.', price: 'R$ 99,90', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
+    { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 9,99', cta: 'Comprar créditos' },
+    { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 19,99', cta: 'Comprar créditos' },
+    { id: 'unlimited', title: 'Ilimitado', description: 'Buscas sem limite e leads preservados por 60 dias.', price: 'R$ 49,99', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
   ],
   en: [
-    { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 14.99', cta: 'Buy credits' },
-    { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 34.99', cta: 'Buy credits' },
-    { id: 'unlimited', title: 'Unlimited', description: 'Unlimited searches and leads preserved for 60 days.', price: 'R$ 99.90', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
+    { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 9.99', cta: 'Buy credits' },
+    { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 19.99', cta: 'Buy credits' },
+    { id: 'unlimited', title: 'Unlimited', description: 'Unlimited searches and leads preserved for 60 days.', price: 'R$ 49.99', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
   ],
 };
 

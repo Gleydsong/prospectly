@@ -109,28 +109,28 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Posso testar sem pagar?',
     answer:
-      'Sim. O Free libera até 3 buscas para validar o fluxo. Depois você assina o Starter mensal ou compra o acesso vitalício.',
+      'Sim. O Free libera até 3 buscas para validar o fluxo. Depois você compra pacotes de créditos (R$ 9,99 / R$ 19,99) ou assina o ilimitado (R$ 49,99/mês).',
   },
   {
     id: 'plans',
     category: 'pricing',
-    question: 'Qual a diferença entre mensal e vitalício?',
+    question: 'Qual a diferença entre créditos e ilimitado?',
     answer:
-      'Mensal: assinatura Stripe que você cancela no portal do cliente. Vitalício: pagamento único, sem renovação automática. Os dois abrem o Starter com as mesmas funções principais.',
+      'Créditos avulsos (2.000 ou 5.000) acumulam, não expiram e não têm mensalidade. O ilimitado é assinatura mensal com buscas sem limite. Os dois usam o mesmo fluxo de prospecção.',
   },
   {
     id: 'currency',
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'BRL, EUR e USD. Na página de preços você escolhe a moeda antes do checkout. Exemplos: R$ 49/mês ou R$ 399 vitalício; € 10/mês ou € 99 vitalício; $ 10/mês ou $ 99 vitalício.',
+      'No Brasil o checkout é em BRL. Exemplos atuais: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'Como cancelo a assinatura mensal?',
     answer:
-      'Pelo Customer Portal da Stripe, ligado à sua conta. Sem multa de fidelidade no modelo atual. O vitalício não tem cobrança recorrente para cancelar.',
+      'Pelo portal de cobrança ligado à sua conta (Stripe ou AbacatePay, conforme o meio de pagamento). Pacotes de créditos não têm renovação para cancelar.',
   },
   {
     id: 'sources',
@@ -151,7 +151,7 @@ const faqPt: FaqItem[] = [
     category: 'data',
     question: 'OpenStreetMap ou Google Places?',
     answer:
-      'OSM costuma bastar para começar sem custo de API. Google Places entra quando você quer outra cobertura na mesma cidade. Você escolhe o provedor em cada busca.',
+      'Você não escolhe mais. Cada busca consulta as duas fontes quando disponíveis e une os resultados numa lista mais completa.',
   },
   {
     id: 'accuracy',
@@ -252,28 +252,28 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Can I try it without paying?',
     answer:
-      'Yes. Free includes up to 3 searches so you can validate the flow. Then subscribe to Starter monthly or buy lifetime access.',
+      'Yes. Free includes up to 3 searches so you can validate the flow. Then buy credit packs (R$ 9.99 / R$ 19.99) or subscribe to unlimited (R$ 49.99/month).',
   },
   {
     id: 'plans',
     category: 'pricing',
-    question: 'Monthly vs lifetime?',
+    question: 'Credits vs unlimited?',
     answer:
-      'Monthly is a Stripe subscription you cancel in the customer portal. Lifetime is a one-time payment with no auto-renewal. Both unlock the same core Starter features.',
+      'One-off credit packs (2,000 or 5,000) accumulate, never expire, and have no monthly fee. Unlimited is a monthly subscription with uncapped searches. Both use the same prospecting flow.',
   },
   {
     id: 'currency',
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'BRL, EUR, and USD. Pick the currency on the pricing page before checkout. Examples: R$49/mo or R$399 lifetime; €10/mo or €99 lifetime; $10/mo or $99 lifetime.',
+      'Checkout in Brazil is in BRL. Current examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'How do I cancel a monthly plan?',
     answer:
-      'Through Stripe’s Customer Portal linked to your account. No loyalty penalty in the current model. Lifetime has no recurring charge to cancel.',
+      'Through the billing portal linked to your account (Stripe or AbacatePay, depending on payment method). Credit packs have no renewal to cancel.',
   },
   {
     id: 'sources',
@@ -294,7 +294,7 @@ const faqEn: FaqItem[] = [
     category: 'data',
     question: 'OpenStreetMap or Google Places?',
     answer:
-      'OSM is a solid start without API cost. Google Places helps when you want another pass on the same city. You pick the provider per search.',
+      'You no longer pick one. Each search queries both sources when available and merges the results for a denser list.',
   },
   {
     id: 'accuracy',

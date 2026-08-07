@@ -24,7 +24,7 @@ export type CheckoutRequest = {
   existingCustomerId?: string | null;
 };
 
-/** Resposta discriminada: redirect (Stripe / assinatura BR) ou PIX in-app (vitalício BR). */
+/** Resposta discriminada: redirect (Stripe / assinatura BR) ou PIX in-app (créditos BR). */
 export type CheckoutResult =
   | {
       mode: 'redirect';

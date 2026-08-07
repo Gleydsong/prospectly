@@ -14,9 +14,10 @@ import type { NormalizedBusiness } from '../domain/normalized-business';
 import { mapCategoryToOsmTags, type OsmTagMap } from './osm-category-map';
 import type { NominatimRateLimiter } from './nominatim-rate-limiter';
 
+/** Prefer lz4 first — public overpass-api.de frequently returns 504 under load. */
 const DEFAULT_OVERPASS_MIRRORS = [
-  'https://overpass-api.de/api/interpreter',
   'https://lz4.overpass-api.de/api/interpreter',
+  'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ] as const;
 
@@ -476,16 +477,23 @@ export class OpenStreetMapProvider implements SearchProvider {
     const urls = this.resolveOverpassUrls();
     let lastError: SearchProviderError | undefined;
 
+    // One attempt per mirror, then fail over. Retries on the same overloaded
+    // Overpass host (often 504 for 8–45s) dominate end-to-end search latency.
     for (const url of urls) {
       try {
-        return await this.requestJson<OverpassResponse>(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=UTF-8',
-            'User-Agent': this.options.userAgent,
+        return await this.requestJson<OverpassResponse>(
+          url,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain;charset=UTF-8',
+              'User-Agent': this.options.userAgent,
+            },
+            body,
           },
-          body,
-        });
+          false,
+          1,
+        );
       } catch (error) {
         if (error instanceof SearchProviderError) {
           if (!error.retryable) throw error;
@@ -586,8 +594,12 @@ export class OpenStreetMapProvider implements SearchProvider {
     };
   }
 
-  private async requestJson<T>(url: string, init: RequestInit, applyNominatimRateLimit = false): Promise<T> {
-    const maxAttempts = 3;
+  private async requestJson<T>(
+    url: string,
+    init: RequestInit,
+    applyNominatimRateLimit = false,
+    maxAttempts = 3,
+  ): Promise<T> {
     let lastError: ProviderRequestError | undefined;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
