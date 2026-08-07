@@ -28,7 +28,8 @@ test.describe('landing routes', () => {
 });
 
 test.describe('landing navigation', () => {
-  test('desktop navigation opens the benefits page', async ({ page }) => {
+  test('desktop navigation opens the benefits page', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop navigation is covered in the desktop project');
     await page.goto('/v2');
     await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Benefícios', exact: true }).click();
     await expect(page).toHaveURL(/\/v2\/beneficios$/);
@@ -82,7 +83,7 @@ test.describe('waitlist form', () => {
     await page.getByLabel('E-mail').fill('e2e@prospectly.dev');
     await page.getByRole('button', { name: 'Entrar na lista' }).click();
 
-    await expect(page.getByRole('alert')).toContainText('Muitas tentativas');
+    await expect(page.locator('p[role="alert"]')).toContainText('Muitas tentativas');
     await expect(page.getByLabel('E-mail')).toBeVisible();
   });
 });
