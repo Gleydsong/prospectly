@@ -356,9 +356,21 @@ body {
 .landing-v2-header { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #e5e7e9; background: rgb(255 255 255 / .92); backdrop-filter: blur(14px); }
 .landing-v2-header-inner { display: flex; align-items: center; justify-content: space-between; min-height: 68px; gap: 24px; }
 .landing-v2-brand-link { color: var(--v2-ink); text-decoration: none; }
-.landing-v2-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 22px; font-weight: 700; letter-spacing: -.065em; line-height: 1; }
-.landing-v2-brand img { width: 34px; height: 34px; }
-.landing-v2-brand span { color: var(--v2-green); }
+.landing-v2-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--v2-ink);
+}
+.landing-v2-brand img { width: 34px; height: 34px; margin-right: -1px; }
+.landing-v2-brand-word {
+  color: var(--v2-ink);
+  font-weight: 600;
+}
 .landing-v2-desktop-nav { display: flex; align-items: center; gap: 30px; margin-left: auto; margin-right: 22px; font-size: 14px; font-weight: 600; }
 .landing-v2-desktop-nav a,
 .landing-v2-login { color: #5b636a; text-decoration: none; transition: color .2s ease; }

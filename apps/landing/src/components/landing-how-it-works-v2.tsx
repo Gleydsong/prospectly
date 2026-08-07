@@ -127,7 +127,7 @@ function JourneyMock() {
   const current = JOURNEY_STATES[active];
 
   return <div className="landing-how-journey-mock" aria-label="Demonstração interativa do fluxo do Prospectly">
-    <div className="landing-how-mock-chrome"><span>prospectly<span>.</span></span><small>Fluxo de prospecção</small></div>
+    <div className="landing-how-mock-chrome"><span>rospectly</span><small>Fluxo de prospecção</small></div>
     <div className="landing-how-mock-progress" aria-hidden="true"><i style={{ transform: `scaleX(${(active + 1) / JOURNEY_STATES.length})` }} /></div>
     <div className="landing-how-mock-head"><div><small>{current.eyebrow}</small><h3>{current.title}</h3></div><span>{String(active + 1).padStart(2, '0')} / 03</span></div>
     <p className="landing-how-mock-description">{current.description}</p>

@@ -105,9 +105,7 @@ function ProductDemoFallback({
     >
       <div className="product-demo-motion-glow" aria-hidden="true" />
       <div className="product-demo-motion-topbar">
-        <span className="product-demo-motion-brand">
-          prospectly<span>.</span>
-        </span>
+        <span className="product-demo-motion-brand">rospectly</span>
         <span className="product-demo-motion-status">
           <i /> {locale === 'pt' ? 'Fluxo de prospecção' : 'Prospecting flow'}
         </span>
