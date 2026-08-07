@@ -15,7 +15,6 @@ import { CreditPurchaseService } from '../credit-purchase.service';
 import { CREDIT_PACKAGES } from '../credit-purchase.constants';
 import type {
   CreditCheckoutRequest,
-  CreditOffer,
   CheckoutRequest,
   CheckoutResult,
   ParsedWebhookEvent,

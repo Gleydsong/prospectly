@@ -1,6 +1,6 @@
 # Dependências — exceções e política de audit
 
-Atualizado: **2026-08-02**.
+Atualizado: **2026-08-07**.
 
 ## Política de CI
 
@@ -18,7 +18,8 @@ Atualizado: **2026-08-02**.
 | `multer` | `pnpm.overrides` `^2.2.0` | GHSA-xf7r-hgr6-v32p, GHSA-v52c-386h-88mc, GHSA-5528-5vmv-3xc2, GHSA-72gw-mp4g-v24j — via `@nestjs/platform-express` | Nest pinar multer ≥2.2.0 |
 | `sharp` | `pnpm.overrides` `>=0.35.0` | GHSA-f88m-g3jw-g9cj — via `next` (landing) | Next depender de sharp ≥0.35.0 |
 | `lodash` | `pnpm.overrides` `>=4.18.0` | GHSA-r5fr-rjxr-66jc — via `@nestjs/config` | `@nestjs/config` pinar lodash ≥4.18.0 |
-| `js-yaml` (v4) | `pnpm.overrides` `js-yaml@>=4` → `>=4.3.0` | GHSA-52cp-r559-cp3m — via `@nestjs/swagger` | Swagger pinar js-yaml ≥4.3.0 |
+| `js-yaml` (v3) | `pnpm.overrides` `js-yaml@>=3 <4` → `3.15.1` | GHSA-5p4m-2wfm-xmqj (CVE-2026-59870) — via Jest / istanbul | Istanbul/Jest pinar js-yaml ≥3.15.1 |
+| `js-yaml` (v4) | `pnpm.overrides` `js-yaml@>=4 <5` → `4.3.1` | GHSA-5p4m-2wfm-xmqj + GHSA-52cp-r559-cp3m — via `@nestjs/swagger`, commitlint | Swagger/cosmiconfig pinar js-yaml ≥4.3.1 |
 | `glob` (v10) | `pnpm.overrides` `glob@>=10.2.0 <11` → `>=10.5.0` | GHSA-5j98-mcp5-4vw2 — via `@nestjs/cli` (toolchain) | Nest CLI pinar glob ≥10.5.0 |
 | `picomatch` (v4) | `pnpm.overrides` `picomatch@>=4 <4.0.4` → `>=4.0.4` | GHSA-c2c7-rcm5-vvqj — via Nest CLI / angular-devkit | Devkit pinar picomatch ≥4.0.4 |
 | `tmp` | `pnpm.overrides` `>=0.2.6` | GHSA-ph9p-34f9-6g65 — via Nest CLI / inquirer | external-editor pinar tmp ≥0.2.6 |
