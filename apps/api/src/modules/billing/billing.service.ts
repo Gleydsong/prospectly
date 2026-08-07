@@ -4,15 +4,19 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
+import { CreditPurchaseService } from './credit-purchase.service';
+import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { FREE_SEARCH_LIMIT } from './billing.constants';
 import type {
   BillingCurrency,
   BillingInterval,
+  CreditOffer,
   CheckoutResult,
   PaymentProviderId,
 } from './domain/payment-provider';
@@ -38,6 +42,7 @@ export class BillingService {
     private readonly activation: BillingActivationService,
     private readonly stripeProvider: StripePaymentProvider,
     private readonly abacateProvider: AbacatePaymentProvider,
+    private readonly creditPurchases: CreditPurchaseService,
   ) {}
 
   async getOrganizationBilling(organizationId: string) {
@@ -59,6 +64,7 @@ export class BillingService {
         ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
           (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId))),
       freeSearchLimit: FREE_SEARCH_LIMIT,
+      creditBalance: org.creditBalance ?? 0,
     };
   }
 
@@ -68,7 +74,8 @@ export class BillingService {
     const org =
       typeof organization === 'string' ? await this.requireOrg(organization) : organization;
     const used = await this.prisma.search.count({ where: { organizationId: org.id } });
-    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT;
+    const creditBalance = org.creditBalance ?? 0;
+    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditBalance;
     return {
       used,
       limit,
@@ -84,13 +91,33 @@ export class BillingService {
     }
 
     const searchCount = await this.prisma.search.count({ where: { organizationId } });
-    if (searchCount >= FREE_SEARCH_LIMIT) {
+    const creditBalance = org.creditBalance ?? 0;
+    if (searchCount >= FREE_SEARCH_LIMIT && creditBalance <= 0) {
       throw new ForbiddenException({
         code: 'ENTITLEMENT_SEARCHES',
         message: `Free plan allows ${FREE_SEARCH_LIMIT} searches. Upgrade to continue.`,
         requiredPlan: OrgPlan.STARTER_MONTHLY,
         usage: searchCount,
         limit: FREE_SEARCH_LIMIT,
+      });
+    }
+  }
+
+  async consumeCreditForSearch(organizationId: string): Promise<void> {
+    const org = await this.requireOrg(organizationId);
+    if (org.planStatus === PlanStatus.ACTIVE) return;
+
+    const searchCount = await this.prisma.search.count({ where: { organizationId } });
+    if (searchCount <= FREE_SEARCH_LIMIT) return;
+
+    const consumed = await this.prisma.organization.updateMany({
+      where: { id: organizationId, creditBalance: { gt: 0 } },
+      data: { creditBalance: { decrement: 1 } },
+    });
+    if (consumed.count !== 1) {
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_CREDITS',
+        message: 'No credits remaining. Purchase a credit package to continue.',
       });
     }
   }
@@ -155,6 +182,35 @@ export class BillingService {
     });
 
     return result;
+  }
+
+  async createCreditCheckoutSession(
+    organizationId: string,
+    offer: CreditOffer,
+  ): Promise<CheckoutResult> {
+    const org = await this.requireOrg(organizationId);
+    const pack = CREDIT_PACKAGES[offer];
+    if (!pack) throw new BadRequestException('Invalid credit offer');
+
+    const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
+    const purchase = await this.creditPurchases.createPending({ organizationId, offer, externalId });
+    const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
+    try {
+      return await this.abacateProvider.createCreditCheckout({
+        organizationId,
+        offer,
+        purchaseId: purchase.id,
+        externalId,
+        successUrl: `${frontendUrl}/billing/success`,
+        cancelUrl: `${frontendUrl}/billing/cancel`,
+      });
+    } catch (error) {
+      await this.prisma.creditPurchase.update({
+        where: { id: purchase.id },
+        data: { status: 'FAILED' },
+      });
+      throw error;
+    }
   }
 
   async createPortalSession(organizationId: string): Promise<{ url: string }> {

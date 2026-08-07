@@ -18,7 +18,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
-import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { CreateCheckoutDto, CreateCreditCheckoutDto } from './dto/create-checkout.dto';
 
 
 @ApiTags('billing')
@@ -47,6 +47,17 @@ export class BillingController {
       dto.interval,
       dto.currency,
     );
+  }
+
+  @ApiBearerAuth()
+  @RequireEmailVerified()
+  @Roles('OWNER', 'ADMIN')
+  @Post('credits/checkout')
+  createCreditCheckout(
+    @CurrentOrg() organizationId: string,
+    @Body() dto: CreateCreditCheckoutDto,
+  ) {
+    return this.billing.createCreditCheckoutSession(organizationId, dto.offer);
   }
 
   @ApiBearerAuth()

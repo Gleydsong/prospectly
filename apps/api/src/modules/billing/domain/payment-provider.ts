@@ -2,6 +2,16 @@ export type PaymentProviderId = 'STRIPE' | 'ABACATE';
 
 export type BillingCurrency = 'BRL' | 'EUR' | 'USD';
 export type BillingInterval = 'monthly' | 'lifetime';
+export type CreditOffer = 'credits-2000' | 'credits-5000';
+
+export type CreditCheckoutRequest = {
+  organizationId: string;
+  offer: CreditOffer;
+  successUrl: string;
+  cancelUrl: string;
+  purchaseId: string;
+  externalId: string;
+};
 
 export type CheckoutRequest = {
   organizationId: string;

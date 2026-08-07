@@ -24,6 +24,8 @@ export type SearchUsage = {
   unlimited: boolean;
 };
 
+export type CreditOffer = 'credits-2000' | 'credits-5000';
+
 export type BillingStatus = {
   searchUsage: SearchUsage;
   plan: string;
@@ -35,4 +37,5 @@ export type BillingStatus = {
   canOpenPortal: boolean;
   canCancelSubscription: boolean;
   freeSearchLimit: number;
+  creditBalance: number;
 };

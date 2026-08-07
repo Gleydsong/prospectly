@@ -16,3 +16,12 @@ export class CreateCheckoutDto {
   @IsIn(BILLING_CURRENCIES)
   currency!: BillingCurrency;
 }
+
+export const CREDIT_OFFERS = ['credits-2000', 'credits-5000'] as const;
+export type CreditOffer = (typeof CREDIT_OFFERS)[number];
+
+export class CreateCreditCheckoutDto {
+  @ApiProperty({ enum: CREDIT_OFFERS })
+  @IsIn(CREDIT_OFFERS)
+  offer!: CreditOffer;
+}

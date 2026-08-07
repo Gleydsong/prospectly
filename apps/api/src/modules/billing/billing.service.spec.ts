@@ -6,6 +6,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
+import { CreditPurchaseService } from './credit-purchase.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
@@ -66,6 +67,7 @@ describe('BillingService', () => {
         { provide: BillingActivationService, useValue: activation },
         { provide: StripePaymentProvider, useValue: stripeProvider },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
+        { provide: CreditPurchaseService, useValue: { createPending: jest.fn(), attachPayment: jest.fn() } },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -264,5 +266,13 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
         },
       },
     });
+  });
+
+  it('allows a free organization to search when purchased credits remain', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 2, deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+    await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
   });
 });

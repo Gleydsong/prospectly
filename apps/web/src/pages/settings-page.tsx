@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, Copy, Trash2, UserPlus } from 'lucide-react';
+import { Camera, ChevronDown, Copy, Coins, Trash2, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -15,7 +15,7 @@ import {
   cancelBillingSubscription,
   changeEmail,
   createBillingPortal,
-  createCheckoutSession,
+  createCreditCheckout,
   getBillingStatus,
   getProfile,
   logout,
@@ -303,14 +303,11 @@ export function SettingsPage() {
   const [orgError, setOrgError] = useState<string | null>(null);
 
   const [billingError, setBillingError] = useState<string | null>(null);
-  const [billingInterval, setBillingInterval] = useState<'monthly' | 'lifetime'>(() => {
-    const plan = searchParams.get('plan');
-    return plan === 'lifetime' || plan === 'monthly' ? plan : 'monthly';
+  const [creditOffer, setCreditOffer] = useState<'credits-2000' | 'credits-5000' | null>(() => {
+    const value = searchParams.get('offer');
+    return value === 'credits-2000' || value === 'credits-5000' ? value : null;
   });
-  const [currency, setCurrency] = useState<'BRL' | 'EUR' | 'USD'>(() => {
-    const value = searchParams.get('currency');
-    return value === 'BRL' || value === 'EUR' || value === 'USD' ? value : 'BRL';
-  });
+  const [creditPurchaseOpen, setCreditPurchaseOpen] = useState(() => Boolean(creditOffer));
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -421,16 +418,16 @@ export function SettingsPage() {
     },
   });
 
-  const checkout = useMutation({
-    mutationFn: () => createCheckoutSession({ interval: billingInterval, currency }),
+  const creditCheckout = useMutation({
+    mutationFn: (offer: 'credits-2000' | 'credits-5000') => createCreditCheckout({ offer }),
     onSuccess: (data) => handleCheckoutResult(data),
-    onError: (err) => setBillingError(getApiErrorMessage(err)),
+    onError: () => setBillingError(t('settings.billingError')),
   });
 
   const portal = useMutation({
     mutationFn: createBillingPortal,
     onSuccess: (data) => assignStripeRedirect(data.url),
-    onError: (err) => setBillingError(getApiErrorMessage(err)),
+    onError: () => setBillingError(t('settings.billingError')),
   });
 
   const cancelSub = useMutation({
@@ -439,7 +436,7 @@ export function SettingsPage() {
       setBillingError(null);
       await queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
     },
-    onError: (err) => setBillingError(getApiErrorMessage(err)),
+    onError: () => setBillingError(t('settings.billingError')),
   });
 
   const exportData = useMutation({
@@ -503,13 +500,6 @@ export function SettingsPage() {
   const orgDirty = orgName.trim() !== (orgQuery.data?.name ?? user?.organizationName ?? '');
   const isActive = billing.data?.planStatus === 'ACTIVE';
   const confirmWord = i18n.language.startsWith('en') ? 'DELETE' : 'EXCLUIR';
-
-  const subscribeLabel =
-    currency === 'BRL' && billingInterval === 'lifetime'
-      ? t('settings.subscribeLifetimePix')
-      : currency === 'BRL' && billingInterval === 'monthly'
-        ? t('settings.subscribeMonthly')
-        : t('settings.subscribe');
 
   return (
     <div className="space-y-5">
@@ -659,30 +649,30 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="overflow-hidden">
         <CardHeader title={t('settings.billingTitle')} description={t('settings.billingDesc')} />
         <CardContent className="space-y-4">
           {billing.isLoading ? (
             <Skeleton className="h-16" />
           ) : (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-300">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4 text-sm text-[color:var(--ink-muted)]">
               <span>
-                <span className="text-zinc-500">{t('settings.planLabel')}: </span>
-                <strong className="text-zinc-50">{billing.data?.plan ?? 'FREE'}</strong>
+                <span className="text-[color:var(--ink-muted)]">{t('settings.planLabel')}: </span>
+                <strong className="text-[color:var(--ink)]">{billing.data?.plan ?? 'FREE'}</strong>
               </span>
               <Badge tone={isActive ? 'brand' : 'slate'}>
                 {billing.data?.planStatus ?? 'INACTIVE'}
               </Badge>
               {billing.data?.planCurrency ? (
-                <span className="text-zinc-400">{billing.data.planCurrency}</span>
+                <span className="text-[color:var(--ink-muted)]">{billing.data.planCurrency}</span>
               ) : null}
               {!isActive ? (
-                <span className="text-zinc-500">
+                <span className="text-[color:var(--ink-muted)]">
                   {t('settings.freeSearches', { count: billing.data?.freeSearchLimit ?? 3 })}
                 </span>
               ) : null}
               {billing.data?.currentPeriodEnd ? (
-                <span className="text-zinc-500">
+                <span className="text-[color:var(--ink-muted)]">
                   {t('settings.periodEnd', {
                     date: formatDate(billing.data.currentPeriodEnd),
                   })}
@@ -692,46 +682,63 @@ export function SettingsPage() {
           )}
 
           {billingError ? (
-            <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+            <p className="rounded-control border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="alert">
               {billingError}
             </p>
           ) : null}
 
-          {!isActive ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Select
-                label={t('settings.interval')}
-                value={billingInterval}
-                onChange={(event) =>
-                  setBillingInterval(event.target.value as 'monthly' | 'lifetime')
-                }
-              >
-                <option value="monthly">{t('settings.intervalMonthly')}</option>
-                <option value="lifetime">{t('settings.intervalLifetime')}</option>
-              </Select>
-              <Select
-                label={t('settings.currency')}
-                value={currency}
-                onChange={(event) => setCurrency(event.target.value as 'BRL' | 'EUR' | 'USD')}
-              >
-                <option value="BRL">BRL</option>
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-              </Select>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            {!isActive ? (
+          <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-card)] p-4 shadow-panel">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-[color:var(--surface-muted)] text-[color:var(--ink)]">
+                  <Coins className="h-5 w-5" aria-hidden />
+                </span>
+                <div>
+                  <p className="font-semibold text-[color:var(--ink)]">{t('settings.creditPackages')}</p>
+                  <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{t('settings.creditPackagesDesc')}</p>
+                </div>
+              </div>
               <Button
                 type="button"
-                loading={checkout.isPending}
-                disabled={!emailVerified}
-                onClick={() => checkout.mutate()}
+                variant="secondary"
+                size="sm"
+                aria-expanded={creditPurchaseOpen}
+                onClick={() => setCreditPurchaseOpen((open) => !open)}
               >
-                {subscribeLabel}
+                {creditPurchaseOpen ? t('common.close') : t('settings.addCredits')}
+                <ChevronDown className={cn('h-4 w-4 transition-transform', creditPurchaseOpen && 'rotate-180')} aria-hidden />
               </Button>
+            </div>
+
+            {creditPurchaseOpen ? (
+              <div className="mt-4 border-t border-[color:var(--border)] pt-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(['credits-2000', 'credits-5000'] as const).map((offer) => (
+                    <button
+                      key={offer}
+                      type="button"
+                      className={cn(
+                        'rounded-panel border p-4 text-left transition-[border-color,background,box-shadow] hover:border-[color:var(--border-strong)] hover:shadow-panel',
+                        creditOffer === offer ? 'border-[color:var(--border-strong)] bg-[color:var(--surface-muted)]' : 'border-[color:var(--border)] bg-[color:var(--surface-card)]',
+                      )}
+                      disabled={!emailVerified || creditCheckout.isPending}
+                      onClick={() => {
+                        setCreditOffer(offer);
+                        creditCheckout.mutate(offer);
+                      }}
+                    >
+                      <span className="block text-sm font-semibold text-[color:var(--ink)]">{offer === 'credits-2000' ? '2.000 créditos' : '5.000 créditos'}</span>
+                      <span className="mt-1 block text-sm text-[color:var(--ink-muted)]">{offer === 'credits-2000' ? 'R$ 14,99' : 'R$ 34,99'}</span>
+                      {creditCheckout.isPending && creditOffer === offer ? <span className="mt-2 block text-xs text-[color:var(--ink-muted)]">{t('settings.billingPreparing')}</span> : null}
+                    </button>
+                  ))}
+                </div>
+                {!emailVerified ? <p className="mt-3 text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p> : null}
+              </div>
             ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
             {billing.data?.canOpenPortal ? (
               <Button
                 type="button"
@@ -763,9 +770,7 @@ export function SettingsPage() {
               {t('settings.viewPricing')}
             </a>
           </div>
-          {!emailVerified ? (
-            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
-          ) : null}
+          {!emailVerified && !creditPurchaseOpen ? <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p> : null}
         </CardContent>
       </Card>
 

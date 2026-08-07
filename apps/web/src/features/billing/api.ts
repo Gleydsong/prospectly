@@ -1,12 +1,17 @@
 import { api } from '@/lib/api';
 
-import type { BillingStatus, CheckoutResult } from './types';
+import type { BillingStatus, CheckoutResult, CreditOffer } from './types';
 
 export async function createCheckoutSession(input: {
   interval: 'monthly' | 'lifetime';
   currency: 'BRL' | 'EUR' | 'USD';
 }): Promise<CheckoutResult> {
   const { data } = await api.post<CheckoutResult>('/billing/checkout', input);
+  return data;
+}
+
+export async function createCreditCheckout(input: { offer: CreditOffer }): Promise<CheckoutResult> {
+  const { data } = await api.post<CheckoutResult>('/billing/credits/checkout', input);
   return data;
 }
 

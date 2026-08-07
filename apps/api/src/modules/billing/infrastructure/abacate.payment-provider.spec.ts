@@ -8,6 +8,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
 import { AbacateClient } from './abacate.client';
 import { AbacatePaymentProvider } from './abacate.payment-provider';
+import { CreditPurchaseService } from '../credit-purchase.service';
 
 const HMAC_KEY =
   't9dXRhHHo3yDEj5pVDYz0frf7q6bMKyMRmxxCPIPp3RCplBfXRxqlC6ZpiWmOqj4L63qEaeUOtrCI8P0VMUgo6iIga2ri9ogaHFs0WIIywSMg0q7RmBfybe1E5XJcfC4IW3alNqym0tXoAKkzvfEjZxV6bE0oG2zJrNNYmUCKZyV0KZ3JS8Votf9EAWWYdiDkMkpbMdPggfh1EqHlVkMiTady6jOR3hyzGEHrIz2Ret0xHKMbiqkr9HS1JhNHDX9';
@@ -36,6 +37,11 @@ describe('AbacatePaymentProvider', () => {
       findFirst: jest.fn(),
     },
   };
+  const creditPurchases = {
+    attachPayment: jest.fn(),
+    completeFromWebhook: jest.fn(),
+    refundFromWebhook: jest.fn(),
+  };
 
   const configGet = jest.fn((key: string) => {
     const map: Record<string, string | number> = {
@@ -55,6 +61,7 @@ describe('AbacatePaymentProvider', () => {
         { provide: AbacateClient, useValue: client },
         { provide: PrismaService, useValue: prisma },
         { provide: BillingActivationService, useValue: activation },
+        { provide: CreditPurchaseService, useValue: creditPurchases },
       ],
     }).compile();
     provider = module.get(AbacatePaymentProvider);
@@ -110,6 +117,28 @@ describe('AbacatePaymentProvider', () => {
       expect.objectContaining({ productId: 'prod_monthly' }),
     );
     expect(client.createTransparentPix).not.toHaveBeenCalled();
+  });
+
+  it('creates a PIX checkout with the selected credit offer metadata', async () => {
+    client.createTransparentPix.mockResolvedValue({
+      id: 'pix_credits_1', amount: 1499, brCode: '000201', brCodeBase64: 'data:image/png;base64,abc',
+    });
+    const result = await provider.createCreditCheckout({
+      organizationId: 'org1', offer: 'credits-2000', purchaseId: 'purchase_1',
+      externalId: 'org:org1:credits:purchase_1', successUrl: 'https://app/success', cancelUrl: 'https://app/cancel',
+    });
+    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 1499 }));
+    expect(client.createTransparentPix).toHaveBeenCalledWith(expect.objectContaining({
+      amountCentavos: 1499,
+      metadata: expect.objectContaining({ purchaseId: 'purchase_1', offer: 'credits-2000', credits: '2000' }),
+    }));
+    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');
+  });
+
+  it('routes confirmed credit webhooks to the credit purchase service', async () => {
+    await provider.applyWebhookEvent({ id: 'pix_credits_1', data: { metadata: { purchaseId: 'purchase_1' } } }, 'transparent.completed');
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalledWith({ metadata: { purchaseId: 'purchase_1' } });
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
   });
 
   it('fails lifetime when amount env missing', async () => {

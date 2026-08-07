@@ -11,7 +11,11 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
+import { CreditPurchaseService } from '../credit-purchase.service';
+import { CREDIT_PACKAGES } from '../credit-purchase.constants';
 import type {
+  CreditCheckoutRequest,
+  CreditOffer,
   CheckoutRequest,
   CheckoutResult,
   ParsedWebhookEvent,
@@ -50,6 +54,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     private readonly client: AbacateClient,
     private readonly prisma: PrismaService,
     private readonly activation: BillingActivationService,
+    private readonly creditPurchases: CreditPurchaseService,
   ) {}
 
   async createCheckout(input: CheckoutRequest): Promise<CheckoutResult> {
@@ -62,6 +67,35 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     }
 
     return this.createMonthlySubscription(input);
+  }
+
+  async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
+    const pack = CREDIT_PACKAGES[input.offer];
+    const charge = await this.client.createTransparentPix({
+      amountCentavos: pack.amountCentavos,
+      description: input.offer === 'credits-2000' ? 'Prospectly 2.000 créditos' : 'Prospectly 5.000 créditos',
+      externalId: input.externalId,
+      metadata: {
+        organizationId: input.organizationId,
+        purchaseId: input.purchaseId,
+        offer: input.offer,
+        credits: String(pack.credits),
+        currency: 'BRL',
+      },
+    });
+    if (!charge.brCode || !charge.brCodeBase64) {
+      throw new ServiceUnavailableException('AbacatePay did not return PIX codes');
+    }
+    await this.creditPurchases.attachPayment(input.purchaseId, charge.id);
+    return {
+      mode: 'pix',
+      provider: 'ABACATE',
+      brCode: charge.brCode,
+      brCodeBase64: charge.brCodeBase64,
+      externalPaymentId: charge.id,
+      amountCentavos: charge.amount ?? pack.amountCentavos,
+      expiresAt: charge.expiresAt ?? undefined,
+    };
   }
 
   async cancelSubscription(input: {
@@ -136,11 +170,13 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
 
     switch (type) {
       case 'transparent.completed':
-        await this.onTransparentCompleted(data);
+        if (this.isCreditPayment(data)) await this.creditPurchases.completeFromWebhook(data);
+        else await this.onTransparentCompleted(data);
         return { handled: true, eventId, type };
       case 'transparent.refunded':
       case 'transparent.lost':
-        await this.onTransparentRevoked(data, type);
+        if (this.isCreditPayment(data)) await this.creditPurchases.refundFromWebhook(data);
+        else await this.onTransparentRevoked(data, type);
         return { handled: true, eventId, type };
       case 'subscription.completed':
       case 'subscription.renewed':
@@ -362,5 +398,9 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       if (typeof value === 'string') out[key] = value;
     }
     return out;
+  }
+
+  private isCreditPayment(data: Record<string, unknown>): boolean {
+    return Boolean(this.readMetadata(data).purchaseId);
   }
 }

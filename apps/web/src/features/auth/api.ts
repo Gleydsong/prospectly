@@ -6,6 +6,7 @@ export {
   cancelBillingSubscription,
   createBillingPortal,
   createCheckoutSession,
+  createCreditCheckout,
   getBillingStatus,
 } from '@/features/billing/api';
 

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import {
   createCheckoutSession,
+  createCreditCheckout,
   register as registerUser,
   type AuthResponse,
 } from '@/features/auth/api';
@@ -46,6 +47,12 @@ export function RegisterPage() {
   const currency = useMemo(() => {
     const value = searchParams.get('currency');
     return value === 'BRL' || value === 'EUR' || value === 'USD' ? value : 'BRL';
+  }, [searchParams]);
+  const offer = useMemo(() => {
+    const value = searchParams.get('offer');
+    return value === 'credits-2000' || value === 'credits-5000' || value === 'unlimited'
+      ? value
+      : null;
   }, [searchParams]);
 
   const registerSchema = useMemo(
@@ -96,7 +103,29 @@ export function RegisterPage() {
       }
     }
 
-    navigate('/', { replace: true });
+    if (offer === 'credits-2000' || offer === 'credits-5000') {
+      try {
+        const checkout = await createCreditCheckout({ offer });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate(`/settings?offer=${offer}`, { replace: true });
+        return;
+      }
+    }
+
+    if (offer === 'unlimited') {
+      try {
+        const checkout = await createCheckoutSession({ interval: 'monthly', currency: 'BRL' });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate('/settings?upgrade=1&plan=monthly&currency=BRL', { replace: true });
+        return;
+      }
+    }
+
+    navigate(offer ? `/settings?offer=${offer}` : '/', { replace: true });
   };
 
   const onSubmit = async (values: RegisterForm) => {
@@ -136,7 +165,7 @@ export function RegisterPage() {
         <>
           {t('auth.hasAccount')}{' '}
           <Link
-            to={plan ? `/login?plan=${plan}&currency=${currency}` : '/login'}
+            to={offer ? `/login?offer=${offer}` : plan ? `/login?plan=${plan}&currency=${currency}` : '/login'}
             className="font-medium text-brand-400 hover:text-brand-300"
           >
             {t('auth.login')}

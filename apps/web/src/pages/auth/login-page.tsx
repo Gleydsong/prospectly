@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createCheckoutSession, login, type AuthResponse } from '@/features/auth/api';
+import { createCheckoutSession, createCreditCheckout, login, type AuthResponse } from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
@@ -33,6 +33,12 @@ export function LoginPage() {
   const currency = useMemo(() => {
     const value = searchParams.get('currency');
     return value === 'BRL' || value === 'EUR' || value === 'USD' ? value : 'BRL';
+  }, [searchParams]);
+  const offer = useMemo(() => {
+    const value = searchParams.get('offer');
+    return value === 'credits-2000' || value === 'credits-5000' || value === 'unlimited'
+      ? value
+      : null;
   }, [searchParams]);
 
   const loginSchema = useMemo(
@@ -65,6 +71,33 @@ export function LoginPage() {
       }
     }
 
+    if (offer === 'credits-2000' || offer === 'credits-5000') {
+      try {
+        const checkout = await createCreditCheckout({ offer });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate(`/settings?offer=${offer}`, { replace: true });
+        return;
+      }
+    }
+
+    if (offer === 'unlimited') {
+      try {
+        const checkout = await createCheckoutSession({ interval: 'monthly', currency: 'BRL' });
+        handleCheckoutResult(checkout);
+        return;
+      } catch {
+        navigate('/settings?upgrade=1&plan=monthly&currency=BRL', { replace: true });
+        return;
+      }
+    }
+
+    if (offer) {
+      navigate(`/settings?offer=${offer}`, { replace: true });
+      return;
+    }
+
     const from = (location.state as { from?: string } | null)?.from;
     navigate(resolveInternalRedirect(from), { replace: true });
   };
@@ -79,7 +112,11 @@ export function LoginPage() {
     }
   };
 
-  const registerHref = plan ? `/register?plan=${plan}&currency=${currency}` : '/register';
+  const registerHref = offer
+    ? `/register?offer=${offer}`
+    : plan
+      ? `/register?plan=${plan}&currency=${currency}`
+      : '/register';
 
   return (
     <AuthShell
