@@ -184,6 +184,8 @@ projects:
             plan: starter
             branch: main
             autoDeployTrigger: checksPass
+            # Do NOT use `corepack enable` — Render's build image has a read-only /usr/bin (EROFS).
+            # pnpm is already on PATH; keep --config.production=false so Next build gets TS/Tailwind (devDeps).
             buildCommand: pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build
             startCommand: pnpm --filter @prospectly/landing start
             healthCheckPath: /
@@ -196,6 +198,8 @@ projects:
             envVars:
               - key: NODE_ENV
                 value: production
+              - key: NODE_VERSION
+                value: "22.14.0"
               - key: NEXT_PUBLIC_APP_URL
                 sync: false
               - key: NEXT_PUBLIC_LANDING_URL
@@ -204,4 +208,10 @@ projects:
                 sync: false
               # Server-only Nest base (`.../api/v1`) for waitlist proxy; falls back to NEXT_PUBLIC_API_URL
               - key: WAITLIST_API_URL
+                sync: false
+              - key: RESEND_API_KEY
+                sync: false
+              - key: RESEND_FROM
+                sync: false
+              - key: WAITLIST_NOTIFY_TO
                 sync: false

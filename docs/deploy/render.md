@@ -13,7 +13,25 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 | Web (Docker) | `prospectly-api` | Nest API + queue producers (HTTP) |
 | Worker (proposed) | `prospectly-worker` | BullMQ processors — see [workers.md](./workers.md) (approval required) |
 | Static | `prospectly-web` | Vite SPA |
-| Web (Node) | `prospectly-landing` | Next.js marketing site |
+| Web (Node) | `prospectly-landing` | Next.js marketing site (substitui o antigo `prospectly-mvp`) |
+
+**Build tip:** never use `corepack enable` on Render Node builds — the image FS is read-only (`EROFS` on `/usr/bin/pnpm`). Use plain `pnpm` (preinstalled) + `--config.production=false` so Next gets TypeScript/Tailwind from devDependencies.
+
+## Landing (substitui `prospectly-mvp`)
+
+Serviço ativo criado via plugin (free / frankfurt):
+
+| Campo | Valor |
+|-------|-------|
+| Nome | `prospectly` |
+| URL | https://prospectly-d34m.onrender.com |
+| Dashboard | https://dashboard.render.com/web/srv-d9ql5njm8hqs738m8bu0 |
+| Build | `pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build` |
+| Start | `pnpm --filter @prospectly/landing start` |
+
+Serviços legado a apagar no Dashboard (duplicados / quebrados): `prospectly-mvp` (suspenso), `prospectly-landing` (corepack EROFS), `prospectly-lp`, `prospectly-site`.
+
+Após ter URL da API/app reais, setar `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL`, `WAITLIST_API_URL` e redesploy (build-time para `NEXT_PUBLIC_*`).
 
 API health check: `GET /health/ready` (Postgres + Redis).
 
