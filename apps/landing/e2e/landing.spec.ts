@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 const publicRoutes = [
-  '/v2',
-  '/v2/como-funciona',
-  '/v2/beneficios',
-  '/v2/para-quem-e',
-  '/v2/duvidas',
+  '/',
+  '/como-funciona',
+  '/beneficios',
+  '/para-quem-e',
+  '/duvidas',
   '/entrar',
   '/faq',
   '/pricing',
@@ -30,19 +30,19 @@ test.describe('landing routes', () => {
 test.describe('landing navigation', () => {
   test('desktop navigation opens the benefits page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop navigation is covered in the desktop project');
-    await page.goto('/v2');
+    await page.goto('/');
     await page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Benefícios', exact: true }).click();
-    await expect(page).toHaveURL(/\/v2\/beneficios$/);
+    await expect(page).toHaveURL(/\/beneficios$/);
     await expect(page.getByRole('heading', { name: 'Menos volume. Mais chance de fechar.' })).toBeVisible();
   });
 
   test('mobile menu opens the questions page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chromium', 'mobile menu is covered in the mobile project');
-    await page.goto('/v2');
+    await page.goto('/');
     await page.getByRole('button', { name: 'Abrir menu' }).click();
     await expect(page.getByRole('navigation', { name: 'Navegação móvel' })).toBeVisible();
     await page.getByRole('link', { name: 'Dúvidas frequentes', exact: true }).click();
-    await expect(page).toHaveURL(/\/v2\/duvidas$/);
+    await expect(page).toHaveURL(/\/duvidas$/);
   });
 });
 

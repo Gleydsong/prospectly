@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: {
       command: 'pnpm --filter @prospectly/landing exec next dev -H 127.0.0.1 -p 3011',
     cwd: process.cwd(),
-      url: 'http://127.0.0.1:3011/v2',
+      url: 'http://127.0.0.1:3011/',
       reuseExistingServer: false,
     timeout: 120_000,
   },

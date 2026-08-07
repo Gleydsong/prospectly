@@ -42,10 +42,10 @@ function V2Brand() {
 export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'home' | 'how' | 'section' }) {
   const [open, setOpen] = useState(false);
   const enterUrl = enterExplainerUrl(locale);
-  const howUrl = '/v2/como-funciona';
-  const benefitsUrl = '/v2/beneficios';
-  const audienceUrl = '/v2/para-quem-e';
-  const faqUrl = '/v2/duvidas';
+  const howUrl = '/como-funciona';
+  const benefitsUrl = '/beneficios';
+  const audienceUrl = '/para-quem-e';
+  const faqUrl = '/duvidas';
 
   useEffect(() => {
     if (!open) return;
@@ -60,7 +60,7 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
   return (
     <header className="landing-v2-header" data-page={page}>
       <div className="landing-v2-shell landing-v2-header-inner">
-        <Link href="/v2" className="landing-v2-brand-link" onClick={close}><V2Brand /></Link>
+        <Link href="/" className="landing-v2-brand-link" onClick={close}><V2Brand /></Link>
         <nav className="landing-v2-desktop-nav" aria-label="Navegação principal">
           <Link href={howUrl} aria-current={page === 'how' ? 'page' : undefined}>Como funciona</Link><a href={benefitsUrl}>Benefícios</a><a href={audienceUrl}>Para quem é</a><a href={faqUrl}>Dúvidas frequentes</a>
         </nav>
@@ -150,7 +150,7 @@ export function FaqSection({ locale }: { locale: Locale }) {
 }
 
 export function V2Footer({ page = 'home' }: { page?: 'home' | 'how' | 'section' }) {
-  return <footer className="landing-v2-footer" data-page={page}><div className="landing-v2-shell landing-v2-footer-grid"><div><V2Brand /><p>Empresas certas. Próximos passos claros.</p></div><div><strong>Produto</strong><Link href="/v2/como-funciona">Como funciona</Link><Link href="/v2/beneficios">Benefícios</Link><Link href="/v2/duvidas">Perguntas frequentes</Link></div><div><strong>Legal</strong><Link href="/terms">Termos de uso</Link><Link href="/privacy">Política de privacidade</Link><a href={`mailto:${TEAM_EMAIL}`}>Fale com a gente</a></div></div><div className="landing-v2-shell landing-v2-footer-bottom"><span>© {new Date().getFullYear()} Prospectly</span><span>V2 · Prospecção B2B com mais clareza.</span></div></footer>;
+  return <footer className="landing-v2-footer" data-page={page}><div className="landing-v2-shell landing-v2-footer-grid"><div><V2Brand /><p>Empresas certas. Próximos passos claros.</p></div><div><strong>Produto</strong><Link href="/como-funciona">Como funciona</Link><Link href="/beneficios">Benefícios</Link><Link href="/duvidas">Perguntas frequentes</Link></div><div><strong>Legal</strong><Link href="/terms">Termos de uso</Link><Link href="/privacy">Política de privacidade</Link><a href={`mailto:${TEAM_EMAIL}`}>Fale com a gente</a></div></div><div className="landing-v2-shell landing-v2-footer-bottom"><span>© {new Date().getFullYear()} Prospectly</span><span>Prospecção B2B com mais clareza.</span></div></footer>;
 }
 
 export function LandingV2({ locale }: { locale: Locale }) {

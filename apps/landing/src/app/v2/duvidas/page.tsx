@@ -1,12 +1,5 @@
-import type { Metadata } from 'next';
-import { LandingV2SectionPage } from '@/components/landing-v2';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Dúvidas frequentes | Prospectly V2',
-  description: 'Respostas diretas sobre busca, dados, créditos e o fluxo do Prospectly.',
-  alternates: { canonical: '/v2/duvidas' },
-};
-
-export default function QuestionsPage() {
-  return <LandingV2SectionPage locale="pt" section="faq" />;
+export default function LegacyV2FaqPage() {
+  redirect('/duvidas');
 }
