@@ -5,6 +5,7 @@ node_modules/
 .pnp.js
 .superpowers/
 .agents/
+.worktrees/
 promo-video/
 
 # Build outputs
@@ -17,6 +18,7 @@ out/
 .vercel/
 coverage/
 *.tsbuildinfo
+*.pid
 
 # Environment / secrets
 .env
@@ -24,6 +26,13 @@ coverage/
 !.env.example
 !**/.env.example
 *.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.secret
+*.credentials
+.envrc
 
 # Logs / caches
 *.log
@@ -35,6 +44,8 @@ pnpm-debug.log*
 .vitest/
 .cache/
 .ua/
+.history/
+.local/
 .idea/
 
 # Test artifacts
@@ -52,3 +63,12 @@ Thumbs.db
 uploads/
 .tmp-validate/
 .tmp/
+
+# Local databases and backup files
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bak
+*.orig
+*~
