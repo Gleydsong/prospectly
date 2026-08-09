@@ -327,7 +327,7 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
 
     expect(prisma.organization.updateMany).toHaveBeenCalledWith({
-      where: { id: 'org1', creditBalance: { gt: 0 } },
+      where: { id: 'org1', creditBalance: { gte: 1 } },
       data: { creditBalance: { decrement: 1 } },
     });
     expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({

@@ -11,6 +11,7 @@ import { ConfidenceLevel, LeadSource, LeadStatus, OrgPlan, Prisma, SearchStatus,
 import type { Queue } from 'bullmq';
 import {
   DEFAULT_SEARCH_RESULT_LIMIT,
+  MAX_SEARCH_RESULT_LIMIT,
   SEARCH_RESULT_LIMITS,
   type ProspectingCategoryCatalog,
 } from '@prospectly/shared-types';
@@ -120,7 +121,7 @@ export class ProspectingService {
       state: dto.state,
       country: dto.country,
       onlyWithoutWebsite: dto.onlyWithoutWebsite,
-      limit: dto.limit ?? DEFAULT_SEARCH_RESULT_LIMIT,
+      limit: DEFAULT_SEARCH_RESULT_LIMIT,
     };
     const search = await this.prisma.search.create({
       data: {
@@ -509,12 +510,17 @@ export class ProspectingService {
     };
   }
 
-  /** Older searches were persisted without a limit; fall back to the default volume. */
+  /**
+   * Older searches may have stored a user-picked volume (20/40/60).
+   * New searches always use the system cap; clamp unknown values to the max.
+   */
   private readResultLimit(value: unknown): number {
     const parsed = typeof value === 'number' ? value : Number(value);
-    return (SEARCH_RESULT_LIMITS as readonly number[]).includes(parsed)
-      ? parsed
-      : DEFAULT_SEARCH_RESULT_LIMIT;
+    if ((SEARCH_RESULT_LIMITS as readonly number[]).includes(parsed)) return parsed;
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.min(Math.floor(parsed), MAX_SEARCH_RESULT_LIMIT);
+    }
+    return DEFAULT_SEARCH_RESULT_LIMIT;
   }
 
   private async resolvePlan(organizationId: string): Promise<OrgPlan> {

@@ -171,7 +171,7 @@ describe('SearchPage', () => {
     expect(screen.getByRole('option', { name: /Advocacia/ })).toBeDisabled();
   });
 
-  it('submits multiple niches with neighborhood and requested volume', async () => {
+  it('submits multiple niches with neighborhood without a result quantity', async () => {
     const user = userEvent.setup();
     mocks.createSearch.mockResolvedValue({ id: 'search-1' });
     renderPage();
@@ -179,12 +179,12 @@ describe('SearchPage', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Somente empresas sem site informado' }),
     ).not.toBeChecked();
+    expect(screen.queryByText('Quantidade')).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.selectOptions(screen.getByLabelText('Nicho'), 'bakery');
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.type(screen.getByLabelText('Bairro (opcional)'), 'Pinheiros');
-    await user.click(screen.getByRole('button', { name: '40' }));
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
@@ -194,7 +194,6 @@ describe('SearchPage', () => {
       state: 'SP',
       country: 'BR',
       onlyWithoutWebsite: false,
-      limit: 40,
     });
   });
 
@@ -214,13 +213,13 @@ describe('SearchPage', () => {
       data: {
         data: [
           {
-            id: 'search-pt',
+            id: 'search-br',
             provider: 'OPENSTREETMAP',
             input: {
               category: 'restaurant',
-              city: 'Lisbon',
-              state: 'Lisbon',
-              country: 'PT',
+              city: 'São Paulo',
+              state: 'SP',
+              country: 'BR',
               onlyWithoutWebsite: true,
             },
             status: 'COMPLETED',
@@ -237,33 +236,30 @@ describe('SearchPage', () => {
     });
     renderPage();
 
-    expect(screen.getByText(/Restaurante \/ Lisbon/)).toBeInTheDocument();
-    expect(screen.getByText(/Brasil/)).toBeInTheDocument();
+    expect(screen.getByText(/Restaurante \/ São Paulo/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Brasil/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/OPENSTREETMAP|GOOGLE_PLACES/)).not.toBeInTheDocument();
   });
 
-  it('cascades country to region and city selects for Portugal', async () => {
+  it('keeps Brazil as the only prospecting country and submits a BR search', async () => {
     const user = userEvent.setup();
-    mocks.createSearch.mockResolvedValue({ id: 'search-pt' });
+    mocks.createSearch.mockResolvedValue({ id: 'search-br' });
     renderPage();
 
-    await user.selectOptions(screen.getByLabelText('País'), 'PT');
-    expect(screen.getByLabelText('Região')).toBeInTheDocument();
-    expect(screen.getByLabelText('Cidade')).toBeDisabled();
+    expect(screen.getByLabelText('País')).toHaveValue('BR');
+    expect(screen.queryByRole('option', { name: 'Portugal' })).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
-    await user.selectOptions(screen.getByLabelText('Região'), '11');
-    expect(screen.getByLabelText('Cidade')).not.toBeDisabled();
-    await user.selectOptions(screen.getByLabelText('Cidade'), 'Lisbon');
+    await user.selectOptions(screen.getByLabelText('Região'), 'SP');
+    await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
       categories: ['restaurant'],
-      city: 'Lisbon',
-      state: 'Lisbon',
-      country: 'PT',
+      city: 'São Paulo',
+      state: 'SP',
+      country: 'BR',
       onlyWithoutWebsite: false,
-      limit: 20,
     });
   });
 

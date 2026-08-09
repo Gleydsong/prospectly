@@ -230,16 +230,19 @@ describe('ProspectingService', () => {
     });
   });
 
-  it('persists the neighborhood and caps persisted results at the requested volume', async () => {
+  it('persists the neighborhood and applies the system result volume cap', async () => {
     const { prisma, provider, service } = createService();
-    const input = { ...searchInput, neighborhood: 'Casa Caiada', limit: 20 as const };
+    const input = { ...searchInput, neighborhood: 'Casa Caiada' };
     prisma.search.create.mockResolvedValue({ id: 'search-1', status: 'PENDING' });
 
     await service.create('org-1', 'user-1', input);
 
     expect(prisma.search.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        input: expect.objectContaining({ neighborhood: 'Casa Caiada', limit: 20 }),
+        input: expect.objectContaining({
+          neighborhood: 'Casa Caiada',
+          limit: DEFAULT_SEARCH_RESULT_LIMIT,
+        }),
       }),
     });
 
@@ -247,11 +250,11 @@ describe('ProspectingService', () => {
       id: 'search-1',
       organizationId: 'org-1',
       provider: 'OPENSTREETMAP',
-      input: { ...input, limit: 20 },
+      input: { ...input, limit: DEFAULT_SEARCH_RESULT_LIMIT },
     });
     prisma.search.update.mockResolvedValue(undefined);
     provider.search.mockResolvedValue(
-      Array.from({ length: 25 }, (_, index) => ({
+      Array.from({ length: DEFAULT_SEARCH_RESULT_LIMIT + 5 }, (_, index) => ({
         externalId: `node/${index}`,
         companyName: `Empresa ${index}`,
         city: 'São Paulo',
@@ -265,9 +268,12 @@ describe('ProspectingService', () => {
     await service.process('search-1');
 
     expect(provider.search).toHaveBeenCalledWith(
-      expect.objectContaining({ neighborhood: 'Casa Caiada', limit: 20 }),
+      expect.objectContaining({
+        neighborhood: 'Casa Caiada',
+        limit: DEFAULT_SEARCH_RESULT_LIMIT,
+      }),
     );
-    expect(prisma.searchResult.upsert).toHaveBeenCalledTimes(20);
+    expect(prisma.searchResult.upsert).toHaveBeenCalledTimes(DEFAULT_SEARCH_RESULT_LIMIT);
   });
 
   it('lists only available providers', () => {

@@ -12,7 +12,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
-import { FREE_SEARCH_LIMIT } from './billing.constants';
+import { CREDITS_PER_SEARCH, FREE_SEARCH_LIMIT } from './billing.constants';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -93,7 +93,7 @@ export class BillingService {
 
     const searchCount = await this.prisma.search.count({ where: { organizationId } });
     const creditBalance = org.creditBalance ?? 0;
-    if (searchCount >= FREE_SEARCH_LIMIT && creditBalance <= 0) {
+    if (searchCount >= FREE_SEARCH_LIMIT && creditBalance < CREDITS_PER_SEARCH) {
       throw new ForbiddenException({
         code: 'ENTITLEMENT_SEARCHES',
         message: `Free plan allows ${FREE_SEARCH_LIMIT} searches. Upgrade to continue.`,
@@ -122,8 +122,8 @@ export class BillingService {
       if (existing) return;
 
       const consumed = await tx.organization.updateMany({
-        where: { id: organizationId, creditBalance: { gt: 0 } },
-        data: { creditBalance: { decrement: 1 } },
+        where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
+        data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
       });
       if (consumed.count !== 1) {
         throw new ForbiddenException({
@@ -141,7 +141,7 @@ export class BillingService {
         data: {
           organizationId,
           reason: 'SEARCH_CONSUME',
-          delta: -1,
+          delta: -CREDITS_PER_SEARCH,
           balanceAfter: updated.creditBalance,
           searchId,
           idempotencyKey,
