@@ -315,6 +315,11 @@ export class ProspectingService {
   }
 
   async recordFailure(searchId: string, errorMessage?: string): Promise<void> {
+    const search = await this.prisma.search.findUnique({
+      where: { id: searchId },
+      select: { organizationId: true },
+    });
+
     await this.prisma.search.update({
       where: { id: searchId },
       data: {
@@ -325,6 +330,22 @@ export class ProspectingService {
         completedAt: new Date(),
       },
     });
+
+    if (
+      search &&
+      typeof this.billing.refundCreditForFailedSearch === 'function'
+    ) {
+      try {
+        await this.billing.refundCreditForFailedSearch(search.organizationId, searchId);
+      } catch (error) {
+        this.logger.error({
+          message: 'Failed to refund search credit after FAILED status',
+          searchId,
+          organizationId: search.organizationId,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
   }
 
   async importResults(

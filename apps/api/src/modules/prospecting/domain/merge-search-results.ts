@@ -6,6 +6,19 @@ function digitsOnly(value: string | undefined): string {
   return (value ?? '').replace(/\D/g, '');
 }
 
+/**
+ * Normalize phone digits for identity matching.
+ * Brazil mobiles are DDD(2)+9+8 = 11 digits; slicing to last 10 drops the DDD
+ * leading digit and collapses distinct numbers across area codes.
+ */
+function phoneIdentityDigits(value: string | undefined): string {
+  let digits = digitsOnly(value);
+  if (digits.length >= 12 && digits.startsWith('55')) {
+    digits = digits.slice(2);
+  }
+  return digits;
+}
+
 function normalizeName(value: string): string {
   return value
     .trim()
@@ -60,11 +73,13 @@ export function mergeBusinessFields(
 }
 
 export function businessDedupeKey(business: NormalizedBusiness): string {
-  const phone = digitsOnly(business.phone);
+  const phone = phoneIdentityDigits(business.phone);
   if (phone.length >= 8) {
-    return `phone:${phone.slice(-10)}`;
+    return `phone:${phone}`;
   }
-  return `name:${normalizeName(business.companyName)}|city:${normalizeName(business.city)}|state:${business.state.trim().toUpperCase()}`;
+  const address = normalizeName(business.address ?? '');
+  const base = `name:${normalizeName(business.companyName)}|city:${normalizeName(business.city)}|state:${business.state.trim().toUpperCase()}`;
+  return address ? `${base}|addr:${address}` : base;
 }
 
 /** Deduplicate across providers and enrich overlapping records. */

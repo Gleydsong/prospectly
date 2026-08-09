@@ -54,6 +54,7 @@ function createService(overrides: Record<string, unknown> = {}) {
   const billing = {
     assertCanCreateSearch: jest.fn().mockResolvedValue(undefined),
     consumeCreditForSearch: jest.fn().mockResolvedValue(undefined),
+    refundCreditForFailedSearch: jest.fn().mockResolvedValue(undefined),
   };
 
   return {
@@ -428,7 +429,7 @@ describe('ProspectingService', () => {
   });
 
   it('records only a sanitized failure after a provider error reaches its final attempt', async () => {
-    const { prisma, provider, service } = createService();
+    const { prisma, provider, service, billing } = createService();
     prisma.search.findUnique.mockResolvedValue({
       id: 'search-1',
       organizationId: 'org-1',
@@ -448,6 +449,7 @@ describe('ProspectingService', () => {
         completedAt: expect.any(Date),
       },
     });
+    expect(billing.refundCreditForFailedSearch).toHaveBeenCalledWith('org-1', 'search-1');
   });
 
   it('imports only selected results belonging to the owned search and links imported leads', async () => {

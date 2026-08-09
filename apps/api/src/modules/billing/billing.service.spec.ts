@@ -356,4 +356,49 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     expect(prisma.organization.updateMany).not.toHaveBeenCalled();
     expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
   });
+
+  it('refunds a consumed credit when the search fails', async () => {
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'consume-1', delta: -1 });
+    prisma.organization.update.mockResolvedValue({});
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 4 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.refundCreditForFailedSearch('org1', 'search-42')).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: { creditBalance: { increment: 1 } },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: {
+        organizationId: 'org1',
+        reason: 'SEARCH_REFUND',
+        delta: 1,
+        balanceAfter: 4,
+        searchId: 'search-42',
+        idempotencyKey: 'search-refund:search-42',
+        metadata: { source: 'search_failed' },
+      },
+    });
+  });
+
+  it('does not refund when no SEARCH_CONSUME ledger entry exists', async () => {
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+
+    await expect(service.refundCreditForFailedSearch('org1', 'search-free')).resolves.toBeUndefined();
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('is idempotent for search credit refunds', async () => {
+    prisma.creditLedgerEntry.findUnique.mockResolvedValueOnce({ id: 'refund-1' });
+
+    await expect(service.refundCreditForFailedSearch('org1', 'search-42')).resolves.toBeUndefined();
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
 });
