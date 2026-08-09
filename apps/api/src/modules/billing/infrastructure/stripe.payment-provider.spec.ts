@@ -65,7 +65,7 @@ describe('StripePaymentProvider', () => {
     expect(activation.activateMonthly).not.toHaveBeenCalled();
   });
 
-  it('activates a paid delayed checkout after async payment succeeds', async () => {
+  it('does not grant lifetime for Stripe payment checkouts without credit metadata', async () => {
     await provider.applyWebhookEvent(
       {
         id: 'evt_async_paid',
@@ -75,19 +75,51 @@ describe('StripePaymentProvider', () => {
             mode: 'payment',
             payment_status: 'paid',
             customer: 'cus_1',
-            metadata: { organizationId: 'org_1', interval: 'lifetime', currency: 'EUR' },
+            metadata: { organizationId: 'org_1', interval: 'lifetime', currency: 'BRL' },
           },
         },
       },
       'checkout.session.async_payment_succeeded',
     );
 
-    expect(activation.activateLifetime).toHaveBeenCalledWith({
-      organizationId: 'org_1',
-      currency: 'BRL',
-      provider: PaymentProvider.STRIPE,
-      stripeCustomerId: 'cus_1',
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
+    expect(creditPurchases.completeFromWebhook).not.toHaveBeenCalled();
+  });
+
+  it('fulfills credit packs from paid Stripe payment checkouts', async () => {
+    creditPurchases.completeFromWebhook.mockResolvedValue(undefined);
+
+    await provider.applyWebhookEvent(
+      {
+        id: 'evt_credits_paid',
+        data: {
+          object: {
+            id: 'cs_credits',
+            mode: 'payment',
+            payment_status: 'paid',
+            customer: 'cus_1',
+            metadata: {
+              organizationId: 'org_1',
+              purpose: 'credits',
+              purchaseId: 'purchase_1',
+              offer: 'credits-2000',
+            },
+          },
+        },
+      },
+      'checkout.session.completed',
+    );
+
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalledWith({
+      id: 'cs_credits',
+      metadata: {
+        purchaseId: 'purchase_1',
+        organizationId: 'org_1',
+        offer: 'credits-2000',
+      },
     });
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
   });
 
   it('activates no-payment-required subscription checkouts', async () => {

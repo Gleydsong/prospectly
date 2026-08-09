@@ -150,6 +150,54 @@ export class BillingService {
     });
   }
 
+  /**
+   * Restore a credit consumed at enqueue when the search ends in FAILED.
+   * No-op when no SEARCH_CONSUME ledger row exists (free quota / paid plan).
+   */
+  async refundCreditForFailedSearch(organizationId: string, searchId: string): Promise<void> {
+    const consumeKey = `search-consume:${searchId}`;
+    const refundKey = `search-refund:${searchId}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      const existingRefund = await tx.creditLedgerEntry.findUnique({
+        where: {
+          organizationId_idempotencyKey: { organizationId, idempotencyKey: refundKey },
+        },
+      });
+      if (existingRefund) return;
+
+      const consume = await tx.creditLedgerEntry.findUnique({
+        where: {
+          organizationId_idempotencyKey: { organizationId, idempotencyKey: consumeKey },
+        },
+      });
+      if (!consume || consume.delta >= 0) return;
+
+      const amount = Math.abs(consume.delta);
+      await tx.organization.update({
+        where: { id: organizationId },
+        data: { creditBalance: { increment: amount } },
+      });
+
+      const updated = await tx.organization.findFirstOrThrow({
+        where: { id: organizationId },
+        select: { creditBalance: true },
+      });
+
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId,
+          reason: 'SEARCH_REFUND',
+          delta: amount,
+          balanceAfter: updated.creditBalance,
+          searchId,
+          idempotencyKey: refundKey,
+          metadata: { source: 'search_failed' },
+        },
+      });
+    });
+  }
+
   async createCheckoutSession(
     organizationId: string,
     userEmail: string,

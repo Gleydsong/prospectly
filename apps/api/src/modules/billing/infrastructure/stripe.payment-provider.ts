@@ -256,33 +256,18 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
       return;
     }
 
-    const interval = (session.metadata?.interval ??
-      (session.mode === 'subscription' ? 'monthly' : 'lifetime')) as BillingInterval;
-    const currency = 'BRL' as BillingCurrency;
-
-    const customerId = typeof session.customer === 'string' ? session.customer : undefined;
-
-    if (interval === 'lifetime' || (session.mode === 'payment' && !session.metadata?.purchaseId)) {
-      const previous = await this.activation.activateLifetime({
-        organizationId,
-        currency,
-        provider: PaymentProvider.STRIPE,
-        stripeCustomerId: customerId,
-      });
-
-      if (previous?.previousStripeSubscriptionId) {
-        try {
-          const stripe = this.requireStripe();
-          await stripe.subscriptions.cancel(previous.previousStripeSubscriptionId);
-        } catch (error) {
-          this.logger.error(
-            `Failed to cancel prior Stripe subscription ${previous.previousStripeSubscriptionId} after lifetime upgrade for org ${organizationId}: ${(error as Error).message}`,
-          );
-        }
-      }
+    // Brazil-only billing: Stripe sells monthly card subscriptions and credit packs.
+    // Lifetime is Abacate PIX only — never grant LIFETIME from a Stripe payment session
+    // (orphan/mis-tagged mode=payment checkouts would otherwise unlock unlimited access).
+    if (session.mode === 'payment') {
+      this.logger.warn(
+        `Ignoring Stripe payment checkout ${session.id} for org ${organizationId}: not a credit purchase (missing purpose/purchaseId)`,
+      );
       return;
     }
 
+    const currency = 'BRL' as BillingCurrency;
+    const customerId = typeof session.customer === 'string' ? session.customer : undefined;
     const subscriptionId =
       typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
 
