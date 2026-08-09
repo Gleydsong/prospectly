@@ -21,6 +21,7 @@ export {
   FREE_PROSPECTING_CATEGORIES,
   LeadStatus,
   LeadSource,
+  MAX_SEARCH_RESULT_LIMIT,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   Role,
@@ -319,6 +320,7 @@ export interface SearchInput {
   state: string;
   country: ProspectingCountryCode;
   onlyWithoutWebsite: boolean;
+  /** @deprecated Ignored by API — volume is system-capped; searches consume credits. */
   limit?: SearchResultLimit;
   provider?: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
 }

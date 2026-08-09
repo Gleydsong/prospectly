@@ -7,7 +7,6 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -17,13 +16,7 @@ import {
   ValidatorConstraintInterface,
   type ValidationArguments,
 } from 'class-validator';
-import {
-  DEFAULT_SEARCH_RESULT_LIMIT,
-  PROSPECTING_CATEGORY_VALUES,
-  SEARCH_RESULT_LIMITS,
-  type ProspectingCategory,
-  type SearchResultLimit,
-} from '@prospectly/shared-types';
+import { PROSPECTING_CATEGORY_VALUES, type ProspectingCategory } from '@prospectly/shared-types';
 
 import {
   BRAZILIAN_STATE_CODES,
@@ -139,19 +132,13 @@ export class CreateSearchDto {
   neighborhood?: string;
 
   @ApiPropertyOptional({
-    enum: [...SEARCH_RESULT_LIMITS],
-    default: DEFAULT_SEARCH_RESULT_LIMIT,
-    description: 'Maximum number of results to persist for this search',
+    deprecated: true,
+    description:
+      'Ignored: result volume is system-capped. Each search consumes credits after the free quota.',
   })
   @IsOptional()
-  @Transform(({ value }) => {
-    if (value === undefined || value === null || value === '') return DEFAULT_SEARCH_RESULT_LIMIT;
-    const parsed = typeof value === 'number' ? value : Number(value);
-    return Number.isFinite(parsed) ? parsed : value;
-  })
-  @IsInt()
-  @IsIn([...SEARCH_RESULT_LIMITS])
-  limit?: SearchResultLimit;
+  @Transform(() => undefined)
+  limit?: never;
 
   @ApiPropertyOptional({
     enum: PROSPECTING_PROVIDER_IDS,

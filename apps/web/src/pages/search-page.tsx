@@ -32,17 +32,14 @@ import { SearchResultCard } from '@/features/prospecting/components/search-resul
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import {
-  DEFAULT_SEARCH_RESULT_LIMIT,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   PROSPECTING_COUNTRIES,
   PROSPECTING_COUNTRY_CODES,
-  SEARCH_RESULT_LIMITS,
   type ProspectingCategory,
   type ProspectingCategoryOption,
   type ProspectingSearchResult,
   type SearchImportSummary,
-  type SearchResultLimit,
   type SearchStatus,
 } from '@/types';
 
@@ -58,7 +55,6 @@ const searchSchema = z
     city: z.string().max(120).default(''),
     neighborhood: z.string().max(120).default(''),
     state: z.string().max(120).default(''),
-    limit: z.number(),
     onlyWithoutWebsite: z.boolean(),
   })
   .superRefine((values, ctx) => {
@@ -241,7 +237,6 @@ export function SearchPage() {
       city: '',
       neighborhood: '',
       state: '',
-      limit: DEFAULT_SEARCH_RESULT_LIMIT,
       onlyWithoutWebsite: false,
     },
   });
@@ -249,7 +244,6 @@ export function SearchPage() {
   const selectedCountry = watch('country');
   const selectedCategories = watch('categories');
   const selectedRegion = watch('state');
-  const selectedLimit = watch('limit');
   const regionsQuery = useGeoRegions(selectedCountry);
   const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
   const regions = regionsQuery.data ?? [];
@@ -322,7 +316,6 @@ export function SearchPage() {
         city: values.city,
         state: stateForSearch,
         onlyWithoutWebsite: values.onlyWithoutWebsite,
-        limit: values.limit as SearchResultLimit,
         ...(neighborhood ? { neighborhood } : {}),
       });
       selectSearch(search.id);
@@ -510,27 +503,6 @@ export function SearchPage() {
             ) : null}
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-zinc-300">Quantidade</span>
-                <div className="flex gap-1" role="group" aria-label="Quantidade de resultados">
-                  {SEARCH_RESULT_LIMITS.map((limit) => (
-                    <button
-                      key={limit}
-                      type="button"
-                      aria-pressed={selectedLimit === limit}
-                      onClick={() => setValue('limit', limit, { shouldDirty: true })}
-                      className={
-                        selectedLimit === limit
-                          ? 'cta-glass h-8 rounded-control px-3 text-sm font-medium !shadow-none'
-                          : 'h-8 rounded-control border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800'
-                      }
-                    >
-                      {limit}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
                 <input
                   type="checkbox"
@@ -539,6 +511,9 @@ export function SearchPage() {
                 />
                 Somente empresas sem site informado
               </label>
+              <p className="text-xs text-zinc-500">
+                Cada busca consome 1 crédito após as buscas grátis.
+              </p>
             </div>
 
             {serverError ? (

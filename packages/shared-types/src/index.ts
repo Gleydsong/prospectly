@@ -190,12 +190,18 @@ export function isFreeProspectingCategory(value: string): value is FreeProspecti
   return (FREE_PROSPECTING_CATEGORIES as readonly string[]).includes(value);
 }
 
-/** Result volumes a user can pick per search. */
-export const SEARCH_RESULT_LIMITS = [20, 40, 60] as const;
+/**
+ * Soft cap on results persisted per search (providers may return fewer).
+ * Volume is not user-selectable — each search consumes credits instead.
+ */
+export const MAX_SEARCH_RESULT_LIMIT = 100;
+
+export const DEFAULT_SEARCH_RESULT_LIMIT = MAX_SEARCH_RESULT_LIMIT;
+
+/** @deprecated Prefer MAX_SEARCH_RESULT_LIMIT. Kept for older persisted search inputs. */
+export const SEARCH_RESULT_LIMITS = [20, 40, 60, MAX_SEARCH_RESULT_LIMIT] as const;
 
 export type SearchResultLimit = (typeof SEARCH_RESULT_LIMITS)[number];
-
-export const DEFAULT_SEARCH_RESULT_LIMIT: SearchResultLimit = 20;
 
 export interface ProspectingCategoryOption {
   value: ProspectingCategory;
