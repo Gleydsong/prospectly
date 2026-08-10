@@ -132,15 +132,6 @@ export class CreateSearchDto {
   neighborhood?: string;
 
   @ApiPropertyOptional({
-    deprecated: true,
-    description:
-      'Ignored: result volume is system-capped. Each search consumes credits after the free quota.',
-  })
-  @IsOptional()
-  @Transform(() => undefined)
-  limit?: never;
-
-  @ApiPropertyOptional({
     enum: PROSPECTING_PROVIDER_IDS,
     deprecated: true,
     description:
