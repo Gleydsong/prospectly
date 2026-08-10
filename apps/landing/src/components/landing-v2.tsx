@@ -15,11 +15,12 @@ import {
   Sparkle,
   X,
 } from '@phosphor-icons/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getHomeFaqItems } from '@/lib/faq-content';
 import { enterExplainerUrl } from '@/lib/pricing';
 import { TEAM_EMAIL, type Locale } from '@/lib/i18n';
 import { CookieBanner } from '@/components/cookie-banner';
+import { BrandIntro } from '@/components/brand-intro';
 
 const STEPS = [
   { number: '01', title: 'Defina quem você quer atender.', body: 'Escolha o segmento, a cidade e o tipo de empresa que faz sentido para o seu serviço.' },
@@ -166,7 +167,19 @@ export function V2Footer({ page = 'home' }: { page?: 'home' | 'how' | 'section' 
 }
 
 export function LandingV2({ locale }: { locale: Locale }) {
-  return <div className="landing-v2"><a className="landing-v2-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a><V2Header locale={locale} /><main id="conteudo-principal"><Hero locale={locale} /><StepsSection /><BenefitsSection /><AudienceSection /><FinalCtaSection locale={locale} /><FaqSection locale={locale} /></main><V2Footer /><CookieBanner locale={locale} /></div>;
+  const [introComplete, setIntroComplete] = useState(false);
+  const completeIntro = useCallback(() => setIntroComplete(true), []);
+
+  return (
+    <div className="landing-v2" data-brand-intro-state={introComplete ? 'complete' : 'pending'}>
+      <BrandIntro onComplete={completeIntro} />
+      <a className="landing-v2-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+      <V2Header locale={locale} />
+      <main id="conteudo-principal"><Hero locale={locale} /><StepsSection /><BenefitsSection /><AudienceSection /><FinalCtaSection locale={locale} /><FaqSection locale={locale} /></main>
+      <V2Footer />
+      <CookieBanner locale={locale} />
+    </div>
+  );
 }
 
 export function LandingV2SectionPage({ locale, section }: { locale: Locale; section: 'benefits' | 'audience' | 'faq' }) {
