@@ -165,27 +165,32 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   async applyWebhookEvent(payload: unknown, type: string): Promise<WebhookApplyResult> {
     const body = payload as AbacateWebhookBody;
     const eventId = body.id ?? 'unknown';
-    const data = (body.data ?? {}) as Record<string, unknown>;
+    const rawData = (body.data ?? {}) as Record<string, unknown>;
 
     switch (type) {
-      case 'transparent.completed':
+      case 'transparent.completed': {
+        // Abacate v2 nests charge fields under data.transparent and often omits metadata.
+        const data = this.normalizeTransparentData(rawData);
         if (this.isCreditPayment(data)) await this.creditPurchases.completeFromWebhook(data);
         else await this.onTransparentCompleted(data);
         return { handled: true, eventId, type };
+      }
       case 'transparent.refunded':
-      case 'transparent.lost':
+      case 'transparent.lost': {
+        const data = this.normalizeTransparentData(rawData);
         if (this.isCreditPayment(data)) await this.creditPurchases.refundFromWebhook(data);
         else await this.onTransparentRevoked(data, type);
         return { handled: true, eventId, type };
+      }
       case 'subscription.completed':
       case 'subscription.renewed':
-        await this.onSubscriptionActive(data);
+        await this.onSubscriptionActive(rawData);
         return { handled: true, eventId, type };
       case 'subscription.cancelled':
-        await this.onSubscriptionCancelled(data);
+        await this.onSubscriptionCancelled(rawData);
         return { handled: true, eventId, type };
       case 'checkout.completed':
-        await this.onCheckoutCompleted(data);
+        await this.onCheckoutCompleted(rawData);
         return { handled: true, eventId, type };
       default:
         this.logger.debug(`Unhandled Abacate event: ${type}`);
@@ -265,9 +270,10 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     }
 
     const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    const metadata = this.readMetadata(data);
+    const interval = this.resolveTransparentInterval(data);
 
-    if (metadata.interval === 'monthly') {
+    // Official webhooks omit metadata; never default unknown PIX to LIFETIME.
+    if (interval === 'monthly') {
       const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       await this.activation.activateMonthly({
         organizationId,
@@ -281,6 +287,13 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
           data: { abacatePaymentId: paymentId },
         });
       }
+      return;
+    }
+
+    if (interval !== 'lifetime') {
+      this.logger.warn(
+        `transparent.completed for org ${organizationId} without resolvable plan interval (externalId/metadata); skipping entitlement`,
+      );
       return;
     }
 
@@ -432,7 +445,62 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     return out;
   }
 
+  /**
+   * Abacate webhook v2 puts the charge under `data.transparent` and often omits
+   * `metadata` entirely. Flatten so id/externalId/metadata resolve consistently
+   * with our legacy flat fixtures and create-response shape.
+   */
+  private normalizeTransparentData(data: Record<string, unknown>): Record<string, unknown> {
+    const nested = data.transparent;
+    if (!nested || typeof nested !== 'object' || Array.isArray(nested)) {
+      return data;
+    }
+    const charge = nested as Record<string, unknown>;
+    const { transparent: _nested, ...rest } = data;
+    const nestedMeta =
+      charge.metadata && typeof charge.metadata === 'object' && !Array.isArray(charge.metadata)
+        ? (charge.metadata as Record<string, unknown>)
+        : {};
+    const topMeta =
+      rest.metadata && typeof rest.metadata === 'object' && !Array.isArray(rest.metadata)
+        ? (rest.metadata as Record<string, unknown>)
+        : {};
+    return {
+      ...charge,
+      ...rest,
+      id: typeof charge.id === 'string' ? charge.id : rest.id,
+      externalId:
+        typeof charge.externalId === 'string'
+          ? charge.externalId
+          : typeof rest.externalId === 'string'
+            ? rest.externalId
+            : undefined,
+      metadata: { ...nestedMeta, ...topMeta },
+    };
+  }
+
+  /**
+   * Prefer metadata.interval; fall back to externalId shapes we stamp at checkout:
+   * `org:{id}:monthly:{ts}`, `org:{id}:lifetime`, `org:{id}:credits:{uuid}`.
+   */
+  private resolveTransparentInterval(
+    data: Record<string, unknown>,
+  ): 'monthly' | 'lifetime' | 'credits' | undefined {
+    const metadata = this.readMetadata(data);
+    if (metadata.interval === 'monthly' || metadata.interval === 'lifetime') {
+      return metadata.interval;
+    }
+    if (metadata.purchaseId || metadata.offer?.startsWith('credits-')) {
+      return 'credits';
+    }
+    const externalId = typeof data.externalId === 'string' ? data.externalId : '';
+    if (/^org:[^:]+:credits:/.test(externalId)) return 'credits';
+    if (/^org:[^:]+:monthly(?::|$)/.test(externalId)) return 'monthly';
+    if (/^org:[^:]+:lifetime(?::|$)/.test(externalId)) return 'lifetime';
+    return undefined;
+  }
+
   private isCreditPayment(data: Record<string, unknown>): boolean {
-    return Boolean(this.readMetadata(data).purchaseId);
+    return this.resolveTransparentInterval(data) === 'credits';
   }
 }
