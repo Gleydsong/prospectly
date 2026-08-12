@@ -24,6 +24,11 @@ describe('BillingService', () => {
     search: {
       count: jest.fn(),
     },
+    usageLedger: {
+      count: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+    },
     creditLedgerEntry: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -99,7 +104,7 @@ describe('BillingService', () => {
       plan: OrgPlan.FREE,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(3);
+    prisma.usageLedger.count.mockResolvedValue(3);
     await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
@@ -113,7 +118,7 @@ describe('BillingService', () => {
       currentPeriodEnd: null,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(2);
+    prisma.usageLedger.count.mockResolvedValue(2);
 
     await expect(service.getOrganizationBilling('org1')).resolves.toEqual(
       expect.objectContaining({
@@ -132,7 +137,7 @@ describe('BillingService', () => {
       currentPeriodEnd: null,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(12);
+    prisma.usageLedger.count.mockResolvedValue(12);
 
     await expect(service.getOrganizationBilling('org1')).resolves.toEqual(
       expect.objectContaining({
@@ -294,35 +299,61 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 2, deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(3);
+    prisma.usageLedger.count.mockResolvedValue(3);
     await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
   });
 
-  it('skips credit consume while still within free search quota', async () => {
+  it('records durable free-quota usage without debiting credits', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       planStatus: PlanStatus.INACTIVE,
       creditBalance: 5,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(2);
+    prisma.usageLedger.findUnique.mockResolvedValue(null);
+    prisma.usageLedger.count.mockResolvedValue(2);
+    prisma.usageLedger.create.mockResolvedValue({});
 
     await expect(service.consumeCreditForSearch('org1', 'search-1')).resolves.toBeUndefined();
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.usageLedger.create).toHaveBeenCalledWith({
+      data: {
+        organizationId: 'org1',
+        meterKey: 'SEARCHES',
+        amount: 1,
+        idempotencyKey: 'search-usage:search-1',
+      },
+    });
+    expect(prisma.organization.updateMany).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
   });
 
-  it('decrements balance and writes a SEARCH_CONSUME ledger entry', async () => {
+  it('still charges credits after searches were deleted (usage meter survives)', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 0,
+      deletedAt: null,
+    });
+    // Live Search rows may be 0 after deletes, but durable usage is exhausted.
+    prisma.search.count.mockResolvedValue(0);
+    prisma.usageLedger.count.mockResolvedValue(3);
+    await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('decrements balance and writes SEARCH_CONSUME + SEARCHES usage entries', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       planStatus: PlanStatus.INACTIVE,
       creditBalance: 4,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(4);
+    prisma.usageLedger.findUnique.mockResolvedValue(null);
+    prisma.usageLedger.count.mockResolvedValue(4);
     prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
     prisma.organization.updateMany.mockResolvedValue({ count: 1 });
     prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 3 });
     prisma.creditLedgerEntry.create.mockResolvedValue({});
+    prisma.usageLedger.create.mockResolvedValue({});
 
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
 
@@ -340,20 +371,28 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
         idempotencyKey: 'search-consume:search-42',
       },
     });
+    expect(prisma.usageLedger.create).toHaveBeenCalledWith({
+      data: {
+        organizationId: 'org1',
+        meterKey: 'SEARCHES',
+        amount: 1,
+        idempotencyKey: 'search-usage:search-42',
+      },
+    });
   });
 
-  it('is idempotent when the search already has a consume ledger entry', async () => {
+  it('is idempotent when the search already has a usage ledger entry', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       planStatus: PlanStatus.INACTIVE,
       creditBalance: 1,
       deletedAt: null,
     });
-    prisma.search.count.mockResolvedValue(5);
-    prisma.creditLedgerEntry.findUnique.mockResolvedValue({ id: 'ledger-1' });
+    prisma.usageLedger.findUnique.mockResolvedValue({ id: 'usage-1' });
 
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
     expect(prisma.organization.updateMany).not.toHaveBeenCalled();
     expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+    expect(prisma.usageLedger.create).not.toHaveBeenCalled();
   });
 });
