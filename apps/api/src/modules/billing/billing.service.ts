@@ -6,7 +6,13 @@ import {
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
+import {
+  OrgPlan,
+  PaymentProvider,
+  PlanStatus,
+  UsageMeterKey,
+  type Organization,
+} from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
@@ -74,7 +80,7 @@ export class BillingService {
   ): Promise<SearchUsageSnapshot> {
     const org =
       typeof organization === 'string' ? await this.requireOrg(organization) : organization;
-    const used = await this.prisma.search.count({ where: { organizationId: org.id } });
+    const used = await this.countSearchUsage(org.id);
     const creditBalance = org.creditBalance ?? 0;
     const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditBalance;
     return {
@@ -91,7 +97,8 @@ export class BillingService {
       return;
     }
 
-    const searchCount = await this.prisma.search.count({ where: { organizationId } });
+    // Durable meter — deleting Search rows must not restore free quota / skip credits.
+    const searchCount = await this.countSearchUsage(organizationId);
     const creditBalance = org.creditBalance ?? 0;
     if (searchCount >= FREE_SEARCH_LIMIT && creditBalance < CREDITS_PER_SEARCH) {
       throw new ForbiddenException({
@@ -108,45 +115,81 @@ export class BillingService {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) return;
 
-    const searchCount = await this.prisma.search.count({ where: { organizationId } });
-    if (searchCount <= FREE_SEARCH_LIMIT) return;
-
-    const idempotencyKey = `search-consume:${searchId}`;
+    const usageKey = `search-usage:${searchId}`;
+    const consumeKey = `search-consume:${searchId}`;
 
     await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.creditLedgerEntry.findUnique({
+      const existingUsage = await tx.usageLedger.findUnique({
         where: {
-          organizationId_idempotencyKey: { organizationId, idempotencyKey },
+          organizationId_idempotencyKey: { organizationId, idempotencyKey: usageKey },
         },
       });
-      if (existing) return;
+      if (existingUsage) return;
 
-      const consumed = await tx.organization.updateMany({
-        where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
-        data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
+      const used = await tx.usageLedger.count({
+        where: { organizationId, meterKey: UsageMeterKey.SEARCHES },
       });
-      if (consumed.count !== 1) {
-        throw new ForbiddenException({
-          code: 'ENTITLEMENT_CREDITS',
-          message: 'No credits remaining. Purchase a credit package to continue.',
+
+      if (used < FREE_SEARCH_LIMIT) {
+        await tx.usageLedger.create({
+          data: {
+            organizationId,
+            meterKey: UsageMeterKey.SEARCHES,
+            amount: 1,
+            idempotencyKey: usageKey,
+          },
+        });
+        return;
+      }
+
+      const existingConsume = await tx.creditLedgerEntry.findUnique({
+        where: {
+          organizationId_idempotencyKey: { organizationId, idempotencyKey: consumeKey },
+        },
+      });
+      if (!existingConsume) {
+        const consumed = await tx.organization.updateMany({
+          where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
+          data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
+        });
+        if (consumed.count !== 1) {
+          throw new ForbiddenException({
+            code: 'ENTITLEMENT_CREDITS',
+            message: 'No credits remaining. Purchase a credit package to continue.',
+          });
+        }
+
+        const updated = await tx.organization.findFirstOrThrow({
+          where: { id: organizationId },
+          select: { creditBalance: true },
+        });
+
+        await tx.creditLedgerEntry.create({
+          data: {
+            organizationId,
+            reason: 'SEARCH_CONSUME',
+            delta: -CREDITS_PER_SEARCH,
+            balanceAfter: updated.creditBalance,
+            searchId,
+            idempotencyKey: consumeKey,
+          },
         });
       }
 
-      const updated = await tx.organization.findFirstOrThrow({
-        where: { id: organizationId },
-        select: { creditBalance: true },
-      });
-
-      await tx.creditLedgerEntry.create({
+      await tx.usageLedger.create({
         data: {
           organizationId,
-          reason: 'SEARCH_CONSUME',
-          delta: -CREDITS_PER_SEARCH,
-          balanceAfter: updated.creditBalance,
-          searchId,
-          idempotencyKey,
+          meterKey: UsageMeterKey.SEARCHES,
+          amount: 1,
+          idempotencyKey: usageKey,
         },
       });
+    });
+  }
+
+  private async countSearchUsage(organizationId: string): Promise<number> {
+    return this.prisma.usageLedger.count({
+      where: { organizationId, meterKey: UsageMeterKey.SEARCHES },
     });
   }
 
