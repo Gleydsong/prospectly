@@ -74,7 +74,11 @@ export class BillingService {
   ): Promise<SearchUsageSnapshot> {
     const org =
       typeof organization === 'string' ? await this.requireOrg(organization) : organization;
-    const used = await this.prisma.search.count({ where: { organizationId: org.id } });
+    const [searches, opportunityRuns] = await Promise.all([
+      this.prisma.search.count({ where: { organizationId: org.id } }),
+      this.prisma.opportunityRun.count({ where: { organizationId: org.id } }),
+    ]);
+    const used = searches + opportunityRuns;
     const creditBalance = org.creditBalance ?? 0;
     const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditBalance;
     return {
@@ -91,7 +95,11 @@ export class BillingService {
       return;
     }
 
-    const searchCount = await this.prisma.search.count({ where: { organizationId } });
+    const [searches, opportunityRuns] = await Promise.all([
+      this.prisma.search.count({ where: { organizationId } }),
+      this.prisma.opportunityRun.count({ where: { organizationId } }),
+    ]);
+    const searchCount = searches + opportunityRuns;
     const creditBalance = org.creditBalance ?? 0;
     if (searchCount >= FREE_SEARCH_LIMIT && creditBalance < CREDITS_PER_SEARCH) {
       throw new ForbiddenException({
@@ -145,6 +153,77 @@ export class BillingService {
           balanceAfter: updated.creditBalance,
           searchId,
           idempotencyKey,
+        },
+      });
+    });
+  }
+
+  async consumeCreditForOpportunityRun(organizationId: string, runId: string): Promise<void> {
+    const org = await this.requireOrg(organizationId);
+    if (org.planStatus === PlanStatus.ACTIVE) return;
+
+    const [searches, opportunityRuns] = await Promise.all([
+      this.prisma.search.count({ where: { organizationId } }),
+      this.prisma.opportunityRun.count({ where: { organizationId } }),
+    ]);
+    if (searches + opportunityRuns <= FREE_SEARCH_LIMIT) return;
+    const idempotencyKey = `opportunity-consume:${runId}`;
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.creditLedgerEntry.findUnique({
+        where: { organizationId_idempotencyKey: { organizationId, idempotencyKey } },
+      });
+      if (existing) return;
+      const consumed = await tx.organization.updateMany({
+        where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
+        data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
+      });
+      if (consumed.count !== 1) {
+        throw new ForbiddenException({ code: 'ENTITLEMENT_CREDITS', message: 'No credits remaining. Purchase a credit package to continue.' });
+      }
+      const updated = await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { creditBalance: true } });
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId,
+          reason: 'AI_CONSUME',
+          delta: -CREDITS_PER_SEARCH,
+          balanceAfter: updated.creditBalance,
+          opportunityRunId: runId,
+          idempotencyKey,
+          metadata: { feature: 'AI_OPPORTUNITY_FINDER' },
+        },
+      });
+    });
+  }
+
+  async refundOpportunityRunCredit(organizationId: string, runId: string): Promise<void> {
+    const consumeKey = `opportunity-consume:${runId}`;
+    const refundKey = `opportunity-refund:${runId}`;
+    await this.prisma.$transaction(async (tx) => {
+      const [consume, existingRefund] = await Promise.all([
+        tx.creditLedgerEntry.findUnique({
+          where: { organizationId_idempotencyKey: { organizationId, idempotencyKey: consumeKey } },
+        }),
+        tx.creditLedgerEntry.findUnique({
+          where: { organizationId_idempotencyKey: { organizationId, idempotencyKey: refundKey } },
+        }),
+      ]);
+      if (!consume || existingRefund) return;
+
+      const updated = await tx.organization.update({
+        where: { id: organizationId },
+        data: { creditBalance: { increment: Math.abs(consume.delta) } },
+        select: { creditBalance: true },
+      });
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId,
+          reason: 'REFUND',
+          delta: Math.abs(consume.delta),
+          balanceAfter: updated.creditBalance,
+          opportunityRunId: runId,
+          idempotencyKey: refundKey,
+          metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'QUEUE_DISPATCH_FAILED' },
         },
       });
     });

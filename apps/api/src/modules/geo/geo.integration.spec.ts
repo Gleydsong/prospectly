@@ -61,22 +61,17 @@ describe('Geo HTTP integration', () => {
     }
   });
 
-  it('returns regions for Brazil and Portugal over loopback HTTP', async () => {
+  it('returns Brazilian regions and rejects countries outside the product scope', async () => {
     const br = await request(app.getHttpServer()).get('/api/v1/geo/regions').query({ country: 'BR' }).expect(200);
     expect(br.body.some((region: { code: string }) => region.code === 'SP')).toBe(true);
 
-    const pt = await request(app.getHttpServer()).get('/api/v1/geo/regions').query({ country: 'pt' }).expect(200);
-    expect(pt.body.some((region: { name: string }) => region.name === 'Lisbon')).toBe(true);
+    await request(app.getHttpServer()).get('/api/v1/geo/regions').query({ country: 'PT' }).expect(400);
   });
 
   it('returns cities for a region and rejects invalid country/region', async () => {
-    const regions = await request(app.getHttpServer()).get('/api/v1/geo/regions').query({ country: 'PT' }).expect(200);
-    const lisbon = regions.body.find((region: { name: string }) => region.name === 'Lisbon');
-    expect(lisbon).toBeDefined();
-
     const cities = await request(app.getHttpServer())
       .get('/api/v1/geo/cities')
-      .query({ country: 'PT', region: lisbon.code })
+      .query({ country: 'BR', region: 'SP' })
       .expect(200);
     expect(cities.body.length).toBeGreaterThan(0);
 

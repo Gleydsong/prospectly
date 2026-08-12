@@ -30,6 +30,6 @@ import { WEBSITE_ANALYZER } from './website-analysis.tokens';
         }),
     },
   ],
-  exports: [WebsiteAnalysisService],
+  exports: [WebsiteAnalysisService, WEBSITE_ANALYZER],
 })
 export class WebsiteAnalysisModule {}

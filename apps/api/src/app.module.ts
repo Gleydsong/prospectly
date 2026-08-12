@@ -35,6 +35,7 @@ import { OpsModule } from './modules/ops/ops.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { AgentsModule } from './modules/agents/agents.module';
+import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
 
 @Module({
   imports: [
@@ -113,6 +114,7 @@ import { AgentsModule } from './modules/agents/agents.module';
     CampaignsModule,
     IntegrationsModule,
     AgentsModule,
+    OpportunityFinderModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

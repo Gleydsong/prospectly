@@ -16,6 +16,8 @@ export interface NormalizedBusiness {
   postalCode?: string;
   latitude?: number;
   longitude?: number;
+  rating?: number;
+  reviewCount?: number;
   source: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
   websitePresence: WebsitePresence;
 }

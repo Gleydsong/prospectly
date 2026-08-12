@@ -8,6 +8,7 @@ import { IMPORTS_QUEUE } from '../imports/imports.constants';
 import { PROSPECTING_QUEUE } from '../prospecting/prospecting.constants';
 import { SCORING_QUEUE } from '../scoring/scoring.constants';
 import { WEBSITE_ANALYSIS_QUEUE } from '../website-analysis/website-analysis.constants';
+import { OPPORTUNITY_FINDER_QUEUE } from '../opportunity-finder/opportunity-finder.constants';
 import { MetricsService } from './metrics.service';
 
 const OPS_QUEUES = [
@@ -15,6 +16,7 @@ const OPS_QUEUES = [
   IMPORTS_QUEUE,
   SCORING_QUEUE,
   WEBSITE_ANALYSIS_QUEUE,
+  OPPORTUNITY_FINDER_QUEUE,
 ] as const;
 
 @ApiTags('ops')
@@ -27,6 +29,7 @@ export class OpsMetricsController {
     @InjectQueue(IMPORTS_QUEUE) private readonly importsQueue: Queue,
     @InjectQueue(SCORING_QUEUE) private readonly scoringQueue: Queue,
     @InjectQueue(WEBSITE_ANALYSIS_QUEUE) private readonly websiteAnalysisQueue: Queue,
+    @InjectQueue(OPPORTUNITY_FINDER_QUEUE) private readonly opportunityFinderQueue: Queue,
   ) {}
 
   @Get()
@@ -55,6 +58,8 @@ export class OpsMetricsController {
         return this.scoringQueue;
       case WEBSITE_ANALYSIS_QUEUE:
         return this.websiteAnalysisQueue;
+      case OPPORTUNITY_FINDER_QUEUE:
+        return this.opportunityFinderQueue;
     }
   }
 

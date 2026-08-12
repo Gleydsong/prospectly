@@ -172,6 +172,8 @@
     "quickAccess": "Quick access",
     "available": "Available tools",
     "open": "Open tool",
+    "opportunityTitle": "AI Opportunity Finder",
+    "opportunityDesc": "Turn your service into an evidence-backed ranking of Brazilian companies.",
     "searchTitle": "Client search",
     "searchDesc": "Find local businesses without a website and prioritize opportunities.",
     "importTitle": "Import leads",

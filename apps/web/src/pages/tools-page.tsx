@@ -5,14 +5,16 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 
-const QUICK = [
+export const QUICK = [
+  { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
   { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
   { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
   { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },
   { to: '/pipeline', titleKey: 'tools.pipelineTitle', descKey: 'tools.pipelineDesc' },
 ] as const;
 
-const ALL = [
+export const ALL = [
+  { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
   { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
   { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
   { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },

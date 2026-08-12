@@ -24,6 +24,9 @@ describe('BillingService', () => {
     search: {
       count: jest.fn(),
     },
+    opportunityRun: {
+      count: jest.fn(),
+    },
     creditLedgerEntry: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -69,6 +72,7 @@ describe('BillingService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    prisma.opportunityRun.count.mockResolvedValue(0);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,

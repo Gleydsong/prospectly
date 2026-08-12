@@ -9,6 +9,8 @@ import { ScoringModule } from '../scoring/scoring.module';
 import { ScoringProcessor } from '../scoring/scoring.processor';
 import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.module';
 import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.processor';
+import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finder.module';
+import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 
 /**
  * Registers BullMQ processors. Imported only by WorkerModule — AppModule
@@ -21,12 +23,14 @@ import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.p
     ScoringModule,
     WebsiteAnalysisModule,
     OpsModule,
+    OpportunityFinderModule,
   ],
   providers: [
     ProspectingProcessor,
     ImportsProcessor,
     ScoringProcessor,
     WebsiteAnalysisProcessor,
+    OpportunityFinderProcessor,
   ],
 })
 export class WorkersModule {}

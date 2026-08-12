@@ -22,6 +22,8 @@ const FIELD_MASK = [
   'places.internationalPhoneNumber',
   'places.websiteUri',
   'places.location',
+  'places.rating',
+  'places.userRatingCount',
   'places.addressComponents',
 ].join(',');
 
@@ -45,6 +47,8 @@ interface GooglePlace {
   internationalPhoneNumber?: string;
   websiteUri?: string;
   location?: { latitude?: number; longitude?: number };
+  rating?: number;
+  userRatingCount?: number;
   addressComponents?: Array<{
     longText?: string;
     shortText?: string;
@@ -109,6 +113,8 @@ function normalizePlace(
     postalCode: component(place, 'postal_code')?.longText?.trim() || undefined,
     latitude: place.location?.latitude,
     longitude: place.location?.longitude,
+    rating: place.rating,
+    reviewCount: place.userRatingCount,
     source: 'GOOGLE_PLACES',
     websitePresence: website ? WebsitePresence.WEBSITE_FOUND : WebsitePresence.NO_WEBSITE_REPORTED,
   };
