@@ -18,20 +18,24 @@ export class SsrfBlockedError extends Error {
 }
 
 export function isBlockedIp(ip: string): boolean {
-  if (ip === '::1' || ip === '0.0.0.0') return true;
+  const candidate = ip.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0] ?? '';
+  if (candidate === '::' || candidate === '::1' || candidate === '0.0.0.0') return true;
 
-  if (ip.includes(':')) {
-    const normalized = ip.toLowerCase();
+  if (candidate.includes(':')) {
+    const normalized = candidate;
     if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true; // ULA
-    if (normalized.startsWith('fe80')) return true; // link-local
+    if (/^fe[89ab]/.test(normalized)) return true; // link-local
+    if (normalized.startsWith('ff')) return true; // multicast
+    if (normalized.startsWith('2001:db8:')) return true; // documentation
+    if (normalized.startsWith('2001:10:')) return true; // ORCHID
     if (normalized.startsWith('::ffff:')) {
       return isBlockedIp(normalized.slice('::ffff:'.length));
     }
     return false;
   }
 
-  const parts = ip.split('.').map((part) => Number(part));
-  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) return true;
+  const parts = candidate.split('.').map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
   const [a, b] = parts as [number, number, number, number];
   if (a === 10) return true;
   if (a === 127) return true;
@@ -40,6 +44,11 @@ export function isBlockedIp(ip: string): boolean {
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
   if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  if (a === 192 && b === 0) return true; // IETF protocol assignments and documentation
+  if (a === 198 && (b === 18 || b === 19)) return true; // benchmarking
+  if (a === 198 && b === 51) return true; // documentation
+  if (a === 203 && b === 0) return true; // documentation
+  if (a >= 224) return true; // multicast and reserved
   return false;
 }
 

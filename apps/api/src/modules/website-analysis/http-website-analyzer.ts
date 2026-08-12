@@ -62,6 +62,9 @@ export function parseHtmlSignals(html: string, finalUrl: string): Omit<
   const hasSocialLinks =
     /facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|youtube\.com/i.test(html);
   const hasWhatsapp = /wa\.me|api\.whatsapp\.com|whatsapp/i.test(html);
+  const hasBooking =
+    /agendar|agendamento|reserve|reservation|booking|marcar\s+(consulta|hor[aá]rio)/i.test(html) ||
+    /calendly\.com|doctoralia\.com|trinks\.com|booksy\.com|simplybook\.me/i.test(html);
   const hasPrivacyPolicy = /privacidade|privacy|lgpd|gdpr/i.test(html);
   const hasFavicon = /rel=["'][^"']*icon[^"']*["']/i.test(html);
   const hasOpenGraph = Boolean(extractProperty(html, 'og:title') || extractProperty(html, 'og:type'));
@@ -111,6 +114,7 @@ export function parseHtmlSignals(html: string, finalUrl: string): Omit<
     hasEmail,
     hasSocialLinks,
     hasWhatsapp,
+    hasBooking,
     hasPrivacyPolicy,
     hasSitemap: undefined,
     hasRobotsTxt: undefined,
@@ -230,12 +234,15 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     }
 
     const started = Date.now();
+    const deadline = started + timeoutMs;
     let redirects = 0;
     let response: Response | undefined;
     const visited = new Set<string>();
 
     try {
       while (redirects <= maxRedirects) {
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) throw new Error('Website analysis deadline exceeded');
         if (visited.has(currentUrl)) {
           throw new SsrfBlockedError('Redirect loop detected');
         }
@@ -243,7 +250,7 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         await assertSafePublicUrl(currentUrl);
 
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const timer = setTimeout(() => controller.abort(), remainingMs);
         try {
           response = await fetchImpl(currentUrl, {
             method: 'GET',

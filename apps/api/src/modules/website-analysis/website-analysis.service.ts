@@ -176,6 +176,7 @@ export class WebsiteAnalysisService {
           hasEmail: result.hasEmail ?? null,
           hasSocialLinks: result.hasSocialLinks ?? null,
           hasWhatsapp: result.hasWhatsapp ?? null,
+          hasBooking: result.hasBooking ?? null,
           hasPrivacyPolicy: result.hasPrivacyPolicy ?? null,
           hasSitemap: result.hasSitemap ?? null,
           hasRobotsTxt: result.hasRobotsTxt ?? null,

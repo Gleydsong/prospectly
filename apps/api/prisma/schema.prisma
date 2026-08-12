@@ -171,6 +171,31 @@ enum CreditLedgerReason {
   AI_CONSUME
 }
 
+enum OpportunityRunStatus {
+  IDLE
+  PREPARING
+  SEARCHING
+  ANALYZING
+  RANKING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum OpportunityCandidateStatus {
+  DISCOVERED
+  ANALYZING
+  SCORED
+  FAILED
+}
+
+enum AiRunStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 // ---------- Identity & tenancy ----------
 
 model User {
@@ -210,6 +235,8 @@ model User {
   auditLogs           AuditLog[]
   dataRequests        DataSubjectRequest[]
   reviewedDataRequests DataSubjectRequest[] @relation("DataSubjectRequestReviewer")
+  opportunityRuns      OpportunityRun[]
+  aiRuns               AiRun[]
 
   @@index([email])
 }
@@ -251,6 +278,8 @@ model Organization {
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
   creditLedgerEntries CreditLedgerEntry[]
+  opportunityRuns     OpportunityRun[]
+  aiRuns              AiRun[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -382,6 +411,7 @@ model Lead {
   campaignLeads      CampaignLead[]
   campaignActivities CampaignActivity[]
   searchResults      SearchResult[]
+  opportunityCandidates OpportunityCandidate[]
 
   @@unique([organizationId, source, externalId])
   @@unique([organizationId, domain])
@@ -554,6 +584,7 @@ model WebsiteAnalysis {
   hasEmail          Boolean?
   hasSocialLinks    Boolean?
   hasWhatsapp       Boolean?
+  hasBooking        Boolean?
   hasPrivacyPolicy  Boolean?
   hasSitemap        Boolean?
   hasRobotsTxt      Boolean?
@@ -679,6 +710,105 @@ model SearchResult {
 
   @@unique([searchId, externalId])
   @@index([searchId])
+}
+
+// ---------- AI Opportunity Finder ----------
+
+model OpportunityRun {
+  id                 String               @id @default(uuid())
+  organizationId     String
+  userId             String
+  status             OpportunityRunStatus @default(PREPARING)
+  service            String
+  city               String
+  state              String
+  country             String               @default("BR")
+  profile             Json?
+  searchStrategy      Json?
+  scoringVersion      String               @default("opportunity-score-v1")
+  profilePromptVersion String?
+  strategyPromptVersion String?
+  candidateCount      Int                  @default(0)
+  analyzedCount       Int                  @default(0)
+  failedCount         Int                  @default(0)
+  errorCode           String?
+  errorMessage        String?
+  correlationId       String?
+  idempotencyKey      String?
+  startedAt           DateTime             @default(now())
+  completedAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  candidates   OpportunityCandidate[]
+  aiRuns       AiRun[]
+  creditLedgerEntries CreditLedgerEntry[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@index([userId, createdAt])
+}
+
+model OpportunityCandidate {
+  id               String                     @id @default(uuid())
+  runId            String
+  status           OpportunityCandidateStatus @default(DISCOVERED)
+  externalId       String
+  provider         String
+  company          Json
+  websiteAnalysis  Json?
+  signals          Json
+  scoreBreakdown   Json
+  overallScore     Int
+  confidenceScore  Int
+  dataCompleteness Int
+  rankingCategory  String
+  explanation      Json?
+  explanationPromptVersion String?
+  importedLeadId   String?
+  analyzedAt       DateTime?
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  run          OpportunityRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  importedLead Lead?          @relation(fields: [importedLeadId], references: [id], onDelete: SetNull)
+  aiRuns       AiRun[]
+
+  @@unique([runId, externalId])
+  @@index([runId, overallScore, confidenceScore])
+  @@index([importedLeadId])
+}
+
+model AiRun {
+  id             String      @id @default(uuid())
+  organizationId String
+  userId         String
+  opportunityRunId String?
+  candidateId    String?
+  task           String
+  provider       String
+  model          String
+  promptVersion  String
+  status         AiRunStatus @default(PENDING)
+  inputTokens    Int?
+  outputTokens   Int?
+  durationMs     Int?
+  errorCode      String?
+  createdAt      DateTime    @default(now())
+  completedAt    DateTime?
+
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunityRun OpportunityRun?       @relation(fields: [opportunityRunId], references: [id], onDelete: Cascade)
+  candidate      OpportunityCandidate? @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([opportunityRunId])
+  @@index([candidateId])
+  @@index([task, status, createdAt])
 }
 
 model Import {
@@ -903,6 +1033,7 @@ model CreditLedgerEntry {
   delta          Int
   balanceAfter   Int
   searchId       String?
+  opportunityRunId String?
   purchaseId     String?
   idempotencyKey String
   metadata       Json?
@@ -910,12 +1041,14 @@ model CreditLedgerEntry {
 
   organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   search       Search?        @relation(fields: [searchId], references: [id], onDelete: SetNull)
+  opportunityRun OpportunityRun? @relation(fields: [opportunityRunId], references: [id], onDelete: SetNull)
   purchase     CreditPurchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
 
   @@unique([organizationId, idempotencyKey])
   @@index([organizationId, createdAt])
   @@index([organizationId, reason, createdAt])
   @@index([searchId])
+  @@index([opportunityRunId])
   @@index([purchaseId])
 }
 

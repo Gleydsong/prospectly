@@ -291,6 +291,7 @@ export interface WebsiteAnalysisResult {
   hasEmail?: boolean;
   hasSocialLinks?: boolean;
   hasWhatsapp?: boolean;
+  hasBooking?: boolean;
   hasPrivacyPolicy?: boolean;
   hasSitemap?: boolean;
   hasRobotsTxt?: boolean;
@@ -424,4 +425,146 @@ export function buildOpportunitySignal(input: OpportunitySignalInput): Opportuni
   if (level === 'HIGH') tags.unshift('HIGH_POTENTIAL');
 
   return { level, score: capped, reasons, tags: [...new Set(tags)] };
+}
+
+// ---------- AI Opportunity Finder ----------
+
+export const OPPORTUNITY_RUN_STATUSES = [
+  'IDLE', 'PREPARING', 'SEARCHING', 'ANALYZING', 'RANKING',
+  'COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED',
+] as const;
+
+export type OpportunityRunStatus = (typeof OPPORTUNITY_RUN_STATUSES)[number];
+export type EvidenceTruth = 'TRUE' | 'FALSE' | 'UNKNOWN';
+export type OpportunityEvidenceKind = 'FACT' | 'INFERENCE' | 'RECOMMENDATION' | 'UNKNOWN';
+
+export type OpportunityFinderSignalType =
+  | 'MISSING_WEBSITE'
+  | 'LOW_PERFORMANCE'
+  | 'MISSING_HTTPS'
+  | 'MISSING_MOBILE_SUPPORT'
+  | 'MISSING_BOOKING'
+  | 'MISSING_WHATSAPP'
+  | 'MISSING_CONTACT_FORM'
+  | 'HIGH_REVIEW_COUNT'
+  | 'HIGH_RATING'
+  | 'CONTACT_AVAILABLE'
+  | 'ACTIVE_BUSINESS';
+
+export interface OpportunityFinderSignal {
+  type: OpportunityFinderSignalType;
+  value: EvidenceTruth;
+  source: 'PROVIDER' | 'WEBSITE_ANALYZER' | 'DETERMINISTIC_RULE';
+  confidence: number;
+  evidence: string;
+  kind: OpportunityEvidenceKind;
+  checkedAt: string;
+}
+
+export interface OpportunityProfile {
+  service: string;
+  targetCustomer: string[];
+  relevantSignals: OpportunityFinderSignalType[];
+  categories: ProspectingCategory[];
+}
+
+export interface OpportunitySearchStrategy {
+  categories: ProspectingCategory[];
+  minimumRating: number | null;
+  minimumReviews: number | null;
+  relevantSignals: OpportunityFinderSignalType[];
+}
+
+export interface OpportunityDna {
+  need: number;
+  quality: number;
+  reach: number;
+  timing: number;
+  fit: number;
+}
+
+export interface OpportunityScoreReason {
+  signal: OpportunityFinderSignalType;
+  dimension: keyof OpportunityDna;
+  points: number;
+  label: string;
+}
+
+export interface OpportunityScoreBreakdown {
+  version: 'opportunity-score-v1';
+  dna: OpportunityDna;
+  reasons: OpportunityScoreReason[];
+}
+
+export interface OpportunityExplanation {
+  summary: string;
+  whyOpportunity: string;
+  recommendedOffer: string;
+  commercialAngle: string;
+  warnings: string[];
+  source: 'AI' | 'DETERMINISTIC_FALLBACK';
+}
+
+export interface OpportunityCompany {
+  externalId: string;
+  companyName: string;
+  category?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  city: string;
+  state: string;
+  country: 'BR';
+  postalCode?: string;
+  latitude?: number;
+  longitude?: number;
+  rating?: number;
+  reviewCount?: number;
+  source: 'OPENSTREETMAP' | 'GOOGLE_PLACES';
+  websitePresence: 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
+}
+
+export interface OpportunityCandidateView {
+  id: string;
+  runId: string;
+  status: 'DISCOVERED' | 'ANALYZING' | 'SCORED' | 'FAILED';
+  company: OpportunityCompany;
+  signals: OpportunityFinderSignal[];
+  scoreBreakdown: OpportunityScoreBreakdown;
+  overallScore: number;
+  confidenceScore: number;
+  dataCompleteness: number;
+  rankingCategory: 'EXCELLENT' | 'HIGH' | 'MEDIUM' | 'LOW';
+  explanation?: OpportunityExplanation | null;
+  importedLeadId?: string | null;
+  analyzedAt?: string | null;
+}
+
+export interface OpportunityRunView {
+  id: string;
+  status: OpportunityRunStatus;
+  service: string;
+  city: string;
+  state: string;
+  country: 'BR';
+  profile?: OpportunityProfile | null;
+  searchStrategy?: OpportunitySearchStrategy | null;
+  scoringVersion: string;
+  candidateCount: number;
+  analyzedCount: number;
+  failedCount: number;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+  createdAt: string;
+}
+
+export interface CreateOpportunityRunInput {
+  service: string;
+  city: string;
+  state: string;
+  country?: 'BR';
+  idempotencyKey?: string;
 }

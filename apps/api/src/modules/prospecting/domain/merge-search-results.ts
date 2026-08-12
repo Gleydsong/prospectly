@@ -45,6 +45,8 @@ export function mergeBusinessFields(
     postalCode: current.postalCode || incoming.postalCode,
     latitude: current.latitude ?? incoming.latitude,
     longitude: current.longitude ?? incoming.longitude,
+    rating: current.rating ?? incoming.rating,
+    reviewCount: current.reviewCount ?? incoming.reviewCount,
     category: current.category || incoming.category,
     websitePresence,
     // Keep Google Places as display source when it contributed richer contact data.

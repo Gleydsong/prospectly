@@ -72,6 +72,6 @@ import { ProspectingService } from './prospecting.service';
         ]),
     },
   ],
-  exports: [ProspectingService],
+  exports: [ProspectingService, SEARCH_PROVIDER_REGISTRY],
 })
 export class ProspectingModule {}

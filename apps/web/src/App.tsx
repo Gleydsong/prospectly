@@ -52,6 +52,9 @@ const AgentsWhatsappPage = lazy(() =>
   import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
 );
 const ToolsPage = lazy(() => import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })));
+const OpportunityFinderPage = lazy(() =>
+  import('@/pages/opportunity-finder-page').then((m) => ({ default: m.OpportunityFinderPage })),
+);
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -107,6 +110,10 @@ export function App() {
                 <ToolsPage />
               </LazyPage>
             }
+          />
+          <Route
+            path="tools/opportunity-finder"
+            element={<LazyPage><OpportunityFinderPage /></LazyPage>}
           />
           <Route path="search" element={<SearchPage />} />
           <Route path="support" element={<SupportPage />} />

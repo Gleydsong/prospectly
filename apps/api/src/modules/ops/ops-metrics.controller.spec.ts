@@ -27,6 +27,7 @@ describe('OpsMetricsController', () => {
       makeQueue(counts) as never,
       makeQueue(counts) as never,
       makeQueue(counts) as never,
+      makeQueue(counts) as never,
     );
 
     const snapshot = await controller.getMetrics();
@@ -54,6 +55,7 @@ describe('OpsMetricsController', () => {
 
     const controller = new OpsMetricsController(
       new MetricsService(),
+      downQueue as never,
       downQueue as never,
       downQueue as never,
       downQueue as never,

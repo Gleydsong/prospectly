@@ -1,6 +1,9 @@
 import type {
   LeadSource,
   LeadStatus,
+  OpportunityCandidateView,
+  OpportunityRunView,
+  CreateOpportunityRunInput,
   PaginatedResult,
   ProspectingCategory,
   ProspectingCategoryCatalog,
@@ -11,6 +14,9 @@ import type {
 
 export type {
   PaginatedResult,
+  OpportunityCandidateView,
+  OpportunityRunView,
+  CreateOpportunityRunInput,
   ProspectingCategory,
   ProspectingCategoryCatalog,
   ProspectingCategoryOption,
