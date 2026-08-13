@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,5 +96,26 @@ describe('TopNav', () => {
       'href',
       '/leads',
     );
+  });
+
+  it('portals the mobile menu outside the sticky header so backdrop-filter cannot clip it', async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /abrir menu|open menu/i }));
+
+    const overlay = screen.getAllByRole('button', { name: /fechar menu|close menu/i })[0];
+    expect(overlay).toBeDefined();
+    expect(overlay?.closest('header')).toBeNull();
+    expect(document.getElementById('mobile-nav')).toBeTruthy();
   });
 });
