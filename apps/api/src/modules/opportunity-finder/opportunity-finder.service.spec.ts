@@ -72,3 +72,64 @@ describe('OpportunityFinderService tenant isolation', () => {
     expect(billing.consumeCreditForOpportunityRun).not.toHaveBeenCalled();
   });
 });
+
+describe('OpportunityFinderService recordFailure', () => {
+  it('refunds debited credits when a run transitions to FAILED', async () => {
+    const prisma = {
+      opportunityRun: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'run-1', organizationId: 'org-1' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const billing = {
+      refundOpportunityRunCredit: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new OpportunityFinderService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      billing as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await service.recordFailure('run-1', 'NO_COMPANIES_FOUND');
+
+    expect(prisma.opportunityRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'run-1' }),
+        data: expect.objectContaining({ status: 'FAILED', errorCode: 'NO_COMPANIES_FOUND' }),
+      }),
+    );
+    expect(billing.refundOpportunityRunCredit).toHaveBeenCalledWith('org-1', 'run-1', 'RUN_FAILED');
+  });
+
+  it('does not refund when the run was already terminal', async () => {
+    const prisma = {
+      opportunityRun: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'run-1', organizationId: 'org-1' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const billing = {
+      refundOpportunityRunCredit: jest.fn().mockResolvedValue(undefined),
+    };
+    const service = new OpportunityFinderService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      billing as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await service.recordFailure('run-1', 'PROCESSING_FAILED');
+    expect(billing.refundOpportunityRunCredit).not.toHaveBeenCalled();
+  });
+});

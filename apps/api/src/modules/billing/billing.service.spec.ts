@@ -346,6 +346,57 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     });
   });
 
+  it('debits search credits when opportunity runs already exhausted the free quota', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 10,
+      deletedAt: null,
+    });
+    // One new search + 3 prior opportunity runs must not skip the shared free quota.
+    prisma.search.count.mockResolvedValue(1);
+    prisma.opportunityRun.count.mockResolvedValue(3);
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 9 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForSearch('org1', 'search-after-opp')).resolves.toBeUndefined();
+
+    expect(prisma.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org1', creditBalance: { gte: 1 } },
+      data: { creditBalance: { decrement: 1 } },
+    });
+  });
+
+  it('refunds opportunity-run credits idempotently after a failed run', async () => {
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ id: 'consume-1', delta: -1 })
+      .mockResolvedValueOnce(null);
+    prisma.organization.update.mockResolvedValue({ creditBalance: 11 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(
+      service.refundOpportunityRunCredit('org1', 'run-1', 'RUN_FAILED'),
+    ).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: { creditBalance: { increment: 1 } },
+      select: { creditBalance: true },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'org1',
+        reason: 'REFUND',
+        delta: 1,
+        opportunityRunId: 'run-1',
+        idempotencyKey: 'opportunity-refund:run-1',
+        metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'RUN_FAILED' },
+      }),
+    });
+  });
+
   it('is idempotent when the search already has a consume ledger entry', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
