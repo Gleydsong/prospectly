@@ -218,7 +218,15 @@ export class OpportunityFinderService {
 
   async processRun(runId: string): Promise<void> {
     const run = await this.prisma.opportunityRun.findUnique({ where: { id: runId } });
-    if (!run || run.status === OpportunityRunStatus.CANCELLED || run.status === OpportunityRunStatus.COMPLETED) return;
+    if (
+      !run ||
+      run.status === OpportunityRunStatus.CANCELLED ||
+      run.status === OpportunityRunStatus.COMPLETED ||
+      run.status === OpportunityRunStatus.PARTIAL ||
+      run.status === OpportunityRunStatus.FAILED
+    ) {
+      return;
+    }
     const deadline = Date.now() + OPPORTUNITY_LIMITS.maxDurationMs;
     const context = { organizationId: run.organizationId, userId: run.userId, opportunityRunId: run.id };
 
@@ -325,10 +333,35 @@ export class OpportunityFinderService {
 
   async recordFailure(runId: string, code = 'PROCESSING_FAILED'): Promise<void> {
     const publicCode = code === 'NO_COMPANIES_FOUND' ? code : 'PROCESSING_FAILED';
-    await this.prisma.opportunityRun.updateMany({
-      where: { id: runId, status: { notIn: [OpportunityRunStatus.COMPLETED, OpportunityRunStatus.PARTIAL, OpportunityRunStatus.CANCELLED] } },
-      data: { status: OpportunityRunStatus.FAILED, errorCode: publicCode, errorMessage: 'Não foi possível concluir a análise. Tente novamente.', completedAt: new Date() },
+    const run = await this.prisma.opportunityRun.findUnique({
+      where: { id: runId },
+      select: { id: true, organizationId: true },
     });
+    if (!run) return;
+
+    const updated = await this.prisma.opportunityRun.updateMany({
+      where: {
+        id: runId,
+        status: {
+          notIn: [
+            OpportunityRunStatus.COMPLETED,
+            OpportunityRunStatus.PARTIAL,
+            OpportunityRunStatus.CANCELLED,
+            OpportunityRunStatus.FAILED,
+          ],
+        },
+      },
+      data: {
+        status: OpportunityRunStatus.FAILED,
+        errorCode: publicCode,
+        errorMessage: 'Não foi possível concluir a análise. Tente novamente.',
+        completedAt: new Date(),
+      },
+    });
+    // Credits are debited at enqueue; restore them when the run yields no usable result.
+    if (updated.count > 0) {
+      await this.billing.refundOpportunityRunCredit(run.organizationId, run.id, 'RUN_FAILED');
+    }
   }
 
   private async generateExplanation(run: { id: string; organizationId: string; userId: string; service: string }, candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue }, userId: string): Promise<OpportunityExplanation> {

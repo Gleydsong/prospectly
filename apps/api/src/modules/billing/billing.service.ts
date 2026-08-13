@@ -116,8 +116,12 @@ export class BillingService {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) return;
 
-    const searchCount = await this.prisma.search.count({ where: { organizationId } });
-    if (searchCount <= FREE_SEARCH_LIMIT) return;
+    // Free quota is shared with Opportunity Finder runs (same meter as assert/getSearchUsage).
+    const [searches, opportunityRuns] = await Promise.all([
+      this.prisma.search.count({ where: { organizationId } }),
+      this.prisma.opportunityRun.count({ where: { organizationId } }),
+    ]);
+    if (searches + opportunityRuns <= FREE_SEARCH_LIMIT) return;
 
     const idempotencyKey = `search-consume:${searchId}`;
 
@@ -196,7 +200,11 @@ export class BillingService {
     });
   }
 
-  async refundOpportunityRunCredit(organizationId: string, runId: string): Promise<void> {
+  async refundOpportunityRunCredit(
+    organizationId: string,
+    runId: string,
+    cause: 'QUEUE_DISPATCH_FAILED' | 'RUN_FAILED' = 'QUEUE_DISPATCH_FAILED',
+  ): Promise<void> {
     const consumeKey = `opportunity-consume:${runId}`;
     const refundKey = `opportunity-refund:${runId}`;
     await this.prisma.$transaction(async (tx) => {
@@ -223,7 +231,7 @@ export class BillingService {
           balanceAfter: updated.creditBalance,
           opportunityRunId: runId,
           idempotencyKey: refundKey,
-          metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'QUEUE_DISPATCH_FAILED' },
+          metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause },
         },
       });
     });
