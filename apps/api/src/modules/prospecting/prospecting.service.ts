@@ -316,6 +316,10 @@ export class ProspectingService {
   }
 
   async recordFailure(searchId: string, errorMessage?: string): Promise<void> {
+    const search = await this.prisma.search.findUnique({
+      where: { id: searchId },
+      select: { organizationId: true, status: true },
+    });
     await this.prisma.search.update({
       where: { id: searchId },
       data: {
@@ -326,6 +330,9 @@ export class ProspectingService {
         completedAt: new Date(),
       },
     });
+    if (search && search.status !== SearchStatus.COMPLETED) {
+      await this.billing.refundSearchCredit(search.organizationId, searchId);
+    }
   }
 
   async importResults(

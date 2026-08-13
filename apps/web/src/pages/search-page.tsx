@@ -32,6 +32,7 @@ import { SearchResultCard } from '@/features/prospecting/components/search-resul
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDateTime } from '@/lib/utils';
 import {
+  CREDIT_COSTS,
   PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORY_VALUES,
   PROSPECTING_COUNTRIES,
@@ -512,7 +513,7 @@ export function SearchPage() {
                 Somente empresas sem site informado
               </label>
               <p className="text-xs text-zinc-500">
-                Cada busca consome 1 crédito após as buscas grátis.
+                Cada busca consome {CREDIT_COSTS.mapsSearch} créditos após as buscas grátis.
               </p>
             </div>
 

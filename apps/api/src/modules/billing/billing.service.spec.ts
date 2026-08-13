@@ -296,10 +296,26 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
 
   it('allows a free organization to search when purchased credits remain', async () => {
     prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 2, deletedAt: null,
+      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 14, deletedAt: null,
     });
     prisma.search.count.mockResolvedValue(3);
     await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
+  });
+
+  it('blocks Maps search when remaining credits are below 14', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 13, deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+    await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('blocks Opportunity Finder when remaining credits are below 16', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 15, deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+    await expect(service.assertCanCreateSearch('org1', 16)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('skips credit consume while still within free search quota', async () => {
@@ -315,31 +331,31 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('decrements balance and writes a SEARCH_CONSUME ledger entry', async () => {
+  it('decrements 14 credits and writes a SEARCH_CONSUME ledger entry', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       planStatus: PlanStatus.INACTIVE,
-      creditBalance: 4,
+      creditBalance: 20,
       deletedAt: null,
     });
     prisma.search.count.mockResolvedValue(4);
     prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
     prisma.organization.updateMany.mockResolvedValue({ count: 1 });
-    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 3 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 6 });
     prisma.creditLedgerEntry.create.mockResolvedValue({});
 
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
 
     expect(prisma.organization.updateMany).toHaveBeenCalledWith({
-      where: { id: 'org1', creditBalance: { gte: 1 } },
-      data: { creditBalance: { decrement: 1 } },
+      where: { id: 'org1', creditBalance: { gte: 14 } },
+      data: { creditBalance: { decrement: 14 } },
     });
     expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
       data: {
         organizationId: 'org1',
         reason: 'SEARCH_CONSUME',
-        delta: -1,
-        balanceAfter: 3,
+        delta: -14,
+        balanceAfter: 6,
         searchId: 'search-42',
         idempotencyKey: 'search-consume:search-42',
       },
@@ -359,5 +375,112 @@ stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
     expect(prisma.organization.updateMany).not.toHaveBeenCalled();
     expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('decrements 16 credits for an Opportunity Finder run after the free quota', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 40,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(2);
+    prisma.opportunityRun.count.mockResolvedValue(2);
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 24 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForOpportunityRun('org1', 'run-9')).resolves.toBeUndefined();
+
+    expect(prisma.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org1', creditBalance: { gte: 16 } },
+      data: { creditBalance: { decrement: 16 } },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: {
+        organizationId: 'org1',
+        reason: 'AI_CONSUME',
+        delta: -16,
+        balanceAfter: 24,
+        opportunityRunId: 'run-9',
+        idempotencyKey: 'opportunity-consume:run-9',
+        metadata: { feature: 'AI_OPPORTUNITY_FINDER' },
+      },
+    });
+  });
+
+  it('charges 8 credits to regenerate an explanation outside the free quota', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 10,
+      deletedAt: null,
+    });
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 2 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForExplain('org1', 'cand-1', 'run-1')).resolves.toBeUndefined();
+
+    expect(prisma.search.count).not.toHaveBeenCalled();
+    expect(prisma.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org1', creditBalance: { gte: 8 } },
+      data: { creditBalance: { decrement: 8 } },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reason: 'AI_CONSUME',
+        delta: -8,
+        idempotencyKey: 'explain-consume:cand-1',
+        metadata: { feature: 'EXPLAIN', candidateId: 'cand-1' },
+      }),
+    });
+  });
+
+  it('charges 1 credit to save a lead', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 5,
+      deletedAt: null,
+    });
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 4 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForSaveLead('org1', 'cand-2', 'run-1')).resolves.toBeUndefined();
+
+    expect(prisma.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org1', creditBalance: { gte: 1 } },
+      data: { creditBalance: { decrement: 1 } },
+    });
+  });
+
+  it('refunds the consumed Opportunity Finder amount on failure', async () => {
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ delta: -16 })
+      .mockResolvedValueOnce(null);
+    prisma.organization.update.mockResolvedValue({ creditBalance: 30 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.refundOpportunityRunCredit('org1', 'run-9', 'NO_COMPANIES_FOUND')).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: { creditBalance: { increment: 16 } },
+      select: { creditBalance: true },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        reason: 'REFUND',
+        delta: 16,
+        opportunityRunId: 'run-9',
+        idempotencyKey: 'opportunity-refund:run-9',
+        metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'NO_COMPANIES_FOUND' },
+      }),
+    });
   });
 });

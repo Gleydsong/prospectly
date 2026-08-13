@@ -62,7 +62,7 @@ test.describe('AI Opportunity Finder happy path', () => {
     await expect(page.getByText('Clínica Vita')).toBeVisible();
     await page.getByRole('button', { name: 'Ver evidências' }).click();
     await expect(page.getByRole('dialog')).toContainText('A fonte não reportou website.');
-    await page.getByRole('button', { name: 'Salvar como lead' }).click();
+    await page.getByRole('button', { name: /Salvar como lead/ }).click();
     await expect(page.getByRole('button', { name: 'Salvo como lead' })).toBeDisabled();
   });
 });

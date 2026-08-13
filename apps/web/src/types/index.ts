@@ -23,6 +23,7 @@ export type {
   SearchResultLimit,
 };
 export {
+  CREDIT_COSTS,
   DEFAULT_SEARCH_RESULT_LIMIT,
   FREE_PROSPECTING_CATEGORIES,
   LeadStatus,

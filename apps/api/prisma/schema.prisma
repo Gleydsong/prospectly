@@ -161,8 +161,8 @@ enum CreditPurchaseStatus {
   FAILED
 }
 
-/// Reasons for credit balance movements. SEARCH_CONSUME + SIGNUP_BONUS are wired today;
-/// PURCHASE/REFUND reserved for purchase ledger; AI_CONSUME for future AI billing.
+/// Reasons for credit balance movements. SEARCH_CONSUME (Maps), AI_CONSUME (Opportunity Finder / explain / save lead),
+/// SIGNUP_BONUS, PURCHASE and REFUND (failed paid actions return the consumed amount).
 enum CreditLedgerReason {
   SEARCH_CONSUME
   SIGNUP_BONUS
