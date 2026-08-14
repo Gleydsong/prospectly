@@ -1,53 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Camera, Copy, Trash2, UserPlus } from 'lucide-react';
+import { Building2, Camera, Globe, Lock, Mail, Trash2, User, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  changeEmail,
-  getProfile,
-  logout,
-  requestDataDeletion,
-  requestDataExport,
-  updateProfile,
-} from '@/features/auth/api';
+import { changeEmail, getProfile, updateProfile } from '@/features/auth/api';
+import { canManageOrg } from '@/features/settings/can-manage-org';
+import { IntegrationsSettingsCard } from '@/features/settings/integrations-settings-card';
+import { InviteMemberModal } from '@/features/settings/invite-member-modal';
+import { SettingsShell } from '@/features/settings/settings-shell';
+import { parseSettingsTab } from '@/features/settings/settings-tabs';
 import {
   fetchCurrentOrganization,
   fetchOrganizationMembers,
-  inviteOrganizationMember,
   removeOrganizationMember,
   updateOrganizationMemberRole,
   updateOrganizationName,
-  type InviteRole,
   type OrgMember,
 } from '@/features/organizations/api';
-import {
-  createPluginToken,
-  fetchPluginTokens,
-  revokePluginToken,
-  upsertWebhookIntegration,
-} from '@/features/integrations/api';
 import { setAppLocale } from '@/i18n';
-import { compressAvatarFile, generateTemporaryPassword } from '@/lib/compress-avatar';
+import { compressAvatarFile } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
 
-const INVITE_ROLES: InviteRole[] = [Role.ADMIN, Role.SALES, Role.MEMBER, Role.VIEWER];
-
-function canManageOrg(role: Role | string | undefined): boolean {
-  return role === Role.OWNER || role === Role.ADMIN || role === 'OWNER' || role === 'ADMIN';
-}
+const MEMBER_ROLES: Role[] = [Role.OWNER, Role.ADMIN, Role.SALES, Role.MEMBER, Role.VIEWER];
 
 function initials(name: string): string {
   return name
@@ -58,264 +44,12 @@ function initials(name: string): string {
     .join('');
 }
 
-function InviteMemberModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteRole>(Role.SALES);
-  const [tempPassword, setTempPassword] = useState(() => generateTemporaryPassword());
-  const [revealedPassword, setRevealedPassword] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    setName('');
-    setEmail('');
-    setRole(Role.SALES);
-    setTempPassword(generateTemporaryPassword());
-    setRevealedPassword(null);
-    setCopied(false);
-    setError(null);
-  }, [open]);
-
-  const invite = useMutation({
-    mutationFn: () =>
-      inviteOrganizationMember({
-        name: name.trim(),
-        email: email.trim(),
-        role,
-        temporaryPassword: tempPassword,
-      }),
-    onSuccess: async () => {
-      setRevealedPassword(tempPassword);
-      setError(null);
-      await queryClient.invalidateQueries({ queryKey: ['organizations', 'members'] });
-    },
-    onError: (err) => setError(getApiErrorMessage(err) || t('settings.inviteError')),
-  });
-
-  const copyPassword = async () => {
-    if (!revealedPassword) return;
-    await navigator.clipboard.writeText(revealedPassword);
-    setCopied(true);
-  };
-
-  return (
-    <Modal open={open} onClose={onClose} title={t('settings.inviteTitle')}>
-      {revealedPassword ? (
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-300">{t('settings.inviteSuccessBody')}</p>
-          <div className="flex items-center gap-2 rounded-control border border-zinc-700 bg-zinc-950 px-3 py-2">
-            <code className="flex-1 truncate font-mono text-sm text-zinc-50">{revealedPassword}</code>
-            <Button type="button" size="sm" variant="secondary" onClick={() => void copyPassword()}>
-              <Copy className="h-4 w-4" />
-              {copied ? t('settings.copied') : t('settings.copyPassword')}
-            </Button>
-          </div>
-          <p className="text-xs text-amber-300">{t('settings.invitePasswordWarning')}</p>
-          <Button type="button" onClick={onClose}>
-            {t('common.back')}
-          </Button>
-        </div>
-      ) : (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            invite.mutate();
-          }}
-        >
-          <Input
-            label={t('settings.memberName')}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
-            maxLength={120}
-          />
-          <Input
-            label={t('auth.email')}
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          <Select
-            label={t('settings.memberRole')}
-            value={role}
-            onChange={(event) => setRole(event.target.value as InviteRole)}
-          >
-            {INVITE_ROLES.map((value) => (
-              <option key={value} value={value}>
-                {t(`settings.roles.${value}`)}
-              </option>
-            ))}
-          </Select>
-          <p className="text-xs text-zinc-500">{t('settings.inviteHint')}</p>
-          {error ? (
-            <p className="text-sm text-red-300" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" loading={invite.isPending}>
-              {t('settings.inviteSubmit')}
-            </Button>
-          </div>
-        </form>
-      )}
-    </Modal>
-  );
-}
-
-function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const [pluginName, setPluginName] = useState('Meu agente de prospecção');
-  const [generatedToken, setGeneratedToken] = useState<string | null>(null);
-  const [pluginError, setPluginError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [url, setUrl] = useState('');
-  const [label, setLabel] = useState('');
-  const [enabled, setEnabled] = useState(true);
-  const [webhookMessage, setWebhookMessage] = useState<string | null>(null);
-  const [webhookError, setWebhookError] = useState<string | null>(null);
-
-  const tokens = useQuery({
-    queryKey: ['plugin-tokens'],
-    queryFn: fetchPluginTokens,
-    enabled: canManage,
-  });
-
-  const createToken = useMutation({
-    mutationFn: () => createPluginToken(pluginName),
-    onSuccess: async (data) => {
-      setGeneratedToken(data.token);
-      setPluginError(null);
-      await queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] });
-    },
-    onError: () => setPluginError(t('settings.pluginKeyError')),
-  });
-
-  useEffect(() => {
-    if (!generatedToken) return undefined;
-    const timeout = window.setTimeout(() => {
-      setGeneratedToken(null);
-      setCopied(false);
-    }, 15_000);
-    return () => window.clearTimeout(timeout);
-  }, [generatedToken]);
-
-  const revokeToken = useMutation({
-    mutationFn: revokePluginToken,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] }),
-  });
-
-  const saveWebhook = useMutation({
-    mutationFn: () => upsertWebhookIntegration({ url: url.trim(), label: label.trim() || undefined, enabled }),
-    onSuccess: () => {
-      setWebhookMessage(t('settings.webhookSaved'));
-      setWebhookError(null);
-    },
-    onError: (err) => {
-      setWebhookMessage(null);
-      setWebhookError(getApiErrorMessage(err) || t('settings.webhookError'));
-    },
-  });
-
-  if (!canManage) return null;
-
-  return (
-    <Card>
-      <CardHeader title={t('settings.pluginsTitle')} description={t('settings.pluginsDesc')} />
-      <CardContent className="space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ['Cursor', t('settings.pluginCursor')],
-            ['Codex', t('settings.pluginCodex')],
-            ['Notion', t('settings.pluginNotion')],
-            [t('settings.pluginAgents'), t('settings.pluginAgentsDesc')],
-          ].map(([name, description]) => (
-            <div key={name} className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-3">
-              <p className="text-sm font-semibold text-[color:var(--ink)]">{name}</p>
-              <p className="mt-1 text-xs leading-5 text-[color:var(--ink-muted)]">{description}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-card)] p-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <Input
-              className="min-w-[min(100%,22rem)] flex-1"
-              label={t('settings.pluginName')}
-              value={pluginName}
-              onChange={(event) => setPluginName(event.target.value)}
-              maxLength={80}
-            />
-            <Button type="button" loading={createToken.isPending} disabled={!pluginName.trim()} onClick={() => createToken.mutate()}>
-              {t('settings.generatePluginKey')}
-            </Button>
-          </div>
-          {pluginError ? <p className="mt-3 text-sm text-red-700" role="alert">{pluginError}</p> : null}
-          {generatedToken ? (
-            <div className="mt-4 rounded-control border border-sky-200 bg-sky-50 p-3">
-              <p className="text-sm font-semibold text-sky-900">{t('settings.pluginKeyCreated')}</p>
-              <p className="mt-1 text-xs text-sky-800">{t('settings.pluginKeyWarning')}</p>
-              <div className="mt-3 flex gap-2">
-                <code className="min-w-0 flex-1 overflow-x-auto rounded-control bg-white px-3 py-2 text-xs text-slate-700">{generatedToken}</code>
-                <Button type="button" variant="secondary" size="sm" onClick={() => void navigator.clipboard.writeText(generatedToken).then(() => setCopied(true))}>
-                  {copied ? t('settings.copied') : t('settings.copyPluginKey')}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-          {!tokens.isLoading && tokens.data?.length ? (
-            <div className="mt-4 space-y-2 border-t border-[color:var(--border)] pt-4">
-              {tokens.data.map((token) => (
-                <div key={token.id} className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <span className="text-[color:var(--ink)]">{token.name} <code className="text-xs text-[color:var(--ink-muted)]">{token.tokenPrefix}</code></span>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => revokeToken.mutate(token.id)}>{t('settings.revokePluginKey')}</Button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <details className="rounded-panel border border-[color:var(--border)] p-4">
-          <summary className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">{t('settings.webhookSection')}</summary>
-          <div className="mt-4 space-y-4">
-            <Input label={t('settings.webhookUrl')} type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://hooks.example.com/prospectly" />
-            <Input label={t('settings.webhookLabel')} value={label} onChange={(event) => setLabel(event.target.value)} maxLength={120} />
-            <label className="flex items-center gap-2 text-sm text-[color:var(--ink-muted)]">
-              <input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />
-              {enabled ? t('settings.webhookEnabled') : t('settings.webhookDisabled')}
-            </label>
-            {webhookMessage ? <p className="text-sm text-emerald-700">{webhookMessage}</p> : null}
-            {webhookError ? <p className="text-sm text-red-700" role="alert">{webhookError}</p> : null}
-            <Button type="button" loading={saveWebhook.isPending} disabled={!url.trim()} onClick={() => saveWebhook.mutate()}>{t('settings.webhookSave')}</Button>
-          </div>
-        </details>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function SettingsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
-  const clearAuth = useAuthStore((state) => state.clear);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(user?.name ?? '');
@@ -329,9 +63,6 @@ export function SettingsPage() {
   const [orgError, setOrgError] = useState<string | null>(null);
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-  const [dsrMessage, setDsrMessage] = useState<string | null>(null);
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
   const [emailMessage, setEmailMessage] = useState<string | null>(null);
@@ -339,6 +70,8 @@ export function SettingsPage() {
 
   const manage = canManageOrg(user?.role);
   const emailVerified = Boolean(user?.emailVerifiedAt);
+  const requestedTab = parseSettingsTab(searchParams.get('tab'));
+  const tab = requestedTab === 'integrations' && !manage ? 'account' : requestedTab;
 
   useEffect(() => {
     setName(user?.name ?? '');
@@ -377,9 +110,7 @@ export function SettingsPage() {
       updateProfile({
         name: name.trim(),
         locale,
-        ...(avatarPreview && avatarPreview !== user?.avatarUrl
-          ? { avatarUrl: avatarPreview }
-          : {}),
+        ...(avatarPreview && avatarPreview !== user?.avatarUrl ? { avatarUrl: avatarPreview } : {}),
       }),
     onSuccess: async (data) => {
       updateUser({
@@ -408,15 +139,12 @@ export function SettingsPage() {
     onError: (err) => {
       const msg = getApiErrorMessage(err);
       setOrgMessage(null);
-      setOrgError(
-        msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'),
-      );
+      setOrgError(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'));
     },
   });
 
   const changeEmailMutation = useMutation({
-    mutationFn: () =>
-      changeEmail({ newEmail: newEmail.trim(), currentPassword: emailPassword }),
+    mutationFn: () => changeEmail({ newEmail: newEmail.trim(), currentPassword: emailPassword }),
     onSuccess: (data) => {
       setEmailMessage(data.message || t('settings.emailChangeSuccess'));
       setEmailError(null);
@@ -426,33 +154,6 @@ export function SettingsPage() {
     onError: (err) => {
       setEmailMessage(null);
       setEmailError(getApiErrorMessage(err) || t('settings.emailChangeError'));
-    },
-  });
-
-  const exportData = useMutation({
-    mutationFn: () =>
-      requestDataExport('Solicitação via app — exportação de dados pessoais (LGPD)'),
-    onSuccess: () => setDsrMessage(t('settings.exportSuccess')),
-    onError: (err) => setDsrMessage(getApiErrorMessage(err)),
-  });
-
-  const deleteAccount = useMutation({
-    mutationFn: () =>
-      requestDataDeletion('Solicitação via app — exclusão de conta (LGPD)'),
-    onSuccess: async () => {
-      setDsrMessage(t('settings.deleteSuccess'));
-      setDeleteOpen(false);
-      try {
-        await logout();
-      } catch {
-        /* ignore */
-      }
-      clearAuth();
-      window.location.assign('/login');
-    },
-    onError: (err) => {
-      const msg = getApiErrorMessage(err);
-      setDsrMessage(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg);
     },
   });
 
@@ -488,301 +189,302 @@ export function SettingsPage() {
     (avatarPreview ?? null) !== (user?.avatarUrl ?? null);
 
   const orgDirty = orgName.trim() !== (orgQuery.data?.name ?? user?.organizationName ?? '');
-  const confirmWord = i18n.language.startsWith('en') ? 'DELETE' : 'EXCLUIR';
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('settings.title')}</h1>
-        <p className="text-sm text-zinc-500">{user?.organizationName}</p>
+    <SettingsShell active={tab} showIntegrations={manage}>
+      <div className="space-y-6" hidden={tab !== 'account'}>
+        <Card>
+          <CardHeader
+            className="px-6 py-5 sm:px-8"
+            title={t('settings.profileTitle')}
+            description={t('settings.profileDesc')}
+          />
+          <CardContent className="space-y-6 px-6 pb-6 sm:px-8 sm:pb-8">
+            <div className="flex flex-col gap-8 sm:flex-row sm:items-start">
+              <div className="flex flex-col items-center gap-3 sm:w-40">
+                <div
+                  className={cn(
+                    'flex h-24 w-24 items-center justify-center overflow-hidden rounded-full',
+                    'border border-[color:var(--border)] bg-[color:var(--surface-hover)] text-xl font-semibold text-[color:var(--ink)]',
+                  )}
+                >
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    initials(name || user?.name || '?')
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="glass"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" />
+                  {t('settings.changePhoto')}
+                </Button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => void onPickAvatar(event.target.files?.[0])}
+                />
+              </div>
+              <div className="min-w-0 flex-1 space-y-4">
+                <Input
+                  id="profile-name"
+                  name="profile-name"
+                  className="h-11"
+                  label={t('settings.memberName')}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  maxLength={120}
+                  leadingIcon={<User className="h-4 w-4" />}
+                />
+                <Input
+                  id="profile-email"
+                  name="profile-email"
+                  className="h-11"
+                  label={t('auth.email')}
+                  value={user?.email ?? ''}
+                  disabled
+                  readOnly
+                  leadingIcon={<Mail className="h-4 w-4" />}
+                />
+              </div>
+            </div>
+            {profileMessage ? <Alert tone="success">{profileMessage}</Alert> : null}
+            {profileError ? <Alert tone="error">{profileError}</Alert> : null}
+            <div className="flex justify-end">
+              <Button
+                loading={saveProfile.isPending}
+                disabled={!profileDirty}
+                onClick={() => saveProfile.mutate()}
+              >
+                {t('common.save')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader
+            className="px-6 py-5 sm:px-8"
+            title={t('settings.preferencesTitle')}
+            description={t('settings.preferencesDesc')}
+          />
+          <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8">
+            <Select
+              id="profile-locale"
+              name="profile-locale"
+              className="h-11 max-w-md"
+              label={t('auth.language')}
+              value={locale}
+              onChange={(event) => setLocale(event.target.value as AppLocale)}
+              leadingIcon={<Globe className="h-4 w-4" />}
+            >
+              <option value="pt">{t('auth.languagePt')}</option>
+              <option value="en">{t('auth.languageEn')}</option>
+            </Select>
+            <div className="flex justify-end">
+              <Button
+                loading={saveProfile.isPending}
+                disabled={!profileDirty}
+                onClick={() => saveProfile.mutate()}
+              >
+                {t('common.save')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader
+            className="px-6 py-5 sm:px-8"
+            title={t('settings.orgTitle')}
+            description={t('settings.orgDesc')}
+          />
+          <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8">
+            {orgQuery.isLoading ? (
+              <Skeleton className="h-11" />
+            ) : (
+              <Input
+                id="org-name"
+                name="org-name"
+                className="h-11 max-w-md"
+                label={t('settings.orgName')}
+                value={orgName}
+                onChange={(event) => setOrgName(event.target.value)}
+                disabled={!manage}
+                maxLength={120}
+                leadingIcon={<Building2 className="h-4 w-4" />}
+              />
+            )}
+            {orgMessage ? <Alert tone="success">{orgMessage}</Alert> : null}
+            {orgError ? <Alert tone="error">{orgError}</Alert> : null}
+            {manage ? (
+              <div className="flex justify-end">
+                <Button
+                  loading={saveOrg.isPending}
+                  disabled={!orgDirty || !orgName.trim() || !emailVerified}
+                  onClick={() => saveOrg.mutate()}
+                >
+                  {t('common.save')}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.orgReadOnly')}</p>
+            )}
+            {manage && !emailVerified ? (
+              <Alert tone="warning">{t('settings.emailGateHint')}</Alert>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader
+            className="px-6 py-5 sm:px-8"
+            title={t('settings.emailTitle')}
+            description={t('settings.emailDesc')}
+          />
+          <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8" id="email">
+            <p className="text-sm text-[color:var(--ink-muted)]">
+              {emailVerified ? t('settings.emailVerified') : t('settings.emailUnverified')}
+              {user?.email ? ` · ${user.email}` : null}
+            </p>
+            <Input
+              id="new-email"
+              name="new-email"
+              className="h-11"
+              label={t('settings.emailNew')}
+              type="email"
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+              autoComplete="email"
+              leadingIcon={<Mail className="h-4 w-4" />}
+            />
+            <Input
+              id="email-password"
+              name="email-password"
+              className="h-11"
+              label={t('settings.emailCurrentPassword')}
+              type="password"
+              value={emailPassword}
+              onChange={(event) => setEmailPassword(event.target.value)}
+              autoComplete="current-password"
+              leadingIcon={<Lock className="h-4 w-4" />}
+            />
+            {emailMessage ? <Alert tone="success">{emailMessage}</Alert> : null}
+            {emailError ? <Alert tone="error">{emailError}</Alert> : null}
+            <div className="flex justify-end">
+              <Button
+                loading={changeEmailMutation.isPending}
+                disabled={!newEmail.trim() || !emailPassword}
+                onClick={() => changeEmailMutation.mutate()}
+              >
+                {t('settings.emailChangeSubmit')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader title={t('settings.profileTitle')} description={t('settings.profileDesc')} />
-        <CardContent className="space-y-5">
-          <div className="space-y-5">
-            <div className="relative mx-auto w-fit">
-              <div
-                className={cn(
-                  'flex h-20 w-20 items-center justify-center overflow-hidden rounded-full',
-                  'border border-zinc-700 bg-zinc-800 text-lg font-semibold text-zinc-100',
-                )}
-              >
-                {avatarPreview ? (
-                  <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  initials(name || user?.name || '?')
-                )}
-              </div>
-              <button
-                type="button"
-                className="cta-glass absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full !shadow-none"
-                aria-label={t('settings.changePhoto')}
-                onClick={() => fileRef.current?.click()}
-              >
-                <Camera className="h-4 w-4" />
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => void onPickAvatar(event.target.files?.[0])}
-              />
-            </div>
-            <div className="space-y-3">
-              <Input
-                label={t('settings.memberName')}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={120}
-              />
-              <Input label={t('auth.email')} value={user?.email ?? ''} disabled readOnly />
-              <Select
-                label={t('auth.language')}
-                value={locale}
-                onChange={(event) => setLocale(event.target.value as AppLocale)}
-              >
-                <option value="pt">{t('auth.languagePt')}</option>
-                <option value="en">{t('auth.languageEn')}</option>
-              </Select>
-            </div>
-          </div>
-          {profileMessage ? <p className="text-sm text-brand-300">{profileMessage}</p> : null}
-          {profileError ? (
-            <p className="text-sm text-red-400" role="alert">
-              {profileError}
-            </p>
-          ) : null}
-          <Button
-            loading={saveProfile.isPending}
-            disabled={!profileDirty}
-            onClick={() => saveProfile.mutate()}
-          >
-            {t('common.save')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader title={t('settings.emailTitle')} description={t('settings.emailDesc')} />
-        <CardContent className="space-y-3" id="email">
-          <p className="text-sm text-zinc-400">
-            {emailVerified ? t('settings.emailVerified') : t('settings.emailUnverified')}
-            {user?.email ? ` · ${user.email}` : null}
-          </p>
-          <Input
-            label={t('settings.emailNew')}
-            type="email"
-            value={newEmail}
-            onChange={(event) => setNewEmail(event.target.value)}
-            autoComplete="email"
+      <div className="space-y-6" hidden={tab !== 'team'}>
+        <Card>
+          <CardHeader
+            className="px-6 py-5 sm:px-8"
+            title={t('settings.membersTitle')}
+            description={t('settings.membersDesc')}
+            action={
+              manage ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!emailVerified}
+                  onClick={() => setInviteOpen(true)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  {t('settings.inviteButton')}
+                </Button>
+              ) : undefined
+            }
           />
-          <Input
-            label={t('settings.emailCurrentPassword')}
-            type="password"
-            value={emailPassword}
-            onChange={(event) => setEmailPassword(event.target.value)}
-            autoComplete="current-password"
-          />
-          {emailMessage ? <p className="text-sm text-brand-300">{emailMessage}</p> : null}
-          {emailError ? (
-            <p className="text-sm text-red-400" role="alert">
-              {emailError}
-            </p>
-          ) : null}
-          <Button
-            loading={changeEmailMutation.isPending}
-            disabled={!newEmail.trim() || !emailPassword}
-            onClick={() => changeEmailMutation.mutate()}
-          >
-            {t('settings.emailChangeSubmit')}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader title={t('settings.orgTitle')} description={t('settings.orgDesc')} />
-        <CardContent className="space-y-3">
-          {orgQuery.isLoading ? (
-            <Skeleton className="h-10" />
-          ) : (
-            <Input
-              label={t('settings.orgName')}
-              value={orgName}
-              onChange={(event) => setOrgName(event.target.value)}
-              disabled={!manage}
-              maxLength={120}
-            />
-          )}
-          {orgMessage ? <p className="text-sm text-brand-300">{orgMessage}</p> : null}
-          {orgError ? (
-            <p className="text-sm text-red-400" role="alert">
-              {orgError}
-            </p>
-          ) : null}
-          {manage ? (
-            <Button
-              loading={saveOrg.isPending}
-              disabled={!orgDirty || !orgName.trim() || !emailVerified}
-              onClick={() => saveOrg.mutate()}
-            >
-              {t('common.save')}
-            </Button>
-          ) : (
-            <p className="text-xs text-zinc-500">{t('settings.orgReadOnly')}</p>
-          )}
-          {manage && !emailVerified ? (
-            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <IntegrationsSettingsCard canManage={manage} />
-
-      <Card>
-        <CardHeader
-          title={t('settings.membersTitle')}
-          description={t('settings.membersDesc')}
-          action={
-            manage ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={!emailVerified}
-                onClick={() => setInviteOpen(true)}
-              >
-                <UserPlus className="h-4 w-4" />
-                {t('settings.inviteButton')}
-              </Button>
-            ) : undefined
-          }
-        />
-        <CardContent>
-          {members.isLoading ? (
-            <Skeleton className="h-32" />
-          ) : (
-            <ul className="divide-y divide-zinc-800">
-              {(members.data ?? []).map((member: OrgMember) => (
-                <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-zinc-50">{member.user.name}</p>
-                    <p className="text-xs text-zinc-500">{member.user.email}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {manage && member.user.id !== user?.id ? (
-                      <>
-                        <Select
-                          value={member.role}
-                          aria-label={t('settings.memberRole')}
-                          className="w-36"
-                          onChange={(event) =>
-                            updateRole.mutate({
-                              memberId: member.id,
-                              role: event.target.value as Role,
-                            })
-                          }
-                        >
-                          {(['OWNER', ...INVITE_ROLES] as Role[]).map((value) => (
-                            <option key={value} value={value}>
-                              {t(`settings.roles.${value}`)}
-                            </option>
-                          ))}
-                        </Select>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          aria-label={t('settings.removeMember')}
-                          onClick={() => {
-                            if (window.confirm(t('settings.removeMemberConfirm'))) {
-                              removeMember.mutate(member.id);
+          <CardContent className="px-6 pb-6 sm:px-8 sm:pb-8">
+            {members.isLoading ? (
+              <Skeleton className="h-32" />
+            ) : (members.data ?? []).length === 0 ? (
+              <p className="py-10 text-center text-sm text-[color:var(--ink-muted)]">
+                {t('settings.membersEmpty')}
+              </p>
+            ) : (
+              <ul className="divide-y divide-[color:var(--border)]">
+                {(members.data ?? []).map((member: OrgMember) => (
+                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color:var(--surface-hover)] text-xs font-semibold text-[color:var(--ink)]">
+                        {initials(member.user.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[color:var(--ink)]">
+                          {member.user.name}
+                        </p>
+                        <p className="truncate text-xs text-[color:var(--ink-muted)]">{member.user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {manage && member.user.id !== user?.id ? (
+                        <>
+                          <Select
+                            value={member.role}
+                            aria-label={t('settings.memberRole')}
+                            className="w-36"
+                            onChange={(event) =>
+                              updateRole.mutate({
+                                memberId: member.id,
+                                role: event.target.value as Role,
+                              })
                             }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-400" />
-                        </Button>
-                      </>
-                    ) : (
-                      <Badge tone={member.role === 'OWNER' ? 'brand' : 'slate'}>
-                        {t(`settings.roles.${member.role}`, { defaultValue: member.role })}
-                      </Badge>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                          >
+                            {MEMBER_ROLES.map((value) => (
+                              <option key={value} value={value}>
+                                {t(`settings.roles.${value}`)}
+                              </option>
+                            ))}
+                          </Select>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t('settings.removeMember')}
+                            onClick={() => {
+                              if (window.confirm(t('settings.removeMemberConfirm'))) {
+                                removeMember.mutate(member.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge tone={member.role === 'OWNER' ? 'brand' : 'slate'}>
+                          {t(`settings.roles.${member.role}`, { defaultValue: member.role })}
+                        </Badge>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-      <Card>
-        <CardHeader title={t('settings.privacyTitle')} description={t('settings.privacyDesc')} />
-        <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-300">{t('settings.privacyBody')}</p>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/settings/privacy"
-              className="inline-flex h-10 items-center justify-center rounded-control bg-zinc-800 px-4 text-sm font-medium text-zinc-50 hover:bg-zinc-700"
-            >
-              {t('settings.viewLgpd')}
-            </Link>
-            <Button
-              type="button"
-              variant="outline"
-              loading={exportData.isPending}
-              disabled={!emailVerified}
-              onClick={() => exportData.mutate()}
-            >
-              {t('settings.requestExport')}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              disabled={!emailVerified}
-              onClick={() => setDeleteOpen(true)}
-            >
-              {t('settings.deleteAccount')}
-            </Button>
-          </div>
-          {!emailVerified ? (
-            <p className="text-xs text-amber-200/90">{t('settings.emailGateHint')}</p>
-          ) : null}
-          {dsrMessage ? <p className="text-sm text-zinc-200">{dsrMessage}</p> : null}
-        </CardContent>
-      </Card>
+      <div hidden={tab !== 'integrations'}>
+        <IntegrationsSettingsCard canManage={manage} />
+      </div>
 
       <InviteMemberModal open={inviteOpen} onClose={() => setInviteOpen(false)} />
-
-      <Modal
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        title={t('settings.deleteAccountTitle')}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-zinc-300">{t('settings.deleteAccountBody')}</p>
-          <Input
-            label={t('settings.deleteConfirmLabel', { word: confirmWord })}
-            value={deleteConfirm}
-            onChange={(event) => setDeleteConfirm(event.target.value)}
-            autoComplete="off"
-          />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setDeleteOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              loading={deleteAccount.isPending}
-              disabled={deleteConfirm.trim().toUpperCase() !== confirmWord}
-              onClick={() => deleteAccount.mutate()}
-            >
-              {t('settings.deleteAccount')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+    </SettingsShell>
   );
 }

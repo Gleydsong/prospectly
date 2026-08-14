@@ -1,14 +1,15 @@
-import { forwardRef, type SelectHTMLAttributes } from 'react';
+import { forwardRef, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
+  leadingIcon?: ReactNode;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, id, children, ...props }, ref) => {
+  ({ className, label, error, id, children, leadingIcon, ...props }, ref) => {
     const inputId = id ?? props.name;
     return (
       <div className="w-full">
@@ -17,20 +18,31 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </label>
         ) : null}
-        <select
-          ref={ref}
-          id={inputId}
-          aria-invalid={error ? true : undefined}
-          className={cn(
-            'field-control h-10 w-full rounded-control px-3 text-sm',
-            'focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
-            className,
-          )}
-          {...props}
-        >
-          {children}
-        </select>
+        <div className="relative">
+          {leadingIcon ? (
+            <span
+              className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[color:var(--ink-muted)]"
+              aria-hidden
+            >
+              {leadingIcon}
+            </span>
+          ) : null}
+          <select
+            ref={ref}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
+            className={cn(
+              'field-control h-10 w-full rounded-control px-3 text-sm',
+              'focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]',
+              leadingIcon && 'pl-10',
+              error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
+              className,
+            )}
+            {...props}
+          >
+            {children}
+          </select>
+        </div>
         {error ? (
           <p className="mt-1 text-sm text-red-400" role="alert">
             {error}

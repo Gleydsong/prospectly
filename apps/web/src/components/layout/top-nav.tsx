@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Bell, Coins, LogOut, Menu, Search, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 
@@ -62,6 +63,25 @@ export function TopNav() {
   const { user, clear } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    const onResize = () => {
+      if (window.matchMedia('(min-width: 1024px)').matches) setMobileOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [mobileOpen]);
+
   const billing = useQuery({
     queryKey: ['billing', 'status'],
     queryFn: getBillingStatus,
@@ -90,6 +110,8 @@ export function TopNav() {
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] lg:hidden"
           onClick={() => setMobileOpen(true)}
           aria-label={t('nav.openMenu')}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-nav"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -184,15 +206,19 @@ export function TopNav() {
         </button>
       </div>
 
-      {mobileOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[var(--chrome-overlay)] backdrop-blur-sm"
-            aria-label={t('nav.closeMenu')}
-            onClick={() => setMobileOpen(false)}
-          />
-          <aside className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] backdrop-blur-xl">
+      {mobileOpen
+        ? createPortal(
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-[var(--chrome-overlay)] backdrop-blur-sm"
+                aria-label={t('nav.closeMenu')}
+                onClick={() => setMobileOpen(false)}
+              />
+              <aside
+                id="mobile-nav"
+                className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] shadow-elevated"
+              >
             <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
               <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
                 <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
@@ -256,9 +282,11 @@ export function TopNav() {
                 </div>
               ))}
             </nav>
-          </aside>
-        </div>
-      ) : null}
+              </aside>
+            </div>,
+            document.body,
+          )
+        : null}
     </header>
   );
 }
