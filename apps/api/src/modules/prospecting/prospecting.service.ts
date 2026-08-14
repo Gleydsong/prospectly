@@ -526,10 +526,14 @@ export class ProspectingService {
   private async resolvePlan(organizationId: string): Promise<OrgPlan> {
     const org = await this.prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
-      select: { plan: true, planStatus: true },
+      select: { plan: true, planStatus: true, currentPeriodEnd: true },
     });
     if (!org) throw new NotFoundException('Organization not found');
-    return effectivePlan({ plan: org.plan, planStatus: org.planStatus });
+    return effectivePlan({
+      plan: org.plan,
+      planStatus: org.planStatus,
+      currentPeriodEnd: org.currentPeriodEnd,
+    });
   }
 
   private async assertCategoriesAllowed(

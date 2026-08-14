@@ -328,6 +328,16 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     if (!org) return;
 
     if (org.plan === OrgPlan.STARTER_MONTHLY && org.paymentProvider === PaymentProvider.ABACATE) {
+      if (
+        paymentId &&
+        org.abacatePaymentId &&
+        org.abacatePaymentId !== paymentId
+      ) {
+        this.logger.warn(
+          `Ignoring Abacate ${type} for org ${organizationId}: payment ${paymentId} does not match active monthly charge ${org.abacatePaymentId}`,
+        );
+        return;
+      }
       this.logger.warn(
         `Revoking monthly PIX entitlement for org ${organizationId} after Abacate ${type}`,
       );

@@ -1,4 +1,4 @@
-import { OrgPlan, PlanStatus } from '@prisma/client';
+import { OrgPlan } from '@prisma/client';
 import {
   FREE_PROSPECTING_CATEGORIES,
   PROSPECTING_CATEGORIES,
@@ -7,16 +7,18 @@ import {
   type ProspectingCategoryOption,
 } from '@prospectly/shared-types';
 
+import {
+  effectivePlan as resolveEffectivePlan,
+  type PlanEntitlementContext,
+} from '../../billing/domain/plan-entitlement';
+
 export const CATEGORY_REQUIRED_PLAN = OrgPlan.STARTER_MONTHLY;
 
-interface PlanContext {
-  plan: OrgPlan;
-  planStatus: PlanStatus;
-}
+export type PlanContext = PlanEntitlementContext;
 
 /** Paid plans unlock the whole catalog; everything else falls back to the free subset. */
-export function effectivePlan({ plan, planStatus }: PlanContext): OrgPlan {
-  return planStatus === PlanStatus.ACTIVE ? plan : OrgPlan.FREE;
+export function effectivePlan(context: PlanContext): OrgPlan {
+  return resolveEffectivePlan(context);
 }
 
 export function isCategoryAvailable(plan: OrgPlan, category: string): boolean {
