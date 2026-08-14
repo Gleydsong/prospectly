@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BrainCircuit, Search, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Search, ShieldCheck, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
@@ -20,7 +20,14 @@ import {
 } from '@/features/opportunity-finder/hooks';
 import { useGeoCities, useGeoRegions } from '@/features/prospecting/hooks';
 import { getApiErrorMessage } from '@/lib/api';
+import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
 import { CREDIT_COSTS, type OpportunityCandidateView } from '@/types';
+
+const GENERIC_AUDIENCE = /negócios locais brasileiros/i;
+
+function specificAudience(targets: string[]): string[] {
+  return targets.filter((target) => !GENERIC_AUDIENCE.test(target));
+}
 
 const activeStatuses = new Set(['PREPARING', 'SEARCHING', 'ANALYZING', 'RANKING']);
 const statusLabels: Record<string, string> = {
@@ -54,6 +61,7 @@ export function OpportunityFinderPage() {
     counts[candidate.rankingCategory] = (counts[candidate.rankingCategory] ?? 0) + 1;
     return counts;
   }, {});
+  const audience = run?.profile ? specificAudience(run.profile.targetCustomer) : [];
 
   const start = async () => {
     if (!service.trim() || !state || !city) {
@@ -130,8 +138,29 @@ export function OpportunityFinderPage() {
 
       {run?.profile ? (
         <Card>
-          <CardContent className="p-5">
-            <div className="flex items-start gap-3"><BrainCircuit className="mt-0.5 h-5 w-5 text-[color:var(--accent)]" /><div><h2 className="font-bold text-[color:var(--ink)]">Perfil de oportunidade</h2><p className="mt-1 text-sm text-[color:var(--ink-muted)]">{run.profile.targetCustomer.join(' · ')}</p><div className="mt-3 flex flex-wrap gap-2">{run.profile.categories.map((category) => <Badge key={category} tone="blue">{category}</Badge>)}</div></div></div>
+          <CardContent className="p-5 sm:p-6">
+            <div className="flex items-start gap-3">
+              <Target className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--ink-muted)]" aria-hidden />
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <h2 className="font-bold text-[color:var(--ink)]">Nichos desta busca</h2>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">
+                    A partir de “{run.profile.service || run.service}”, a Prospectly está procurando
+                    estes tipos de negócio em {run.city}/{run.state}. A lista abaixo vem daí.
+                  </p>
+                </div>
+                {audience.length ? (
+                  <p className="text-sm text-[color:var(--ink)]">Público: {audience.join(' · ')}</p>
+                ) : null}
+                <div className="flex flex-wrap gap-2" aria-label="Tipos de negócio na busca">
+                  {run.profile.categories.map((category) => (
+                    <Badge key={category} tone="slate" className="px-3 py-1 text-sm font-medium normal-case">
+                      {formatCategoryTag(category)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       ) : null}

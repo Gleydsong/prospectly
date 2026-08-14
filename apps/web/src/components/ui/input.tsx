@@ -1,14 +1,15 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  leadingIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => {
+  ({ className, label, error, id, leadingIcon, ...props }, ref) => {
     const inputId = id ?? props.name;
     return (
       <div className="w-full">
@@ -17,20 +18,31 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         ) : null}
-        <input
-          ref={ref}
-          id={inputId}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${inputId}-error` : undefined}
-          className={cn(
-            'field-control h-10 w-full rounded-control px-3 text-sm',
-            'placeholder:text-[color:var(--ink-muted)]',
-            'focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]',
-            error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
-            className,
-          )}
-          {...props}
-        />
+        <div className="relative">
+          {leadingIcon ? (
+            <span
+              className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[color:var(--ink-muted)]"
+              aria-hidden
+            >
+              {leadingIcon}
+            </span>
+          ) : null}
+          <input
+            ref={ref}
+            id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${inputId}-error` : undefined}
+            className={cn(
+              'field-control h-10 w-full rounded-control px-3 text-sm',
+              'placeholder:text-[color:var(--ink-muted)]',
+              'focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]',
+              leadingIcon && 'pl-10',
+              error && 'border-red-500 focus:border-red-500 focus:ring-red-500/20',
+              className,
+            )}
+            {...props}
+          />
+        </div>
         {error ? (
           <p id={`${inputId}-error`} className="mt-1 text-sm text-red-400" role="alert">
             {error}
