@@ -1,6 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { useAuthStore } from '@/stores/auth.store';
+import type { Role } from '@/types';
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
@@ -81,7 +82,7 @@ export async function bootstrapSession(): Promise<boolean> {
   const { accessToken, user, setAuth, setBootstrapped, updateUser, clear } = useAuthStore.getState();
   if (accessToken) {
     setBootstrapped(true);
-    void syncProfileAvatar(updateUser);
+    void syncProfile(updateUser);
     return true;
   }
   if (!user) {
@@ -99,7 +100,7 @@ export async function bootstrapSession(): Promise<boolean> {
     );
     setAuth({ user, accessToken: response.data.accessToken });
     setBootstrapped(true);
-    void syncProfileAvatar(updateUser);
+    void syncProfile(updateUser);
     return true;
   } catch {
     clear();
@@ -108,21 +109,38 @@ export async function bootstrapSession(): Promise<boolean> {
   }
 }
 
-async function syncProfileAvatar(
-  updateUser: (patch: Partial<{ avatarUrl?: string | null; name?: string; emailVerifiedAt?: string | null }>) => void,
+async function syncProfile(
+  updateUser: (patch: Partial<{
+    avatarUrl?: string | null;
+    name?: string;
+    emailVerifiedAt?: string | null;
+    role?: Role;
+    organizationId?: string;
+    organizationName?: string;
+  }>) => void,
 ): Promise<void> {
   try {
     const { data } = await api.get<{
       avatarUrl?: string | null;
       name?: string;
       emailVerifiedAt?: string | null;
+      memberships?: Array<{
+        role: Role;
+        organization: { id: string; name?: string };
+      }>;
     }>('/users/me');
+    const orgId = useAuthStore.getState().user?.organizationId;
+    const membership =
+      data.memberships?.find((item) => item.organization.id === orgId) ?? data.memberships?.[0];
     updateUser({
       avatarUrl: data.avatarUrl ?? null,
       ...(data.name ? { name: data.name } : {}),
       emailVerifiedAt: data.emailVerifiedAt ?? null,
+      ...(membership?.role ? { role: membership.role } : {}),
+      ...(membership?.organization.id ? { organizationId: membership.organization.id } : {}),
+      ...(membership?.organization.name ? { organizationName: membership.organization.name } : {}),
     });
   } catch {
-    /* ignore — avatar stays as cached */
+    /* ignore — avatar/role stay as cached */
   }
 }

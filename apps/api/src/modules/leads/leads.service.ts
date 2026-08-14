@@ -46,7 +46,7 @@ export class LeadsService {
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
     const where = this.buildListWhere(organizationId, query);
 
-    const [total, leads] = await this.prisma.$transaction([
+    const [total, leads] = await Promise.all([
       this.prisma.lead.count({ where }),
       this.prisma.lead.findMany({
         where,

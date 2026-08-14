@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PlanStatus } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -141,6 +141,55 @@ describe('BillingService', () => {
     await expect(service.getOrganizationBilling('org1')).resolves.toEqual(
       expect.objectContaining({
         searchUsage: { used: 12, limit: null, remaining: null, unlimited: true },
+      }),
+    );
+  });
+
+  it('redacts billing admin flags for VIEWER', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      planCurrency: 'BRL',
+      paymentProvider: PaymentProvider.STRIPE,
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: 'sub_1',
+      currentPeriodEnd: null,
+      deletedAt: null,
+      creditBalance: 10,
+    });
+    prisma.search.count.mockResolvedValue(1);
+
+    await expect(service.getOrganizationBilling('org1', 'VIEWER')).resolves.toEqual(
+      expect.objectContaining({
+        creditBalance: 10,
+        hasStripeCustomer: false,
+        canOpenPortal: false,
+        canCancelSubscription: false,
+      }),
+    );
+  });
+
+  it('keeps billing admin flags for OWNER', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      planCurrency: 'BRL',
+      paymentProvider: PaymentProvider.STRIPE,
+      stripeCustomerId: 'cus_1',
+      stripeSubscriptionId: 'sub_1',
+      currentPeriodEnd: null,
+      deletedAt: null,
+      creditBalance: 10,
+    });
+    prisma.search.count.mockResolvedValue(1);
+
+    await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
+      expect.objectContaining({
+        hasStripeCustomer: true,
+        canOpenPortal: true,
+        canCancelSubscription: true,
       }),
     );
   });

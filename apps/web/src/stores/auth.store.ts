@@ -14,6 +14,12 @@ interface AuthState {
   clear: () => void;
 }
 
+export function persistableUser(user: AuthUser | null): Omit<AuthUser, 'role'> | null {
+  if (!user) return null;
+  const { role: _role, ...safe } = user;
+  return safe;
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -29,7 +35,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'prospectly-auth',
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({
+        user: persistableUser(state.user),
+      }),
     },
   ),
 );

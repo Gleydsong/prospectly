@@ -1,7 +1,7 @@
 import { ExternalLink, Globe, Mail, MessageCircle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { sanitizeExternalUrl } from '@/lib/safe-url';
+import { sanitizeExternalUrl, sanitizeMailtoHref } from '@/lib/safe-url';
 
 export type LeadContactChannelInput = {
   companyName: string;
@@ -70,13 +70,14 @@ interface LeadContactChannelsProps {
 export function LeadContactChannels({ lead, className }: LeadContactChannelsProps) {
   const blocked = Boolean(lead.doNotContact);
   const email = lead.email?.trim() || null;
+  const emailHref = email ? sanitizeMailtoHref(email) : null;
   const websiteHref = lead.website ? sanitizeExternalUrl(lead.website) : null;
   const whatsappRaw = (lead.whatsapp?.trim() || lead.phone?.trim() || '') || null;
   const message = buildWhatsAppOutreachMessage(lead);
   const whatsappHref =
     !blocked && whatsappRaw ? buildWhatsAppHref(whatsappRaw, message) : null;
 
-  const emailTone: ChannelTone = blocked ? 'blocked' : email ? 'ready' : 'missing';
+  const emailTone: ChannelTone = blocked ? 'blocked' : emailHref ? 'ready' : 'missing';
   const websiteTone: ChannelTone = websiteHref ? 'ready' : 'missing';
   const whatsappTone: ChannelTone = blocked ? 'blocked' : whatsappHref ? 'ready' : 'missing';
 
@@ -84,9 +85,9 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
     <div className={cn('mt-3', className)}>
       <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Canais de contacto</p>
       <div className="flex flex-wrap gap-1.5">
-        {email && !blocked ? (
+        {emailHref && !blocked ? (
           <a
-            href={`mailto:${email}`}
+            href={emailHref}
             className={cn(
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
               channelClass(emailTone),

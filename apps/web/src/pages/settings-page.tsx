@@ -29,6 +29,7 @@ import { setAppLocale } from '@/i18n';
 import { compressAvatarFile } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
 import type { AppLocale } from '@/lib/locale';
+import { sanitizeAvatarSrc } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
@@ -103,6 +104,7 @@ export function SettingsPage() {
   const members = useQuery({
     queryKey: ['organizations', 'members'],
     queryFn: fetchOrganizationMembers,
+    enabled: manage,
   });
 
   const saveProfile = useMutation({
@@ -189,6 +191,7 @@ export function SettingsPage() {
     (avatarPreview ?? null) !== (user?.avatarUrl ?? null);
 
   const orgDirty = orgName.trim() !== (orgQuery.data?.name ?? user?.organizationName ?? '');
+  const safeAvatarPreview = sanitizeAvatarSrc(avatarPreview);
 
   return (
     <SettingsShell active={tab} showIntegrations={manage}>
@@ -208,8 +211,8 @@ export function SettingsPage() {
                     'border border-[color:var(--border)] bg-[color:var(--surface-hover)] text-xl font-semibold text-[color:var(--ink)]',
                   )}
                 >
-                  {avatarPreview ? (
-                    <img src={avatarPreview} alt="" className="h-full w-full object-cover" />
+                  {safeAvatarPreview ? (
+                    <img src={safeAvatarPreview} alt="" className="h-full w-full object-cover" />
                   ) : (
                     initials(name || user?.name || '?')
                   )}

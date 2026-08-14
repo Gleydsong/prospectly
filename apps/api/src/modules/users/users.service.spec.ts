@@ -15,6 +15,7 @@ const makePrisma = () => {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findUniqueOrThrow: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -37,9 +38,13 @@ describe('UsersService data-subject workflow', () => {
     });
     const service = new UsersService(prisma, audit);
 
-    const result = await service.createDataSubjectRequest('u1', 'EXPORT', 'notes', 'org1');
+    await service.createDataSubjectRequest('u1', 'EXPORT', 'notes', 'org1');
 
-    expect(result.status).toBe(DSR_STATUS.PENDING);
+    expect(prisma.dataSubjectRequest.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: 'u1', organizationId: 'org1', type: 'EXPORT' }),
+      }),
+    );
     expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: 'org1',
@@ -50,10 +55,9 @@ describe('UsersService data-subject workflow', () => {
     );
   });
 
-  it('lists only requests from organization members', async () => {
+  it('lists only requests from the current organization', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
-    prisma.organizationMember.findMany.mockResolvedValue([{ userId: 'u1' }, { userId: 'u2' }]);
     prisma.dataSubjectRequest.findMany.mockResolvedValue([{ id: 'dsr1' }]);
     const service = new UsersService(prisma, audit);
 
@@ -61,7 +65,7 @@ describe('UsersService data-subject workflow', () => {
 
     expect(prisma.dataSubjectRequest.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: { in: ['u1', 'u2'] } },
+        where: { organizationId: 'org1' },
       }),
     );
   });
@@ -69,10 +73,16 @@ describe('UsersService data-subject workflow', () => {
   it('approves PENDING and schedules completion stub', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
-    prisma.dataSubjectRequest.findUnique
-      .mockResolvedValueOnce({ id: 'dsr1', userId: 'u1', status: DSR_STATUS.PENDING, type: 'DELETE' })
-      .mockResolvedValueOnce({ status: DSR_STATUS.APPROVED, type: 'DELETE' });
-    prisma.organizationMember.findUnique.mockResolvedValue({ id: 'm1' });
+    prisma.dataSubjectRequest.findFirst.mockResolvedValueOnce({
+      id: 'dsr1',
+      userId: 'u1',
+      status: DSR_STATUS.PENDING,
+      type: 'DELETE',
+    });
+    prisma.dataSubjectRequest.findUnique.mockResolvedValueOnce({
+      status: DSR_STATUS.APPROVED,
+      type: 'DELETE',
+    });
     prisma.dataSubjectRequest.update.mockResolvedValue({
       id: 'dsr1',
       userId: 'u1',
@@ -102,13 +112,12 @@ describe('UsersService data-subject workflow', () => {
   it('rejects complete while still PENDING', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
-    prisma.dataSubjectRequest.findUnique.mockResolvedValue({
+    prisma.dataSubjectRequest.findFirst.mockResolvedValue({
       id: 'dsr1',
       userId: 'u1',
       status: DSR_STATUS.PENDING,
       type: 'EXPORT',
     });
-    prisma.organizationMember.findUnique.mockResolvedValue({ id: 'm1' });
     const service = new UsersService(prisma, audit);
 
     await expect(
@@ -119,13 +128,7 @@ describe('UsersService data-subject workflow', () => {
   it('returns 404 when request is outside organization', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
-    prisma.dataSubjectRequest.findUnique.mockResolvedValue({
-      id: 'dsr1',
-      userId: 'u1',
-      status: DSR_STATUS.PENDING,
-      type: 'EXPORT',
-    });
-    prisma.organizationMember.findUnique.mockResolvedValue(null);
+    prisma.dataSubjectRequest.findFirst.mockResolvedValue(null);
     const service = new UsersService(prisma, audit);
 
     await expect(

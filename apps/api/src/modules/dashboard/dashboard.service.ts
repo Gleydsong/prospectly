@@ -52,7 +52,7 @@ export class DashboardService {
       staleLeads,
       searchCount,
       org,
-    ] = await this.prisma.$transaction([
+    ] = await Promise.all([
       this.prisma.lead.count({ where: baseWhere }),
       this.prisma.lead.count({
         where: periodStart

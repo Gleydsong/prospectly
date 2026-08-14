@@ -30,6 +30,14 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   const nodeEnv =
     typeof config.NODE_ENV === 'string' ? config.NODE_ENV : process.env.NODE_ENV ?? 'development';
 
+  const isProdLike = nodeEnv === 'production' || nodeEnv === 'staging';
+  if (isProdLike) {
+    const appUrl = config.DATABASE_APP_URL;
+    if (typeof appUrl !== 'string' || appUrl.length === 0) {
+      throw new Error('DATABASE_APP_URL is required in production (runtime role without BYPASSRLS)');
+    }
+  }
+
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
     const value = config[key];
     if (typeof value === 'string') {

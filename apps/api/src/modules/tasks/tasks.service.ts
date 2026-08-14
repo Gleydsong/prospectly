@@ -19,7 +19,7 @@ export class TasksService {
       ...(query.leadId ? { leadId: query.leadId } : {}),
     };
 
-    const [total, tasks] = await this.prisma.$transaction([
+    const [total, tasks] = await Promise.all([
       this.prisma.task.count({ where }),
       this.prisma.task.findMany({
         where,

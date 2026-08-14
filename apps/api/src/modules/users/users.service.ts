@@ -92,9 +92,13 @@ export class UsersService {
     notes?: string,
     organizationId?: string,
   ) {
+    if (!organizationId) {
+      throw new BadRequestException('Organization is required');
+    }
     const request = await this.prisma.dataSubjectRequest.create({
       data: {
         userId,
+        organizationId,
         type,
         status: DSR_STATUS.PENDING,
         notes: notes?.trim() || `Solicitação ${type} via API (MVP — revisão administrativa)`,
@@ -114,19 +118,10 @@ export class UsersService {
     return request;
   }
 
-  /** OWNER: list DSRs for members of the current organization. */
+  /** OWNER: list DSRs for the current organization. */
   async listDataSubjectRequests(organizationId: string) {
-    const memberIds = await this.prisma.organizationMember.findMany({
-      where: { organizationId },
-      select: { userId: true },
-    });
-    const userIds = memberIds.map((m) => m.userId);
-    if (userIds.length === 0) {
-      return [];
-    }
-
     return this.prisma.dataSubjectRequest.findMany({
-      where: { userId: { in: userIds } },
+      where: { organizationId },
       select: DSR_PUBLIC_SELECT,
       orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
     });
@@ -240,7 +235,7 @@ export class UsersService {
   ) {
     const now = new Date();
     const result = await this.prisma.dataSubjectRequest.updateMany({
-      where: { id: requestId, status: DSR_STATUS.APPROVED },
+      where: { id: requestId, organizationId, status: DSR_STATUS.APPROVED },
       data: {
         status: DSR_STATUS.COMPLETED,
         completedAt: now,
@@ -278,21 +273,11 @@ export class UsersService {
   }
 
   private async findOrgScopedRequest(organizationId: string, requestId: string) {
-    const request = await this.prisma.dataSubjectRequest.findUnique({
-      where: { id: requestId },
+    const request = await this.prisma.dataSubjectRequest.findFirst({
+      where: { id: requestId, organizationId },
       select: { id: true, userId: true, status: true, type: true },
     });
     if (!request) {
-      throw new NotFoundException('Data subject request not found');
-    }
-
-    const membership = await this.prisma.organizationMember.findUnique({
-      where: {
-        userId_organizationId: { userId: request.userId, organizationId },
-      },
-      select: { id: true },
-    });
-    if (!membership) {
       throw new NotFoundException('Data subject request not found');
     }
 

@@ -384,11 +384,16 @@ const TEMPLATES = [
 ];
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Refusing to run demo seed in production (contains known Demo123! passwords)');
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_PROD_SEED !== 'true') {
+    throw new Error('Refusing to run demo seed in production. Set ALLOW_PROD_SEED=true to override.');
   }
 
-  const passwordHash = await argon2.hash('Demo123!');
+  const password = process.env.SEED_DEMO_PASSWORD ?? (process.env.NODE_ENV === 'production' ? '' : 'Demo123!');
+  if (!password) {
+    throw new Error('SEED_DEMO_PASSWORD is required');
+  }
+
+  const passwordHash = await argon2.hash(password);
 
   const organization = await prisma.organization.upsert({
     where: { slug: 'demo-agency' },

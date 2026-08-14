@@ -5,7 +5,13 @@ import type { AuditService } from '../audit/audit.service';
 import { PipelinesService } from './pipelines.service';
 
 const makePrisma = () => {
-  const prisma = {
+  const prisma: {
+    pipeline: { findFirst: jest.Mock };
+    pipelineStage: { findMany: jest.Mock; findFirst: jest.Mock };
+    lead: { count: jest.Mock; findMany: jest.Mock; findFirst: jest.Mock; update: jest.Mock };
+    leadActivity: { create: jest.Mock };
+    $transaction: jest.Mock;
+  } = {
     pipeline: {
       findFirst: jest.fn(),
     },
@@ -22,8 +28,14 @@ const makePrisma = () => {
     leadActivity: {
       create: jest.fn(),
     },
-    $transaction: jest.fn(async (ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
+    $transaction: jest.fn(),
   };
+  prisma.$transaction.mockImplementation(async (arg: unknown) => {
+    if (typeof arg === 'function') {
+      return (arg as (tx: typeof prisma) => Promise<unknown>)(prisma);
+    }
+    return Promise.all(arg as Promise<unknown>[]);
+  });
   return prisma as unknown as PrismaService & typeof prisma;
 };
 
@@ -48,7 +60,11 @@ describe('PipelinesService', () => {
     expect(firstStage!.hasMore).toBe(true);
     expect(firstStage!.leads).toHaveLength(50);
     expect(prisma.lead.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 50, skip: 0 }),
+      expect.objectContaining({
+        take: 50,
+        skip: 0,
+        where: { organizationId: 'org-1', stageId: 'stage-1', deletedAt: null },
+      }),
     );
   });
 
@@ -64,7 +80,11 @@ describe('PipelinesService', () => {
     expect(page.totalCount).toBe(150);
     expect(page.hasMore).toBe(true);
     expect(prisma.lead.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 50, skip: 100 }),
+      expect.objectContaining({
+        take: 50,
+        skip: 100,
+        where: { organizationId: 'org-1', stageId: 'stage-1', deletedAt: null },
+      }),
     );
   });
 

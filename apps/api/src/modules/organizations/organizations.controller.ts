@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
@@ -34,6 +34,7 @@ export class OrganizationsController {
   }
 
   @Get('members')
+  @Roles('OWNER', 'ADMIN')
   listMembers(@CurrentOrg() organizationId: string) {
     return this.organizations.listMembers(organizationId);
   }
@@ -55,7 +56,7 @@ export class OrganizationsController {
   updateMemberRole(
     @CurrentOrg() organizationId: string,
     @CurrentUser() user: AuthenticatedUser,
-    @Param('memberId') memberId: string,
+    @Param('memberId', ParseUUIDPipe) memberId: string,
     @Body() dto: UpdateMemberRoleDto,
   ) {
     return this.organizations.updateMemberRole(
@@ -74,7 +75,7 @@ export class OrganizationsController {
   async removeMember(
     @CurrentOrg() organizationId: string,
     @CurrentUser() user: AuthenticatedUser,
-    @Param('memberId') memberId: string,
+    @Param('memberId', ParseUUIDPipe) memberId: string,
   ): Promise<void> {
     await this.organizations.removeMember(organizationId, memberId, user.id, user.role);
   }

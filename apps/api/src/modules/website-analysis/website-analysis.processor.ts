@@ -9,6 +9,7 @@ import {
   type AnalyzeWebsiteJobData,
 } from './website-analysis.constants';
 import { WebsiteAnalysisService } from './website-analysis.service';
+import { runWithTenant } from '../../common/prisma/tenant-context';
 
 @Processor(WEBSITE_ANALYSIS_QUEUE)
 export class WebsiteAnalysisProcessor extends WorkerHost {
@@ -30,7 +31,9 @@ export class WebsiteAnalysisProcessor extends WorkerHost {
     const correlationId = job.data.correlationId ?? 'unknown';
     const started = Date.now();
     try {
-      await this.websiteAnalysis.processAnalysis(job.data);
+      await runWithTenant(job.data.organizationId, () =>
+        this.websiteAnalysis.processAnalysis(job.data),
+      );
       this.metrics.recordJob(WEBSITE_ANALYSIS_QUEUE, 'completed', Date.now() - started);
       this.logger.log({
         message: 'Website analysis completed',

@@ -28,7 +28,7 @@ export class TemplatesService {
 
   async list(organizationId: string, query: PaginationQueryDto) {
     const where: Prisma.MessageTemplateWhereInput = { organizationId };
-    const [total, data] = await this.prisma.$transaction([
+    const [total, data] = await Promise.all([
       this.prisma.messageTemplate.count({ where }),
       this.prisma.messageTemplate.findMany({
         where,

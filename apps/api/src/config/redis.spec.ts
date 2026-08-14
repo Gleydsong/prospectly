@@ -26,4 +26,17 @@ describe('Redis configuration', () => {
   ])('rejects an invalid REDIS_URL: %s', (redisUrl) => {
     expect(() => validateEnv({ ...baseConfig, REDIS_URL: redisUrl })).toThrow('REDIS_URL');
   });
+
+  it('requires DATABASE_APP_URL in production', () => {
+    expect(() =>
+      validateEnv({ ...baseConfig, NODE_ENV: 'production' }),
+    ).toThrow('DATABASE_APP_URL');
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        NODE_ENV: 'production',
+        DATABASE_APP_URL: 'postgresql://prospectly_app:secret@localhost:5432/prospectly',
+      }),
+    ).not.toThrow();
+  });
 });

@@ -52,6 +52,8 @@ projects:
                 fromDatabase:
                   name: prospectly-db
                   property: connectionString
+              - key: DATABASE_APP_URL
+                sync: false
               - key: REDIS_URL
                 fromService:
                   type: keyvalue

@@ -5,7 +5,7 @@ import { AppLocale } from '@prisma/client';
 import { MailService } from '../../common/mail/mail.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { JoinWaitlistDto } from './dto/join-waitlist.dto';
-import { buildWaitlistConfirmationEmail } from './waitlist-email';
+import { buildWaitlistConfirmationEmail, escapeHtml } from './waitlist-email';
 
 export type JoinWaitlistResult = { message: string };
 
@@ -74,7 +74,7 @@ export class WaitlistService {
           to: notifyTo,
           subject: `Novo waitlist: ${email}`,
           text: `Novo cadastro na lista de espera.\n\nE-mail: ${email}\nLocale: ${locale}\nSource: ${source}\n`,
-          html: `<p>Novo cadastro na lista de espera.</p><p><strong>E-mail:</strong> ${email}<br/><strong>Locale:</strong> ${locale}<br/><strong>Source:</strong> ${source}</p>`,
+          html: `<p>Novo cadastro na lista de espera.</p><p><strong>E-mail:</strong> ${escapeHtml(email)}<br/><strong>Locale:</strong> ${escapeHtml(locale)}<br/><strong>Source:</strong> ${escapeHtml(source)}</p>`,
         });
       } catch (err) {
         this.logger.error(

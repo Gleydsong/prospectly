@@ -34,4 +34,16 @@ describe('PluginAccessService', () => {
     await expect(service.resolveOrganization('pst_test-key')).resolves.toBe('org_1');
     expect(prisma.pluginToken.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'token_1' } }));
   });
+
+  it('extracts leads without email or phone', async () => {
+    const prisma = {
+      lead: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new PluginAccessService(prisma as never);
+    await service.extract('org_1', 'leads', 10);
+    const select = prisma.lead.findMany.mock.calls[0][0].select as Record<string, boolean>;
+    expect(select.email).toBeUndefined();
+    expect(select.phone).toBeUndefined();
+    expect(select.companyName).toBe(true);
+  });
 });

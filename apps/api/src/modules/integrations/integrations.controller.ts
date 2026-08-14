@@ -8,6 +8,7 @@ import { CreateWebhookIntegrationDto } from './dto/create-webhook-integration.dt
 import { IntegrationsService } from './integrations.service';
 import { PluginAccessService } from './plugin-access.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { runWithTenant } from '../../common/prisma/tenant-context';
 
 @ApiTags('integrations')
 @ApiBearerAuth()
@@ -68,7 +69,9 @@ export class IntegrationsController {
     @Query('limit') limit?: string,
   ) {
     return this.plugins.resolveOrganization(key).then((organizationId) =>
-      this.plugins.extract(organizationId, resource, limit ? Number(limit) : 25),
+      runWithTenant(organizationId, () =>
+        this.plugins.extract(organizationId, resource, limit ? Number(limit) : 25),
+      ),
     );
   }
 }

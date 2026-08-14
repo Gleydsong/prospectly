@@ -128,7 +128,8 @@ describe('CampaignsService', () => {
 
   it('list scopes queries to the authenticated organization', async () => {
     const prisma = makePrisma();
-    prisma.$transaction.mockResolvedValue([0, []]);
+    prisma.campaign.count.mockResolvedValue(0);
+    prisma.campaign.findMany.mockResolvedValue([]);
     const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
 
     await service.list('org-a', { page: 1, pageSize: 20 });

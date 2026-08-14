@@ -291,7 +291,8 @@ describe('ProspectingService', () => {
 
   it('scopes search history and pagination to the current organization', async () => {
     const { prisma, service } = createService();
-    prisma.$transaction.mockResolvedValue([1, [{ id: 'search-1' }]]);
+    prisma.search.count.mockResolvedValue(1);
+    prisma.search.findMany.mockResolvedValue([{ id: 'search-1' }]);
 
     await expect(service.list('org-1', { page: 2, pageSize: 10 })).resolves.toEqual({
       data: [{ id: 'search-1' }],

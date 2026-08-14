@@ -6,6 +6,7 @@ import { MetricsService } from '../ops/metrics.service';
 import { isSearchProviderError } from './domain/search-provider-error';
 import { PROSPECTING_QUEUE, type RunSearchJobData } from './prospecting.constants';
 import { ProspectingService } from './prospecting.service';
+import { runWithBypass, runWithTenant } from '../../common/prisma/tenant-context';
 
 @Processor(PROSPECTING_QUEUE)
 export class ProspectingProcessor extends WorkerHost {
@@ -22,8 +23,13 @@ export class ProspectingProcessor extends WorkerHost {
     let context: { organizationId: string; correlationId: string | null } | null = null;
     const started = Date.now();
     try {
-      context = await this.prospecting.getJobContext(job.data.searchId);
-      await this.prospecting.process(job.data.searchId);
+      context = await runWithBypass(() => this.prospecting.getJobContext(job.data.searchId));
+      const work = () => this.prospecting.process(job.data.searchId);
+      if (context?.organizationId) {
+        await runWithTenant(context.organizationId, work);
+      } else {
+        await runWithBypass(work);
+      }
       this.metrics.recordJob(PROSPECTING_QUEUE, 'completed', Date.now() - started);
     } catch (error) {
       const permanent = isSearchProviderError(error) && !error.retryable;
@@ -31,10 +37,16 @@ export class ProspectingProcessor extends WorkerHost {
       const isFinalAttempt = permanent || job.attemptsMade + 1 >= maxAttempts;
 
       if (isFinalAttempt) {
-        await this.prospecting.recordFailure(
-          job.data.searchId,
-          isSearchProviderError(error) ? error.publicMessage : undefined,
-        );
+        const fail = () =>
+          this.prospecting.recordFailure(
+            job.data.searchId,
+            isSearchProviderError(error) ? error.publicMessage : undefined,
+          );
+        if (context?.organizationId) {
+          await runWithTenant(context.organizationId, fail);
+        } else {
+          await runWithBypass(fail);
+        }
       }
 
       this.metrics.recordJob(

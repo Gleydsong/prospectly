@@ -174,7 +174,7 @@ export class ProspectingService {
       organizationId,
       ...(query.status ? { status: query.status } : {}),
     };
-    const [total, searches] = await this.prisma.$transaction([
+    const [total, searches] = await Promise.all([
       this.prisma.search.count({ where }),
       this.prisma.search.findMany({
         where,
@@ -209,7 +209,7 @@ export class ProspectingService {
   ): Promise<PaginatedResult<unknown>> {
     await this.requireSearch(organizationId, id);
     const where = { searchId: id };
-    const [total, results] = await this.prisma.$transaction([
+    const [total, results] = await Promise.all([
       this.prisma.searchResult.count({ where }),
       this.prisma.searchResult.findMany({
         where,

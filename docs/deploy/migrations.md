@@ -27,11 +27,15 @@ Render uses `healthCheckPath: /health/ready`. Do not mark a new revision live un
 Recommended order for a release that includes schema changes:
 
 1. Build and publish the API image (runner target; default Dockerfile stage).
-2. Run **one** migrate job/command against production `DATABASE_URL`.
-3. Deploy / roll web instances to the new image.
-4. Confirm `GET /health/ready` on the new revision.
+2. Run **one** migrate job/command against production `DATABASE_URL` (owner / BYPASSRLS).
+3. Provision `prospectly_app` with `LOGIN` and a strong secret from the platform secret manager. The migration creates the role as `NOLOGIN`, without a password and without `BYPASSRLS`.
+4. Set `DATABASE_APP_URL` with that externally managed credential. Never commit or embed the password in a migration, image, command history, or repository environment file.
+5. Deploy / roll web instances to the new image (runtime uses `DATABASE_APP_URL`, then falls back to `DATABASE_URL`).
+6. Confirm `GET /health/ready` on the new revision.
 
 If the release has **no** schema change, skip step 2.
+
+The role provisioning operation is intentionally outside Prisma migrations so the password is never stored in source control. Execute the equivalent of `ALTER ROLE prospectly_app LOGIN PASSWORD <secret>` through the provider's protected SQL console or a release job that reads the password directly from its secret manager.
 
 ### Local / CI one-off
 
@@ -74,7 +78,7 @@ Avoid expand+contract in the same release when rolling instances gradually. Brea
 |-----------|--------|
 | New app bad, **no** migrate in release | Redeploy previous API image/revision. |
 | New app bad, migrate was **expand-only** (additive) | Redeploy previous API image. Old code typically still works with extra columns/tables. Schedule a later contract if needed. |
-| Migrate was **destructive** / incompatible | Do **not** rely on automatic down migrations in production. Restore DB from snapshot/backup taken before migrate, then redeploy previous API image. Prefer avoiding destructive migrations without a tested restore path. |
+| New app bad, migrate was **destructive** / incompatible | Do **not** rely on automatic down migrations in production. Restore DB from snapshot/backup taken before migrate, then redeploy previous API image. Prefer avoiding destructive migrations without a tested restore path. |
 
 Always take (or confirm) a DB snapshot/backup before running migrate in production.
 
