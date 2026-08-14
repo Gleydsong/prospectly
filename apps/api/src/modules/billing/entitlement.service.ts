@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { OrgPlan, PlanStatus, UsageMeterKey } from '@prisma/client';
+import { OrgPlan, UsageMeterKey } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { effectivePlan } from '../prospecting/domain/category-entitlements';
 
 export type FeatureKey =
   | 'searches'
@@ -51,7 +52,11 @@ export class EntitlementService {
       where: { id: organizationId },
       select: { plan: true, planStatus: true, currentPeriodEnd: true },
     });
-    const plan = org.planStatus === PlanStatus.ACTIVE ? org.plan : OrgPlan.FREE;
+    const plan = effectivePlan({
+      plan: org.plan,
+      planStatus: org.planStatus,
+      currentPeriodEnd: org.currentPeriodEnd,
+    });
     const limits = PLAN_ENTITLEMENTS[plan];
     const members = await this.prisma.organizationMember.count({ where: { organizationId } });
 

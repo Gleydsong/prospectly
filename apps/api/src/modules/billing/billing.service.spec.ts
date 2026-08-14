@@ -145,6 +145,44 @@ describe('BillingService', () => {
     );
   });
 
+  it('treats expired monthly PIX as free for search entitlement', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      planCurrency: 'BRL',
+      paymentProvider: 'ABACATE',
+      currentPeriodEnd: new Date(Date.now() - 60_000),
+      creditBalance: 0,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+    prisma.opportunityRun.count.mockResolvedValue(0);
+
+    await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.getSearchUsage('org1')).resolves.toEqual({
+      used: 3,
+      limit: 3,
+      remaining: 0,
+      unlimited: false,
+    });
+  });
+
+  it('keeps monthly PIX unlimited before currentPeriodEnd', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date(Date.now() + 86_400_000),
+      creditBalance: 0,
+      deletedAt: null,
+    });
+
+    await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
+    await expect(service.consumeCreditForSearch('org1', 'search-1')).resolves.toBeUndefined();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('routes card monthly checkout to Stripe redirect', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',

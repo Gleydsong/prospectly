@@ -253,6 +253,52 @@ describe('AbacatePaymentProvider', () => {
     });
   });
 
+  it('revokes monthly PIX when the refunded charge matches the active payment', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: 'STARTER_MONTHLY',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_current',
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_monthly_refund',
+        event: 'transparent.refunded',
+        data: {
+          id: 'pix_current',
+          metadata: { organizationId: 'org1', interval: 'monthly' },
+        },
+      },
+      'transparent.refunded',
+    );
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      status: 'CANCELED',
+    });
+  });
+
+  it('ignores monthly PIX refunds for a previous charge after renew', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: 'STARTER_MONTHLY',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_renewal',
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_stale_refund',
+        event: 'transparent.refunded',
+        data: {
+          id: 'pix_old',
+          metadata: { organizationId: 'org1', interval: 'monthly' },
+        },
+      },
+      'transparent.refunded',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+    expect(activation.revokeLifetime).not.toHaveBeenCalled();
+  });
+
   it('verifies webhook HMAC + secret', async () => {
     const raw = Buffer.from(
       JSON.stringify({ id: 'log_1', event: 'transparent.completed', data: {} }),

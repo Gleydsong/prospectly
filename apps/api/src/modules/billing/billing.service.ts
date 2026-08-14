@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { hasActivePaidEntitlement } from '../prospecting/domain/category-entitlements';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
@@ -61,7 +62,7 @@ export class BillingService {
       canOpenPortal: provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId),
       canCancelSubscription:
         org.plan === OrgPlan.STARTER_MONTHLY &&
-        org.planStatus === PlanStatus.ACTIVE &&
+        this.isPaidEntitlementActive(org) &&
         ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
           (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId))),
       freeSearchLimit: FREE_SEARCH_LIMIT,
@@ -80,7 +81,7 @@ export class BillingService {
     ]);
     const used = searches + opportunityRuns;
     const creditBalance = org.creditBalance ?? 0;
-    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditBalance;
+    const limit = this.isPaidEntitlementActive(org) ? null : FREE_SEARCH_LIMIT + creditBalance;
     return {
       used,
       limit,
@@ -91,7 +92,7 @@ export class BillingService {
 
   async assertCanCreateSearch(organizationId: string): Promise<void> {
     const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) {
+    if (this.isPaidEntitlementActive(org)) {
       return;
     }
 
@@ -114,7 +115,7 @@ export class BillingService {
 
   async consumeCreditForSearch(organizationId: string, searchId: string): Promise<void> {
     const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) return;
+    if (this.isPaidEntitlementActive(org)) return;
 
     const searchCount = await this.prisma.search.count({ where: { organizationId } });
     if (searchCount <= FREE_SEARCH_LIMIT) return;
@@ -160,7 +161,7 @@ export class BillingService {
 
   async consumeCreditForOpportunityRun(organizationId: string, runId: string): Promise<void> {
     const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) return;
+    if (this.isPaidEntitlementActive(org)) return;
 
     const [searches, opportunityRuns] = await Promise.all([
       this.prisma.search.count({ where: { organizationId } }),
@@ -442,7 +443,7 @@ export class BillingService {
   private assertPlanProviderCompatible(org: Organization, next: PaymentProviderId): void {
     if (!org.paymentProvider) return;
     if (org.paymentProvider === next) return;
-    if (org.planStatus === PlanStatus.ACTIVE) {
+    if (this.isPaidEntitlementActive(org)) {
       throw new ForbiddenException(
         'Organization already has an active plan on another payment provider. Gateway migration is not supported.',
       );
@@ -450,6 +451,14 @@ export class BillingService {
     throw new ForbiddenException(
       'Organization is bound to another payment provider for plans. Use the same payment method as the existing gateway.',
     );
+  }
+
+  private isPaidEntitlementActive(org: Organization): boolean {
+    return hasActivePaidEntitlement({
+      plan: org.plan,
+      planStatus: org.planStatus,
+      currentPeriodEnd: org.currentPeriodEnd,
+    });
   }
 
   private async claimWebhookEvent(
