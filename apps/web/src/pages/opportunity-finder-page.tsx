@@ -21,7 +21,7 @@ import {
 import { useGeoCities, useGeoRegions } from '@/features/prospecting/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
-import { type OpportunityCandidateView } from '@/types';
+import { CREDIT_COSTS, type OpportunityCandidateView } from '@/types';
 
 const GENERIC_AUDIENCE = /negócios locais brasileiros/i;
 
@@ -119,7 +119,7 @@ export function OpportunityFinderPage() {
             </Select>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="flex items-center gap-2 text-xs text-[color:var(--ink-muted)]"><ShieldCheck className="h-4 w-4" />Busca limitada ao Brasil. Cada execução consome 1 crédito.</p>
+            <p className="flex items-center gap-2 text-xs text-[color:var(--ink-muted)]"><ShieldCheck className="h-4 w-4" />Busca limitada ao Brasil. Cada execução consome {CREDIT_COSTS.opportunityFinder} créditos após as buscas grátis.</p>
             <Button loading={createRun.isPending} disabled={isRunning} onClick={() => void start()}><Search className="h-4 w-4" />Encontrar oportunidades</Button>
           </div>
         </CardContent>

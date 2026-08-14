@@ -106,6 +106,17 @@ export enum AnalysisStatus {
   FAILED = 'FAILED',
 }
 
+/** Credits charged per paid action after the 3 free Maps/OF runs. ACTIVE plans skip consume.
+ *  Keep in sync with apps/api billing.constants CREDIT_COSTS. */
+export const CREDIT_COSTS = {
+  mapsSearch: 14,
+  opportunityFinder: 16,
+  explain: 8,
+  saveLead: 1,
+} as const;
+
+export type CreditAction = keyof typeof CREDIT_COSTS;
+
 // ---------- API contracts ----------
 
 export interface PaginatedResult<T> {

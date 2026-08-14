@@ -12,7 +12,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
-import { CREDITS_PER_SEARCH, FREE_SEARCH_LIMIT } from './billing.constants';
+import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -74,13 +74,10 @@ export class BillingService {
   ): Promise<SearchUsageSnapshot> {
     const org =
       typeof organization === 'string' ? await this.requireOrg(organization) : organization;
-    const [searches, opportunityRuns] = await Promise.all([
-      this.prisma.search.count({ where: { organizationId: org.id } }),
-      this.prisma.opportunityRun.count({ where: { organizationId: org.id } }),
-    ]);
-    const used = searches + opportunityRuns;
+    const used = await this.countBillableRuns(org.id);
     const creditBalance = org.creditBalance ?? 0;
-    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditBalance;
+    const creditEquivalent = Math.floor(creditBalance / CREDIT_COSTS.mapsSearch);
+    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditEquivalent;
     return {
       used,
       limit,
@@ -89,19 +86,18 @@ export class BillingService {
     };
   }
 
-  async assertCanCreateSearch(organizationId: string): Promise<void> {
+  async assertCanCreateSearch(
+    organizationId: string,
+    requiredCredits = CREDIT_COSTS.mapsSearch,
+  ): Promise<void> {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) {
       return;
     }
 
-    const [searches, opportunityRuns] = await Promise.all([
-      this.prisma.search.count({ where: { organizationId } }),
-      this.prisma.opportunityRun.count({ where: { organizationId } }),
-    ]);
-    const searchCount = searches + opportunityRuns;
+    const searchCount = await this.countBillableRuns(organizationId);
     const creditBalance = org.creditBalance ?? 0;
-    if (searchCount >= FREE_SEARCH_LIMIT && creditBalance < CREDITS_PER_SEARCH) {
+    if (searchCount >= FREE_SEARCH_LIMIT && creditBalance < requiredCredits) {
       throw new ForbiddenException({
         code: 'ENTITLEMENT_SEARCHES',
         message: `Free plan allows ${FREE_SEARCH_LIMIT} searches. Upgrade to continue.`,
@@ -113,119 +109,101 @@ export class BillingService {
   }
 
   async consumeCreditForSearch(organizationId: string, searchId: string): Promise<void> {
-    const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) return;
-
-    const searchCount = await this.prisma.search.count({ where: { organizationId } });
-    if (searchCount <= FREE_SEARCH_LIMIT) return;
-
-    const idempotencyKey = `search-consume:${searchId}`;
-
-    await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.creditLedgerEntry.findUnique({
-        where: {
-          organizationId_idempotencyKey: { organizationId, idempotencyKey },
-        },
-      });
-      if (existing) return;
-
-      const consumed = await tx.organization.updateMany({
-        where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
-        data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
-      });
-      if (consumed.count !== 1) {
-        throw new ForbiddenException({
-          code: 'ENTITLEMENT_CREDITS',
-          message: 'No credits remaining. Purchase a credit package to continue.',
-        });
-      }
-
-      const updated = await tx.organization.findFirstOrThrow({
-        where: { id: organizationId },
-        select: { creditBalance: true },
-      });
-
-      await tx.creditLedgerEntry.create({
-        data: {
-          organizationId,
-          reason: 'SEARCH_CONSUME',
-          delta: -CREDITS_PER_SEARCH,
-          balanceAfter: updated.creditBalance,
-          searchId,
-          idempotencyKey,
-        },
-      });
+    await this.consumeCredits({
+      organizationId,
+      amount: CREDIT_COSTS.mapsSearch,
+      reason: 'SEARCH_CONSUME',
+      idempotencyKey: `search-consume:${searchId}`,
+      searchId,
+      usesFreeQuota: true,
     });
   }
 
   async consumeCreditForOpportunityRun(organizationId: string, runId: string): Promise<void> {
-    const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) return;
-
-    const [searches, opportunityRuns] = await Promise.all([
-      this.prisma.search.count({ where: { organizationId } }),
-      this.prisma.opportunityRun.count({ where: { organizationId } }),
-    ]);
-    if (searches + opportunityRuns <= FREE_SEARCH_LIMIT) return;
-    const idempotencyKey = `opportunity-consume:${runId}`;
-
-    await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.creditLedgerEntry.findUnique({
-        where: { organizationId_idempotencyKey: { organizationId, idempotencyKey } },
-      });
-      if (existing) return;
-      const consumed = await tx.organization.updateMany({
-        where: { id: organizationId, creditBalance: { gte: CREDITS_PER_SEARCH } },
-        data: { creditBalance: { decrement: CREDITS_PER_SEARCH } },
-      });
-      if (consumed.count !== 1) {
-        throw new ForbiddenException({ code: 'ENTITLEMENT_CREDITS', message: 'No credits remaining. Purchase a credit package to continue.' });
-      }
-      const updated = await tx.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { creditBalance: true } });
-      await tx.creditLedgerEntry.create({
-        data: {
-          organizationId,
-          reason: 'AI_CONSUME',
-          delta: -CREDITS_PER_SEARCH,
-          balanceAfter: updated.creditBalance,
-          opportunityRunId: runId,
-          idempotencyKey,
-          metadata: { feature: 'AI_OPPORTUNITY_FINDER' },
-        },
-      });
+    await this.consumeCredits({
+      organizationId,
+      amount: CREDIT_COSTS.opportunityFinder,
+      reason: 'AI_CONSUME',
+      idempotencyKey: `opportunity-consume:${runId}`,
+      opportunityRunId: runId,
+      metadata: { feature: 'AI_OPPORTUNITY_FINDER' },
+      usesFreeQuota: true,
     });
   }
 
-  async refundOpportunityRunCredit(organizationId: string, runId: string): Promise<void> {
-    const consumeKey = `opportunity-consume:${runId}`;
-    const refundKey = `opportunity-refund:${runId}`;
-    await this.prisma.$transaction(async (tx) => {
-      const [consume, existingRefund] = await Promise.all([
-        tx.creditLedgerEntry.findUnique({
-          where: { organizationId_idempotencyKey: { organizationId, idempotencyKey: consumeKey } },
-        }),
-        tx.creditLedgerEntry.findUnique({
-          where: { organizationId_idempotencyKey: { organizationId, idempotencyKey: refundKey } },
-        }),
-      ]);
-      if (!consume || existingRefund) return;
+  async consumeCreditForExplain(
+    organizationId: string,
+    candidateId: string,
+    opportunityRunId: string,
+  ): Promise<void> {
+    await this.consumeCredits({
+      organizationId,
+      amount: CREDIT_COSTS.explain,
+      reason: 'AI_CONSUME',
+      idempotencyKey: `explain-consume:${candidateId}`,
+      opportunityRunId,
+      metadata: { feature: 'EXPLAIN', candidateId },
+    });
+  }
 
-      const updated = await tx.organization.update({
-        where: { id: organizationId },
-        data: { creditBalance: { increment: Math.abs(consume.delta) } },
-        select: { creditBalance: true },
-      });
-      await tx.creditLedgerEntry.create({
-        data: {
-          organizationId,
-          reason: 'REFUND',
-          delta: Math.abs(consume.delta),
-          balanceAfter: updated.creditBalance,
-          opportunityRunId: runId,
-          idempotencyKey: refundKey,
-          metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'QUEUE_DISPATCH_FAILED' },
-        },
-      });
+  async consumeCreditForSaveLead(
+    organizationId: string,
+    candidateId: string,
+    opportunityRunId: string,
+  ): Promise<void> {
+    await this.consumeCredits({
+      organizationId,
+      amount: CREDIT_COSTS.saveLead,
+      reason: 'AI_CONSUME',
+      idempotencyKey: `save-lead-consume:${candidateId}`,
+      opportunityRunId,
+      metadata: { feature: 'SAVE_LEAD', candidateId },
+    });
+  }
+
+  async refundSearchCredit(
+    organizationId: string,
+    searchId: string,
+    cause = 'SEARCH_FAILED',
+  ): Promise<void> {
+    await this.refundConsumedCredits({
+      organizationId,
+      consumeKey: `search-consume:${searchId}`,
+      refundKey: `search-refund:${searchId}`,
+      searchId,
+      metadata: { cause },
+    });
+  }
+
+  async refundOpportunityRunCredit(
+    organizationId: string,
+    runId: string,
+    cause = 'QUEUE_DISPATCH_FAILED',
+  ): Promise<void> {
+    await this.refundConsumedCredits({
+      organizationId,
+      consumeKey: `opportunity-consume:${runId}`,
+      refundKey: `opportunity-refund:${runId}`,
+      opportunityRunId: runId,
+      metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause },
+    });
+  }
+
+  async refundExplainCredit(organizationId: string, candidateId: string): Promise<void> {
+    await this.refundConsumedCredits({
+      organizationId,
+      consumeKey: `explain-consume:${candidateId}`,
+      refundKey: `explain-refund:${candidateId}`,
+      metadata: { feature: 'EXPLAIN', candidateId, cause: 'EXPLAIN_FAILED' },
+    });
+  }
+
+  async refundSaveLeadCredit(organizationId: string, candidateId: string): Promise<void> {
+    await this.refundConsumedCredits({
+      organizationId,
+      consumeKey: `save-lead-consume:${candidateId}`,
+      refundKey: `save-lead-refund:${candidateId}`,
+      metadata: { feature: 'SAVE_LEAD', candidateId, cause: 'SAVE_LEAD_FAILED' },
     });
   }
 
@@ -493,6 +471,123 @@ export class BillingService {
         `Failed to release ${provider} webhook claim ${eventId}: ${(error as Error).message}`,
       );
     }
+  }
+
+  private async countBillableRuns(organizationId: string): Promise<number> {
+    const [searches, opportunityRuns] = await Promise.all([
+      this.prisma.search.count({ where: { organizationId } }),
+      this.prisma.opportunityRun.count({ where: { organizationId } }),
+    ]);
+    return searches + opportunityRuns;
+  }
+
+  private async consumeCredits(params: {
+    organizationId: string;
+    amount: number;
+    reason: 'SEARCH_CONSUME' | 'AI_CONSUME';
+    idempotencyKey: string;
+    searchId?: string;
+    opportunityRunId?: string;
+    metadata?: Record<string, string>;
+    usesFreeQuota?: boolean;
+  }): Promise<void> {
+    const org = await this.requireOrg(params.organizationId);
+    if (org.planStatus === PlanStatus.ACTIVE) return;
+
+    if (params.usesFreeQuota) {
+      const used = await this.countBillableRuns(params.organizationId);
+      if (used <= FREE_SEARCH_LIMIT) return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.creditLedgerEntry.findUnique({
+        where: {
+          organizationId_idempotencyKey: {
+            organizationId: params.organizationId,
+            idempotencyKey: params.idempotencyKey,
+          },
+        },
+      });
+      if (existing) return;
+
+      const consumed = await tx.organization.updateMany({
+        where: { id: params.organizationId, creditBalance: { gte: params.amount } },
+        data: { creditBalance: { decrement: params.amount } },
+      });
+      if (consumed.count !== 1) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_CREDITS',
+          message: 'No credits remaining. Purchase a credit package to continue.',
+        });
+      }
+
+      const updated = await tx.organization.findFirstOrThrow({
+        where: { id: params.organizationId },
+        select: { creditBalance: true },
+      });
+
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId: params.organizationId,
+          reason: params.reason,
+          delta: -params.amount,
+          balanceAfter: updated.creditBalance,
+          idempotencyKey: params.idempotencyKey,
+          ...(params.searchId ? { searchId: params.searchId } : {}),
+          ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
+          ...(params.metadata ? { metadata: params.metadata } : {}),
+        },
+      });
+    });
+  }
+
+  private async refundConsumedCredits(params: {
+    organizationId: string;
+    consumeKey: string;
+    refundKey: string;
+    searchId?: string;
+    opportunityRunId?: string;
+    metadata?: Record<string, string>;
+  }): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const [consume, existingRefund] = await Promise.all([
+        tx.creditLedgerEntry.findUnique({
+          where: {
+            organizationId_idempotencyKey: {
+              organizationId: params.organizationId,
+              idempotencyKey: params.consumeKey,
+            },
+          },
+        }),
+        tx.creditLedgerEntry.findUnique({
+          where: {
+            organizationId_idempotencyKey: {
+              organizationId: params.organizationId,
+              idempotencyKey: params.refundKey,
+            },
+          },
+        }),
+      ]);
+      if (!consume || existingRefund) return;
+
+      const updated = await tx.organization.update({
+        where: { id: params.organizationId },
+        data: { creditBalance: { increment: Math.abs(consume.delta) } },
+        select: { creditBalance: true },
+      });
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId: params.organizationId,
+          reason: 'REFUND',
+          delta: Math.abs(consume.delta),
+          balanceAfter: updated.creditBalance,
+          idempotencyKey: params.refundKey,
+          ...(params.searchId ? { searchId: params.searchId } : {}),
+          ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
+          ...(params.metadata ? { metadata: params.metadata } : {}),
+        },
+      });
+    });
   }
 
   private async requireOrg(organizationId: string): Promise<Organization> {

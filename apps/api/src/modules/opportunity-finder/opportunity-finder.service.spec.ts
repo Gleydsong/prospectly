@@ -49,6 +49,10 @@ describe('OpportunityFinderService tenant isolation', () => {
       assertCanCreateSearch: jest.fn().mockResolvedValue(undefined),
       consumeCreditForOpportunityRun: jest.fn().mockResolvedValue(undefined),
       refundOpportunityRunCredit: jest.fn().mockResolvedValue(undefined),
+      consumeCreditForExplain: jest.fn().mockResolvedValue(undefined),
+      consumeCreditForSaveLead: jest.fn().mockResolvedValue(undefined),
+      refundExplainCredit: jest.fn().mockResolvedValue(undefined),
+      refundSaveLeadCredit: jest.fn().mockResolvedValue(undefined),
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
     const idempotentService = new OpportunityFinderService(
@@ -70,5 +74,6 @@ describe('OpportunityFinderService tenant isolation', () => {
     expect(persistence.opportunityRun.create).toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
     expect(billing.consumeCreditForOpportunityRun).not.toHaveBeenCalled();
+    expect(billing.assertCanCreateSearch).toHaveBeenCalledWith('org-1', 16);
   });
 });

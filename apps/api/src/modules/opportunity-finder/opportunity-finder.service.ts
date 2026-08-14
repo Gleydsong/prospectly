@@ -24,6 +24,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { StructuredAiService } from '../ai/structured-ai.service';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
+import { CREDIT_COSTS } from '../billing/billing.constants';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
 import type { NormalizedBusiness } from '../prospecting/domain/normalized-business';
 import { mergeProviderResults } from '../prospecting/domain/merge-search-results';
@@ -82,7 +83,7 @@ export class OpportunityFinderService {
       });
       if (existing) return this.toRunView(existing);
     }
-    await this.billing.assertCanCreateSearch(organizationId);
+    await this.billing.assertCanCreateSearch(organizationId, CREDIT_COSTS.opportunityFinder);
     if (!this.providers.list().some((provider) => provider.available)) {
       throw new BadRequestException('No company search provider is available');
     }
@@ -165,12 +166,18 @@ export class OpportunityFinderService {
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
     if (candidate.explanation) return this.toCandidateView(candidate);
-    const explanation = await this.generateExplanation(run, candidate, userId);
-    const updated = await this.prisma.opportunityCandidate.update({
-      where: { id: candidate.id },
-      data: { explanation: explanation as unknown as Prisma.InputJsonValue, explanationPromptVersion: OPPORTUNITY_EXPLANATION_PROMPT_VERSION },
-    });
-    return this.toCandidateView(updated);
+    await this.billing.consumeCreditForExplain(organizationId, candidate.id, run.id);
+    try {
+      const explanation = await this.generateExplanation(run, candidate, userId);
+      const updated = await this.prisma.opportunityCandidate.update({
+        where: { id: candidate.id },
+        data: { explanation: explanation as unknown as Prisma.InputJsonValue, explanationPromptVersion: OPPORTUNITY_EXPLANATION_PROMPT_VERSION },
+      });
+      return this.toCandidateView(updated);
+    } catch (error) {
+      await this.billing.refundExplainCredit(organizationId, candidate.id);
+      throw error;
+    }
   }
 
   async saveAsLead(organizationId: string, userId: string, runId: string, candidateId: string) {
@@ -178,42 +185,48 @@ export class OpportunityFinderService {
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
     if (candidate.importedLeadId) return { status: 'ALREADY_SAVED' as const, leadId: candidate.importedLeadId };
-    const company = candidate.company as unknown as OpportunityCompany;
-    const noWebsiteReported = company.websitePresence === 'NO_WEBSITE_REPORTED';
-    const outcome = await this.leadIngestion.ingest(organizationId, userId, {
-      companyName: company.companyName,
-      category: company.category,
-      phone: company.phone,
-      email: company.email,
-      website: company.website,
-      address: company.address,
-      city: company.city,
-      state: company.state,
-      country: 'BR',
-      postalCode: company.postalCode,
-      latitude: company.latitude,
-      longitude: company.longitude,
-      rating: company.rating,
-      reviewCount: company.reviewCount,
-      source: company.source === 'GOOGLE_PLACES' ? LeadSource.GOOGLE_PLACES : LeadSource.OPENSTREETMAP,
-      externalId: company.externalId,
-      status: LeadStatus.TO_REVIEW,
-      websitePresence: company.websitePresence as WebsitePresence,
-      websiteCheckedAt: new Date(),
-      websiteCheckSource: 'AI Opportunity Finder',
-      websiteStatusReason: noWebsiteReported
-        ? 'Fonte não reportou website; ausência não confirmada.'
-        : 'Website reportado pela fonte e analisado quando tecnicamente acessível.',
-      confidenceLevel: noWebsiteReported ? ConfidenceLevel.LOW : ConfidenceLevel.MEDIUM,
-      notes: `Opportunity Finder: score ${candidate.overallScore}/100, confiança ${candidate.confidenceScore}%.`,
-      tags: ['opportunity-finder'],
-    });
-    const lead = outcome.lead;
-    if (lead) {
-      await this.prisma.opportunityCandidate.updateMany({ where: { id: candidate.id, importedLeadId: null }, data: { importedLeadId: lead.id } });
+    await this.billing.consumeCreditForSaveLead(organizationId, candidate.id, runId);
+    try {
+      const company = candidate.company as unknown as OpportunityCompany;
+      const noWebsiteReported = company.websitePresence === 'NO_WEBSITE_REPORTED';
+      const outcome = await this.leadIngestion.ingest(organizationId, userId, {
+        companyName: company.companyName,
+        category: company.category,
+        phone: company.phone,
+        email: company.email,
+        website: company.website,
+        address: company.address,
+        city: company.city,
+        state: company.state,
+        country: 'BR',
+        postalCode: company.postalCode,
+        latitude: company.latitude,
+        longitude: company.longitude,
+        rating: company.rating,
+        reviewCount: company.reviewCount,
+        source: company.source === 'GOOGLE_PLACES' ? LeadSource.GOOGLE_PLACES : LeadSource.OPENSTREETMAP,
+        externalId: company.externalId,
+        status: LeadStatus.TO_REVIEW,
+        websitePresence: company.websitePresence as WebsitePresence,
+        websiteCheckedAt: new Date(),
+        websiteCheckSource: 'AI Opportunity Finder',
+        websiteStatusReason: noWebsiteReported
+          ? 'Fonte não reportou website; ausência não confirmada.'
+          : 'Website reportado pela fonte e analisado quando tecnicamente acessível.',
+        confidenceLevel: noWebsiteReported ? ConfidenceLevel.LOW : ConfidenceLevel.MEDIUM,
+        notes: `Opportunity Finder: score ${candidate.overallScore}/100, confiança ${candidate.confidenceScore}%.`,
+        tags: ['opportunity-finder'],
+      });
+      const lead = outcome.lead;
+      if (lead) {
+        await this.prisma.opportunityCandidate.updateMany({ where: { id: candidate.id, importedLeadId: null }, data: { importedLeadId: lead.id } });
+      }
+      await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_SAVED_AS_LEAD', entity: 'OpportunityCandidate', entityId: candidate.id, metadata: { outcome: outcome.status, leadId: lead?.id } });
+      return { status: outcome.status, leadId: lead?.id ?? null };
+    } catch (error) {
+      await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
+      throw error;
     }
-    await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_SAVED_AS_LEAD', entity: 'OpportunityCandidate', entityId: candidate.id, metadata: { outcome: outcome.status, leadId: lead?.id } });
-    return { status: outcome.status, leadId: lead?.id ?? null };
   }
 
   async processRun(runId: string): Promise<void> {
@@ -324,11 +337,23 @@ export class OpportunityFinderService {
   }
 
   async recordFailure(runId: string, code = 'PROCESSING_FAILED'): Promise<void> {
+    const run = await this.prisma.opportunityRun.findUnique({
+      where: { id: runId },
+      select: { organizationId: true, status: true },
+    });
+    if (!run) return;
+    const terminal: OpportunityRunStatus[] = [
+      OpportunityRunStatus.COMPLETED,
+      OpportunityRunStatus.PARTIAL,
+      OpportunityRunStatus.CANCELLED,
+    ];
+    if (terminal.includes(run.status)) return;
     const publicCode = code === 'NO_COMPANIES_FOUND' ? code : 'PROCESSING_FAILED';
     await this.prisma.opportunityRun.updateMany({
-      where: { id: runId, status: { notIn: [OpportunityRunStatus.COMPLETED, OpportunityRunStatus.PARTIAL, OpportunityRunStatus.CANCELLED] } },
+      where: { id: runId, status: { notIn: terminal } },
       data: { status: OpportunityRunStatus.FAILED, errorCode: publicCode, errorMessage: 'Não foi possível concluir a análise. Tente novamente.', completedAt: new Date() },
     });
+    await this.billing.refundOpportunityRunCredit(run.organizationId, runId, publicCode);
   }
 
   private async generateExplanation(run: { id: string; organizationId: string; userId: string; service: string }, candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue }, userId: string): Promise<OpportunityExplanation> {

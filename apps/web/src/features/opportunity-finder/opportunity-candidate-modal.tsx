@@ -4,7 +4,7 @@ import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
-import type { OpportunityCandidateView } from '@/types';
+import { CREDIT_COSTS, type OpportunityCandidateView } from '@/types';
 
 const signalLabels: Record<string, string> = {
   MISSING_WEBSITE: 'Website não reportado',
@@ -87,9 +87,9 @@ export function OpportunityCandidateModal({
         </Alert>
 
         <div className="flex flex-wrap justify-end gap-2">
-          {!explanation ? <Button variant="secondary" loading={explaining} onClick={onExplain}>Gerar explicação</Button> : null}
+          {!explanation ? <Button variant="secondary" loading={explaining} onClick={onExplain}>Gerar explicação ({CREDIT_COSTS.explain} créditos)</Button> : null}
           <Button loading={saving} disabled={Boolean(candidate.importedLeadId)} onClick={onSave}>
-            {candidate.importedLeadId ? 'Salvo como lead' : 'Salvar como lead'}
+            {candidate.importedLeadId ? 'Salvo como lead' : `Salvar como lead (${CREDIT_COSTS.saveLead} crédito)`}
           </Button>
         </div>
       </div>
