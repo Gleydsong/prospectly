@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { hasActivePaidEntitlement } from '../prospecting/domain/category-entitlements';
+import { hasActivePaidEntitlement } from './domain/plan-entitlement';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';

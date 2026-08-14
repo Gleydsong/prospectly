@@ -2,7 +2,7 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { OrgPlan, UsageMeterKey } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { effectivePlan } from '../prospecting/domain/category-entitlements';
+import { effectivePlan } from './domain/plan-entitlement';
 
 export type FeatureKey =
   | 'searches'

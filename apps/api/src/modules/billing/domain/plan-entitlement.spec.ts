@@ -1,8 +1,8 @@
 import { OrgPlan, PlanStatus } from '@prisma/client';
 
-import { effectivePlan, hasActivePaidEntitlement } from './category-entitlements';
+import { effectivePlan, hasActivePaidEntitlement } from './plan-entitlement';
 
-describe('effectivePlan period expiry', () => {
+describe('plan entitlement period expiry', () => {
   it('keeps ACTIVE monthly plans before currentPeriodEnd', () => {
     expect(
       effectivePlan({
