@@ -48,3 +48,43 @@ jobs:
       - name: Audit dependencies (high)
         # Bloqueia qualquer high remanescente (overrides + ignoreGhsas documentados).
         run: pnpm audit --audit-level=high
+
+  rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: prospectly_rls
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d prospectly_rls"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/prospectly_rls?schema=public
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Apply migrations to disposable PostgreSQL
+        run: pnpm --filter @prospectly/api exec prisma migrate deploy
+
+      - name: Verify PostgreSQL row-level security
+        run: pnpm --filter @prospectly/api test:rls

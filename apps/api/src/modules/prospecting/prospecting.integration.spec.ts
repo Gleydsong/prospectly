@@ -209,7 +209,10 @@ describe('Prospecting HTTP integration', () => {
         { provide: LeadIngestionService, useValue: ingestion },
         {
           provide: BillingService,
-          useValue: { assertCanCreateSearch: jest.fn().mockResolvedValue(undefined) },
+          useValue: {
+            assertCanCreateSearch: jest.fn().mockResolvedValue(undefined),
+            refundSearchCredit: jest.fn().mockResolvedValue(undefined),
+          },
         },
         { provide: MetricsService, useValue: metrics },
       ],

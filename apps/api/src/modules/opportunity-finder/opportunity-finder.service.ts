@@ -229,6 +229,15 @@ export class OpportunityFinderService {
     }
   }
 
+  async getJobContext(runId: string): Promise<{ organizationId: string; correlationId: string | null } | null> {
+    const run = await this.prisma.opportunityRun.findUnique({
+      where: { id: runId },
+      select: { organizationId: true, correlationId: true },
+    });
+    if (!run) return null;
+    return { organizationId: run.organizationId, correlationId: run.correlationId };
+  }
+
   async processRun(runId: string): Promise<void> {
     const run = await this.prisma.opportunityRun.findUnique({ where: { id: runId } });
     if (!run || run.status === OpportunityRunStatus.CANCELLED || run.status === OpportunityRunStatus.COMPLETED) return;

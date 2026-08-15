@@ -193,7 +193,7 @@ describe('ImportsService', () => {
 
   it('scopes import history and hides imports from another organization', async () => {
     const { prisma, service } = createService();
-    prisma.$transaction.mockResolvedValue([1, [{
+    const importRow = {
       id: 'import-1',
       fileName: 'leads.csv',
       status: 'PENDING',
@@ -204,12 +204,9 @@ describe('ImportsService', () => {
       mapping: { companyName: 'Empresa' },
       createdAt: new Date('2026-07-22T10:00:00.000Z'),
       completedAt: null,
-      organizationId: 'org-1',
-      userId: 'user-1',
-      correlationId: 'corr-secret',
-      jobDispatchedAt: new Date(),
-      stagedRows: rows,
-    }]]);
+    };
+    prisma.import.count.mockResolvedValue(1);
+    prisma.import.findMany.mockResolvedValue([importRow]);
     prisma.import.findFirst
       .mockResolvedValueOnce({
         id: 'import-1',
@@ -420,7 +417,8 @@ describe('ImportsService', () => {
   it('lists paginated row errors only for the owning organization', async () => {
     const { prisma, service } = createService();
     prisma.import.findFirst.mockResolvedValue({ id: 'import-1' });
-    prisma.$transaction.mockResolvedValue([1, [{ row: 3, message: 'Company name is required' }]]);
+    prisma.importError.count.mockResolvedValue(1);
+    prisma.importError.findMany.mockResolvedValue([{ row: 3, message: 'Company name is required' }]);
 
     await expect(
       service.listErrors('org-1', 'import-1', { page: 1, pageSize: 20 }),

@@ -132,4 +132,32 @@ describe('WaitlistService', () => {
       data: { notifiedAt: expect.any(Date) },
     });
   });
+
+  it('escapes HTML in the team notification body', async () => {
+    const prisma = makePrisma();
+    const mail = makeMail();
+    prisma.waitlistEntry.findUnique.mockResolvedValue(null);
+    prisma.waitlistEntry.create.mockResolvedValue({ id: 'w1', email: 'ana@agency.dev' });
+    prisma.waitlistEntry.update.mockResolvedValue({});
+    const service = new WaitlistService(prisma, mail, makeConfig('team@prospectly.dev'));
+
+    await service.join({
+      email: 'ana@agency.dev',
+      locale: AppLocale.pt,
+      source: '<img src=x onerror=alert(1)>',
+    });
+
+    expect(mail.send).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        html: expect.stringContaining('&lt;img src=x onerror=alert(1)&gt;'),
+      }),
+    );
+    expect(mail.send).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        html: expect.not.stringContaining('<img src=x onerror=alert(1)>'),
+      }),
+    );
+  });
 });

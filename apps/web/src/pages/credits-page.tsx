@@ -15,6 +15,7 @@ import {
   createCreditCheckout,
   getBillingStatus,
 } from '@/features/auth/api';
+import { canManageOrg } from '@/features/settings/can-manage-org';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import type { PaymentMethod } from '@/features/billing/types';
 import { assignStripeRedirect } from '@/lib/safe-url';
@@ -29,6 +30,7 @@ export function CreditsPage() {
   const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const emailVerified = Boolean(user?.emailVerifiedAt);
+  const manage = canManageOrg(user?.role);
 
   const [billingError, setBillingError] = useState<string | null>(null);
   const [creditOffer, setCreditOffer] = useState<CreditOfferId | null>(() => {
@@ -158,7 +160,7 @@ export function CreditsPage() {
             </p>
           ) : null}
 
-          {pendingOffer ? (
+          {manage && pendingOffer ? (
             <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
               <p className="text-sm font-medium text-[color:var(--ink)]">{t('settings.choosePaymentMethod')}</p>
               <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{t('settings.choosePaymentMethodHint')}</p>
@@ -207,6 +209,7 @@ export function CreditsPage() {
             </div>
           ) : null}
 
+          {manage ? (
           <div className="grid gap-3 lg:grid-cols-3">
             {offers.map((offer) => {
               const pending = checkoutPending && creditOffer === offer.id;
@@ -281,11 +284,15 @@ export function CreditsPage() {
               );
             })}
           </div>
+          ) : (
+            <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.orgReadOnly')}</p>
+          )}
 
-          {!emailVerified ? (
+          {manage && !emailVerified ? (
             <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p>
           ) : null}
 
+          {manage ? (
           <div className="flex flex-wrap items-center gap-2">
             {billing.data?.canOpenPortal ? (
               <Button
@@ -310,6 +317,7 @@ export function CreditsPage() {
               </Button>
             ) : null}
           </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>

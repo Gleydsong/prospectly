@@ -40,8 +40,8 @@ export class ActivitiesService {
   ) {
     await this.assertLead(organizationId, leadId);
 
-    const [activity] = await this.prisma.$transaction([
-      this.prisma.leadActivity.create({
+    const activity = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.leadActivity.create({
         data: {
           organizationId,
           leadId,
@@ -53,15 +53,16 @@ export class ActivitiesService {
           followUpAt: dto.followUpAt ? new Date(dto.followUpAt) : undefined,
         },
         include: { user: { select: { id: true, name: true } } },
-      }),
-      this.prisma.lead.update({
+      });
+      await tx.lead.update({
         where: { id: leadId },
         data: {
           lastContactAt: new Date(),
           ...(dto.followUpAt ? { nextContactAt: new Date(dto.followUpAt) } : {}),
         },
-      }),
-    ]);
+      });
+      return created;
+    });
 
     return activity;
   }

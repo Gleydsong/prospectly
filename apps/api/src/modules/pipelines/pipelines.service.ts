@@ -50,7 +50,7 @@ export class PipelinesService {
 
     const stagePages = await Promise.all(
       stages.map(async (stage) => {
-        const where = { stageId: stage.id, deletedAt: null };
+        const where = { organizationId, stageId: stage.id, deletedAt: null };
         const [totalCount, leads] = await Promise.all([
           this.prisma.lead.count({ where }),
           this.prisma.lead.findMany({
@@ -89,7 +89,7 @@ export class PipelinesService {
       throw new NotFoundException('Stage not found');
     }
 
-    const where = { stageId, deletedAt: null };
+    const where = { organizationId, stageId, deletedAt: null };
     const [totalCount, leads] = await Promise.all([
       this.prisma.lead.count({ where }),
       this.prisma.lead.findMany({
@@ -131,13 +131,13 @@ export class PipelinesService {
       return lead;
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.lead.update({
+    const [updated] = await this.prisma.$transaction(async (tx) => {
+      const moved = await tx.lead.update({
         where: { id: leadId },
         data: { stageId },
         include: { stage: true, owner: { select: { id: true, name: true } } },
-      }),
-      this.prisma.leadActivity.create({
+      });
+      await tx.leadActivity.create({
         data: {
           organizationId,
           leadId,
@@ -146,8 +146,9 @@ export class PipelinesService {
           description: `Movido de "${lead.stage?.name ?? 'sem etapa'}" para "${stage.name}"`,
           metadata: { fromStageId: lead.stageId, toStageId: stageId },
         },
-      }),
-    ]);
+      });
+      return [moved];
+    });
 
     await this.audit.log({
       organizationId,

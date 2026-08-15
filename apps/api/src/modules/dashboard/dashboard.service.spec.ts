@@ -29,30 +29,30 @@ describe('DashboardService', () => {
 
   it('summary applies period/source/owner filters and returns decision metrics', async () => {
     const prisma = makePrisma();
-    prisma.$transaction.mockResolvedValue([
-      10, // total
-      4, // new
-      2, // qualified
-      1, // contacted
-      3, // meetings
-      2, // proposals
-      5, // won
-      1, // lost
-      2, // overdue tasks
-      [{ id: 'l1', companyName: 'A', nextContactAt: new Date('2020-01-01') }],
-      [],
-      [{ id: 'l2', companyName: 'B', score: 90, status: 'QUALIFIED', city: 'SP' }],
-      [
-        { source: 'GOOGLE_PLACES', status: 'WON', _count: 2 },
-        { source: 'GOOGLE_PLACES', status: 'LOST', _count: 1 },
-        { source: 'MANUAL', status: 'NEW', _count: 3 },
-      ],
-      8, // approached
-      3, // highPotentialIdle
-      2, // staleLeads
-      2, // searchCount
-      { plan: 'FREE', planStatus: 'INACTIVE' },
+    prisma.lead.count
+      .mockResolvedValueOnce(10)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(5)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(8)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(2);
+    prisma.task.count.mockResolvedValue(2);
+    prisma.lead.findMany
+      .mockResolvedValueOnce([{ id: 'l1', companyName: 'A', nextContactAt: new Date('2020-01-01') }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'l2', companyName: 'B', score: 90, status: 'QUALIFIED', city: 'SP' }]);
+    prisma.lead.groupBy.mockResolvedValue([
+      { source: 'GOOGLE_PLACES', status: 'WON', _count: 2 },
+      { source: 'GOOGLE_PLACES', status: 'LOST', _count: 1 },
+      { source: 'MANUAL', status: 'NEW', _count: 3 },
     ]);
+    prisma.search.count.mockResolvedValue(2);
+    prisma.organization.findUnique.mockResolvedValue({ plan: 'FREE', planStatus: 'INACTIVE' });
     const service = new DashboardService(prisma);
 
     const result = await service.summary('org-1', {
@@ -89,7 +89,6 @@ describe('DashboardService', () => {
         }),
       ]),
     );
-    expect(prisma.$transaction).toHaveBeenCalled();
   });
 
   it('charts scopes groupBy by organization and optional filters', async () => {

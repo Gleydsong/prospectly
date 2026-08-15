@@ -186,7 +186,8 @@ describe('LeadsService', () => {
 
   it('list always scopes by organization and excludes soft-deleted', async () => {
     const prisma = makePrisma();
-    prisma.$transaction.mockResolvedValue([0, []]);
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
     const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
 
     await service.list('org1', { page: 1, pageSize: 20, sortBy: 'createdAt', sortOrder: 'desc' });

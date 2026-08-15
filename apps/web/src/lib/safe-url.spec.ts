@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   resolveInternalRedirect,
+  sanitizeAvatarSrc,
   sanitizeExternalUrl,
+  sanitizeMailtoHref,
+  sanitizePixQrSrc,
 } from './safe-url';
 
 describe('resolveInternalRedirect', () => {
@@ -27,5 +30,40 @@ describe('sanitizeExternalUrl', () => {
   it('rejects dangerous schemes', () => {
     expect(sanitizeExternalUrl('javascript:alert(1)')).toBeNull();
     expect(sanitizeExternalUrl('data:text/html,hi')).toBeNull();
+  });
+});
+
+describe('sanitizeAvatarSrc', () => {
+  it('allows https and jpeg data urls', () => {
+    expect(sanitizeAvatarSrc('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg');
+    expect(sanitizeAvatarSrc('data:image/jpeg;base64,abc+/=')).toBe('data:image/jpeg;base64,abc+/=');
+  });
+
+  it('rejects http, javascript and svg data urls', () => {
+    expect(sanitizeAvatarSrc('http://cdn.example.com/a.jpg')).toBeNull();
+    expect(sanitizeAvatarSrc('javascript:alert(1)')).toBeNull();
+    expect(sanitizeAvatarSrc('data:image/svg+xml;base64,PHN2Zz4=')).toBeNull();
+  });
+});
+
+describe('sanitizeMailtoHref', () => {
+  it('allows a plain email', () => {
+    expect(sanitizeMailtoHref('ana@agency.dev')).toBe('mailto:ana@agency.dev');
+  });
+
+  it('rejects query injection', () => {
+    expect(sanitizeMailtoHref('ana@agency.dev?bcc=evil@x.test')).toBeNull();
+    expect(sanitizeMailtoHref('ana@agency.dev&bcc=evil')).toBeNull();
+  });
+});
+
+describe('sanitizePixQrSrc', () => {
+  it('prefixes raw png base64 and keeps valid data urls', () => {
+    expect(sanitizePixQrSrc('abc+/==')).toBe('data:image/png;base64,abc+/==');
+    expect(sanitizePixQrSrc('data:image/png;base64,abc+/==')).toBe('data:image/png;base64,abc+/==');
+  });
+
+  it('rejects html data urls', () => {
+    expect(sanitizePixQrSrc('data:text/html;base64,PHNjcmlwdD4=')).toBeNull();
   });
 });

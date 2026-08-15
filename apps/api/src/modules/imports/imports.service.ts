@@ -158,7 +158,7 @@ export class ImportsService {
     query: { page: number; pageSize: number },
   ): Promise<PaginatedResult<unknown>> {
     const where = { organizationId };
-    const [total, imports] = await this.prisma.$transaction([
+    const [total, imports] = await Promise.all([
       this.prisma.import.count({ where }),
       this.prisma.import.findMany({
         where,
@@ -189,7 +189,7 @@ export class ImportsService {
   ): Promise<PaginatedResult<unknown>> {
     await this.requireImport(organizationId, importId);
     const where = { importId };
-    const [total, errors] = await this.prisma.$transaction([
+    const [total, errors] = await Promise.all([
       this.prisma.importError.count({ where }),
       this.prisma.importError.findMany({
         where,

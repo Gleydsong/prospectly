@@ -9,6 +9,7 @@ import {
   type RecalculateOrgScoresJobData,
 } from './scoring.constants';
 import { ScoringService } from './scoring.service';
+import { runWithTenant } from '../../common/prisma/tenant-context';
 
 @Processor(SCORING_QUEUE)
 export class ScoringProcessor extends WorkerHost {
@@ -30,7 +31,9 @@ export class ScoringProcessor extends WorkerHost {
     const correlationId = job.data.correlationId ?? 'unknown';
     const started = Date.now();
     try {
-      const count = await this.scoring.recalculateOrganization(job.data.organizationId);
+      const count = await runWithTenant(job.data.organizationId, () =>
+        this.scoring.recalculateOrganization(job.data.organizationId),
+      );
       this.metrics.recordJob(SCORING_QUEUE, 'completed', Date.now() - started);
       this.logger.log({
         message: 'Recalculated organization scores',

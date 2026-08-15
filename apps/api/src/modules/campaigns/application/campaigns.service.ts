@@ -55,7 +55,7 @@ export class CampaignsService {
       organizationId,
       ...(query.status ? { status: query.status } : {}),
     };
-    const [total, data] = await this.prisma.$transaction([
+    const [total, data] = await Promise.all([
       this.prisma.campaign.count({ where }),
       this.prisma.campaign.findMany({
         where,
@@ -282,7 +282,7 @@ export class CampaignsService {
       ...(query.stageId ? { currentStageId: query.stageId } : {}),
     };
 
-    const [total, data] = await this.prisma.$transaction([
+    const [total, data] = await Promise.all([
       this.prisma.campaignLead.count({ where }),
       this.prisma.campaignLead.findMany({
         where,
@@ -537,27 +537,29 @@ export class CampaignsService {
     const assigneeId = dto.assigneeId ?? campaign.ownerId ?? userId;
 
     const created = toCreate.length
-      ? await this.prisma.$transaction(
-          toCreate.map((cl) =>
-            this.prisma.task.create({
-              data: {
-                organizationId,
-                createdById: userId,
-                assigneeId,
-                leadId: cl.leadId,
-                campaignId,
-                campaignStageId: stageId,
-                title: stageTaskTitle(stage, cl.lead.companyName),
-                description: [
-                  `Campanha: ${campaign.name}`,
-                  `Etapa: ${stage.name} (${stage.type})`,
-                  'Modo assistido — envio automático desativado.',
-                ].join('\n'),
-                dueAt,
-                priority: 'MEDIUM',
-                status: 'OPEN',
-              },
-            }),
+      ? await this.prisma.$transaction(async (tx) =>
+          Promise.all(
+            toCreate.map((cl) =>
+              tx.task.create({
+                data: {
+                  organizationId,
+                  createdById: userId,
+                  assigneeId,
+                  leadId: cl.leadId,
+                  campaignId,
+                  campaignStageId: stageId,
+                  title: stageTaskTitle(stage, cl.lead.companyName),
+                  description: [
+                    `Campanha: ${campaign.name}`,
+                    `Etapa: ${stage.name} (${stage.type})`,
+                    'Modo assistido — envio automático desativado.',
+                  ].join('\n'),
+                  dueAt,
+                  priority: 'MEDIUM',
+                  status: 'OPEN',
+                },
+              }),
+            ),
           ),
         )
       : [];

@@ -9,6 +9,7 @@ import { logout } from '@/features/auth/api';
 import { getBillingStatus } from '@/features/billing/api';
 import { ThemeToggle } from '@/features/theme/theme-toggle';
 import { cn } from '@/lib/utils';
+import { sanitizeAvatarSrc } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 import { NAV_GROUPS, TOP_NAV_ITEMS } from './nav-items';
 import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
@@ -33,7 +34,8 @@ function UserAvatar({
   label: string;
 }) {
   const [broken, setBroken] = useState(false);
-  const showPhoto = Boolean(avatarUrl) && !broken;
+  const safeAvatar = sanitizeAvatarSrc(avatarUrl);
+  const showPhoto = Boolean(safeAvatar) && !broken;
 
   return (
     <Link
@@ -44,7 +46,7 @@ function UserAvatar({
     >
       {showPhoto ? (
         <img
-          src={avatarUrl!}
+          src={safeAvatar!}
           alt=""
           className="h-full w-full object-cover"
           referrerPolicy="no-referrer"

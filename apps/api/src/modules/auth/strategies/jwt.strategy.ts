@@ -5,6 +5,7 @@ import type { Role } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { runWithTenant } from '../../../common/prisma/tenant-context';
 import type { AuthenticatedUser } from '../../../common/decorators/current-user.decorator';
 
 interface AccessTokenPayload {
@@ -29,9 +30,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
     // Re-check membership so removed members lose access immediately.
-    const membership = await this.prisma.organizationMember.findUnique({
-      where: { userId_organizationId: { userId: payload.sub, organizationId: payload.orgId } },
-    });
+    const membership = await runWithTenant(
+      payload.orgId,
+      () =>
+        this.prisma.organizationMember.findUnique({
+          where: { userId_organizationId: { userId: payload.sub, organizationId: payload.orgId } },
+        }),
+      payload.sub,
+    );
     if (!membership) {
       throw new UnauthorizedException('Membership revoked');
     }

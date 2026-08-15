@@ -88,7 +88,7 @@ export class PluginAccessService {
         take: safeLimit,
         select: {
           id: true, companyName: true, tradeName: true, category: true, city: true, state: true,
-          email: true, phone: true, website: true, status: true, source: true, updatedAt: true,
+          website: true, status: true, source: true, updatedAt: true,
         },
       });
     }

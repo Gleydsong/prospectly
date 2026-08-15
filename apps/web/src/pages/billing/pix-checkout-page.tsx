@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getBillingStatus } from '@/features/billing/api';
 import type { PixCheckoutMeta } from '@/features/billing/handle-checkout';
 import type { CheckoutResult } from '@/features/billing/types';
+import { sanitizePixQrSrc } from '@/lib/safe-url';
 
 type PixPayload = Extract<CheckoutResult, { mode: 'pix' }> & PixCheckoutMeta;
 
@@ -91,12 +92,7 @@ export function PixCheckoutPage() {
     navigate('/billing/success', { replace: true });
   }, [paid, navigate]);
 
-  const qrSrc = useMemo(() => {
-    if (!pix?.brCodeBase64) return null;
-    return pix.brCodeBase64.startsWith('data:')
-      ? pix.brCodeBase64
-      : `data:image/png;base64,${pix.brCodeBase64}`;
-  }, [pix]);
+  const qrSrc = useMemo(() => sanitizePixQrSrc(pix?.brCodeBase64), [pix]);
 
   if (!pix) {
     return null;

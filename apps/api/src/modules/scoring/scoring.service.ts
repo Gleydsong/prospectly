@@ -268,8 +268,8 @@ export class ScoringService {
       activityTypes: lead.activities.map((activity) => activity.type),
     });
 
-    await this.prisma.$transaction([
-      this.prisma.leadScore.create({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.leadScore.create({
         data: {
           leadId: lead.id,
           score: result.score,
@@ -282,12 +282,12 @@ export class ScoringService {
           recommendedAction: result.recommendedAction,
           configVersion: config.version,
         },
-      }),
-      this.prisma.lead.update({
+      });
+      await tx.lead.update({
         where: { id: lead.id },
         data: { score: result.score },
-      }),
-    ]);
+      });
+    });
 
     return {
       score: result.score,

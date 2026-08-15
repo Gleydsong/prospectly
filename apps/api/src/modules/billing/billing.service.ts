@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PaymentProvider, PlanStatus, type Organization } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus, type Organization, type Role } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
@@ -46,10 +46,11 @@ export class BillingService {
     private readonly creditPurchases: CreditPurchaseService,
   ) {}
 
-  async getOrganizationBilling(organizationId: string) {
+  async getOrganizationBilling(organizationId: string, role?: Role) {
     const org = await this.requireOrg(organizationId);
     const provider = org.paymentProvider;
     const searchUsage = await this.getSearchUsage(org);
+    const canManage = role === 'OWNER' || role === 'ADMIN';
     return {
       searchUsage,
       plan: org.plan,
@@ -57,13 +58,16 @@ export class BillingService {
       planCurrency: org.planCurrency,
       paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
-      hasStripeCustomer: Boolean(org.stripeCustomerId),
-      canOpenPortal: provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId),
-      canCancelSubscription:
-        org.plan === OrgPlan.STARTER_MONTHLY &&
-        org.planStatus === PlanStatus.ACTIVE &&
-        ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
-          (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId))),
+      hasStripeCustomer: canManage ? Boolean(org.stripeCustomerId) : false,
+      canOpenPortal: canManage
+        ? provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId)
+        : false,
+      canCancelSubscription: canManage
+        ? org.plan === OrgPlan.STARTER_MONTHLY &&
+          org.planStatus === PlanStatus.ACTIVE &&
+          ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
+            (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId)))
+        : false,
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
     };
@@ -88,7 +92,7 @@ export class BillingService {
 
   async assertCanCreateSearch(
     organizationId: string,
-    requiredCredits = CREDIT_COSTS.mapsSearch,
+    requiredCredits: number = CREDIT_COSTS.mapsSearch,
   ): Promise<void> {
     const org = await this.requireOrg(organizationId);
     if (org.planStatus === PlanStatus.ACTIVE) {

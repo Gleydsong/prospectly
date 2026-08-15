@@ -28,8 +28,8 @@ export class BillingController {
 
   @ApiBearerAuth()
   @Get('status')
-  getStatus(@CurrentOrg() organizationId: string) {
-    return this.billing.getOrganizationBilling(organizationId);
+  getStatus(@CurrentOrg() organizationId: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.billing.getOrganizationBilling(organizationId, user.role);
   }
 
   @ApiBearerAuth()

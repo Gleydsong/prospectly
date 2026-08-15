@@ -2,6 +2,7 @@ export const configuration = () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
   databaseUrl: process.env.DATABASE_URL,
+  databaseAppUrl: process.env.DATABASE_APP_URL,
   redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,
