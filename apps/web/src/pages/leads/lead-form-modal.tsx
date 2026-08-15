@@ -54,7 +54,10 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
         country: values.country || undefined,
         notes: values.notes || undefined,
         tags: values.tags
-          ? values.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
+          ? values.tags
+              .split(',')
+              .map((tag) => tag.trim())
+              .filter(Boolean)
           : undefined,
       });
       close();
@@ -83,7 +86,11 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
           />
           <Input label="Cidade" {...register('city')} />
           <Input label="País" {...register('country')} />
-          <Input label="Etiquetas (separadas por vírgula)" placeholder="sem-site, prioridade" {...register('tags')} />
+          <Input
+            label="Etiquetas (separadas por vírgula)"
+            placeholder="sem-site, prioridade"
+            {...register('tags')}
+          />
         </div>
         <Textarea label="Observações" {...register('notes')} />
 

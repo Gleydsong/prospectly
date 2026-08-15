@@ -34,9 +34,7 @@ describe('ResetPasswordPage', () => {
 
   it('shows missing token state', () => {
     renderPage('/reset-password');
-    expect(
-      screen.getByText(/Link inválido ou incompleto/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Link inválido ou incompleto/i)).toBeInTheDocument();
   });
 
   it('validates password strength', async () => {
@@ -62,8 +60,6 @@ describe('ResetPasswordPage', () => {
       token: 'abc123',
       newPassword: 'NewPass1',
     });
-    expect(
-      await screen.findByText(/Senha redefinida com sucesso/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Senha redefinida com sucesso/i)).toBeInTheDocument();
   });
 });

@@ -31,8 +31,12 @@ export async function fetchProspectingCategories(): Promise<ProspectingCategoryC
   return data;
 }
 
-export async function fetchSearches(query: SearchesQuery = {}): Promise<PaginatedResult<ProspectingSearch>> {
-  const { data } = await api.get<PaginatedResult<ProspectingSearch>>('/searches', { params: query });
+export async function fetchSearches(
+  query: SearchesQuery = {},
+): Promise<PaginatedResult<ProspectingSearch>> {
+  const { data } = await api.get<PaginatedResult<ProspectingSearch>>('/searches', {
+    params: query,
+  });
   return data;
 }
 
@@ -45,9 +49,12 @@ export async function fetchSearchResults(
   id: string,
   query: SearchResultsQuery = {},
 ): Promise<PaginatedResult<ProspectingSearchResult>> {
-  const { data } = await api.get<PaginatedResult<ProspectingSearchResult>>(`/searches/${id}/results`, {
-    params: query,
-  });
+  const { data } = await api.get<PaginatedResult<ProspectingSearchResult>>(
+    `/searches/${id}/results`,
+    {
+      params: query,
+    },
+  );
   return data;
 }
 
@@ -56,7 +63,10 @@ export async function createSearch(input: SearchInput): Promise<ProspectingSearc
   return data;
 }
 
-export async function importSearchResults(id: string, resultIds: string[]): Promise<SearchImportSummary> {
+export async function importSearchResults(
+  id: string,
+  resultIds: string[],
+): Promise<SearchImportSummary> {
   const { data } = await api.post<SearchImportSummary>(`/searches/${id}/import`, { resultIds });
   return data;
 }

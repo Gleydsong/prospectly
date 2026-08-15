@@ -41,7 +41,10 @@ export function useCreateTaskForLead(leadId: string) {
 export function useUpdateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...input }: { id: string } & Partial<CreateTaskInput & { status: Task['status'] }>) =>
+    mutationFn: ({
+      id,
+      ...input
+    }: { id: string } & Partial<CreateTaskInput & { status: Task['status'] }>) =>
       updateTask(id, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });

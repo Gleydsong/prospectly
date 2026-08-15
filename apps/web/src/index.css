@@ -44,8 +44,8 @@ html.dark {
   --cta-primary-from: #60a5fa;
   --cta-primary-to: #2563eb;
   --cta-primary-border: rgb(147 197 253 / 0.35);
-  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.28) inset,
-    0 14px 36px -12px rgb(37 99 235 / 0.7);
+  --cta-primary-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.28) inset, 0 14px 36px -12px rgb(37 99 235 / 0.7);
   --cta-primary-hover-from: #93c5fd;
   --cta-primary-hover-to: #3b82f6;
 
@@ -116,8 +116,8 @@ html.light {
   --cta-primary-from: #3f3f46;
   --cta-primary-to: #18181b;
   --cta-primary-border: rgb(255 255 255 / 0.22);
-  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.28) inset,
-    0 12px 28px -12px rgb(24 24 27 / 0.45);
+  --cta-primary-shadow:
+    0 1px 0 0 rgb(255 255 255 / 0.28) inset, 0 12px 28px -12px rgb(24 24 27 / 0.45);
   --cta-primary-hover-from: #52525b;
   --cta-primary-hover-to: #27272a;
 
@@ -625,32 +625,62 @@ html.dark .auth-confirm {
 }
 
 /* Compatibility layer for existing page markup while screens migrate to tokens. */
-html.light .text-zinc-50 { color: var(--ink) !important; }
+html.light .text-zinc-50 {
+  color: var(--ink) !important;
+}
 html.light .text-zinc-100,
 html.light .text-zinc-200,
-html.light .text-zinc-300 { color: var(--ink) !important; }
+html.light .text-zinc-300 {
+  color: var(--ink) !important;
+}
 html.light .text-zinc-400,
-html.light .text-zinc-500 { color: var(--ink-muted) !important; }
-html.light .text-zinc-600 { color: #64748b !important; }
-html.light .bg-zinc-950 { background-color: var(--bg) !important; }
+html.light .text-zinc-500 {
+  color: var(--ink-muted) !important;
+}
+html.light .text-zinc-600 {
+  color: #64748b !important;
+}
+html.light .bg-zinc-950 {
+  background-color: var(--bg) !important;
+}
 html.light .bg-zinc-900,
-html.light .bg-zinc-800 { background-color: var(--surface-card) !important; }
-html.light .bg-zinc-700 { background-color: var(--surface-hover) !important; }
+html.light .bg-zinc-800 {
+  background-color: var(--surface-card) !important;
+}
+html.light .bg-zinc-700 {
+  background-color: var(--surface-hover) !important;
+}
 html.light .border-zinc-800,
 html.light .border-zinc-700,
 html.light .border-white\/\[0\.08\],
 html.light .border-white\/\[0\.1\],
-html.light .border-white\/10 { border-color: var(--border) !important; }
-html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
-html.light .placeholder\:text-zinc-500::placeholder { color: var(--ink-muted); }
+html.light .border-white\/10 {
+  border-color: var(--border) !important;
+}
+html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+html.light .placeholder\:text-zinc-500::placeholder {
+  color: var(--ink-muted);
+}
 html.light .hover\:bg-white\/\[0\.05\]:hover,
-html.light .hover\:bg-white\/\[0\.06\]:hover { background-color: var(--surface-hover) !important; }
+html.light .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: var(--surface-hover) !important;
+}
 html.light .text-brand-300,
-html.light .text-brand-400 { color: var(--accent) !important; }
-html.light .bg-brand-500 { background-color: var(--accent) !important; }
+html.light .text-brand-400 {
+  color: var(--accent) !important;
+}
+html.light .bg-brand-500 {
+  background-color: var(--accent) !important;
+}
 html.light .shadow-panel,
 html.light .shadow-elevated,
-html.light .shadow-soft { box-shadow: 0 12px 30px -22px rgb(16 24 40 / 0.28), 0 1px 2px rgb(16 24 40 / 0.06); }
+html.light .shadow-soft {
+  box-shadow:
+    0 12px 30px -22px rgb(16 24 40 / 0.28),
+    0 1px 2px rgb(16 24 40 / 0.06);
+}
 
 html.light .surface-bento,
 html.light .surface-bento-accent {

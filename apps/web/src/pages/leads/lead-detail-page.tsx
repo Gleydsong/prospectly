@@ -134,8 +134,7 @@ export function LeadDetailPage() {
   });
 
   const latestAnalysisStatus = leadQuery.data?.websiteRecord?.analyses?.[0]?.status;
-  const analysisPending =
-    latestAnalysisStatus === 'PENDING' || latestAnalysisStatus === 'RUNNING';
+  const analysisPending = latestAnalysisStatus === 'PENDING' || latestAnalysisStatus === 'RUNNING';
 
   useEffect(() => {
     if (analysisPending && analysisError) {
@@ -191,7 +190,10 @@ export function LeadDetailPage() {
 
   return (
     <div className="space-y-5">
-      <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
+      <Link
+        to="/leads"
+        className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300"
+      >
         <ArrowLeft className="h-4 w-4" /> Voltar para clientes potenciais
       </Link>
 
@@ -203,7 +205,9 @@ export function LeadDetailPage() {
               lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
               lead.city,
               lead.country,
-            ].filter(Boolean).join(' · ') || 'Sem segmento'}
+            ]
+              .filter(Boolean)
+              .join(' · ') || 'Sem segmento'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -228,7 +232,11 @@ export function LeadDetailPage() {
               Enviar para o funil
             </Button>
           )}
-          <Button size="sm" variant="secondary" onClick={() => navigate(`/agents/crm?leadId=${lead.id}`)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => navigate(`/agents/crm?leadId=${lead.id}`)}
+          >
             Assistente de CRM
           </Button>
           <Button
@@ -271,7 +279,11 @@ export function LeadDetailPage() {
                 )
               }
             />
-            <InfoRow icon={MapPin} label="Endereço" value={[lead.address, lead.city, lead.state].filter(Boolean).join(', ') || undefined} />
+            <InfoRow
+              icon={MapPin}
+              label="Endereço"
+              value={[lead.address, lead.city, lead.state].filter(Boolean).join(', ') || undefined}
+            />
             <div className="pt-2">
               <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Etiquetas</p>
               <div className="flex flex-wrap gap-1">
@@ -406,7 +418,9 @@ export function LeadDetailPage() {
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium uppercase text-zinc-500">
-                        {t('scoreExplain.configVersion', { defaultValue: 'Versão da configuração' })}
+                        {t('scoreExplain.configVersion', {
+                          defaultValue: 'Versão da configuração',
+                        })}
                       </p>
                       <p className="text-sm text-zinc-200">v{latestScore.configVersion}</p>
                     </div>
@@ -417,17 +431,23 @@ export function LeadDetailPage() {
                       {t('scoreExplain.appliedRules', { defaultValue: 'Regras aplicadas' })}
                     </p>
                     <ul className="space-y-1 text-sm text-zinc-300">
-                      {(latestScore.rulesApplied as Array<{
-                        key: string;
-                        points: number;
-                        dimension?: string;
-                      }>).map((rule) => (
+                      {(
+                        latestScore.rulesApplied as Array<{
+                          key: string;
+                          points: number;
+                          dimension?: string;
+                        }>
+                      ).map((rule) => (
                         <li key={rule.key} className="flex justify-between gap-3">
                           <span>
                             {t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}
                             {rule.dimension ? (
                               <span className="ml-2 text-xs text-zinc-500">
-                                ({t(`scoreExplain.${rule.dimension}`, { defaultValue: rule.dimension })})
+                                (
+                                {t(`scoreExplain.${rule.dimension}`, {
+                                  defaultValue: rule.dimension,
+                                })}
+                                )
                               </span>
                             ) : null}
                           </span>
@@ -509,8 +529,13 @@ export function LeadDetailPage() {
                 <ol className="relative space-y-4 border-l border-zinc-800 pl-5">
                   {activitiesQuery.data.data.map((activity) => (
                     <li key={activity.id} className="relative">
-                      <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500/150" aria-hidden />
-                      <p className="text-sm font-medium text-zinc-50">{formatActivityType(activity.type)}</p>
+                      <span
+                        className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500/150"
+                        aria-hidden
+                      />
+                      <p className="text-sm font-medium text-zinc-50">
+                        {formatActivityType(activity.type)}
+                      </p>
                       {activity.description ? (
                         <p className="text-sm text-zinc-300">{activity.description}</p>
                       ) : null}
@@ -551,7 +576,15 @@ export function LeadDetailPage() {
                           {task.assignee?.name ?? 'Sem responsável'} · {formatDateTime(task.dueAt)}
                         </p>
                       </div>
-                      <Badge tone={task.status === 'DONE' ? 'green' : task.priority === 'HIGH' ? 'red' : 'slate'}>
+                      <Badge
+                        tone={
+                          task.status === 'DONE'
+                            ? 'green'
+                            : task.priority === 'HIGH'
+                              ? 'red'
+                              : 'slate'
+                        }
+                      >
                         {TASK_STATUS_LABELS[task.status]}
                       </Badge>
                     </li>
@@ -572,7 +605,11 @@ export function LeadDetailPage() {
           })}
           className="space-y-4"
         >
-          <Select label="Tipo" error={activityForm.formState.errors.type?.message} {...activityForm.register('type')}>
+          <Select
+            label="Tipo"
+            error={activityForm.formState.errors.type?.message}
+            {...activityForm.register('type')}
+          >
             {ACTIVITY_TYPES.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -605,7 +642,11 @@ export function LeadDetailPage() {
           })}
           className="space-y-4"
         >
-          <Input label="Título" error={taskForm.formState.errors.title?.message} {...taskForm.register('title')} />
+          <Input
+            label="Título"
+            error={taskForm.formState.errors.title?.message}
+            {...taskForm.register('title')}
+          />
           <Input label="Vencimento" type="date" {...taskForm.register('dueAt')} />
           <Select label="Prioridade" {...taskForm.register('priority')}>
             <option value="LOW">Baixa</option>
@@ -626,7 +667,6 @@ export function LeadDetailPage() {
     </div>
   );
 }
-
 
 function DimensionStat({ label, value }: { label: string; value: number }) {
   return (

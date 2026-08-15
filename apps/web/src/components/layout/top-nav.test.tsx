@@ -45,7 +45,9 @@ describe('TopNav', () => {
     );
 
     expect(screen.getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('navigation', { name: /navegação principal|main navigation/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: /navegação principal|main navigation/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows user avatar photo when avatarUrl is present', () => {

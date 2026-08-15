@@ -29,7 +29,9 @@ export async function fetchPluginTokens(): Promise<PluginToken[]> {
 }
 
 export async function createPluginToken(name: string): Promise<PluginToken & { token: string }> {
-  const { data } = await api.post<PluginToken & { token: string }>('/integrations/plugins/tokens', { name });
+  const { data } = await api.post<PluginToken & { token: string }>('/integrations/plugins/tokens', {
+    name,
+  });
   return data;
 }
 

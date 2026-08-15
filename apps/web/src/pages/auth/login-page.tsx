@@ -8,7 +8,12 @@ import { z } from 'zod';
 import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createCheckoutSession, createCreditCheckout, login, type AuthResponse } from '@/features/auth/api';
+import {
+  createCheckoutSession,
+  createCreditCheckout,
+  login,
+  type AuthResponse,
+} from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';

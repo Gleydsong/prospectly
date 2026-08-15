@@ -11,15 +11,7 @@ interface GaugePairProps {
   meetingRate: number;
 }
 
-function Gauge({
-  value,
-  label,
-  animate,
-}: {
-  value: number;
-  label: string;
-  animate: boolean;
-}) {
+function Gauge({ value, label, animate }: { value: number; label: string; animate: boolean }) {
   const clamped = Math.max(0, Math.min(100, value));
   const data = [
     { name: 'value', value: clamped },
@@ -43,7 +35,10 @@ function Gauge({
               animationBegin={animate ? 180 : 0}
               animationDuration={animate ? 900 : 0}
             >
-              <Cell fill="#60a5fa" style={{ filter: 'drop-shadow(0 0 8px rgb(96 165 250 / 0.55))' }} />
+              <Cell
+                fill="#60a5fa"
+                style={{ filter: 'drop-shadow(0 0 8px rgb(96 165 250 / 0.55))' }}
+              />
               <Cell fill="rgb(255 255 255 / 0.08)" />
             </Pie>
           </PieChart>

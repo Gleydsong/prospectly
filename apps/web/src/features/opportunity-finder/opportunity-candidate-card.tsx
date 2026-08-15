@@ -26,7 +26,9 @@ export function OpportunityCandidateCard({
     try {
       const parsed = new URL(candidate.company.website);
       return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   })();
   return (
     <Card interactive className="h-full">
@@ -36,7 +38,9 @@ export function OpportunityCandidateCard({
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <Badge tone={category.tone}>{category.label}</Badge>
               {candidate.explanation?.source === 'AI' ? (
-                <Badge tone="purple"><Sparkles className="h-3 w-3" /> IA</Badge>
+                <Badge tone="purple">
+                  <Sparkles className="h-3 w-3" /> IA
+                </Badge>
               ) : null}
             </div>
             <h3 className="truncate text-base font-bold text-[color:var(--ink)]">
@@ -55,18 +59,46 @@ export function OpportunityCandidateCard({
         </div>
 
         <div className="space-y-2 text-sm text-[color:var(--ink-muted)]">
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4" />{candidate.company.city}, {candidate.company.state}</p>
-          {candidate.company.phone ? <p className="flex items-center gap-2"><Phone className="h-4 w-4" />{candidate.company.phone}</p> : null}
+          <p className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            {candidate.company.city}, {candidate.company.state}
+          </p>
+          {candidate.company.phone ? (
+            <p className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              {candidate.company.phone}
+            </p>
+          ) : null}
           {safeWebsite ? (
-            <a className="flex items-center gap-2 text-[color:var(--accent)] hover:underline" href={safeWebsite} target="_blank" rel="noreferrer">
+            <a
+              className="flex items-center gap-2 text-[color:var(--accent)] hover:underline"
+              href={safeWebsite}
+              target="_blank"
+              rel="noreferrer"
+            >
               <ExternalLink className="h-4 w-4" /> Abrir site
             </a>
-          ) : <p className="flex items-center gap-2"><Building2 className="h-4 w-4" />Site não informado pela fonte</p>}
+          ) : (
+            <p className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Site não informado pela fonte
+            </p>
+          )}
         </div>
 
         <div className="mt-auto grid grid-cols-2 gap-2 rounded-control bg-[color:var(--surface-hover)] p-3 text-xs">
-          <span>Confiança <strong className="block text-sm text-[color:var(--ink)]">{candidate.confidenceScore}%</strong></span>
-          <span>Dados completos <strong className="block text-sm text-[color:var(--ink)]">{candidate.dataCompleteness}%</strong></span>
+          <span>
+            Confiança{' '}
+            <strong className="block text-sm text-[color:var(--ink)]">
+              {candidate.confidenceScore}%
+            </strong>
+          </span>
+          <span>
+            Dados completos{' '}
+            <strong className="block text-sm text-[color:var(--ink)]">
+              {candidate.dataCompleteness}%
+            </strong>
+          </span>
         </div>
         <Button variant="secondary" className="w-full" onClick={() => onOpen(candidate)}>
           Ver evidências

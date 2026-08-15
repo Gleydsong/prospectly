@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { PrivacyActionsCard } from '@/features/settings/privacy-actions-card';
 import { SettingsShell } from '@/features/settings/settings-shell';
+import { resolvePublicLandingUrl } from '@/lib/public-env';
 import { useAuthStore } from '@/stores/auth.store';
 
-const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
+const LANDING_URL = resolvePublicLandingUrl();
 
 export function SettingsPrivacyPage() {
   const { t, i18n } = useTranslation();

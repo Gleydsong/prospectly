@@ -175,7 +175,9 @@ export function AgentsCrmPage() {
 
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs uppercase text-zinc-500">{t('agents.crm.currentStage')}</dt>
+                    <dt className="text-xs uppercase text-zinc-500">
+                      {t('agents.crm.currentStage')}
+                    </dt>
                     <dd className="text-zinc-200">
                       {suggest.data.currentStage?.name ?? t('agents.crm.noStage')}
                     </dd>

@@ -25,8 +25,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     const fromError = readCorrelationIdFromError(error);
-    const correlationId =
-      this.props.correlationId ?? fromError ?? getOrCreateCorrelationId();
+    const correlationId = this.props.correlationId ?? fromError ?? getOrCreateCorrelationId();
 
     this.setState({ correlationId });
     captureClientError(error, {

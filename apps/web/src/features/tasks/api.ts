@@ -30,7 +30,10 @@ export async function createTaskForLead(leadId: string, input: CreateTaskInput):
   return data;
 }
 
-export async function updateTask(id: string, input: Partial<CreateTaskInput & { status: Task['status'] }>): Promise<Task> {
+export async function updateTask(
+  id: string,
+  input: Partial<CreateTaskInput & { status: Task['status'] }>,
+): Promise<Task> {
   const { data } = await api.patch<Task>(`/tasks/${id}`, input);
   return data;
 }

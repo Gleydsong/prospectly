@@ -69,7 +69,7 @@ export function DashboardPage() {
   const greeting = useMemo(() => {
     const key = greetingKey();
     return t(`principal.greeting.${key}`, { name: firstName });
-  }, [firstName, i18n.language, t]);
+  }, [firstName, t]);
 
   if (summary.isError) {
     return <Alert tone="error">{t('dashboard.loadError')}</Alert>;
@@ -231,7 +231,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className={leads.length > 0 ? 'overflow-x-auto' : undefined}>
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-white/[0.08] text-xs font-medium uppercase tracking-wide text-zinc-500">
@@ -306,15 +306,7 @@ export function DashboardPage() {
   );
 }
 
-function StatLine({
-  icon,
-  label,
-  loading,
-}: {
-  icon: ReactNode;
-  label: string;
-  loading?: boolean;
-}) {
+function StatLine({ icon, label, loading }: { icon: ReactNode; label: string; loading?: boolean }) {
   if (loading) return <Skeleton className="h-5 w-48" />;
   return (
     <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">

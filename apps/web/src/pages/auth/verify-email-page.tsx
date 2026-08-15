@@ -49,7 +49,9 @@ export function VerifyEmailPage() {
         <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-control bg-[color:var(--status-success-bg)] text-[color:var(--status-success-ink)]">
           <Mail className="h-5 w-5" aria-hidden />
         </div>
-        <p className="text-center text-sm font-semibold text-[color:var(--status-success-ink)]">{t('auth.verifyEyebrow')}</p>
+        <p className="text-center text-sm font-semibold text-[color:var(--status-success-ink)]">
+          {t('auth.verifyEyebrow')}
+        </p>
         <h1 className="mt-2 text-center text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-[1.75rem]">
           {t('auth.verifyTitleCard')}
         </h1>
@@ -65,7 +67,9 @@ export function VerifyEmailPage() {
               {t('auth.verifyMissingToken')}
             </p>
           ) : status === 'ok' ? (
-            <p className="font-medium text-[color:var(--status-success-ink)]">{t('auth.verifySuccess')}</p>
+            <p className="font-medium text-[color:var(--status-success-ink)]">
+              {t('auth.verifySuccess')}
+            </p>
           ) : status === 'error' ? (
             <p className="text-red-400" role="alert">
               {getApiErrorMessage(mutation.error) || t('auth.verifyError')}

@@ -17,7 +17,7 @@ projects:
           - name: prospectly-db
             plan: basic-256mb
             region: frankfurt
-            postgresMajorVersion: "16"
+            postgresMajorVersion: '16'
             diskSizeGB: 5
 
         services:
@@ -96,7 +96,7 @@ projects:
               - key: ABACATE_PRODUCT_MONTHLY_BRL
                 sync: false
               - key: ABACATE_LIFETIME_AMOUNT_CENTAVOS
-                value: "99700"
+                value: '99700'
               - key: ABACATE_SUCCESS_URL
                 sync: false
               - key: ABACATE_CANCEL_URL
@@ -108,7 +108,7 @@ projects:
               - key: SMTP_HOST
                 sync: false
               - key: SMTP_PORT
-                value: "587"
+                value: '587'
               - key: SMTP_USER
                 sync: false
               - key: SMTP_PASSWORD
@@ -133,10 +133,13 @@ projects:
           - type: web
             name: prospectly-web
             runtime: static
-            region: frankfurt
+            # Static Sites do not accept `region` (Render schema additionalProperties: false).
             branch: main
             autoDeployTrigger: checksPass
-            buildCommand: corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile --filter @prospectly/web... && pnpm --filter @prospectly/web run build
+            # Do NOT use `corepack enable` — Render's build image has a read-only /usr/bin (EROFS).
+            # Compile @prospectly/shared-types before the web app; dist/ is not versioned.
+            # --config.production=false keeps TypeScript/Vite (devDependencies) for the build.
+            buildCommand: pnpm install --frozen-lockfile --filter @prospectly/web... --config.production=false && pnpm --filter @prospectly/shared-types build && pnpm --filter @prospectly/web build:deploy
             staticPublishPath: apps/web/dist
             buildFilter:
               paths:
@@ -150,6 +153,12 @@ projects:
                 source: /*
                 destination: /index.html
             headers:
+              - path: /assets/*
+                name: Cache-Control
+                value: 'public, max-age=31536000, immutable'
+              - path: /index.html
+                name: Cache-Control
+                value: 'public, max-age=0, must-revalidate'
               - path: /*
                 name: X-Frame-Options
                 value: DENY
@@ -161,22 +170,24 @@ projects:
                 value: strict-origin-when-cross-origin
               - path: /*
                 name: Permissions-Policy
-                value: "camera=(), microphone=(), geolocation=()"
+                value: 'camera=(), microphone=(), geolocation=()'
               - path: /*
                 name: Cross-Origin-Opener-Policy
                 value: same-origin-allow-popups
               - path: /*
                 name: Strict-Transport-Security
-                value: "max-age=31536000; includeSubDomains"
+                value: 'max-age=31536000; includeSubDomains'
               - path: /*
                 name: Content-Security-Policy
-                value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src https://accounts.google.com"
+                value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.onrender.com https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; frame-src https://accounts.google.com"
             envVars:
               - key: VITE_API_URL
                 sync: false
               - key: VITE_LANDING_URL
                 sync: false
               - key: VITE_GOOGLE_CLIENT_ID
+                sync: false
+              - key: VITE_SENTRY_DSN
                 sync: false
 
           - type: web
@@ -201,7 +212,7 @@ projects:
               - key: NODE_ENV
                 value: production
               - key: NODE_VERSION
-                value: "22.14.0"
+                value: '22.14.0'
               - key: NEXT_PUBLIC_APP_URL
                 sync: false
               - key: NEXT_PUBLIC_LANDING_URL

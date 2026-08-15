@@ -20,9 +20,10 @@ import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
 import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
+import { resolvePublicLandingUrl } from '@/lib/public-env';
 import { useAuthStore } from '@/stores/auth.store';
 
-const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
+const LANDING_URL = resolvePublicLandingUrl();
 
 type RegisterForm = {
   name: string;
@@ -173,7 +174,13 @@ export function RegisterPage() {
         <>
           {t('auth.hasAccount')}{' '}
           <Link
-            to={offer ? `/login?offer=${offer}` : plan ? `/login?plan=${plan}&method=${paymentMethod}` : '/login'}
+            to={
+              offer
+                ? `/login?offer=${offer}`
+                : plan
+                  ? `/login?plan=${plan}&method=${paymentMethod}`
+                  : '/login'
+            }
             className="font-medium text-brand-400 hover:text-brand-300"
           >
             {t('auth.login')}

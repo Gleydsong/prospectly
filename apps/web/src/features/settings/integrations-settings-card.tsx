@@ -94,7 +94,9 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
                 className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-subtle)] p-4"
               >
                 <p className="text-sm font-semibold text-[color:var(--ink)]">{name}</p>
-                <p className="mt-1 text-xs leading-5 text-[color:var(--ink-muted)]">{description}</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--ink-muted)]">
+                  {description}
+                </p>
               </div>
             ))}
           </div>
@@ -147,10 +149,15 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
             {!tokens.isLoading && tokens.data?.length ? (
               <ul className="mt-4 divide-y divide-[color:var(--border)] border-t border-[color:var(--border)] pt-2">
                 {tokens.data.map((token) => (
-                  <li key={token.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                  <li
+                    key={token.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+                  >
                     <span className="text-[color:var(--ink)]">
                       {token.name}{' '}
-                      <code className="text-xs text-[color:var(--ink-muted)]">{token.tokenPrefix}</code>
+                      <code className="text-xs text-[color:var(--ink-muted)]">
+                        {token.tokenPrefix}
+                      </code>
                     </span>
                     <Button
                       type="button"

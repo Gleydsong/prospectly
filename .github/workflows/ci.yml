@@ -49,6 +49,36 @@ jobs:
         # Bloqueia qualquer high remanescente (overrides + ignoreGhsas documentados).
         run: pnpm audit --audit-level=high
 
+  web-deploy-build:
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_URL: https://api.example.com/api/v1
+      VITE_LANDING_URL: https://prospectlyonboard.com
+      VITE_GOOGLE_CLIENT_ID: demo-ci.apps.googleusercontent.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Validate Render blueprint
+        run: node scripts/validate-render-blueprint.mjs
+
+      - name: Install web workspace (Render sequence)
+        run: pnpm install --frozen-lockfile --filter @prospectly/web... --config.production=false
+
+      - name: Build shared-types then web deploy bundle
+        run: |
+          pnpm --filter @prospectly/shared-types build
+          pnpm --filter @prospectly/web build:deploy
+
+      - name: Reject development hosts in the deploy bundle
+        run: node apps/web/scripts/assert-deploy-bundle.mjs
+
   rls:
     runs-on: ubuntu-latest
     services:

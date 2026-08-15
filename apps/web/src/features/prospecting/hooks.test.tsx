@@ -37,7 +37,14 @@ describe('useSearch', () => {
         id: 'search-1',
         status: 'PENDING',
         provider: 'OPENSTREETMAP',
-        input: { categories: ['restaurant'], category: 'restaurant', city: 'Lisboa', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
+        input: {
+          categories: ['restaurant'],
+          category: 'restaurant',
+          city: 'Lisboa',
+          state: 'SP',
+          country: 'BR',
+          onlyWithoutWebsite: true,
+        },
         error: null,
         createdAt: '2026-07-22T10:00:00.000Z',
         completedAt: null,
@@ -46,7 +53,14 @@ describe('useSearch', () => {
         id: 'search-1',
         status: 'COMPLETED',
         provider: 'OPENSTREETMAP',
-        input: { categories: ['restaurant'], category: 'restaurant', city: 'Lisboa', state: 'SP', country: 'BR', onlyWithoutWebsite: true },
+        input: {
+          categories: ['restaurant'],
+          category: 'restaurant',
+          city: 'Lisboa',
+          state: 'SP',
+          country: 'BR',
+          onlyWithoutWebsite: true,
+        },
         error: null,
         createdAt: '2026-07-22T10:00:00.000Z',
         completedAt: '2026-07-22T10:00:02.000Z',
@@ -72,18 +86,23 @@ describe('useSearch', () => {
   });
 
   it('does not keep selectable results from the previous page while the next page loads', async () => {
-    let resolveSecondPage: ((value: {
-      data: Array<{ id: string }>;
-      meta: { page: number; pageSize: number; total: number; totalPages: number };
-    }) => void) | undefined;
+    let resolveSecondPage:
+      | ((value: {
+          data: Array<{ id: string }>;
+          meta: { page: number; pageSize: number; total: number; totalPages: number };
+        }) => void)
+      | undefined;
     fetchSearchResultsMock
       .mockResolvedValueOnce({
         data: [{ id: 'result-page-one' }],
         meta: { page: 1, pageSize: 20, total: 21, totalPages: 2 },
       } as never)
-      .mockImplementationOnce(() => new Promise((resolve) => {
-        resolveSecondPage = resolve as typeof resolveSecondPage;
-      }));
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecondPage = resolve as typeof resolveSecondPage;
+          }),
+      );
 
     const { result, rerender } = renderHook(
       ({ page }) => useSearchResults('search-1', { page, pageSize: 20 }),

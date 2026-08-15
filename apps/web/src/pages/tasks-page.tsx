@@ -234,7 +234,9 @@ export function TasksPage() {
                       <td className="px-5 py-3 text-right">
                         <TaskRowActions
                           task={task}
-                          deletingLead={deleteLead.isPending && deleteLead.variables === task.lead?.id}
+                          deletingLead={
+                            deleteLead.isPending && deleteLead.variables === task.lead?.id
+                          }
                           deletingTask={deleteTask.isPending && deleteTask.variables === task.id}
                           onComplete={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
                           onDeleteLead={removeLead}

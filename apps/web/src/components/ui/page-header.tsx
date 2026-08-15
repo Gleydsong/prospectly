@@ -11,13 +11,7 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({
-  title,
-  description,
-  eyebrow,
-  actions,
-  className,
-}: PageHeaderProps) {
+export function PageHeader({ title, description, eyebrow, actions, className }: PageHeaderProps) {
   return (
     <div className={cn('flex flex-wrap items-start justify-between gap-4', className)}>
       <div className="min-w-0 max-w-3xl">

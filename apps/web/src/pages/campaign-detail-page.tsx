@@ -252,9 +252,15 @@ export function CampaignDetailPage() {
                 defaultValue: 'Estado não identificado',
               })}
             </Badge>
-            <span>{t('campaigns.columns.segment')}: {campaign.segment ?? '—'}</span>
-            <span>{t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}</span>
-            <span>{t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}</span>
+            <span>
+              {t('campaigns.columns.segment')}: {campaign.segment ?? '—'}
+            </span>
+            <span>
+              {t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}
+            </span>
+            <span>
+              {t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}
+            </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -279,7 +285,10 @@ export function CampaignDetailPage() {
         </div>
       </div>
 
-      <Card className="border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90" role="note">
+      <Card
+        className="border-amber-600/30 bg-amber-100 p-4 text-sm text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-100"
+        role="note"
+      >
         {t('campaigns.assistedNotice')}
       </Card>
 
@@ -329,11 +338,14 @@ export function CampaignDetailPage() {
             <Card key={stage.id} className="p-4">
               <CardHeader
                 title={stage.name}
-                description={t(`campaigns.stageType.${stage.type}`, { defaultValue: 'Etapa manual' })}
+                description={t(`campaigns.stageType.${stage.type}`, {
+                  defaultValue: 'Etapa manual',
+                })}
               />
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
                 <span>
-                  {t('campaigns.metrics.leads')}: {'leadCount' in stage ? stage.leadCount : campaign.stageCounts?.[stage.id] ?? 0}
+                  {t('campaigns.metrics.leads')}:{' '}
+                  {'leadCount' in stage ? stage.leadCount : (campaign.stageCounts?.[stage.id] ?? 0)}
                 </span>
                 <span>
                   {t('campaigns.metrics.openTasks')}: {'openTasks' in stage ? stage.openTasks : 0}
@@ -524,7 +536,11 @@ export function CampaignDetailPage() {
             </label>
             <label className="text-sm text-zinc-300">
               {t('campaigns.nextAction')}
-              <Input className="mt-1" value={nextAction} onChange={(e) => setNextAction(e.target.value)} />
+              <Input
+                className="mt-1"
+                value={nextAction}
+                onChange={(e) => setNextAction(e.target.value)}
+              />
             </label>
             <label className="text-sm text-zinc-300">
               {t('campaigns.followUpAt')}
@@ -538,7 +554,11 @@ export function CampaignDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" loading={recordResult.isPending} onClick={() => void handleRecordResult()}>
+            <Button
+              type="button"
+              loading={recordResult.isPending}
+              onClick={() => void handleRecordResult()}
+            >
               {t('campaigns.saveResult')}
             </Button>
             {(templatesQuery.data?.data ?? []).slice(0, 3).map((template) => (
@@ -719,7 +739,11 @@ export function CampaignDetailPage() {
   );
 }
 
-function expectNoSend(payload: { autoSend?: boolean; messageSent?: boolean; autoSendEnabled?: boolean }) {
+function expectNoSend(payload: {
+  autoSend?: boolean;
+  messageSent?: boolean;
+  autoSendEnabled?: boolean;
+}) {
   if (payload.autoSend || payload.messageSent || payload.autoSendEnabled) {
     throw new Error('Unexpected auto-send flag in assisted campaign response');
   }

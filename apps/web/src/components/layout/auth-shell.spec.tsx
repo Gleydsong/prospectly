@@ -22,7 +22,9 @@ describe('AuthShell', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Entrar no Prospectly' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: 'Entrar no Prospectly' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('SSL seguro')).toBeInTheDocument();
     expect(screen.getByText('Fluxo alinhado à LGPD')).toBeInTheDocument();
     expect(screen.getByText('Comece grátis')).toBeInTheDocument();

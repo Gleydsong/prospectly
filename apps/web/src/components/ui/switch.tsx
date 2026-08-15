@@ -22,7 +22,10 @@ export function Switch({
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        <label htmlFor={switchId} className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">
+        <label
+          htmlFor={switchId}
+          className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]"
+        >
           {label}
         </label>
         {description ? (

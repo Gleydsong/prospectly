@@ -14,13 +14,7 @@ import { Role } from '@/types';
 
 const INVITE_ROLES: InviteRole[] = [Role.ADMIN, Role.SALES, Role.MEMBER, Role.VIEWER];
 
-export function InviteMemberModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+export function InviteMemberModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
