@@ -13,6 +13,17 @@ export class CreateOpportunityRunDto {
   @MaxLength(240)
   service!: string;
 
+  @ApiPropertyOptional({
+    example: 'Lojas de roupas no atacado',
+    description: 'Target business niche. Falls back to service for legacy clients.',
+  })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(120)
+  niche?: string;
+
   @ApiProperty({ example: 'Curitiba' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()

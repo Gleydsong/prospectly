@@ -64,7 +64,7 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   return (
-    <Modal open={open} onClose={close} title="Novo lead" className="max-w-2xl">
+    <Modal open={open} onClose={close} title="Novo cliente potencial" className="max-w-2xl">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
@@ -76,14 +76,14 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
           <Input label="E-mail" type="email" error={errors.email?.message} {...register('email')} />
           <Input label="Telefone" {...register('phone')} />
           <Input
-            label="Website"
+            label="Site"
             placeholder="https://…"
             error={errors.website?.message}
             {...register('website')}
           />
           <Input label="Cidade" {...register('city')} />
           <Input label="País" {...register('country')} />
-          <Input label="Tags (separadas por vírgula)" placeholder="sem-site, prioridade" {...register('tags')} />
+          <Input label="Etiquetas (separadas por vírgula)" placeholder="sem-site, prioridade" {...register('tags')} />
         </div>
         <Textarea label="Observações" {...register('notes')} />
 

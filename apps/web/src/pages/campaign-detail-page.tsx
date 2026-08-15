@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import type { CampaignLeadResult, CampaignStatus } from '@/features/campaigns/api';
+import type { CampaignLeadResult, CampaignStage, CampaignStatus } from '@/features/campaigns/api';
 import {
   useAddCampaignLeads,
   useCampaign,
@@ -28,6 +28,7 @@ import {
 } from '@/features/campaigns/hooks';
 import { useLeads } from '@/features/leads/hooks';
 import { getApiErrorMessage } from '@/lib/api';
+import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
 import { formatDate } from '@/lib/utils';
 
 const RESULTS: CampaignLeadResult[] = [
@@ -48,6 +49,19 @@ const STATUS_ACTIONS: Partial<Record<CampaignStatus, CampaignStatus[]>> = {
   RUNNING: ['PAUSED', 'COMPLETED', 'CANCELLED'],
   PAUSED: ['RUNNING', 'COMPLETED', 'CANCELLED'],
 };
+
+function formatCampaignLeadStatus(
+  status: string,
+  currentStageId: string | null | undefined,
+  stages: CampaignStage[] | undefined,
+): string {
+  const currentStage = currentStageId
+    ? stages?.find((stage) => stage.id === currentStageId)
+    : undefined;
+  if (currentStage) return currentStage.name;
+  if (status === 'PENDING') return 'Pendente';
+  return 'Em andamento';
+}
 
 export function CampaignDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -233,7 +247,11 @@ export function CampaignDetailPage() {
             {campaign.description || t('campaigns.noDescription')}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
-            <Badge>{t(`campaigns.status.${campaign.status}`)}</Badge>
+            <Badge>
+              {t(`campaigns.status.${campaign.status}`, {
+                defaultValue: 'Estado não identificado',
+              })}
+            </Badge>
             <span>{t('campaigns.columns.segment')}: {campaign.segment ?? '—'}</span>
             <span>{t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}</span>
             <span>{t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}</span>
@@ -311,7 +329,7 @@ export function CampaignDetailPage() {
             <Card key={stage.id} className="p-4">
               <CardHeader
                 title={stage.name}
-                description={t(`campaigns.stageType.${stage.type}`, { defaultValue: stage.type })}
+                description={t(`campaigns.stageType.${stage.type}`, { defaultValue: 'Etapa manual' })}
               />
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
                 <span>
@@ -391,10 +409,18 @@ export function CampaignDetailPage() {
                         <div>{row.lead.email ?? '—'}</div>
                         <div>{row.lead.phone ?? '—'}</div>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">{row.status}</td>
+                      <td className="px-4 py-3 text-zinc-400">
+                        {formatCampaignLeadStatus(
+                          row.status,
+                          row.currentStageId,
+                          campaign?.metrics?.stages,
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-zinc-400">
                         {row.result
-                          ? t(`campaigns.results.${row.result}`, { defaultValue: row.result })
+                          ? t(`campaigns.results.${row.result}`, {
+                              defaultValue: 'Resultado registrado',
+                            })
                           : '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -681,7 +707,9 @@ export function CampaignDetailPage() {
             {(templatesQuery.data?.data ?? []).map((template) => (
               <li key={template.id} className="rounded-md border border-zinc-800 p-3">
                 <div className="font-medium text-zinc-100">{template.name}</div>
-                <div className="text-xs text-zinc-500">{template.category}</div>
+                <div className="text-xs text-zinc-500">
+                  {formatMessageTemplateCategory(template.category)}
+                </div>
               </li>
             ))}
           </ul>

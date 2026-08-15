@@ -18,7 +18,8 @@ const makePrisma = () => {
     leadTag: { createMany: jest.fn(), deleteMany: jest.fn() },
     leadActivity: { create: jest.fn() },
     organizationMember: { findUnique: jest.fn() },
-    $transaction: jest.fn(),
+    task: { deleteMany: jest.fn() },
+    $transaction: jest.fn(async (operations: unknown[]) => Promise.all(operations)),
   };
   return prisma as unknown as PrismaService & {
     lead: {
@@ -29,6 +30,7 @@ const makePrisma = () => {
       update: jest.Mock;
     };
     organizationMember: { findUnique: jest.Mock };
+    task: { deleteMany: jest.Mock };
     $transaction: jest.Mock;
   };
 };
@@ -225,9 +227,27 @@ describe('LeadsService', () => {
 
     await service.softDelete('org1', 'l1');
 
+    expect(prisma.task.deleteMany).toHaveBeenCalledWith({
+      where: { organizationId: 'org1', leadId: 'l1' },
+    });
     expect(prisma.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
     );
+  });
+
+  it('softDelete is a no-op when the lead is already deleted', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'l1',
+      organizationId: 'org1',
+      deletedAt: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.softDelete('org1', 'l1');
+
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+    expect(prisma.task.deleteMany).not.toHaveBeenCalled();
   });
 
   it('collectMissingLeadFields lists blank contact and website fields', () => {

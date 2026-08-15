@@ -38,6 +38,7 @@ export type BillingStatus = {
   hasStripeCustomer: boolean;
   canOpenPortal: boolean;
   canCancelSubscription: boolean;
+  canExportCsv: boolean;
   freeSearchLimit: number;
   creditBalance: number;
 };

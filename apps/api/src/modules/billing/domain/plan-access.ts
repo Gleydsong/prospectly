@@ -1,0 +1,30 @@
+import { OrgPlan, PlanStatus } from '@prisma/client';
+
+export type PlanAccessOrg = {
+  plan: OrgPlan;
+  planStatus: PlanStatus;
+  currentPeriodEnd: Date | null;
+};
+
+/** ACTIVE paid access. LIFETIME never expires. Monthly expires at currentPeriodEnd. */
+export function hasUnlimitedAccess(org: PlanAccessOrg, now = new Date()): boolean {
+  if (org.planStatus !== PlanStatus.ACTIVE) {
+    return false;
+  }
+  if (org.plan === OrgPlan.LIFETIME) {
+    return true;
+  }
+  if (org.currentPeriodEnd && org.currentPeriodEnd.getTime() <= now.getTime()) {
+    return false;
+  }
+  return true;
+}
+
+export function isMonthlyPeriodExpired(org: PlanAccessOrg, now = new Date()): boolean {
+  return (
+    org.plan !== OrgPlan.LIFETIME &&
+    org.planStatus === PlanStatus.ACTIVE &&
+    org.currentPeriodEnd != null &&
+    org.currentPeriodEnd.getTime() <= now.getTime()
+  );
+}

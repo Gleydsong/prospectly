@@ -160,8 +160,17 @@ export class LeadsService {
   }
 
   async softDelete(organizationId: string, id: string) {
-    await this.ensureLead(organizationId, id);
-    await this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } });
+    const lead = await this.prisma.lead.findFirst({ where: { id, organizationId } });
+    if (!lead) {
+      throw new NotFoundException('Lead not found');
+    }
+    if (lead.deletedAt) {
+      return;
+    }
+    await this.prisma.$transaction([
+      this.prisma.task.deleteMany({ where: { organizationId, leadId: id } }),
+      this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } }),
+    ]);
   }
 
   async restore(organizationId: string, id: string) {

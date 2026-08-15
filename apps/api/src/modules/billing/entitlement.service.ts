@@ -1,7 +1,8 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { OrgPlan, PlanStatus, UsageMeterKey } from '@prisma/client';
+import { CreditPurchaseStatus, OrgPlan, UsageMeterKey } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { hasUnlimitedAccess } from './domain/plan-access';
 
 export type FeatureKey =
   | 'searches'
@@ -51,7 +52,7 @@ export class EntitlementService {
       where: { id: organizationId },
       select: { plan: true, planStatus: true, currentPeriodEnd: true },
     });
-    const plan = org.planStatus === PlanStatus.ACTIVE ? org.plan : OrgPlan.FREE;
+    const plan = hasUnlimitedAccess(org) ? org.plan : OrgPlan.FREE;
     const limits = PLAN_ENTITLEMENTS[plan];
     const members = await this.prisma.organizationMember.count({ where: { organizationId } });
 
@@ -67,7 +68,43 @@ export class EntitlementService {
     };
   }
 
+  async canExportCsv(organizationId: string): Promise<boolean> {
+    const org = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: organizationId },
+      select: { plan: true, planStatus: true, currentPeriodEnd: true },
+    });
+    if (hasUnlimitedAccess(org)) {
+      return true;
+    }
+    const purchased = await this.prisma.creditPurchase.count({
+      where: { organizationId, status: CreditPurchaseStatus.COMPLETED },
+    });
+    return purchased > 0;
+  }
+
+  async assertTeamSeat(organizationId: string): Promise<void> {
+    const snapshot = await this.getSnapshot(organizationId);
+    if (snapshot.usage.teamMembers >= snapshot.limits.teamMembers) {
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_TEAM_MEMBERS',
+        message: `Team member limit of ${snapshot.limits.teamMembers} reached`,
+        requiredPlan: snapshot.plan === OrgPlan.FREE ? 'STARTER_MONTHLY' : 'LIFETIME',
+      });
+    }
+  }
+
   async assertFeature(organizationId: string, feature: FeatureKey): Promise<void> {
+    if (feature === 'csv_export') {
+      if (!(await this.canExportCsv(organizationId))) {
+        throw new ForbiddenException({
+          code: 'ENTITLEMENT_CSV_EXPORT',
+          message: 'Feature csv_export is not available on current plan',
+          requiredPlan: 'STARTER_MONTHLY',
+        });
+      }
+      return;
+    }
+
     const snapshot = await this.getSnapshot(organizationId);
     const value = snapshot.features[feature];
     const allowed = typeof value === 'boolean' ? value : Number(value) > 0;

@@ -7,6 +7,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
+import { EntitlementService } from './entitlement.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
@@ -56,6 +57,11 @@ describe('BillingService', () => {
 
   const activation = {
     bindCheckoutIntent: jest.fn().mockResolvedValue(undefined),
+    syncMonthlyStatus: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const entitlements = {
+    canExportCsv: jest.fn().mockResolvedValue(false),
   };
 
   const configGet = jest.fn((key: string) => {
@@ -82,6 +88,7 @@ describe('BillingService', () => {
         { provide: StripePaymentProvider, useValue: stripeProvider },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
         { provide: CreditPurchaseService, useValue: { createPending: jest.fn(), attachPayment: jest.fn() } },
+        { provide: EntitlementService, useValue: entitlements },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -189,7 +196,7 @@ describe('BillingService', () => {
       expect.objectContaining({
         hasStripeCustomer: true,
         canOpenPortal: true,
-        canCancelSubscription: true,
+        canCancelSubscription: false,
       }),
     );
   });
@@ -223,32 +230,62 @@ describe('BillingService', () => {
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('routes PIX lifetime checkout to Abacate', async () => {
+  it('rejects new lifetime checkouts', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       name: 'Acme',
       paymentProvider: null,
       deletedAt: null,
     });
-    abacateProvider.createCheckout.mockResolvedValue({
-      mode: 'pix',
-      provider: 'ABACATE',
-      brCode: '000201',
-      brCodeBase64: 'data:image/png;base64,abc',
-      externalPaymentId: 'pix_1',
-      amountCentavos: 39900,
-    });
 
-    const result = await service.createCheckoutSession(
-      'org1',
-      'a@b.com',
-      'lifetime',
-      'BRL',
-      'pix',
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL', 'pix'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('allows PIX monthly cancel without an Abacate subscription id', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      planCurrency: 'BRL',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: null,
+      currentPeriodEnd: new Date('2026-09-14T00:00:00.000Z'),
+      deletedAt: null,
+      creditBalance: 0,
+    });
+    prisma.search.count.mockResolvedValue(1);
+
+    await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
+      expect.objectContaining({ canCancelSubscription: true, canOpenPortal: false }),
     );
-    expect(result.mode).toBe('pix');
-    expect(abacateProvider.createCheckout).toHaveBeenCalled();
-    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('expires an overdue monthly plan before allowing more unlimited searches', async () => {
+    const expired = {
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+      creditBalance: 0,
+      deletedAt: null,
+    };
+    prisma.organization.findFirst
+      .mockResolvedValueOnce(expired)
+      .mockResolvedValueOnce({
+        ...expired,
+        plan: OrgPlan.FREE,
+        planStatus: PlanStatus.CANCELED,
+      });
+    prisma.search.count.mockResolvedValue(3);
+
+    await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      status: PlanStatus.CANCELED,
+    });
   });
 
   it('rejects cross-provider plan checkout when org already bound', async () => {

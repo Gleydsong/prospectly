@@ -2,6 +2,7 @@ import { ExternalLink, Globe, MapPin, Phone, Send, Star } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
 import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import type { ProspectingSearchResult } from '@/types';
@@ -67,7 +68,7 @@ export function SearchResultCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
-        {business.category ? <Badge>{business.category}</Badge> : null}
+        {business.category ? <Badge>{formatCategoryTag(business.category)}</Badge> : null}
         <Badge tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}>
           {signal.level === 'HIGH' ? 'Quente' : signal.level === 'MEDIUM' ? 'Morno' : 'Frio'}
         </Badge>
@@ -76,7 +77,7 @@ export function SearchResultCard({
             'ml-auto rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
             SCORE_TONE[signal.level],
           )}
-          title="Score de oportunidade"
+          title="Pontuação de oportunidade"
         >
           {signal.score}
         </span>

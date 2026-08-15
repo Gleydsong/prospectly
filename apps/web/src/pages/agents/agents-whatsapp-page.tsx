@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { useWhatsappFirstMessage, useWhatsappVariants } from '@/features/agents/hooks';
 import { useMessageTemplates } from '@/features/campaigns/hooks';
+import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
 import { fetchLead, fetchLeads } from '@/features/leads/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -294,7 +295,7 @@ export function AgentsWhatsappPage() {
                     >
                       {(templates.data?.data ?? []).map((template) => (
                         <option key={template.id} value={template.id}>
-                          {template.name} ({template.category})
+                          {template.name} ({formatMessageTemplateCategory(template.category)})
                         </option>
                       ))}
                     </Select>

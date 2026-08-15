@@ -17,22 +17,29 @@ export class TasksService {
       ...(query.status ? { status: query.status } : {}),
       ...(query.assigneeId ? { assigneeId: query.assigneeId } : {}),
       ...(query.leadId ? { leadId: query.leadId } : {}),
+      NOT: {
+        lead: {
+          is: { deletedAt: { not: null } },
+        },
+      },
     };
 
-    const [total, tasks] = await Promise.all([
+    const [total, rows] = await Promise.all([
       this.prisma.task.count({ where }),
       this.prisma.task.findMany({
         where,
-        include: {
-          assignee: { select: { id: true, name: true } },
-          lead: { select: { id: true, companyName: true } },
-        },
+        include: this.taskInclude,
         orderBy: [{ status: 'asc' }, { dueAt: 'asc' }, { createdAt: 'desc' }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
     ]);
-    return paginate(tasks, total, query.page, query.pageSize);
+    return paginate(
+      rows.map((task) => this.serialize(task)),
+      total,
+      query.page,
+      query.pageSize,
+    );
   }
 
   async create(organizationId: string, userId: string, dto: CreateTaskDto) {
@@ -42,22 +49,21 @@ export class TasksService {
     if (dto.assigneeId) {
       await this.assertMember(organizationId, dto.assigneeId);
     }
-    return this.prisma.task.create({
-      data: {
-        organizationId,
-        createdById: userId,
-        title: dto.title.trim(),
-        description: dto.description,
-        dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-        priority: dto.priority ?? 'MEDIUM',
-        assigneeId: dto.assigneeId ?? userId,
-        leadId: dto.leadId,
-      },
-      include: {
-        assignee: { select: { id: true, name: true } },
-        lead: { select: { id: true, companyName: true } },
-      },
-    });
+    return this.serialize(
+      await this.prisma.task.create({
+        data: {
+          organizationId,
+          createdById: userId,
+          title: dto.title.trim(),
+          description: dto.description,
+          dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+          priority: dto.priority ?? 'MEDIUM',
+          assigneeId: dto.assigneeId ?? userId,
+          leadId: dto.leadId,
+        },
+        include: this.taskInclude,
+      }),
+    );
   }
 
   async update(organizationId: string, id: string, dto: UpdateTaskDto) {
@@ -68,23 +74,22 @@ export class TasksService {
     if (dto.assigneeId) {
       await this.assertMember(organizationId, dto.assigneeId);
     }
-    return this.prisma.task.update({
-      where: { id },
-      data: {
-        title: dto.title?.trim(),
-        description: dto.description,
-        dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-        priority: dto.priority,
-        status: dto.status,
-        ...(dto.status === 'DONE' ? { completedAt: new Date() } : {}),
-        ...(dto.status && dto.status !== 'DONE' ? { completedAt: null } : {}),
-        assigneeId: dto.assigneeId,
-      },
-      include: {
-        assignee: { select: { id: true, name: true } },
-        lead: { select: { id: true, companyName: true } },
-      },
-    });
+    return this.serialize(
+      await this.prisma.task.update({
+        where: { id },
+        data: {
+          title: dto.title?.trim(),
+          description: dto.description,
+          dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+          priority: dto.priority,
+          status: dto.status,
+          ...(dto.status === 'DONE' ? { completedAt: new Date() } : {}),
+          ...(dto.status && dto.status !== 'DONE' ? { completedAt: null } : {}),
+          assigneeId: dto.assigneeId,
+        },
+        include: this.taskInclude,
+      }),
+    );
   }
 
   async remove(organizationId: string, id: string) {
@@ -93,6 +98,23 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
     await this.prisma.task.delete({ where: { id } });
+  }
+
+  private readonly taskInclude = {
+    assignee: { select: { id: true, name: true } },
+    lead: { select: { id: true, companyName: true, deletedAt: true } },
+  } as const;
+
+  private serialize<
+    T extends {
+      lead: { id: string; companyName: string; deletedAt: Date | null } | null;
+    },
+  >(task: T) {
+    const lead = task.lead;
+    return {
+      ...task,
+      lead: lead && lead.deletedAt == null ? { id: lead.id, companyName: lead.companyName } : null,
+    };
   }
 
   private async assertLead(organizationId: string, leadId: string) {

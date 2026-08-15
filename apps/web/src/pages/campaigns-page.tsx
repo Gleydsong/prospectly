@@ -185,7 +185,7 @@ export function CampaignsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={STATUS_TONE[campaign.status] ?? 'slate'}>
-                        {t(`campaigns.status.${campaign.status}`, { defaultValue: campaign.status })}
+                        {t(`campaigns.status.${campaign.status}`, { defaultValue: 'Estado não identificado' })}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-zinc-400">{campaign.segment ?? '—'}</td>

@@ -5,10 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 import { CREDIT_COSTS, type OpportunityCandidateView } from '@/types';
+import {
+  formatEvidenceKind,
+  formatEvidenceSource,
+  formatOpportunityDimension,
+} from './opportunity-labels';
 
 const signalLabels: Record<string, string> = {
-  MISSING_WEBSITE: 'Website não reportado',
-  LOW_PERFORMANCE: 'Performance baixa',
+  MISSING_WEBSITE: 'Site não informado',
+  LOW_PERFORMANCE: 'Desempenho baixo',
   MISSING_HTTPS: 'HTTPS ausente',
   MISSING_MOBILE_SUPPORT: 'Suporte móvel ausente',
   MISSING_BOOKING: 'Agendamento não detectado',
@@ -46,7 +51,7 @@ export function OpportunityCandidateModal({
           {Object.entries(candidate.scoreBreakdown.dna).map(([dimension, score]) => (
             <div key={dimension} className="rounded-control bg-[color:var(--surface-hover)] p-3 text-center">
               <strong className="block text-lg text-[color:var(--ink)]">{score}</strong>
-              <span className="text-xs capitalize text-[color:var(--ink-muted)]">{dimension}</span>
+              <span className="text-xs text-[color:var(--ink-muted)]">{formatOpportunityDimension(dimension)}</span>
             </div>
           ))}
         </div>
@@ -61,11 +66,13 @@ export function OpportunityCandidateModal({
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--ink-muted)]" />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <strong className="text-sm text-[color:var(--ink)]">{signalLabels[signal.type] ?? signal.type}</strong>
-                      <Badge tone={signal.kind === 'FACT' ? 'green' : signal.kind === 'UNKNOWN' ? 'slate' : 'amber'}>{signal.kind}</Badge>
+                      <strong className="text-sm text-[color:var(--ink)]">{signalLabels[signal.type] ?? 'Sinal de oportunidade'}</strong>
+                      <Badge tone={signal.kind === 'FACT' ? 'green' : signal.kind === 'UNKNOWN' ? 'slate' : 'amber'}>
+                        {formatEvidenceKind(signal.kind)}
+                      </Badge>
                     </div>
                     <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{signal.evidence}</p>
-                    <p className="mt-1 text-xs text-[color:var(--ink-muted)]">Fonte: {signal.source} · Confiança: {Math.round(signal.confidence * 100)}% · Verificado: {new Date(signal.checkedAt).toLocaleString('pt-BR')}</p>
+                    <p className="mt-1 text-xs text-[color:var(--ink-muted)]">Fonte: {formatEvidenceSource(signal.source)} · Confiança: {Math.round(signal.confidence * 100)}% · Verificado: {new Date(signal.checkedAt).toLocaleString('pt-BR')}</p>
                   </div>
                 </div>
               );
@@ -89,7 +96,7 @@ export function OpportunityCandidateModal({
         <div className="flex flex-wrap justify-end gap-2">
           {!explanation ? <Button variant="secondary" loading={explaining} onClick={onExplain}>Gerar explicação ({CREDIT_COSTS.explain} créditos)</Button> : null}
           <Button loading={saving} disabled={Boolean(candidate.importedLeadId)} onClick={onSave}>
-            {candidate.importedLeadId ? 'Salvo como lead' : `Salvar como lead (${CREDIT_COSTS.saveLead} crédito)`}
+            {candidate.importedLeadId ? 'Salvo como cliente potencial' : `Salvar como cliente potencial (${CREDIT_COSTS.saveLead} crédito)`}
           </Button>
         </div>
       </div>

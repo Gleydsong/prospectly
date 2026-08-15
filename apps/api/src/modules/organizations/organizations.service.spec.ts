@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { AuditService } from '../audit/audit.service';
+import type { EntitlementService } from '../billing/entitlement.service';
 import { OrganizationsService } from './organizations.service';
 
 jest.mock('argon2', () => ({
@@ -37,6 +38,14 @@ const makeAudit = () =>
     log: jest.Mock;
   };
 
+const makeEntitlements = () =>
+  ({
+    assertTeamSeat: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as EntitlementService & { assertTeamSeat: jest.Mock };
+
+const makeService = (prisma: ReturnType<typeof makePrisma>, entitlements = makeEntitlements()) =>
+  new OrganizationsService(prisma, makeAudit(), entitlements);
+
 describe('OrganizationsService.updateMemberRole', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -48,7 +57,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       role: 'MEMBER',
       organizationId: 'org1',
     });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await expect(
       service.updateMemberRole('org1', 'm1', 'OWNER', 'admin-1', 'ADMIN'),
@@ -64,7 +73,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       role: 'OWNER',
       organizationId: 'org1',
     });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await expect(
       service.updateMemberRole('org1', 'm1', 'ADMIN', 'admin-1', 'ADMIN'),
@@ -80,7 +89,7 @@ describe('OrganizationsService.updateMemberRole', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.update.mockResolvedValue({ id: 'm1', role: 'OWNER' });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await service.updateMemberRole('org1', 'm1', 'OWNER', 'owner-1', 'OWNER');
     expect(prisma.organizationMember.update).toHaveBeenCalledWith({
@@ -92,7 +101,7 @@ describe('OrganizationsService.updateMemberRole', () => {
   it('throws when member is missing', async () => {
     const prisma = makePrisma();
     prisma.organizationMember.findFirst.mockResolvedValue(null);
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await expect(
       service.updateMemberRole('org1', 'missing', 'ADMIN', 'owner-1', 'OWNER'),
@@ -112,7 +121,7 @@ describe('OrganizationsService.removeMember', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.count.mockResolvedValue(2);
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await expect(
       service.removeMember('org1', 'm-owner', 'admin-1', 'ADMIN'),
@@ -130,7 +139,7 @@ describe('OrganizationsService.removeMember', () => {
     });
     prisma.organizationMember.count.mockResolvedValue(2);
     prisma.organizationMember.delete.mockResolvedValue({ id: 'm-owner-2' });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await service.removeMember('org1', 'm-owner-2', 'owner-1', 'OWNER');
     expect(prisma.organizationMember.delete).toHaveBeenCalledWith({
@@ -147,7 +156,7 @@ describe('OrganizationsService.removeMember', () => {
       organizationId: 'org1',
     });
     prisma.organizationMember.delete.mockResolvedValue({ id: 'm-member' });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await service.removeMember('org1', 'm-member', 'admin-1', 'ADMIN');
     expect(prisma.organizationMember.delete).toHaveBeenCalledWith({
@@ -167,7 +176,7 @@ describe('OrganizationsService.inviteMember', () => {
       emailVerifiedAt: null,
       memberships: [],
     });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await expect(
       service.inviteMember('org1', {
@@ -195,7 +204,7 @@ describe('OrganizationsService.inviteMember', () => {
       role: 'SALES',
       user: { id: 'u2', name: 'Colleague', email: 'colleague@company.com' },
     });
-    const service = new OrganizationsService(prisma, makeAudit());
+    const service = makeService(prisma);
 
     await service.inviteMember('org1', {
       email: 'colleague@company.com',
@@ -210,5 +219,22 @@ describe('OrganizationsService.inviteMember', () => {
         data: { userId: 'u2', organizationId: 'org1', role: 'SALES' },
       }),
     );
+  });
+
+  it('blocks invite when the team seat entitlement is exhausted', async () => {
+    const prisma = makePrisma();
+    const entitlements = makeEntitlements();
+    entitlements.assertTeamSeat.mockRejectedValue(new ForbiddenException('full'));
+    const service = makeService(prisma, entitlements);
+
+    await expect(
+      service.inviteMember('org1', {
+        email: 'new@company.com',
+        name: 'New',
+        role: 'SALES',
+        temporaryPassword: 'TempPass1!',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 });

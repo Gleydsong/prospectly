@@ -104,7 +104,7 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
               channelClass(emailTone),
             )}
-            title={blocked ? 'Lead marcado como não contatar' : 'E-mail não cadastrado'}
+            title={blocked ? 'Cliente potencial marcado como não contatar' : 'E-mail não cadastrado'}
           >
             <Mail className="h-3 w-3" aria-hidden />
             E-mail
@@ -120,10 +120,10 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
               channelClass(websiteTone),
             )}
-            title="Abrir website"
+            title="Abrir site"
           >
             <Globe className="h-3 w-3" aria-hidden />
-            Website
+            Site
             <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
           </a>
         ) : (
@@ -132,10 +132,10 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
               channelClass(websiteTone),
             )}
-            title="Website não cadastrado"
+            title="Site não cadastrado"
           >
             <Globe className="h-3 w-3" aria-hidden />
-            Website
+            Site
           </span>
         )}
 
@@ -162,7 +162,7 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
             )}
             title={
               blocked
-                ? 'Lead marcado como não contatar'
+                ? 'Cliente potencial marcado como não contatar'
                 : 'Telefone/WhatsApp não cadastrado'
             }
           >

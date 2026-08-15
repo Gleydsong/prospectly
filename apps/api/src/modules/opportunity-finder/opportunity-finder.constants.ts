@@ -2,8 +2,8 @@ export const OPPORTUNITY_FINDER_QUEUE = 'opportunity-finder';
 export const PROCESS_OPPORTUNITY_RUN_JOB = 'process-opportunity-run';
 
 export const OPPORTUNITY_SCORE_VERSION = 'opportunity-score-v1' as const;
-export const OPPORTUNITY_PROFILE_PROMPT_VERSION = 'opportunity-profile:v1';
-export const OPPORTUNITY_STRATEGY_PROMPT_VERSION = 'search-strategy:v1';
+export const OPPORTUNITY_PROFILE_PROMPT_VERSION = 'opportunity-profile:v2';
+export const OPPORTUNITY_STRATEGY_PROMPT_VERSION = 'search-strategy:v2';
 export const OPPORTUNITY_EXPLANATION_PROMPT_VERSION = 'opportunity-explanation:v1';
 
 export const OPPORTUNITY_LIMITS = {

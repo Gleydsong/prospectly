@@ -4,6 +4,8 @@ const CATEGORY_LABEL = Object.fromEntries(
   PROSPECTING_CATEGORIES.map((category) => [category.value, category.label]),
 ) as Record<string, string>;
 
+CATEGORY_LABEL.hostel = 'Albergue';
+
 export function formatCategoryTag(category: string): string {
   const label = CATEGORY_LABEL[category] ?? category.replace(/_/g, ' ');
   const trimmed = label.trim();

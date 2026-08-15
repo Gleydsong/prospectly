@@ -158,7 +158,7 @@ export function TopNav() {
         <div className="flex-1" />
 
         <Link
-          to="/leads"
+          to="/search"
           className="cta-primary relative hidden h-10 w-[220px] shrink-0 items-center gap-2 rounded-full pl-9 pr-3 text-sm font-semibold transition-[transform,background-color,box-shadow] hover:-translate-y-px active:translate-y-0 sm:inline-flex"
           aria-label={t('nav.searchClients')}
         >

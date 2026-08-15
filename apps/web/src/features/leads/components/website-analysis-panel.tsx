@@ -123,7 +123,7 @@ interface WebsiteAnalysisPanelProps {
 }
 
 /**
- * Painel amigável da análise de website — sem jargão de fila/API.
+ * Painel amigável da análise de site — sem jargão de fila/API.
  */
 export function WebsiteAnalysisPanel({
   hasWebsite,
@@ -140,7 +140,7 @@ export function WebsiteAnalysisPanel({
     : !hasWebsite
       ? {
           ...BANNER.idle,
-          title: 'Sem website cadastrado',
+          title: 'Sem site cadastrado',
           body: 'A fonte não trouxe um site, ou ele ainda não foi informado. Isso não prova ausência — só falta de URL.',
         }
       : BANNER[tone];

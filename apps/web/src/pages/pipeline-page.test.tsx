@@ -138,7 +138,7 @@ describe('PipelinePage', () => {
       </Wrapper>,
     );
 
-    const column = await screen.findByLabelText(/Novo, 1 de 120 leads/);
+    const column = await screen.findByLabelText(/Novo, 1 de 120 clientes potenciais/);
     expect(within(column).getByText('120')).toBeInTheDocument();
 
     await user.click(within(column).getByRole('button', { name: /Carregar mais \(119\)/i }));

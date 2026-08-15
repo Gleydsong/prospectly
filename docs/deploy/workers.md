@@ -14,10 +14,11 @@ Queues (shared Redis): prospecting, imports, scoring, website-analysis.
 ## Local development
 
 ```bash
-# Terminal 1 — API (producers + HTTP)
+# API HTTP + worker BullMQ (mesmo comando)
 pnpm --filter @prospectly/api run dev
 
-# Terminal 2 — Worker (processors)
+# Opcional: processos isolados
+pnpm --filter @prospectly/api run dev:api
 pnpm --filter @prospectly/api run dev:worker
 ```
 

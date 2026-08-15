@@ -20,18 +20,28 @@ const offersByLocale: Record<Locale, Offer[]> = {
   pt: [
     { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 9,99', cta: 'Comprar créditos' },
     { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 19,99', cta: 'Comprar créditos' },
-    { id: 'unlimited', title: 'Ilimitado', description: 'Buscas sem limite e leads preservados por 60 dias.', price: 'R$ 49,99', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
+    { id: 'unlimited', title: 'Ilimitado', description: 'Buscas e Opportunity Finder sem débito de créditos.', price: 'R$ 49,99', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
   ],
   en: [
     { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 9.99', cta: 'Buy credits' },
     { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 19.99', cta: 'Buy credits' },
-    { id: 'unlimited', title: 'Unlimited', description: 'Unlimited searches and leads preserved for 60 days.', price: 'R$ 49.99', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
+    { id: 'unlimited', title: 'Unlimited', description: 'Searches and Opportunity Finder with no credit debit.', price: 'R$ 49.99', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
   ],
 };
 
-const features: Record<Locale, string[]> = {
-  pt: ['Busca focada em qualidade', 'PDF estratégico por contato'],
-  en: ['Quality-focused search', 'Strategic PDF per contact'],
+const featuresByOffer: Record<CreditOffer, Record<Locale, string[]>> = {
+  'credits-2000': {
+    pt: ['Maps 14 cr · Opportunity Finder 16 cr', 'Exportação CSV após a compra'],
+    en: ['Maps 14 cr · Opportunity Finder 16 cr', 'CSV export after purchase'],
+  },
+  'credits-5000': {
+    pt: ['Maps 14 cr · Opportunity Finder 16 cr', 'Exportação CSV após a compra'],
+    en: ['Maps 14 cr · Opportunity Finder 16 cr', 'CSV export after purchase'],
+  },
+  unlimited: {
+    pt: ['Maps e Opportunity Finder sem débito', 'Exportação CSV incluída', 'PIX = 30 dias; cartão renova'],
+    en: ['Uncapped Maps and Opportunity Finder', 'CSV export included', 'PIX = 30 days; card auto-renews'],
+  },
 };
 
 export function PricingCard({ locale }: { locale: Locale }) {
@@ -54,7 +64,7 @@ export function PricingCard({ locale }: { locale: Locale }) {
               {offer.suffix ? <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">{offer.suffix}</span> : null}
             </p>
             <ul className="mt-6 space-y-2 text-sm text-[color:var(--ink-muted)]">
-              {features[locale].map((feature) => <li key={feature} className="flex items-center gap-2"><Check weight="bold" className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{feature}</li>)}
+              {featuresByOffer[offer.id][locale].map((feature) => <li key={feature} className="flex items-center gap-2"><Check weight="bold" className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{feature}</li>)}
             </ul>
             <CtaButton href={appLoginUrl(offer.id)} className="mt-auto w-full bg-[#050817] text-white hover:bg-[#1a2033]">{offer.cta}</CtaButton>
           </BentoSurface>
