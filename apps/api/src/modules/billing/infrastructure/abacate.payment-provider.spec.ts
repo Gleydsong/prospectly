@@ -142,6 +142,79 @@ describe('AbacatePaymentProvider', () => {
     expect(activation.activateLifetime).not.toHaveBeenCalled();
   });
 
+  it('unwraps Abacate v2 data.transparent and routes credit packs by externalId (no metadata)', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_credits_v2',
+        event: 'transparent.completed',
+        data: {
+          transparent: {
+            id: 'char_credits_1',
+            externalId: 'org:org1:credits:ext-1',
+            amount: 999,
+            status: 'PAID',
+            methods: ['PIX'],
+          },
+          customer: { id: 'cust_1', email: 'a@b.com' },
+        },
+      },
+      'transparent.completed',
+    );
+
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'char_credits_1',
+        externalId: 'org:org1:credits:ext-1',
+      }),
+    );
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
+  });
+
+  it('activates lifetime from nested Abacate v2 transparent.completed payload', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_lifetime_v2',
+        event: 'transparent.completed',
+        data: {
+          transparent: {
+            id: 'char_life_1',
+            externalId: 'org:org1:lifetime',
+            amount: 39900,
+            status: 'PAID',
+            methods: ['PIX'],
+          },
+        },
+      },
+      'transparent.completed',
+    );
+
+    expect(activation.activateLifetime).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        provider: PaymentProvider.ABACATE,
+        abacatePaymentId: 'char_life_1',
+      }),
+    );
+    expect(creditPurchases.completeFromWebhook).not.toHaveBeenCalled();
+  });
+
+  it('does not grant lifetime when a credit externalId arrives without purchase metadata', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_credits_flat',
+        event: 'transparent.completed',
+        data: {
+          id: 'char_credits_2',
+          externalId: 'org:org1:credits:ext-2',
+        },
+      },
+      'transparent.completed',
+    );
+
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalled();
+    expect(activation.activateLifetime).not.toHaveBeenCalled();
+  });
+
   it('fails lifetime when amount env missing', async () => {
     configGet.mockImplementation((key: string) => {
       if (key === 'abacate.lifetimeAmountCentavos') return 0;

@@ -39,22 +39,30 @@ export class CreditPurchaseService {
   }
 
   async completeFromWebhook(data: Record<string, unknown>): Promise<void> {
-    const metadata = this.readMetadata(data);
+    const purchase = await this.findPurchaseFromWebhook(data);
     const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    const purchase = metadata.purchaseId
-      ? await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } })
-      : paymentId
-        ? await this.prisma.creditPurchase.findUnique({ where: { externalPaymentId: paymentId } })
-        : null;
     if (!purchase) {
       this.logger.warn('Credit payment completed without a matching purchase');
       return;
     }
-    if (purchase.status !== CreditPurchaseStatus.PENDING) return;
+    // PENDING is the happy path; FAILED means checkout errored after Abacate already
+    // created a payable PIX — still honor a confirmed payment webhook.
+    if (
+      purchase.status !== CreditPurchaseStatus.PENDING &&
+      purchase.status !== CreditPurchaseStatus.FAILED
+    ) {
+      return;
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchase.id } });
-      if (!current || current.status !== CreditPurchaseStatus.PENDING) return;
+      if (
+        !current ||
+        (current.status !== CreditPurchaseStatus.PENDING &&
+          current.status !== CreditPurchaseStatus.FAILED)
+      ) {
+        return;
+      }
 
       await tx.creditPurchase.update({
         where: { id: current.id },
@@ -72,13 +80,7 @@ export class CreditPurchaseService {
   }
 
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
-    const metadata = this.readMetadata(data);
-    const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    const purchase = metadata.purchaseId
-      ? await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } })
-      : paymentId
-        ? await this.prisma.creditPurchase.findUnique({ where: { externalPaymentId: paymentId } })
-        : null;
+    const purchase = await this.findPurchaseFromWebhook(data);
     if (!purchase || purchase.status === CreditPurchaseStatus.REFUNDED) return;
 
     await this.prisma.$transaction(async (tx) => {
@@ -102,6 +104,32 @@ export class CreditPurchaseService {
         data: { status: CreditPurchaseStatus.REFUNDED, refundedAt: new Date() },
       });
     });
+  }
+
+  private async findPurchaseFromWebhook(data: Record<string, unknown>) {
+    const metadata = this.readMetadata(data);
+    if (metadata.purchaseId) {
+      const byId = await this.prisma.creditPurchase.findUnique({
+        where: { id: metadata.purchaseId },
+      });
+      if (byId) return byId;
+    }
+
+    const paymentId = typeof data.id === 'string' ? data.id : undefined;
+    if (paymentId) {
+      const byPayment = await this.prisma.creditPurchase.findUnique({
+        where: { externalPaymentId: paymentId },
+      });
+      if (byPayment) return byPayment;
+    }
+
+    // Official transparent.* webhooks omit metadata; credit checkouts stamp externalId.
+    const externalId = typeof data.externalId === 'string' ? data.externalId : undefined;
+    if (externalId) {
+      return this.prisma.creditPurchase.findUnique({ where: { externalId } });
+    }
+
+    return null;
   }
 
   private readMetadata(data: Record<string, unknown>): Record<string, string> {
