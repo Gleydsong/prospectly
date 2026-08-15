@@ -15,10 +15,7 @@ import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import {
-  useCampaigns,
-  useCreateCampaign,
-} from '@/features/campaigns/hooks';
+import { useCampaigns, useCreateCampaign } from '@/features/campaigns/hooks';
 import type { CampaignStatus } from '@/features/campaigns/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -103,7 +100,10 @@ export function CampaignsPage() {
         }
       />
 
-      <Card className="border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90" role="note">
+      <Card
+        className="border-amber-600/30 bg-amber-100 p-4 text-sm text-amber-950 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-100"
+        role="note"
+      >
         {t('campaigns.assistedNotice')}
       </Card>
 
@@ -185,7 +185,9 @@ export function CampaignsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={STATUS_TONE[campaign.status] ?? 'slate'}>
-                        {t(`campaigns.status.${campaign.status}`, { defaultValue: 'Estado não identificado' })}
+                        {t(`campaigns.status.${campaign.status}`, {
+                          defaultValue: 'Estado não identificado',
+                        })}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-zinc-400">{campaign.segment ?? '—'}</td>
@@ -216,7 +218,7 @@ export function CampaignsPage() {
             <label className="mb-1 block text-sm text-zinc-300" htmlFor="campaign-name">
               {t('campaigns.fields.name')}
             </label>
-            <Input id="campaign-name" {...form.register('name')} autoFocus />
+            <Input id="campaign-name" {...form.register('name')} />
             {form.formState.errors.name ? (
               <p className="mt-1 text-xs text-red-400">{form.formState.errors.name.message}</p>
             ) : null}

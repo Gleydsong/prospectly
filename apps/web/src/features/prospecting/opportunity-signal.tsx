@@ -47,7 +47,9 @@ export function OpportunitySignalBadges({ signal }: { signal: OpportunitySignal 
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <Badge tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}>
+      <Badge
+        tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}
+      >
         {t(`opportunity.level.${signal.level}`)}
       </Badge>
       {signal.tags

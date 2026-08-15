@@ -6,9 +6,11 @@ type Surface = 'default' | 'elevated' | 'bento' | 'accent';
 
 const surfaces: Record<Surface, string> = {
   default: 'rounded-panel border-[color:var(--border)] bg-[color:var(--surface-card)] shadow-panel',
-  elevated: 'rounded-panel border-[color:var(--border-strong)] bg-[color:var(--surface-card)] shadow-elevated',
+  elevated:
+    'rounded-panel border-[color:var(--border-strong)] bg-[color:var(--surface-card)] shadow-elevated',
   bento: 'surface-bento rounded-bento border-[color:var(--border)] shadow-elevated',
-  accent: 'surface-bento surface-bento-accent rounded-bento border-[color:var(--border-strong)] shadow-elevated',
+  accent:
+    'surface-bento surface-bento-accent rounded-bento border-[color:var(--border-strong)] shadow-elevated',
 };
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -23,7 +25,8 @@ export function Card({ className, surface = 'default', interactive, ...props }: 
       className={cn(
         'border transition-[background-color,border-color,box-shadow] duration-200',
         surfaces[surface],
-        interactive && 'cursor-pointer hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-hover)]',
+        interactive &&
+          'cursor-pointer hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-hover)]',
         className,
       )}
       {...props}
@@ -51,7 +54,9 @@ export function CardHeader({
     >
       <div className="min-w-0">
         <h3 className="text-base font-bold tracking-tight text-[color:var(--ink)]">{title}</h3>
-        {description ? <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{description}</p> : null}
+        {description ? (
+          <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{description}</p>
+        ) : null}
       </div>
       {action ? <div className="w-full shrink-0 sm:w-auto">{action}</div> : null}
     </div>

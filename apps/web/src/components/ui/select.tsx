@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { forwardRef, useId, type ReactNode, type SelectHTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -10,11 +10,15 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, id, children, leadingIcon, ...props }, ref) => {
-    const inputId = id ?? props.name;
+    const generatedId = useId();
+    const inputId = id ?? props.name ?? generatedId;
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]"
+          >
             {label}
           </label>
         ) : null}

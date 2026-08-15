@@ -47,7 +47,10 @@ function Ring({
               animationBegin={animate ? 220 : 0}
               animationDuration={animate ? 900 : 0}
             >
-              <Cell fill="#3b82f6" style={{ filter: 'drop-shadow(0 0 6px rgb(59 130 246 / 0.5))' }} />
+              <Cell
+                fill="#3b82f6"
+                style={{ filter: 'drop-shadow(0 0 6px rgb(59 130 246 / 0.5))' }}
+              />
               <Cell fill="rgb(255 255 255 / 0.07)" />
             </Pie>
           </PieChart>

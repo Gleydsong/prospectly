@@ -35,8 +35,12 @@ describe('sanitizeExternalUrl', () => {
 
 describe('sanitizeAvatarSrc', () => {
   it('allows https and jpeg data urls', () => {
-    expect(sanitizeAvatarSrc('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg');
-    expect(sanitizeAvatarSrc('data:image/jpeg;base64,abc+/=')).toBe('data:image/jpeg;base64,abc+/=');
+    expect(sanitizeAvatarSrc('https://cdn.example.com/a.jpg')).toBe(
+      'https://cdn.example.com/a.jpg',
+    );
+    expect(sanitizeAvatarSrc('data:image/jpeg;base64,abc+/=')).toBe(
+      'data:image/jpeg;base64,abc+/=',
+    );
   });
 
   it('rejects http, javascript and svg data urls', () => {

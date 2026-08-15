@@ -8,11 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardMapPin } from '@/types';
 import { cn } from '@/lib/utils';
 
-import {
-  WORLD_LAND_PATH,
-  WORLD_MAP_HEIGHT,
-  WORLD_MAP_WIDTH,
-} from './world-land-path';
+import { WORLD_LAND_PATH, WORLD_MAP_HEIGHT, WORLD_MAP_WIDTH } from './world-land-path';
 
 /** Fallback: América do Sul (Prospectly = prospecção local BR). */
 const FALLBACK_BOUNDS = {
@@ -38,7 +34,9 @@ function arcPath(a: { x: number; y: number }, b: { x: number; y: number }): stri
   return `M ${a.x.toFixed(1)} ${a.y.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
 }
 
-function computeViewBox(pins: Array<{ x: number; y: number; latitude: number; longitude: number }>) {
+function computeViewBox(
+  pins: Array<{ x: number; y: number; latitude: number; longitude: number }>,
+) {
   let minLng: number;
   let maxLng: number;
   let minLat: number;
@@ -186,7 +184,13 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
                     </feMerge>
                   </filter>
                   <filter id="landShadow" x="-2%" y="-2%" width="104%" height="104%">
-                    <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="#000" floodOpacity="0.45" />
+                    <feDropShadow
+                      dx="0"
+                      dy="1"
+                      stdDeviation="1.2"
+                      floodColor="#000"
+                      floodOpacity="0.45"
+                    />
                   </filter>
                 </defs>
 
@@ -197,7 +201,13 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
                   height={WORLD_MAP_HEIGHT * 3}
                   fill="#05070b"
                 />
-                <rect x={0} y={0} width={WORLD_MAP_WIDTH} height={WORLD_MAP_HEIGHT} fill="url(#oceanGlow)" />
+                <rect
+                  x={0}
+                  y={0}
+                  width={WORLD_MAP_WIDTH}
+                  height={WORLD_MAP_HEIGHT}
+                  fill="url(#oceanGlow)"
+                />
 
                 {/* Grade geográfica sutil */}
                 {Array.from({ length: 13 }).map((_, i) => (
@@ -296,7 +306,9 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
               {hovered ? (
                 <div className="pointer-events-none absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:max-w-[240px]">
                   <div className="rounded-control border border-white/15 bg-[#0c1018]/92 px-3 py-2 shadow-elevated backdrop-blur-md">
-                    <p className="truncate text-sm font-medium text-zinc-50">{hovered.companyName}</p>
+                    <p className="truncate text-sm font-medium text-zinc-50">
+                      {hovered.companyName}
+                    </p>
                     <p className="mt-0.5 text-xs text-zinc-400">
                       {[hovered.city, `score ${hovered.score}`].filter(Boolean).join(' · ')}
                     </p>

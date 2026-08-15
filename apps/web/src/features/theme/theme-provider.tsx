@@ -34,13 +34,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyThemeClass(theme);
   }, [theme]);
 
-  const setTheme = useCallback((next: ThemeMode, origin: { x: number; y: number } | null = null) => {
-    void startThemeTransition(origin, () => {
-      writeStoredTheme(next);
-      applyThemeClass(next);
-      setThemeState(next);
-    });
-  }, []);
+  const setTheme = useCallback(
+    (next: ThemeMode, origin: { x: number; y: number } | null = null) => {
+      void startThemeTransition(origin, () => {
+        writeStoredTheme(next);
+        applyThemeClass(next);
+        setThemeState(next);
+      });
+    },
+    [],
+  );
 
   const toggleTheme = useCallback(
     (origin: { x: number; y: number } | null = null) => {
@@ -49,10 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [setTheme, theme],
   );
 
-  const value = useMemo(
-    () => ({ theme, setTheme, toggleTheme }),
-    [theme, setTheme, toggleTheme],
-  );
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

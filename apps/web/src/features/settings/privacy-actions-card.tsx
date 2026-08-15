@@ -57,7 +57,9 @@ export function PrivacyActionsCard() {
           description={t('settings.privacyDesc')}
         />
         <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8">
-          <p className="text-sm leading-6 text-[color:var(--ink-muted)]">{t('settings.privacyBody')}</p>
+          <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
+            {t('settings.privacyBody')}
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -77,9 +79,7 @@ export function PrivacyActionsCard() {
               {t('settings.deleteAccount')}
             </Button>
           </div>
-          {!emailVerified ? (
-            <Alert tone="warning">{t('settings.emailGateHint')}</Alert>
-          ) : null}
+          {!emailVerified ? <Alert tone="warning">{t('settings.emailGateHint')}</Alert> : null}
           {dsrMessage ? <Alert tone="info">{dsrMessage}</Alert> : null}
         </CardContent>
       </Card>

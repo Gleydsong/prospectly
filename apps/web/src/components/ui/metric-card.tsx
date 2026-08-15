@@ -31,8 +31,7 @@ function AnimatedMetricValue({
   decimals?: number;
 }) {
   const display = useCountUp(value);
-  const formatted =
-    decimals > 0 ? display.toFixed(decimals) : Math.round(display).toLocaleString();
+  const formatted = decimals > 0 ? display.toFixed(decimals) : Math.round(display).toLocaleString();
   return (
     <>
       {formatted}

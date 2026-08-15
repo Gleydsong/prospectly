@@ -53,7 +53,8 @@ export function usePreviewCsv() {
 export function useCreateCsvImport() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, mapping }: { file: File; mapping: CsvImportMapping }) => createCsvImport(file, mapping),
+    mutationFn: ({ file, mapping }: { file: File; mapping: CsvImportMapping }) =>
+      createCsvImport(file, mapping),
     onSuccess: (csvImport) => {
       queryClient.setQueryData(['imports', csvImport.id], csvImport);
       void queryClient.invalidateQueries({ queryKey: ['imports'] });

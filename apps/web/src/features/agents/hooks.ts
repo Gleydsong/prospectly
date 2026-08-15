@@ -29,7 +29,10 @@ export function useCrmApply() {
   });
 }
 
-export function useWhatsappFirstMessage(leadId: string | undefined, templateId: string | undefined) {
+export function useWhatsappFirstMessage(
+  leadId: string | undefined,
+  templateId: string | undefined,
+) {
   return useQuery({
     queryKey: ['agents', 'whatsapp', 'first-message', leadId, templateId],
     queryFn: () =>

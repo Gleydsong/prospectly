@@ -28,8 +28,15 @@ export function PipelinePage() {
   const moveSelectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
 
   const move = useMutation({
-    mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string; leadName: string; stageName: string }) =>
-      moveLeadToStage(leadId, stageId),
+    mutationFn: ({
+      leadId,
+      stageId,
+    }: {
+      leadId: string;
+      stageId: string;
+      leadName: string;
+      stageName: string;
+    }) => moveLeadToStage(leadId, stageId),
     onSuccess: (_data, variables) => {
       setAnnouncement(
         t('pipeline.movedAnnouncement', {
@@ -99,8 +106,12 @@ export function PipelinePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.pipeline')}</h1>
-        <p className="text-sm text-zinc-500">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">
+          {t('leads.pipeline')}
+        </h1>
+        <p className="text-sm text-zinc-500">
+          {t('pipeline.subtitle', { name: board.data.pipeline.name })}
+        </p>
       </div>
 
       <div
@@ -131,7 +142,9 @@ export function PipelinePage() {
             onDrop={(event) => {
               event.preventDefault();
               if (draggingLeadId) {
-                const lead = stages.flatMap((item) => item.leads).find((item) => item.id === draggingLeadId);
+                const lead = stages
+                  .flatMap((item) => item.leads)
+                  .find((item) => item.id === draggingLeadId);
                 move.mutate({
                   leadId: draggingLeadId,
                   stageId: stage.id,
@@ -144,7 +157,9 @@ export function PipelinePage() {
             }}
             className={cn(
               'flex w-72 shrink-0 flex-col rounded-control border border-zinc-800 bg-zinc-900/60',
-              overStageId === stage.id ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-zinc-800',
+              overStageId === stage.id
+                ? 'border-brand-500 ring-2 ring-brand-500/30'
+                : 'border-zinc-800',
             )}
           >
             <header

@@ -49,9 +49,16 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
         <div className="mx-auto flex h-full max-w-lg flex-col justify-center lg:mx-0">
           <div className="flex items-center gap-1">
             <span className="cta-glass flex h-11 w-11 items-center justify-center rounded-control p-1.5">
-              <img src={prospectlyMark} alt="" aria-hidden className="h-full w-full object-contain" />
+              <img
+                src={prospectlyMark}
+                alt=""
+                aria-hidden
+                className="h-full w-full object-contain"
+              />
             </span>
-            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">rospectly</p>
+            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">
+              rospectly
+            </p>
           </div>
 
           <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
@@ -69,7 +76,9 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-[color:var(--ink)]">{benefitTitle}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">{body}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">
+                    {body}
+                  </p>
                 </div>
               </li>
             ))}
@@ -91,7 +100,9 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
       <main className="flex items-center justify-center px-4 py-10 sm:px-8 lg:px-12 lg:py-14">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{title}</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">
+              {title}
+            </h2>
             <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{subtitle}</p>
           </div>
 
@@ -99,7 +110,10 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
 
           <ul className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border)] pt-6">
             {trustItems.map(({ icon: Icon, label }) => (
-              <li key={label} className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]">
+              <li
+                key={label}
+                className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-muted)]"
+              >
                 <Icon className="h-3.5 w-3.5 text-[color:var(--accent)]" aria-hidden />
                 {label}
               </li>

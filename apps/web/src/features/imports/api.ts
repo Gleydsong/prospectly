@@ -1,5 +1,11 @@
 import { api } from '@/lib/api';
-import type { CsvImport, CsvImportError, CsvImportMapping, CsvPreview, PaginatedResult } from '@/types';
+import type {
+  CsvImport,
+  CsvImportError,
+  CsvImportMapping,
+  CsvPreview,
+  PaginatedResult,
+} from '@/types';
 
 export interface ImportsQuery {
   page?: number;
@@ -19,12 +25,20 @@ const multipartRequestConfig = {
 };
 
 export async function previewCsv(file: File): Promise<CsvPreview> {
-  const { data } = await api.post<CsvPreview>('/imports/csv/preview', createMultipartForm(file), multipartRequestConfig);
+  const { data } = await api.post<CsvPreview>(
+    '/imports/csv/preview',
+    createMultipartForm(file),
+    multipartRequestConfig,
+  );
   return data;
 }
 
 export async function createCsvImport(file: File, mapping: CsvImportMapping): Promise<CsvImport> {
-  const { data } = await api.post<CsvImport>('/imports/csv', createMultipartForm(file, mapping), multipartRequestConfig);
+  const { data } = await api.post<CsvImport>(
+    '/imports/csv',
+    createMultipartForm(file, mapping),
+    multipartRequestConfig,
+  );
   return data;
 }
 
@@ -42,6 +56,8 @@ export async function fetchCsvImportErrors(
   id: string,
   query: ImportsQuery = {},
 ): Promise<PaginatedResult<CsvImportError>> {
-  const { data } = await api.get<PaginatedResult<CsvImportError>>(`/imports/${id}/errors`, { params: query });
+  const { data } = await api.get<PaginatedResult<CsvImportError>>(`/imports/${id}/errors`, {
+    params: query,
+  });
   return data;
 }

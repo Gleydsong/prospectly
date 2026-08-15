@@ -29,8 +29,18 @@ describe('ImportsPage', () => {
       isError: false,
       refetch: vi.fn(),
     });
-    mocks.useImport.mockReturnValue({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() });
-    mocks.useImportErrors.mockReturnValue({ data: undefined, isLoading: false, isError: false, refetch: vi.fn() });
+    mocks.useImport.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    mocks.useImportErrors.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
   });
 
   it('rejects a non-CSV file before requesting a preview', async () => {
@@ -48,7 +58,9 @@ describe('ImportsPage', () => {
 
   it('previews the first five rows and applies the suggested mapping', async () => {
     const user = userEvent.setup();
-    const file = new File(['Empresa,E-mail\nAcme,contato@acme.test'], 'leads.csv', { type: 'text/csv' });
+    const file = new File(['Empresa,E-mail\nAcme,contato@acme.test'], 'leads.csv', {
+      type: 'text/csv',
+    });
     mocks.previewCsv.mockResolvedValue({
       headers: ['Empresa', 'E-mail'],
       rows: [{ Empresa: 'Acme', 'E-mail': 'contato@acme.test' }],
@@ -74,7 +86,10 @@ describe('ImportsPage', () => {
     });
     render(<ImportsPage />);
 
-    await user.upload(screen.getByLabelText('Arquivo CSV'), new File(['Empresa\nAcme'], 'leads.csv'));
+    await user.upload(
+      screen.getByLabelText('Arquivo CSV'),
+      new File(['Empresa\nAcme'], 'leads.csv'),
+    );
     await user.click(screen.getByRole('button', { name: 'Pré-visualizar arquivo' }));
 
     expect(await screen.findByRole('button', { name: 'Iniciar importação' })).toBeDisabled();
@@ -85,7 +100,9 @@ describe('ImportsPage', () => {
     const user = userEvent.setup();
     const file = new File(['Empresa\nAcme'], 'leads.csv', { type: 'text/csv' });
     mocks.previewCsv.mockResolvedValue({
-      headers: ['Empresa'], rows: [{ Empresa: 'Acme' }], suggestedMapping: { companyName: 'Empresa' },
+      headers: ['Empresa'],
+      rows: [{ Empresa: 'Acme' }],
+      suggestedMapping: { companyName: 'Empresa' },
     });
     mocks.createImport.mockResolvedValue({ id: 'import-created' });
     render(<ImportsPage />);
@@ -102,8 +119,14 @@ describe('ImportsPage', () => {
   it('shows import progress and row-level errors for a selected job', async () => {
     const user = userEvent.setup();
     const completedImport = {
-      id: 'import-1', fileName: 'leads.csv', status: 'COMPLETED', totalRows: 3,
-      importedCount: 2, skippedCount: 0, invalidCount: 1, createdAt: '2026-07-22T10:00:00.000Z',
+      id: 'import-1',
+      fileName: 'leads.csv',
+      status: 'COMPLETED',
+      totalRows: 3,
+      importedCount: 2,
+      skippedCount: 0,
+      invalidCount: 1,
+      createdAt: '2026-07-22T10:00:00.000Z',
     };
     mocks.useImports.mockReturnValue({
       data: { data: [completedImport], meta: { page: 1, pageSize: 10, total: 1, totalPages: 1 } },
@@ -111,10 +134,22 @@ describe('ImportsPage', () => {
       isError: false,
       refetch: vi.fn(),
     });
-    mocks.useImport.mockReturnValue({ data: completedImport, isLoading: false, isError: false, refetch: vi.fn() });
+    mocks.useImport.mockReturnValue({
+      data: completedImport,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
     mocks.useImportErrors.mockReturnValue({
       data: {
-        data: [{ id: 'error-1', row: 4, message: 'Company name is required', createdAt: '2026-07-22T10:01:00.000Z' }],
+        data: [
+          {
+            id: 'error-1',
+            row: 4,
+            message: 'Company name is required',
+            createdAt: '2026-07-22T10:01:00.000Z',
+          },
+        ],
         meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
       },
       isLoading: false,
@@ -135,10 +170,23 @@ describe('ImportsPage', () => {
     const user = userEvent.setup();
     mocks.useImports.mockReturnValue({
       data: {
-        data: [{ id: 'import-1', fileName: 'first.csv', status: 'COMPLETED', totalRows: 1, importedCount: 1, skippedCount: 0, invalidCount: 0, createdAt: '2026-07-22T10:00:00.000Z' }],
+        data: [
+          {
+            id: 'import-1',
+            fileName: 'first.csv',
+            status: 'COMPLETED',
+            totalRows: 1,
+            importedCount: 1,
+            skippedCount: 0,
+            invalidCount: 0,
+            createdAt: '2026-07-22T10:00:00.000Z',
+          },
+        ],
         meta: { page: 1, pageSize: 10, total: 11, totalPages: 2 },
       },
-      isLoading: false, isError: false, refetch: vi.fn(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
     render(<ImportsPage />);
 
@@ -149,20 +197,39 @@ describe('ImportsPage', () => {
 
   it('paginates row errors independently from the import history', async () => {
     const user = userEvent.setup();
-    const csvImport = { id: 'import-1', fileName: 'leads.csv', status: 'COMPLETED', totalRows: 21, importedCount: 0, skippedCount: 0, invalidCount: 21, createdAt: '2026-07-22T10:00:00.000Z' };
+    const csvImport = {
+      id: 'import-1',
+      fileName: 'leads.csv',
+      status: 'COMPLETED',
+      totalRows: 21,
+      importedCount: 0,
+      skippedCount: 0,
+      invalidCount: 21,
+      createdAt: '2026-07-22T10:00:00.000Z',
+    };
     mocks.useImports.mockReturnValue({
       data: { data: [csvImport], meta: { page: 1, pageSize: 10, total: 1, totalPages: 1 } },
-      isLoading: false, isError: false, refetch: vi.fn(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
-    mocks.useImport.mockReturnValue({ data: csvImport, isLoading: false, isError: false, refetch: vi.fn() });
+    mocks.useImport.mockReturnValue({
+      data: csvImport,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
     mocks.useImportErrors.mockReturnValue({
       data: { data: [], meta: { page: 1, pageSize: 20, total: 21, totalPages: 2 } },
-      isLoading: false, isError: false, refetch: vi.fn(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
     render(<ImportsPage />);
 
     await user.click(screen.getByRole('button', { name: /leads\.csv/i }));
-    const nextErrorsPage = screen.getAllByRole('button', { name: 'Próxima página' })
+    const nextErrorsPage = screen
+      .getAllByRole('button', { name: 'Próxima página' })
       .find((button) => !button.hasAttribute('disabled'));
     expect(nextErrorsPage).toBeDefined();
     await user.click(nextErrorsPage!);
@@ -173,10 +240,18 @@ describe('ImportsPage', () => {
   it('shows a retriable error instead of an empty import history', async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
-    mocks.useImports.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('offline'), refetch });
+    mocks.useImports.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('offline'),
+      refetch,
+    });
     render(<ImportsPage />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar o histórico de importações.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar o histórico de importações.',
+    );
     expect(screen.queryByText('Nenhuma importação CSV criada.')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
@@ -186,18 +261,42 @@ describe('ImportsPage', () => {
   it('shows a retriable error when row errors cannot be loaded', async () => {
     const user = userEvent.setup();
     const refetch = vi.fn();
-    const csvImport = { id: 'import-1', fileName: 'leads.csv', status: 'COMPLETED', totalRows: 1, importedCount: 0, skippedCount: 0, invalidCount: 1, createdAt: '2026-07-22T10:00:00.000Z' };
+    const csvImport = {
+      id: 'import-1',
+      fileName: 'leads.csv',
+      status: 'COMPLETED',
+      totalRows: 1,
+      importedCount: 0,
+      skippedCount: 0,
+      invalidCount: 1,
+      createdAt: '2026-07-22T10:00:00.000Z',
+    };
     mocks.useImports.mockReturnValue({
       data: { data: [csvImport], meta: { page: 1, pageSize: 10, total: 1, totalPages: 1 } },
-      isLoading: false, isError: false, refetch: vi.fn(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
-    mocks.useImport.mockReturnValue({ data: csvImport, isLoading: false, isError: false, refetch: vi.fn() });
-    mocks.useImportErrors.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('offline'), refetch });
+    mocks.useImport.mockReturnValue({
+      data: csvImport,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    mocks.useImportErrors.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('offline'),
+      refetch,
+    });
     render(<ImportsPage />);
 
     await user.click(screen.getByRole('button', { name: /leads\.csv/i }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar os erros por linha.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar os erros por linha.',
+    );
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(refetch).toHaveBeenCalledOnce();
@@ -205,12 +304,28 @@ describe('ImportsPage', () => {
 
   it('uses failure-specific copy for failed imports', async () => {
     const user = userEvent.setup();
-    const failedImport = { id: 'import-1', fileName: 'failed.csv', status: 'FAILED', totalRows: 2, importedCount: 0, skippedCount: 0, invalidCount: 0, createdAt: '2026-07-22T10:00:00.000Z' };
+    const failedImport = {
+      id: 'import-1',
+      fileName: 'failed.csv',
+      status: 'FAILED',
+      totalRows: 2,
+      importedCount: 0,
+      skippedCount: 0,
+      invalidCount: 0,
+      createdAt: '2026-07-22T10:00:00.000Z',
+    };
     mocks.useImports.mockReturnValue({
       data: { data: [failedImport], meta: { page: 1, pageSize: 10, total: 1, totalPages: 1 } },
-      isLoading: false, isError: false, refetch: vi.fn(),
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
     });
-    mocks.useImport.mockReturnValue({ data: failedImport, isLoading: false, isError: false, refetch: vi.fn() });
+    mocks.useImport.mockReturnValue({
+      data: failedImport,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
     render(<ImportsPage />);
 
     await user.click(screen.getByRole('button', { name: /failed\.csv/i }));

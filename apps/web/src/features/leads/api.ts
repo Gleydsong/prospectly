@@ -81,7 +81,10 @@ export interface CreateActivityInput {
   followUpAt?: string;
 }
 
-export async function createActivity(leadId: string, input: CreateActivityInput): Promise<Activity> {
+export async function createActivity(
+  leadId: string,
+  input: CreateActivityInput,
+): Promise<Activity> {
   const { data } = await api.post<Activity>(`/leads/${leadId}/activities`, input);
   return data;
 }

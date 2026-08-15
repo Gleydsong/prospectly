@@ -140,7 +140,9 @@ export function CreditsPage() {
           ) : (
             <div className="flex items-center justify-between gap-4 rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
               <div>
-                <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.availableCredits')}</p>
+                <p className="text-sm text-[color:var(--ink-muted)]">
+                  {t('settings.availableCredits')}
+                </p>
                 <p className="mt-1 text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
                   {billing.data?.creditBalance ?? 0}
                 </p>
@@ -162,8 +164,12 @@ export function CreditsPage() {
 
           {manage && pendingOffer ? (
             <div className="rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
-              <p className="text-sm font-medium text-[color:var(--ink)]">{t('settings.choosePaymentMethod')}</p>
-              <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{t('settings.choosePaymentMethodHint')}</p>
+              <p className="text-sm font-medium text-[color:var(--ink)]">
+                {t('settings.choosePaymentMethod')}
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--ink-muted)]">
+                {t('settings.choosePaymentMethodHint')}
+              </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Button
                   type="button"
@@ -210,117 +216,119 @@ export function CreditsPage() {
           ) : null}
 
           {manage ? (
-          <div className="grid gap-3 lg:grid-cols-3">
-            {offers.map((offer) => {
-              const pending = checkoutPending && creditOffer === offer.id;
-              return (
-                <div
-                  key={offer.id}
-                  className={cn(
-                    'relative flex flex-col rounded-panel border p-5 shadow-panel',
-                    offer.featured
-                      ? 'border-emerald-400/80 bg-emerald-500/10'
-                      : 'border-[color:var(--border)] bg-[color:var(--surface-card)]',
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    {offer.featured ? (
-                      <Crown className="h-6 w-6 text-emerald-500" aria-hidden />
-                    ) : (
-                      <Coins className="h-6 w-6 text-amber-500" aria-hidden />
+            <div className="grid gap-3 lg:grid-cols-3">
+              {offers.map((offer) => {
+                const pending = checkoutPending && creditOffer === offer.id;
+                return (
+                  <div
+                    key={offer.id}
+                    className={cn(
+                      'relative flex flex-col rounded-panel border p-5 shadow-panel',
+                      offer.featured
+                        ? 'border-emerald-400/80 bg-emerald-500/10'
+                        : 'border-[color:var(--border)] bg-[color:var(--surface-card)]',
                     )}
-                    {offer.featured ? (
-                      <span className="rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                        {t('settings.bestChoice')}
-                      </span>
-                    ) : null}
-                  </div>
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      {offer.featured ? (
+                        <Crown className="h-6 w-6 text-emerald-500" aria-hidden />
+                      ) : (
+                        <Coins className="h-6 w-6 text-amber-500" aria-hidden />
+                      )}
+                      {offer.featured ? (
+                        <span className="rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                          {t('settings.bestChoice')}
+                        </span>
+                      ) : null}
+                    </div>
 
-                  <h2 className="mt-5 text-lg font-semibold tracking-tight text-[color:var(--ink)]">
-                    {offer.title}
-                  </h2>
-                  <p className="mt-2 min-h-12 text-sm leading-6 text-[color:var(--ink-muted)]">
-                    {offer.description}
-                  </p>
-                  <p className="mt-5 text-2xl font-bold tracking-tight text-[color:var(--ink)]">
-                    {offer.price}
-                    {'suffix' in offer && offer.suffix ? (
-                      <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">
-                        {offer.suffix}
-                      </span>
-                    ) : null}
-                  </p>
+                    <h2 className="mt-5 text-lg font-semibold tracking-tight text-[color:var(--ink)]">
+                      {offer.title}
+                    </h2>
+                    <p className="mt-2 min-h-12 text-sm leading-6 text-[color:var(--ink-muted)]">
+                      {offer.description}
+                    </p>
+                    <p className="mt-5 text-2xl font-bold tracking-tight text-[color:var(--ink)]">
+                      {offer.price}
+                      {'suffix' in offer && offer.suffix ? (
+                        <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">
+                          {offer.suffix}
+                        </span>
+                      ) : null}
+                    </p>
 
-                  <ul className="mt-4 space-y-2 text-sm text-[color:var(--ink-muted)]">
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                      {offer.id === 'unlimited'
-                        ? t('settings.packFeatureUnlimitedSearch')
-                        : t('settings.packFeatureSearch')}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                      {offer.id === 'unlimited'
-                        ? t('settings.packFeatureUnlimitedCsv')
-                        : t('settings.packFeaturePdf')}
-                    </li>
-                    {offer.id === 'unlimited' ? (
+                    <ul className="mt-4 space-y-2 text-sm text-[color:var(--ink-muted)]">
                       <li className="flex items-center gap-2">
                         <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                        {t('settings.packFeaturePixMonthly')}
+                        {offer.id === 'unlimited'
+                          ? t('settings.packFeatureUnlimitedSearch')
+                          : t('settings.packFeatureSearch')}
                       </li>
-                    ) : null}
-                  </ul>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                        {offer.id === 'unlimited'
+                          ? t('settings.packFeatureUnlimitedCsv')
+                          : t('settings.packFeaturePdf')}
+                      </li>
+                      {offer.id === 'unlimited' ? (
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                          {t('settings.packFeaturePixMonthly')}
+                        </li>
+                      ) : null}
+                    </ul>
 
-                  <Button
-                    type="button"
-                    className="mt-5 w-full"
-                    disabled={!emailVerified || checkoutPending}
-                    loading={pending}
-                    onClick={() => {
-                      setBillingError(null);
-                      setPendingOffer(offer.id);
-                    }}
-                  >
-                    {offer.cta}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+                    <Button
+                      type="button"
+                      className="mt-5 w-full"
+                      disabled={!emailVerified || checkoutPending}
+                      loading={pending}
+                      onClick={() => {
+                        setBillingError(null);
+                        setPendingOffer(offer.id);
+                      }}
+                    >
+                      {offer.cta}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.orgReadOnly')}</p>
           )}
 
           {manage && !emailVerified ? (
-            <p className="text-xs text-[color:var(--ink-muted)]">{t('settings.billingEmailHint')}</p>
+            <p className="text-xs text-[color:var(--ink-muted)]">
+              {t('settings.billingEmailHint')}
+            </p>
           ) : null}
 
           {manage ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {billing.data?.canOpenPortal ? (
-              <Button
-                type="button"
-                variant="secondary"
-                loading={portal.isPending}
-                disabled={!emailVerified}
-                onClick={() => portal.mutate()}
-              >
-                {t('settings.stripePortal')}
-              </Button>
-            ) : null}
-            {billing.data?.canCancelSubscription ? (
-              <Button
-                type="button"
-                variant="outline"
-                loading={cancelSub.isPending}
-                disabled={!emailVerified}
-                onClick={() => cancelSub.mutate()}
-              >
-                {t('settings.cancelSubscription')}
-              </Button>
-            ) : null}
-          </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {billing.data?.canOpenPortal ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={portal.isPending}
+                  disabled={!emailVerified}
+                  onClick={() => portal.mutate()}
+                >
+                  {t('settings.stripePortal')}
+                </Button>
+              ) : null}
+              {billing.data?.canCancelSubscription ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={cancelSub.isPending}
+                  disabled={!emailVerified}
+                  onClick={() => cancelSub.mutate()}
+                >
+                  {t('settings.cancelSubscription')}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </CardContent>
       </Card>

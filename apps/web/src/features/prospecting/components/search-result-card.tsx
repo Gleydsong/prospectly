@@ -47,7 +47,10 @@ export function SearchResultCard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 truncate text-sm font-semibold text-zinc-50" title={business.companyName}>
+        <h3
+          className="min-w-0 truncate text-sm font-semibold text-zinc-50"
+          title={business.companyName}
+        >
           {business.companyName}
         </h3>
         <input
@@ -69,7 +72,9 @@ export function SearchResultCard({
 
       <div className="flex flex-wrap items-center gap-1.5">
         {business.category ? <Badge>{formatCategoryTag(business.category)}</Badge> : null}
-        <Badge tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}>
+        <Badge
+          tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}
+        >
           {signal.level === 'HIGH' ? 'Quente' : signal.level === 'MEDIUM' ? 'Morno' : 'Frio'}
         </Badge>
         <span

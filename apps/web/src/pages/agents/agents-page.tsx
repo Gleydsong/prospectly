@@ -22,10 +22,7 @@ export function AgentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('agents.title')}
-        description={t('agents.subtitle')}
-      />
+      <PageHeader title={t('agents.title')} description={t('agents.subtitle')} />
 
       {catalog.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">

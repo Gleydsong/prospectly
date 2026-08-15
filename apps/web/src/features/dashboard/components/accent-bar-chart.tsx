@@ -1,15 +1,7 @@
 import { useReducedMotion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -108,8 +100,7 @@ export function AccentBarChart({ loading, data }: AccentBarChartProps) {
                 formatter={(value: number) => [value, t('dashboard.leadsSeries')]}
                 labelFormatter={(_, payload) => {
                   const row = payload?.[0]?.payload as
-                    | { fullLabel?: string; label?: string }
-                    | undefined;
+                    { fullLabel?: string; label?: string } | undefined;
                   return row?.fullLabel ?? row?.label ?? '';
                 }}
               />

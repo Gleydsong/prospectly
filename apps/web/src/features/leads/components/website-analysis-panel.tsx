@@ -185,15 +185,9 @@ export function WebsiteAnalysisPanel({
           <Signal
             label="Velocidade"
             value={speedLabel(analysis.responseTimeMs)}
-            hint={
-              analysis.responseTimeMs != null ? `${analysis.responseTimeMs} ms` : undefined
-            }
+            hint={analysis.responseTimeMs != null ? `${analysis.responseTimeMs} ms` : undefined}
             positive={
-              analysis.responseTimeMs == null
-                ? null
-                : analysis.responseTimeMs < 1200
-                  ? true
-                  : false
+              analysis.responseTimeMs == null ? null : analysis.responseTimeMs < 1200 ? true : false
             }
           />
           <Signal

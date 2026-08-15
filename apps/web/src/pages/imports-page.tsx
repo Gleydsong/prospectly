@@ -6,9 +6,20 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
-import { useCreateCsvImport, useImport, useImportErrors, useImports, usePreviewCsv } from '@/features/imports/hooks';
+import {
+  useCreateCsvImport,
+  useImport,
+  useImportErrors,
+  useImports,
+  usePreviewCsv,
+} from '@/features/imports/hooks';
 import { getApiErrorMessage } from '@/lib/api';
-import { CSV_IMPORT_FIELDS, type CsvImportField, type CsvImportMapping, type CsvPreview } from '@/types';
+import {
+  CSV_IMPORT_FIELDS,
+  type CsvImportField,
+  type CsvImportMapping,
+  type CsvPreview,
+} from '@/types';
 
 const FIELD_LABELS: Record<CsvImportField, string> = {
   companyName: 'Nome da empresa',
@@ -31,13 +42,23 @@ const IMPORT_STATUS_LABEL = {
   FAILED: 'Falhou',
 } as const;
 
-function importStatusTone(status: keyof typeof IMPORT_STATUS_LABEL): 'amber' | 'blue' | 'green' | 'red' {
+function importStatusTone(
+  status: keyof typeof IMPORT_STATUS_LABEL,
+): 'amber' | 'blue' | 'green' | 'red' {
   if (status === 'PENDING') return 'amber';
   if (status === 'PROCESSING') return 'blue';
   return status === 'COMPLETED' ? 'green' : 'red';
 }
 
-function QueryErrorState({ title, error, onRetry }: { title: string; error: unknown; onRetry: () => void }) {
+function QueryErrorState({
+  title,
+  error,
+  onRetry,
+}: {
+  title: string;
+  error: unknown;
+  onRetry: () => void;
+}) {
   return (
     <div className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
       <p className="font-medium">{title}</p>
@@ -75,7 +96,8 @@ export function ImportsPage() {
   const importQuery = useImport(selectedImportId);
   const errorsQuery = useImportErrors(selectedImportId, { page: errorsPage, pageSize: 20 });
   const imports = importsQuery.data?.data ?? [];
-  const selectedImport = importQuery.data ?? imports.find((csvImport) => csvImport.id === selectedImportId);
+  const selectedImport =
+    importQuery.data ?? imports.find((csvImport) => csvImport.id === selectedImportId);
 
   const selectFile = (selectedFile: File | undefined) => {
     setError(null);
@@ -131,16 +153,23 @@ export function ImportsPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.imports')}</h1>
-        <p className="text-sm text-zinc-500">Pré-visualize o arquivo, confirme o mapeamento e acompanhe o processamento.</p>
+        <p className="text-sm text-zinc-500">
+          Pré-visualize o arquivo, confirme o mapeamento e acompanhe o processamento.
+        </p>
       </div>
 
       <Card>
-        <CardHeader title="Selecionar arquivo" description="Aceitamos apenas CSV. Nenhum lead é criado antes da confirmação." />
+        <CardHeader
+          title="Selecionar arquivo"
+          description="Aceitamos apenas CSV. Nenhum lead é criado antes da confirmação."
+        />
         <CardContent>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-zinc-700 p-8 text-center transition-colors hover:border-brand-500 hover:bg-brand-500/150/10">
             <FileSpreadsheet className="mb-3 h-8 w-8 text-brand-400" aria-hidden />
             <span className="font-medium text-zinc-50">Escolha um arquivo CSV</span>
-            <span className="mt-1 text-sm text-zinc-500">Limite e número máximo de linhas são validados pelo servidor.</span>
+            <span className="mt-1 text-sm text-zinc-500">
+              Limite e número máximo de linhas são validados pelo servidor.
+            </span>
             <input
               ref={fileInputRef}
               aria-label="Arquivo CSV"
@@ -150,9 +179,23 @@ export function ImportsPage() {
               onChange={(event) => selectFile(event.target.files?.[0])}
             />
           </label>
-          {file ? <p className="mt-3 text-sm text-zinc-200">Arquivo selecionado: <span className="font-medium">{file.name}</span></p> : null}
-          {error ? <p className="mt-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">{error}</p> : null}
-          <Button type="button" className="mt-4" disabled={!file} loading={previewCsv.isPending} onClick={previewFile}>
+          {file ? (
+            <p className="mt-3 text-sm text-zinc-200">
+              Arquivo selecionado: <span className="font-medium">{file.name}</span>
+            </p>
+          ) : null}
+          {error ? (
+            <p className="mt-3 rounded-lg bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            type="button"
+            className="mt-4"
+            disabled={!file}
+            loading={previewCsv.isPending}
+            onClick={previewFile}
+          >
             <Upload className="h-4 w-4" aria-hidden />
             Pré-visualizar arquivo
           </Button>
@@ -161,7 +204,10 @@ export function ImportsPage() {
 
       {preview ? (
         <Card>
-          <CardHeader title="Pré-visualização" description="Confira até cinco linhas e associe as colunas antes de iniciar a importação." />
+          <CardHeader
+            title="Pré-visualização"
+            description="Confira até cinco linhas e associe as colunas antes de iniciar a importação."
+          />
           <CardContent className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {CSV_IMPORT_FIELDS.map((field) => (
@@ -173,7 +219,11 @@ export function ImportsPage() {
                     className="mt-1.5 h-10 w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20"
                   >
                     <option value="">Não importar</option>
-                    {preview.headers.map((header) => <option key={header} value={header}>{header}</option>)}
+                    {preview.headers.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
+                    ))}
                   </select>
                 </label>
               ))}
@@ -182,20 +232,31 @@ export function ImportsPage() {
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
-                    {preview.headers.map((header) => <th key={header} scope="col" className="px-3 py-3 font-medium">{header}</th>)}
+                    {preview.headers.map((header) => (
+                      <th key={header} scope="col" className="px-3 py-3 font-medium">
+                        {header}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {preview.rows.slice(0, 5).map((row, index) => (
                     <tr key={index} className="border-b border-zinc-800">
-                      {preview.headers.map((header) => <td key={header} className="px-3 py-3 text-zinc-200">{row[header] || '—'}</td>)}
+                      {preview.headers.map((header) => (
+                        <td key={header} className="px-3 py-3 text-zinc-200">
+                          {row[header] || '—'}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-zinc-950 p-4">
-              <p className="text-sm text-zinc-300">A importação será criada em fila e os leads válidos poderão ser processados parcialmente.</p>
+              <p className="text-sm text-zinc-300">
+                A importação será criada em fila e os leads válidos poderão ser processados
+                parcialmente.
+              </p>
               <Button
                 type="button"
                 disabled={!mapping.companyName}
@@ -210,13 +271,20 @@ export function ImportsPage() {
       ) : null}
 
       <Card>
-        <CardHeader title="Histórico de importações" description="Selecione uma importação para acompanhar o processamento e as linhas rejeitadas." />
+        <CardHeader
+          title="Histórico de importações"
+          description="Selecione uma importação para acompanhar o processamento e as linhas rejeitadas."
+        />
         <CardContent>
-          {importsQuery.isLoading ? <p className="text-sm text-zinc-500">A carregar importações…</p> : importsQuery.isError ? (
+          {importsQuery.isLoading ? (
+            <p className="text-sm text-zinc-500">A carregar importações…</p>
+          ) : importsQuery.isError ? (
             <QueryErrorState
               title="Não foi possível carregar o histórico de importações."
               error={importsQuery.error}
-              onRetry={() => { void importsQuery.refetch(); }}
+              onRetry={() => {
+                void importsQuery.refetch();
+              }}
             />
           ) : imports.length === 0 ? (
             <p className="text-sm text-zinc-500">Nenhuma importação CSV criada.</p>
@@ -233,14 +301,20 @@ export function ImportsPage() {
                     >
                       <span>
                         <span className="block font-medium text-zinc-50">{csvImport.fileName}</span>
-                        <span className="text-sm text-zinc-500">{csvImport.totalRows} linha(s)</span>
+                        <span className="text-sm text-zinc-500">
+                          {csvImport.totalRows} linha(s)
+                        </span>
                       </span>
-                      <Badge tone={importStatusTone(csvImport.status)}>{IMPORT_STATUS_LABEL[csvImport.status]}</Badge>
+                      <Badge tone={importStatusTone(csvImport.status)}>
+                        {IMPORT_STATUS_LABEL[csvImport.status]}
+                      </Badge>
                     </button>
                   </li>
                 ))}
               </ul>
-              {importsQuery.data?.meta ? <Pagination {...importsQuery.data.meta} onPageChange={setHistoryPage} /> : null}
+              {importsQuery.data?.meta ? (
+                <Pagination {...importsQuery.data.meta} onPageChange={setHistoryPage} />
+              ) : null}
             </div>
           )}
         </CardContent>
@@ -251,25 +325,61 @@ export function ImportsPage() {
           <CardHeader
             title={`Importação: ${selectedImport.fileName}`}
             description={importStatusDescription(selectedImport.status)}
-            action={<Badge tone={importStatusTone(selectedImport.status)}>{IMPORT_STATUS_LABEL[selectedImport.status]}</Badge>}
+            action={
+              <Badge tone={importStatusTone(selectedImport.status)}>
+                {IMPORT_STATUS_LABEL[selectedImport.status]}
+              </Badge>
+            }
           />
           <CardContent className="space-y-5">
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-lg bg-zinc-950 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">Total</dt><dd className="mt-1 font-semibold text-zinc-50">{selectedImport.totalRows} linha(s)</dd></div>
-              <div className="rounded-lg bg-brand-500/15 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-brand-300">Importados</dt><dd className="mt-1 font-semibold text-brand-100">{selectedImport.importedCount} importado(s)</dd></div>
-              <div className="rounded-lg bg-amber-500/10 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-amber-300">Ignorados</dt><dd className="mt-1 font-semibold text-amber-200">{selectedImport.skippedCount} ignorado(s)</dd></div>
-              <div className="rounded-lg bg-red-500/10 p-3"><dt className="text-xs font-medium uppercase tracking-wide text-red-300">Inválidos</dt><dd className="mt-1 font-semibold text-red-200">{selectedImport.invalidCount} inválido(s)</dd></div>
+              <div className="rounded-lg bg-zinc-950 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wide text-zinc-500">Total</dt>
+                <dd className="mt-1 font-semibold text-zinc-50">
+                  {selectedImport.totalRows} linha(s)
+                </dd>
+              </div>
+              <div className="rounded-lg bg-brand-500/15 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wide text-brand-300">
+                  Importados
+                </dt>
+                <dd className="mt-1 font-semibold text-brand-100">
+                  {selectedImport.importedCount} importado(s)
+                </dd>
+              </div>
+              <div className="rounded-lg bg-amber-500/10 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wide text-amber-300">
+                  Ignorados
+                </dt>
+                <dd className="mt-1 font-semibold text-amber-200">
+                  {selectedImport.skippedCount} ignorado(s)
+                </dd>
+              </div>
+              <div className="rounded-lg bg-red-500/10 p-3">
+                <dt className="text-xs font-medium uppercase tracking-wide text-red-300">
+                  Inválidos
+                </dt>
+                <dd className="mt-1 font-semibold text-red-200">
+                  {selectedImport.invalidCount} inválido(s)
+                </dd>
+              </div>
             </dl>
 
             {selectedImport.invalidCount > 0 ? (
               <section aria-labelledby="import-errors-heading">
-                <h2 id="import-errors-heading" className="text-base font-semibold text-zinc-50">Erros por linha</h2>
-                {errorsQuery.isLoading ? <p className="mt-2 text-sm text-zinc-500">A carregar erros…</p> : errorsQuery.isError ? (
+                <h2 id="import-errors-heading" className="text-base font-semibold text-zinc-50">
+                  Erros por linha
+                </h2>
+                {errorsQuery.isLoading ? (
+                  <p className="mt-2 text-sm text-zinc-500">A carregar erros…</p>
+                ) : errorsQuery.isError ? (
                   <div className="mt-2">
                     <QueryErrorState
                       title="Não foi possível carregar os erros por linha."
                       error={errorsQuery.error}
-                      onRetry={() => { void errorsQuery.refetch(); }}
+                      onRetry={() => {
+                        void errorsQuery.refetch();
+                      }}
                     />
                   </div>
                 ) : (
@@ -282,7 +392,9 @@ export function ImportsPage() {
                         </li>
                       ))}
                     </ul>
-                    {errorsQuery.data?.meta ? <Pagination {...errorsQuery.data.meta} onPageChange={setErrorsPage} /> : null}
+                    {errorsQuery.data?.meta ? (
+                      <Pagination {...errorsQuery.data.meta} onPageChange={setErrorsPage} />
+                    ) : null}
                   </div>
                 )}
               </section>

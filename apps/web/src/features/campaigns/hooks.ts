@@ -22,11 +22,13 @@ import {
   type CreateTemplateInput,
 } from './api';
 
-export function useCampaigns(params: {
-  page?: number;
-  pageSize?: number;
-  status?: CampaignStatus;
-} = {}) {
+export function useCampaigns(
+  params: {
+    page?: number;
+    pageSize?: number;
+    status?: CampaignStatus;
+  } = {},
+) {
   return useQuery({
     queryKey: ['campaigns', params],
     queryFn: () => fetchCampaigns(params),
@@ -103,13 +105,8 @@ export function useRemoveCampaignLead(campaignId: string) {
 export function useCreateStageTasks(campaignId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      stageId,
-      leadIds,
-    }: {
-      stageId: string;
-      leadIds?: string[];
-    }) => createStageTasks(campaignId, stageId, { leadIds }),
+    mutationFn: ({ stageId, leadIds }: { stageId: string; leadIds?: string[] }) =>
+      createStageTasks(campaignId, stageId, { leadIds }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['campaigns', campaignId] });
     },

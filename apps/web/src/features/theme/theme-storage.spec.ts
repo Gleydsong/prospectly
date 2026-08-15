@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { applyThemeClass, readStoredTheme, THEME_STORAGE_KEY, writeStoredTheme } from './theme-storage';
+import {
+  applyThemeClass,
+  readStoredTheme,
+  THEME_STORAGE_KEY,
+  writeStoredTheme,
+} from './theme-storage';
 
 describe('theme-storage', () => {
   afterEach(() => {

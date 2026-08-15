@@ -118,7 +118,9 @@ describe('AgentsWhatsappPage', () => {
     );
 
     expect(await screen.findByTestId('whatsapp-variants-list')).toBeInTheDocument();
-    expect(screen.getByTestId('whatsapp-source-badge')).toHaveTextContent(/modelo local|local model/i);
+    expect(screen.getByTestId('whatsapp-source-badge')).toHaveTextContent(
+      /modelo local|local model/i,
+    );
 
     await user.click(screen.getByTestId('whatsapp-variant-curiosidade'));
     await waitFor(() => {

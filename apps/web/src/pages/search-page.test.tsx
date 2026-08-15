@@ -113,7 +113,10 @@ describe('SearchPage', () => {
         country === 'PT'
           ? [{ code: '11', name: 'Lisbon' }]
           : country === 'BR'
-            ? [{ code: 'SP', name: 'São Paulo' }, { code: 'RJ', name: 'Rio de Janeiro' }]
+            ? [
+                { code: 'SP', name: 'São Paulo' },
+                { code: 'RJ', name: 'Rio de Janeiro' },
+              ]
             : [],
       isLoading: false,
       isError: false,
@@ -283,7 +286,9 @@ describe('SearchPage', () => {
     mocks.useSearches.mockReturnValue(processingSearch('FAILED'));
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }),
+    );
 
     expect(confirmSpy).toHaveBeenCalledWith(
       expect.stringContaining('Clientes potenciais já importados permanecem'),

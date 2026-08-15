@@ -6,7 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 
 export const QUICK = [
-  { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
+  {
+    to: '/tools/opportunity-finder',
+    titleKey: 'tools.opportunityTitle',
+    descKey: 'tools.opportunityDesc',
+  },
   { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
   { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
   { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },
@@ -14,7 +18,11 @@ export const QUICK = [
 ] as const;
 
 export const ALL = [
-  { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
+  {
+    to: '/tools/opportunity-finder',
+    titleKey: 'tools.opportunityTitle',
+    descKey: 'tools.opportunityDesc',
+  },
   { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
   { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
   { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },

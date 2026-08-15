@@ -72,10 +72,9 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
   const email = lead.email?.trim() || null;
   const emailHref = email ? sanitizeMailtoHref(email) : null;
   const websiteHref = lead.website ? sanitizeExternalUrl(lead.website) : null;
-  const whatsappRaw = (lead.whatsapp?.trim() || lead.phone?.trim() || '') || null;
+  const whatsappRaw = lead.whatsapp?.trim() || lead.phone?.trim() || '' || null;
   const message = buildWhatsAppOutreachMessage(lead);
-  const whatsappHref =
-    !blocked && whatsappRaw ? buildWhatsAppHref(whatsappRaw, message) : null;
+  const whatsappHref = !blocked && whatsappRaw ? buildWhatsAppHref(whatsappRaw, message) : null;
 
   const emailTone: ChannelTone = blocked ? 'blocked' : emailHref ? 'ready' : 'missing';
   const websiteTone: ChannelTone = websiteHref ? 'ready' : 'missing';
@@ -104,7 +103,9 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
               channelClass(emailTone),
             )}
-            title={blocked ? 'Cliente potencial marcado como não contatar' : 'E-mail não cadastrado'}
+            title={
+              blocked ? 'Cliente potencial marcado como não contatar' : 'E-mail não cadastrado'
+            }
           >
             <Mail className="h-3 w-3" aria-hidden />
             E-mail
@@ -173,8 +174,8 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
       </div>
       {whatsappHref ? (
         <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
-          WhatsApp abre com mensagem sugerida. A Meta não confirma se o número tem WhatsApp
-          antes do envio.
+          WhatsApp abre com mensagem sugerida. A Meta não confirma se o número tem WhatsApp antes do
+          envio.
         </p>
       ) : null}
     </div>

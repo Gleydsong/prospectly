@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('credit purchase access gate', () => {
-  test('keeps the selected credit offer when moving from login to registration', async ({ page }) => {
+  test('keeps the selected credit offer when moving from login to registration', async ({
+    page,
+  }) => {
     await page.goto('/login?offer=credits-2000');
 
     await expect(page.locator('input[type="email"]')).toBeVisible();

@@ -48,61 +48,61 @@ export function HeroKpiCard({
           className,
         )}
       >
-      <CardHeader
-        title={t('dashboard.conversion')}
-        description={t('dashboard.heroKpiDesc')}
-        className="border-b-0 pb-0"
-        action={
-          !loading && won > 0 ? (
-            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-300">
-              {t('dashboard.wonBadge', { count: won })}
-            </span>
-          ) : null
-        }
-      />
-      <CardContent className="flex flex-1 flex-col gap-4 pt-2">
-        {loading ? (
-          <Skeleton className="h-16 w-36" />
-        ) : (
-          <div className="relative">
-            <p className="text-4xl font-semibold tabular-nums tracking-tight text-zinc-50 sm:text-5xl">
-              {animatedRate.toFixed(1)}
-              <span className="ml-1 text-2xl text-zinc-400">%</span>
-            </p>
-            <div className="pointer-events-none absolute -right-1 top-0 h-14 w-28 opacity-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={spark}>
-                  <defs>
-                    <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.55} />
-                      <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Area
-                    type="monotone"
-                    dataKey="v"
-                    stroke="#93c5fd"
-                    strokeWidth={2}
-                    fill="url(#heroSpark)"
-                    isAnimationActive={!reduceMotion}
-                    animationDuration={reduceMotion ? 0 : 900}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+        <CardHeader
+          title={t('dashboard.conversion')}
+          description={t('dashboard.heroKpiDesc')}
+          className="border-b-0 pb-0"
+          action={
+            !loading && won > 0 ? (
+              <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-300">
+                {t('dashboard.wonBadge', { count: won })}
+              </span>
+            ) : null
+          }
+        />
+        <CardContent className="flex flex-1 flex-col gap-4 pt-2">
+          {loading ? (
+            <Skeleton className="h-16 w-36" />
+          ) : (
+            <div className="relative">
+              <p className="text-4xl font-semibold tabular-nums tracking-tight text-zinc-50 sm:text-5xl">
+                {animatedRate.toFixed(1)}
+                <span className="ml-1 text-2xl text-zinc-400">%</span>
+              </p>
+              <div className="pointer-events-none absolute -right-1 top-0 h-14 w-28 opacity-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={spark}>
+                    <defs>
+                      <linearGradient id="heroSpark" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.55} />
+                        <stop offset="100%" stopColor="#60a5fa" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Area
+                      type="monotone"
+                      dataKey="v"
+                      stroke="#93c5fd"
+                      strokeWidth={2}
+                      fill="url(#heroSpark)"
+                      isAnimationActive={!reduceMotion}
+                      animationDuration={reduceMotion ? 0 : 900}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
-        )}
-        <p className="text-xs text-zinc-500">
-          {loading ? '—' : t('dashboard.heroKpiHint', { newLeads, won })}
-        </p>
-        <Link
-          to="/pipeline"
-          className="cta-primary inline-flex h-11 items-center justify-center gap-2 rounded-control px-4 text-sm font-semibold transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98]"
-        >
-          {t('dashboard.openPipeline')}
-          <ArrowUpRight className="h-4 w-4" aria-hidden />
-        </Link>
-      </CardContent>
+          )}
+          <p className="text-xs text-zinc-500">
+            {loading ? '—' : t('dashboard.heroKpiHint', { newLeads, won })}
+          </p>
+          <Link
+            to="/pipeline"
+            className="cta-primary inline-flex h-11 items-center justify-center gap-2 rounded-control px-4 text-sm font-semibold transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98]"
+          >
+            {t('dashboard.openPipeline')}
+            <ArrowUpRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </CardContent>
       </Card>
     </div>
   );

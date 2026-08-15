@@ -27,7 +27,10 @@ import {
   useSearches,
   useSearchResults,
 } from '@/features/prospecting/hooks';
-import { planLabel, SearchQuotaBanner } from '@/features/prospecting/components/search-quota-banner';
+import {
+  planLabel,
+  SearchQuotaBanner,
+} from '@/features/prospecting/components/search-quota-banner';
 import { SearchResultCard } from '@/features/prospecting/components/search-result-card';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatSearchImportStatus } from '@/lib/presentation-labels';
@@ -152,7 +155,10 @@ function buildResultsCsv(results: ProspectingSearchResult[]): string {
 
 function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
   return (
-    <div className="space-y-2 rounded-control bg-zinc-800/60 p-3 text-sm text-zinc-300" role="status">
+    <div
+      className="space-y-2 rounded-control bg-zinc-800/60 p-3 text-sm text-zinc-300"
+      role="status"
+    >
       <p>
         Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s),{' '}
         {summary.invalid} inválido(s) e {summary.conflicts} possível(is) duplicado(s).
@@ -281,7 +287,8 @@ export function SearchPage() {
   const searches = searchesQuery.data?.data ?? [];
   const resultPage = resultsQuery.data;
   const results = useMemo(() => resultPage?.data ?? [], [resultPage]);
-  const currentSearch = searchQuery.data ?? searches.find((search) => search.id === selectedSearchId);
+  const currentSearch =
+    searchQuery.data ?? searches.find((search) => search.id === selectedSearchId);
   const canImport = currentSearch?.status === 'COMPLETED';
   const selectableResultIds = canImport
     ? results.filter((result) => !result.importedLeadId).map((result) => result.id)
@@ -403,7 +410,9 @@ export function SearchPage() {
                 {t('search.highIntentDesc')}
               </p>
             </div>
-            <div className="shrink-0">{<SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />}</div>
+            <div className="shrink-0">
+              {<SearchQuotaBanner usage={billingQuery.data?.searchUsage} plan={plan} />}
+            </div>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
@@ -424,7 +433,9 @@ export function SearchPage() {
                 disabled={!selectedCountry || regionsQuery.isLoading}
                 {...register('state')}
               >
-                <option value="">{regionsQuery.isLoading ? 'A carregar…' : 'Selecione o estado'}</option>
+                <option value="">
+                  {regionsQuery.isLoading ? 'A carregar…' : 'Selecione o estado'}
+                </option>
                 {regions.map((region) => (
                   <option key={region.code} value={region.code}>
                     {selectedCountry === 'BR' ? `${region.code} — ${region.name}` : region.name}
@@ -467,7 +478,11 @@ export function SearchPage() {
               >
                 <option value="">Selecione o nicho</option>
                 {categoryOptions.map((category) => (
-                  <option key={category.value} value={category.value} disabled={!category.available}>
+                  <option
+                    key={category.value}
+                    value={category.value}
+                    disabled={!category.available}
+                  >
                     {CATEGORY_LABEL[category.value] ?? category.label}
                     {category.available ? '' : ' — plano pago'}
                   </option>
@@ -506,7 +521,7 @@ export function SearchPage() {
               </p>
             ) : null}
 
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
               <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
                 <input
                   type="checkbox"
@@ -535,7 +550,10 @@ export function SearchPage() {
               {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
               {planLabel(plan)}
             </p>
-            <Link to="/credits" className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline">
+            <Link
+              to="/credits"
+              className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline"
+            >
               Ver todos os planos →
             </Link>
           </div>
@@ -620,7 +638,8 @@ export function SearchPage() {
                     Selecionar todos
                   </label>
                   <p className="text-sm text-zinc-500">
-                    <span className="font-medium text-amber-300">{withoutWebsiteCount}</span> sem site
+                    <span className="font-medium text-amber-300">{withoutWebsiteCount}</span> sem
+                    site
                     {' · '}
                     <span className="font-medium text-zinc-300">
                       {resultPage?.meta.total ?? results.length}
@@ -656,8 +675,8 @@ export function SearchPage() {
                     className="underline hover:text-zinc-200"
                   >
                     colaboradores do OpenStreetMap
-                  </a>
-                  {' '}(ODbL) e Google, conforme a fonte de cada resultado.
+                  </a>{' '}
+                  (ODbL) e Google, conforme a fonte de cada resultado.
                 </p>
               </>
             )}
@@ -706,7 +725,9 @@ export function SearchPage() {
                             {formatDateTime(search.createdAt)}
                           </span>
                         </span>
-                        <Badge tone={statusTone(search.status)}>{STATUS_LABEL[search.status]}</Badge>
+                        <Badge tone={statusTone(search.status)}>
+                          {STATUS_LABEL[search.status]}
+                        </Badge>
                       </button>
                       <Button
                         type="button"

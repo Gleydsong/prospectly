@@ -56,11 +56,7 @@ export type WhatsappFirstMessageResult = {
 };
 
 export type WhatsappVariantAngle =
-  | 'direto'
-  | 'curiosidade'
-  | 'prova_social'
-  | 'dor_site'
-  | 'oferta_leve';
+  'direto' | 'curiosidade' | 'prova_social' | 'dor_site' | 'oferta_leve';
 
 export type WhatsappVariant = {
   id: string;

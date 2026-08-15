@@ -2,12 +2,7 @@ import { api } from '@/lib/api';
 import type { PaginatedResult } from '@/types';
 
 export type CampaignStatus =
-  | 'DRAFT'
-  | 'SCHEDULED'
-  | 'RUNNING'
-  | 'PAUSED'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'DRAFT' | 'SCHEDULED' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
 
 export type CampaignLeadResult =
   | 'CONTACTED'
@@ -148,11 +143,13 @@ export interface CreateTemplateInput {
   body: string;
 }
 
-export async function fetchCampaigns(params: {
-  page?: number;
-  pageSize?: number;
-  status?: CampaignStatus;
-} = {}): Promise<PaginatedResult<CampaignListItem>> {
+export async function fetchCampaigns(
+  params: {
+    page?: number;
+    pageSize?: number;
+    status?: CampaignStatus;
+  } = {},
+): Promise<PaginatedResult<CampaignListItem>> {
   const { data } = await api.get<PaginatedResult<CampaignListItem>>('/campaigns', { params });
   return data;
 }
@@ -188,7 +185,10 @@ export async function addCampaignLeads(id: string, leadIds: string[]): Promise<C
   return data;
 }
 
-export async function removeCampaignLead(id: string, leadId: string): Promise<{ removed: boolean }> {
+export async function removeCampaignLead(
+  id: string,
+  leadId: string,
+): Promise<{ removed: boolean }> {
   const { data } = await api.delete<{ removed: boolean }>(`/campaigns/${id}/leads/${leadId}`);
   return data;
 }
@@ -234,10 +234,12 @@ export async function recordCampaignLeadResult(
   return data;
 }
 
-export async function fetchMessageTemplates(params: {
-  page?: number;
-  pageSize?: number;
-} = {}): Promise<PaginatedResult<MessageTemplate>> {
+export async function fetchMessageTemplates(
+  params: {
+    page?: number;
+    pageSize?: number;
+  } = {},
+): Promise<PaginatedResult<MessageTemplate>> {
   const { data } = await api.get<PaginatedResult<MessageTemplate>>('/message-templates', {
     params,
   });

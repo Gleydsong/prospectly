@@ -221,69 +221,74 @@ export function TopNav() {
                 id="mobile-nav"
                 className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] shadow-elevated"
               >
-            <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
-              <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
-                <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-                <span className="-ml-0.5 leading-none">rospectly</span>
-              </span>
-              <button
-                type="button"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)]"
-                onClick={() => setMobileOpen(false)}
-                aria-label={t('nav.closeMenu')}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
-              <div className="space-y-1">
-                {TOP_NAV_ITEMS.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
+                <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
+                  <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
+                    <img
+                      src={prospectlyMark}
+                      alt=""
+                      aria-hidden
+                      className="-ml-0.5 h-7 w-7 shrink-0"
+                    />
+                    <span className="-ml-0.5 leading-none">rospectly</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)]"
                     onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium',
-                        isActive
-                          ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
-                          : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
-                      )
-                    }
+                    aria-label={t('nav.closeMenu')}
                   >
-                    <item.icon className="h-5 w-5" aria-hidden />
-                    {t(item.labelKey)}
-                  </NavLink>
-                ))}
-              </div>
-              {NAV_GROUPS.map((group) => (
-                <div key={group.labelKey} className="space-y-1">
-                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    {t(group.labelKey)}
-                  </p>
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={`${group.labelKey}-${item.to}`}
-                      to={item.to}
-                      end={item.to === '/'}
-                      onClick={() => setMobileOpen(false)}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
-                          isActive
-                            ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
-                            : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)]',
-                        )
-                      }
-                    >
-                      <item.icon className="h-4 w-4" aria-hidden />
-                      {t(item.labelKey)}
-                    </NavLink>
-                  ))}
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-              ))}
-            </nav>
+                <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
+                  <div className="space-y-1">
+                    {TOP_NAV_ITEMS.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === '/'}
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium',
+                            isActive
+                              ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
+                              : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
+                          )
+                        }
+                      >
+                        <item.icon className="h-5 w-5" aria-hidden />
+                        {t(item.labelKey)}
+                      </NavLink>
+                    ))}
+                  </div>
+                  {NAV_GROUPS.map((group) => (
+                    <div key={group.labelKey} className="space-y-1">
+                      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                        {t(group.labelKey)}
+                      </p>
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={`${group.labelKey}-${item.to}`}
+                          to={item.to}
+                          end={item.to === '/'}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
+                              isActive
+                                ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
+                                : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)]',
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" aria-hidden />
+                          {t(item.labelKey)}
+                        </NavLink>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
               </aside>
             </div>,
             document.body,

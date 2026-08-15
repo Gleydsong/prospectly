@@ -15,8 +15,12 @@ describe('CSV imports API', () => {
   });
 
   it('sends a selected CSV file as multipart data for preview', async () => {
-    const file = new File(['Empresa,Email\nAcme,contato@acme.test'], 'leads.csv', { type: 'text/csv' });
-    postMock.mockResolvedValue({ data: { headers: ['Empresa', 'Email'], rows: [], suggestedMapping: {} } });
+    const file = new File(['Empresa,Email\nAcme,contato@acme.test'], 'leads.csv', {
+      type: 'text/csv',
+    });
+    postMock.mockResolvedValue({
+      data: { headers: ['Empresa', 'Email'], rows: [], suggestedMapping: {} },
+    });
 
     await previewCsv(file);
 
@@ -42,6 +46,8 @@ describe('CSV imports API', () => {
       expect.any(FormData),
       expect.objectContaining({ headers: { 'Content-Type': false } }),
     );
-    expect((formData as FormData).get('mapping')).toBe('{"companyName":"Empresa","email":"E-mail"}');
+    expect((formData as FormData).get('mapping')).toBe(
+      '{"companyName":"Empresa","email":"E-mail"}',
+    );
   });
 });
