@@ -8,12 +8,10 @@ import { LocaleSync } from './components/locale-sync';
 import { ToastProvider } from './components/ui/toast';
 import { GoogleAuthProvider } from './features/auth/google-auth-provider';
 import { ThemeProvider } from './features/theme/theme-provider';
+import { ensureI18n } from './i18n';
 import { initObservability } from './lib/observability';
 import { App } from './App';
-import './i18n';
 import './index.css';
-
-initObservability();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,26 +23,33 @@ const queryClient = new QueryClient({
   },
 });
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Root element not found');
+async function bootstrap(): Promise<void> {
+  await ensureI18n();
+  initObservability();
+
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+
+  createRoot(rootElement).render(
+    <StrictMode>
+      <AppErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <ThemeProvider>
+              <GoogleAuthProvider>
+                <ToastProvider>
+                  <LocaleSync />
+                  <App />
+                </ToastProvider>
+              </GoogleAuthProvider>
+            </ThemeProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </AppErrorBoundary>
+    </StrictMode>,
+  );
 }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <ThemeProvider>
-            <GoogleAuthProvider>
-              <ToastProvider>
-                <LocaleSync />
-                <App />
-              </ToastProvider>
-            </GoogleAuthProvider>
-          </ThemeProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </AppErrorBoundary>
-  </StrictMode>,
-);
+void bootstrap();
