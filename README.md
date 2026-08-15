@@ -218,7 +218,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 
 ### Operação e rollout
 
-- Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
+- Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz. O Static Site `prospectly-web` usa `pnpm --filter @prospectly/web build:deploy` (sem `corepack enable`) e exige `VITE_API_URL`, `VITE_LANDING_URL` e `VITE_GOOGLE_CLIENT_ID` HTTPS.
 - Billing dual (Abacate BRL + Stripe EUR/USD): [`docs/billing/dual-gateways.md`](docs/billing/dual-gateways.md).
 - `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
   obrigatória retorna `503`.

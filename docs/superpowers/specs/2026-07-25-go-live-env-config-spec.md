@@ -7,7 +7,9 @@
 
 ## 1. Objetivo
 
-Documentar **tudo que ainda falta configurar** (variáveis de ambiente e wiring externo) para colocar o Prospectly em produção no Render, sem misturar com código ainda não implementado (ex.: SDK Sentry, OAuth).
+Documentar **tudo que ainda falta configurar** (variáveis de ambiente e wiring externo) para colocar o Prospectly em produção no Render.
+
+O código local do web valida `VITE_*` no `build:deploy`, compila `@prospectly/shared-types` no Blueprint e envia erros ao Sentry quando `VITE_SENTRY_DSN` está definido. Este spec permanece **OPEN** até os gates do Dashboard e o smoke staging real.
 
 ## 2. Escopo
 
@@ -17,11 +19,11 @@ Documentar **tudo que ainda falta configurar** (variáveis de ambiente e wiring 
 - Envs build-time do web (Vite) e landing (Next)
 - Webhooks Stripe / Abacate
 - Gaps do `.env` local vs o necessário para smoke de billing/e-mail
+- Observabilidade client (`VITE_SENTRY_DSN` + `@sentry/react`) — código pronto; DSN de staging ainda é gate operacional
 
 ### Fora
 
 - Implementar SEC-001 (HttpOnly cookies)
-- Instrumentar Sentry SDK
 - OAuth GitHub (env existe, código não)
 - Self-host OSM / backups automatizados (ops pós-Go-Live)
 
@@ -83,11 +85,12 @@ Preencher no **Dashboard Render** na primeira aplicação do Blueprint (`sync: f
 
 | # | Variável | Exemplo | Critério de aceite |
 |---|----------|---------|--------------------|
-| W1 | `VITE_API_URL` | `https://<api>.onrender.com/api/v1` | App chama API correta |
-| W2 | `VITE_LANDING_URL` | `https://<landing>.onrender.com` | Links “ver preços” / termos |
+| W1 | `VITE_API_URL` | `https://<api>/api/v1` | App chama API correta; `build:deploy` rejeita vazio/HTTP/localhost |
+| W2 | `VITE_LANDING_URL` | `https://prospectlyonboard.com` | Links “ver preços” / termos; origem HTTPS sem path `/api` |
 | W3 | `VITE_GOOGLE_CLIENT_ID` | mesmo valor que `GOOGLE_CLIENT_ID` | Botão Google no login/register |
+| W4 | `VITE_SENTRY_DSN` | DSN público do projeto web | Opcional; se setado, erros controlados chegam ao Sentry sem PII/tokens |
 
-**Obrigatório:** após setar, **rebuild/redeploy** do static site.
+**Obrigatório:** após setar, **rebuild/redeploy** do static site. `region` não é configurável no Static Site (schema Render).
 
 ### 4.3 Landing — `prospectly-landing` (build-time)
 
@@ -112,7 +115,8 @@ Preencher no **Dashboard Render** na primeira aplicação do Blueprint (`sync: f
 
 | Variável | Serviço | Nota |
 |----------|---------|------|
-| `SENTRY_DSN` | api | Já no Blueprint; **SDK não instrumentado** — valor hoje inerte |
+| `SENTRY_DSN` | api | Já no Blueprint; instrumentação server-side é outro trabalho |
+| `VITE_SENTRY_DSN` | web | SDK client implementado; falta DSN real no Dashboard |
 | `GOOGLE_PLACES_API_KEY` | api | Só se ativar provider Google; OSM funciona sem |
 | `ABACATE_WEBHOOK_HMAC_KEY` | api | Opcional; default = chave pública da doc Abacate |
 
@@ -139,13 +143,13 @@ Snapshot da máquina de desenvolvimento (nomes apenas; sem valores):
 ## 8. Ordem de execução recomendada
 
 ```text
-1. Aplicar Blueprint Render (render.yaml)
+1. Aplicar Blueprint Render (render.yaml) — Static Site sem `region`, sem `corepack enable`
 2. Preencher A3–A20 (secrets billing + SMTP) no Dashboard
-3. Aguardar URLs públicas dos 3 serviços
-4. Preencher A1–A2, W1–W2, L1–L3
-5. Rebuild web + landing
-6. Configurar X1–X4 (webhooks + produto)
-7. Smoke: GET /health/ready → register/login → checkout test EUR → PIX BRL → monthly BRL
+3. Aguardar URLs públicas reais (confirmar no Dashboard; não assumir *.onrender.com)
+4. Preencher A1–A2, W1–W4, L1–L3
+5. Rebuild web (`build:deploy`) + landing
+6. Configurar X1–X4 (webhooks + produto) e Google JS origin
+7. Smoke: GET /health/ready → register/login → checkout test EUR → PIX BRL → monthly BRL → Sentry
 ```
 
 ## 9. Critérios de aceite do spec
