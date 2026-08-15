@@ -80,7 +80,7 @@ describe('TopNav', () => {
     expect(await screen.findByText(/2[,.]?500 créditos/i)).toBeInTheDocument();
   });
 
-  it('links the search clients control to the leads page', () => {
+  it('links the search clients control to the prospecting search page', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
       <QueryClientProvider client={client}>
@@ -94,7 +94,7 @@ describe('TopNav', () => {
 
     expect(screen.getByRole('link', { name: /buscar clientes|search clients/i })).toHaveAttribute(
       'href',
-      '/leads',
+      '/search',
     );
   });
 

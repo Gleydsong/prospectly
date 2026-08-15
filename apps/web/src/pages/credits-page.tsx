@@ -254,11 +254,15 @@ export function CreditsPage() {
                   <ul className="mt-4 space-y-2 text-sm text-[color:var(--ink-muted)]">
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                      {t('settings.packFeatureSearch')}
+                      {offer.id === 'unlimited'
+                        ? t('settings.packFeatureUnlimitedSearch')
+                        : t('settings.packFeatureSearch')}
                     </li>
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                      {t('settings.packFeaturePdf')}
+                      {offer.id === 'unlimited'
+                        ? t('settings.packFeatureUnlimitedCsv')
+                        : t('settings.packFeaturePdf')}
                     </li>
                     {offer.id === 'unlimited' ? (
                       <li className="flex items-center gap-2">

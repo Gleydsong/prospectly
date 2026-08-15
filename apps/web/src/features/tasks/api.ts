@@ -34,3 +34,7 @@ export async function updateTask(id: string, input: Partial<CreateTaskInput & { 
   const { data } = await api.patch<Task>(`/tasks/${id}`, input);
   return data;
 }
+
+export async function deleteTask(id: string): Promise<void> {
+  await api.delete(`/tasks/${id}`);
+}

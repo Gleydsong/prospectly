@@ -30,6 +30,7 @@ import {
 import { planLabel, SearchQuotaBanner } from '@/features/prospecting/components/search-quota-banner';
 import { SearchResultCard } from '@/features/prospecting/components/search-result-card';
 import { getApiErrorMessage } from '@/lib/api';
+import { formatSearchImportStatus } from '@/lib/presentation-labels';
 import { formatDateTime } from '@/lib/utils';
 import {
   CREDIT_COSTS,
@@ -87,6 +88,8 @@ const STATUS_LABEL: Record<SearchStatus, string> = {
 const CATEGORY_LABEL = Object.fromEntries(
   PROSPECTING_CATEGORIES.map((category) => [category.value, category.label]),
 ) as Record<string, string>;
+
+CATEGORY_LABEL.hostel = 'Albergue';
 
 const CSV_COLUMNS = [
   'empresa',
@@ -158,13 +161,13 @@ function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
         <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-brand-100/90">
           {summary.items.map((item) => (
             <li key={item.resultId}>
-              {item.companyName ?? item.resultId}: {item.status}
+              {item.companyName ?? item.resultId}: {formatSearchImportStatus(item.status)}
               {item.leadId ? (
                 <>
                   {' '}
                   —{' '}
                   <Link className="underline hover:text-white" to={`/leads/${item.leadId}`}>
-                    ver lead
+                    ver cliente potencial
                   </Link>
                 </>
               ) : null}
@@ -368,7 +371,7 @@ export function SearchPage() {
 
   const removeSearch = async (searchId: string) => {
     const confirmed = window.confirm(
-      'Apagar esta pesquisa do histórico? Os resultados serão removidos. Leads já importados permanecem.',
+      'Apagar esta pesquisa do histórico? Os resultados serão removidos. Clientes potenciais já importados permanecem.',
     );
     if (!confirmed) return;
     setServerError(null);
@@ -465,7 +468,7 @@ export function SearchPage() {
                 <option value="">Selecione o nicho</option>
                 {categoryOptions.map((category) => (
                   <option key={category.value} value={category.value} disabled={!category.available}>
-                    {category.label}
+                    {CATEGORY_LABEL[category.value] ?? category.label}
                     {category.available ? '' : ' — plano pago'}
                   </option>
                 ))}

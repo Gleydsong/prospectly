@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
+import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -15,7 +16,10 @@ import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { useCreateTask, useTasks, useUpdateTask } from '@/features/tasks/hooks';
+import { useDeleteLead } from '@/features/leads/hooks';
+import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '@/features/tasks/hooks';
+import { getApiErrorMessage } from '@/lib/api';
+import { TASK_STATUS_LABELS } from '@/lib/presentation-labels';
 import { formatDate } from '@/lib/utils';
 import type { Task } from '@/types';
 
@@ -32,13 +36,6 @@ const PRIORITY_LABEL: Record<Task['priority'], string> = {
   URGENT: 'Urgente',
 };
 
-const STATUS_LABEL: Record<Task['status'], string> = {
-  OPEN: 'Aberta',
-  IN_PROGRESS: 'Em andamento',
-  DONE: 'Concluída',
-  CANCELLED: 'Cancelada',
-};
-
 export function TasksPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
@@ -48,6 +45,33 @@ export function TasksPage() {
   const query = useTasks({ page, pageSize: 15, status: status || undefined });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
+  const deleteLead = useDeleteLead();
+  const deleteTask = useDeleteTask();
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const removeLead = async (leadId: string, companyName: string) => {
+    const confirmed = window.confirm(
+      `Apagar o cliente "${companyName}"? Ele será removido da lista de clientes potenciais.`,
+    );
+    if (!confirmed) return;
+    setActionError(null);
+    try {
+      await deleteLead.mutateAsync(leadId);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    }
+  };
+
+  const removeTask = async (task: Task) => {
+    const confirmed = window.confirm(`Apagar a tarefa "${task.title}"?`);
+    if (!confirmed) return;
+    setActionError(null);
+    try {
+      await deleteTask.mutateAsync(task.id);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error));
+    }
+  };
 
   const {
     register,
@@ -86,13 +110,15 @@ export function TasksPage() {
           aria-label="Filtrar por status"
         >
           <option value="">Todos os status</option>
-          {Object.entries(STATUS_LABEL).map(([value, label]) => (
+          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
           ))}
         </Select>
       </Card>
+
+      {actionError ? <Alert tone="error">{actionError}</Alert> : null}
 
       {query.isLoading ? (
         <Card className="p-5">
@@ -125,9 +151,10 @@ export function TasksPage() {
                       {PRIORITY_LABEL[task.priority]}
                     </Badge>
                   </div>
-                  <p className="text-xs text-zinc-400">
-                    {task.lead ? task.lead.companyName : '—'} · {formatDate(task.dueAt)}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <TaskLeadLink lead={task.lead} />
+                    <span className="text-xs text-zinc-400">{formatDate(task.dueAt)}</span>
+                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <Badge
                       tone={
@@ -138,17 +165,16 @@ export function TasksPage() {
                             : 'blue'
                       }
                     >
-                      {STATUS_LABEL[task.status]}
+                      {TASK_STATUS_LABELS[task.status]}
                     </Badge>
-                    {task.status !== 'DONE' && task.status !== 'CANCELLED' ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
-                      >
-                        Concluir
-                      </Button>
-                    ) : null}
+                    <TaskRowActions
+                      task={task}
+                      deletingLead={deleteLead.isPending && deleteLead.variables === task.lead?.id}
+                      deletingTask={deleteTask.isPending && deleteTask.variables === task.id}
+                      onComplete={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
+                      onDeleteLead={removeLead}
+                      onDeleteTask={removeTask}
+                    />
                   </div>
                 </li>
               ))}
@@ -161,7 +187,7 @@ export function TasksPage() {
                       Título
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
-                      Lead
+                      Cliente potencial
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
                       Vencimento
@@ -180,16 +206,7 @@ export function TasksPage() {
                     <tr key={task.id} className="border-b border-zinc-800">
                       <td className="px-5 py-3 font-medium text-zinc-50">{task.title}</td>
                       <td className="px-5 py-3">
-                        {task.lead ? (
-                          <Link
-                            to={`/leads/${task.lead.id}`}
-                            className="text-brand-400 hover:underline"
-                          >
-                            {task.lead.companyName}
-                          </Link>
-                        ) : (
-                          '—'
-                        )}
+                        <TaskLeadLink lead={task.lead} />
                       </td>
                       <td className="px-5 py-3 text-zinc-300">{formatDate(task.dueAt)}</td>
                       <td className="px-5 py-3">
@@ -211,19 +228,18 @@ export function TasksPage() {
                                 : 'blue'
                           }
                         >
-                          {STATUS_LABEL[task.status]}
+                          {TASK_STATUS_LABELS[task.status]}
                         </Badge>
                       </td>
                       <td className="px-5 py-3 text-right">
-                        {task.status !== 'DONE' && task.status !== 'CANCELLED' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
-                          >
-                            Concluir
-                          </Button>
-                        ) : null}
+                        <TaskRowActions
+                          task={task}
+                          deletingLead={deleteLead.isPending && deleteLead.variables === task.lead?.id}
+                          deletingTask={deleteTask.isPending && deleteTask.variables === task.id}
+                          onComplete={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
+                          onDeleteLead={removeLead}
+                          onDeleteTask={removeTask}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -281,6 +297,69 @@ export function TasksPage() {
           </div>
         </form>
       </Modal>
+    </div>
+  );
+}
+
+function TaskLeadLink({ lead }: { lead: Task['lead'] }) {
+  if (!lead) {
+    return <span className="text-zinc-500">—</span>;
+  }
+
+  return (
+    <Link to={`/leads/${lead.id}`} className="truncate text-brand-400 hover:underline">
+      {lead.companyName}
+    </Link>
+  );
+}
+
+function TaskRowActions({
+  task,
+  deletingLead,
+  deletingTask,
+  onComplete,
+  onDeleteLead,
+  onDeleteTask,
+}: {
+  task: Task;
+  deletingLead: boolean;
+  deletingTask: boolean;
+  onComplete: () => void;
+  onDeleteLead: (leadId: string, companyName: string) => void;
+  onDeleteTask: (task: Task) => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {task.status !== 'DONE' && task.status !== 'CANCELLED' ? (
+        <Button size="sm" variant="outline" onClick={onComplete}>
+          Concluir
+        </Button>
+      ) : null}
+      {task.lead ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          aria-label={`Apagar cliente ${task.lead.companyName}`}
+          loading={deletingLead}
+          onClick={() => onDeleteLead(task.lead!.id, task.lead!.companyName)}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+          aria-label={`Apagar tarefa ${task.title}`}
+          loading={deletingTask}
+          onClick={() => onDeleteTask(task)}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </Button>
+      )}
     </div>
   );
 }

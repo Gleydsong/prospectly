@@ -5,6 +5,7 @@ import type {
   OpportunityExplanation,
   OpportunityFinderSignal,
   OpportunityProfile,
+  ProspectingCategory,
   OpportunityScoreBreakdown,
   OpportunitySearchStrategy,
 } from '@prospectly/shared-types';
@@ -51,7 +52,10 @@ export class StructuredAiService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async buildOpportunityProfile(context: AiContext, service: string): Promise<OpportunityProfile | null> {
+  async buildOpportunityProfile(
+    context: AiContext,
+    input: { service: string; niche: string; categories: ProspectingCategory[] },
+  ): Promise<OpportunityProfile | null> {
     return this.runStructured({
       context,
       task: 'OPPORTUNITY_PROFILE',
@@ -59,10 +63,11 @@ export class StructuredAiService {
       schema: OpportunityProfileSchema,
       system: [
         'Interprete um serviço vendido por uma empresa brasileira e produza um perfil de prospecção estruturado.',
-        'Escolha somente categorias permitidas no schema. Não invente fatos sobre empresas.',
+        'O nicho e as categorias recebidas já foram validados. Preserve-os exatamente.',
+        'Não invente fatos sobre empresas.',
         'O país é sempre Brasil. Responda somente JSON válido conforme o schema.',
       ].join(' '),
-      input: { service },
+      input,
     });
   }
 

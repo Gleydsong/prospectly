@@ -80,7 +80,7 @@ pnpm dev
 
 | Comando                               | Descrição                                 |
 | ------------------------------------- | ----------------------------------------- |
-| `pnpm dev`                            | Inicia web + api em modo desenvolvimento  |
+| `pnpm dev`                            | Inicia web + api HTTP + worker BullMQ     |
 | `pnpm build`                          | Build de todos os pacotes                 |
 | `pnpm lint`                           | Lint em todos os pacotes                  |
 | `pnpm test`                           | Testes em todos os pacotes                |
@@ -105,9 +105,8 @@ LANDING_AI_PROVIDER=ollama
 LANDING_AI_BASE_URL=http://127.0.0.1:11434
 LANDING_AI_MODEL=llama3.1
 
-# API + worker (worker processa o job de geração)
+# API HTTP + worker BullMQ (mesmo comando)
 pnpm --filter @prospectly/api run dev
-pnpm --filter @prospectly/api run dev:worker
 ```
 
 ## Fase 3 — pesquisa OpenStreetMap e importação CSV

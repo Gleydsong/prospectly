@@ -1,5 +1,10 @@
 import { api } from '@/lib/api';
-import type { PipelineBoard, PipelineStageLeadsPage } from '@/types';
+import type { PipelineBoard, PipelineListItem, PipelineStageLeadsPage } from '@/types';
+
+export async function fetchPipelines(): Promise<PipelineListItem[]> {
+  const { data } = await api.get<PipelineListItem[]>('/pipelines');
+  return data;
+}
 
 export async function fetchPipelineBoard(params?: {
   pipelineId?: string;

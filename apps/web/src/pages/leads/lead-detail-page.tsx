@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Globe, Mail, MapPin, Phone, RefreshCw } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Globe, Mail, MapPin, Phone, RefreshCw, Workflow } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Badge } from '@/components/ui/badge';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,10 +21,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCreateActivity, useLead, useLeadActivities } from '@/features/leads/hooks';
 import { LeadContactChannels } from '@/features/leads/components/lead-contact-channels';
 import { WebsiteAnalysisPanel } from '@/features/leads/components/website-analysis-panel';
+import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
+import { fetchPipelines, moveLeadToStage } from '@/features/pipeline/api';
+import { selectInitialPipelineStage } from '@/features/pipeline/select-initial-stage';
 import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
 import { getApiErrorMessage } from '@/lib/api';
+import { TASK_STATUS_LABELS, formatActivityType } from '@/lib/presentation-labels';
 import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { formatDateTime } from '@/lib/utils';
 
@@ -50,6 +55,7 @@ const ACTIVITY_TYPES = [
 
 export function LeadDetailPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { id = '' } = useParams();
   const leadQuery = useLead(id);
@@ -59,10 +65,20 @@ export function LeadDetailPage() {
     queryFn: () => fetchTasks({ leadId: id, pageSize: 50 }),
     enabled: Boolean(id),
   });
+  const pipelinesQuery = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: fetchPipelines,
+    enabled: Boolean(id) && Boolean(leadQuery.data) && !leadQuery.data?.stage,
+    staleTime: 60_000,
+  });
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [pipelineFeedback, setPipelineFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   const createActivity = useCreateActivity(id);
   const createTask = useCreateTaskForLead(id);
@@ -74,6 +90,37 @@ export function LeadDetailPage() {
     },
     onError: (error) => {
       setAnalysisError(getApiErrorMessage(error));
+    },
+  });
+  const sendToPipeline = useMutation({
+    mutationFn: async () => {
+      const pipelines = pipelinesQuery.data ?? (await fetchPipelines());
+      const initialStage = selectInitialPipelineStage(pipelines);
+      if (!initialStage) {
+        throw new Error('PIPELINE_STAGE_NOT_AVAILABLE');
+      }
+      await moveLeadToStage(id, initialStage.id);
+      return initialStage;
+    },
+    onSuccess: async (stage) => {
+      setPipelineFeedback({
+        tone: 'success',
+        message: `Cliente potencial adicionado à etapa “${stage.name}” do funil.`,
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leads', id] }),
+        queryClient.invalidateQueries({ queryKey: ['leads'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline'] }),
+      ]);
+    },
+    onError: (error) => {
+      setPipelineFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error && error.message === 'PIPELINE_STAGE_NOT_AVAILABLE'
+            ? 'O funil ainda não possui uma etapa disponível.'
+            : 'Não foi possível enviar o cliente potencial para o funil.',
+      });
     },
   });
 
@@ -128,10 +175,10 @@ export function LeadDetailPage() {
     return (
       <div className="space-y-4">
         <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400">
-          <ArrowLeft className="h-4 w-4" /> Voltar para leads
+          <ArrowLeft className="h-4 w-4" /> Voltar para clientes potenciais
         </Link>
         <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
-          Lead não encontrado ou sem permissão de acesso.
+          Cliente potencial não encontrado ou sem permissão de acesso.
         </p>
       </div>
     );
@@ -145,22 +192,44 @@ export function LeadDetailPage() {
   return (
     <div className="space-y-5">
       <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
-        <ArrowLeft className="h-4 w-4" /> Voltar para leads
+        <ArrowLeft className="h-4 w-4" /> Voltar para clientes potenciais
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{lead.companyName}</h1>
           <p className="text-sm text-zinc-500">
-            {[lead.segment, lead.city, lead.country].filter(Boolean).join(' · ') || 'Sem segmento'}
+            {[
+              lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
+              lead.city,
+              lead.country,
+            ].filter(Boolean).join(' · ') || 'Sem segmento'}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <LeadStatusBadge status={lead.status} />
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
+          {lead.stage ? (
+            <Button size="sm" onClick={() => navigate('/pipeline')}>
+              <Workflow className="h-4 w-4" aria-hidden />
+              Ver no funil
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              loading={pipelinesQuery.isLoading || sendToPipeline.isPending}
+              onClick={() => {
+                setPipelineFeedback(null);
+                sendToPipeline.mutate();
+              }}
+            >
+              <Workflow className="h-4 w-4" aria-hidden />
+              Enviar para o funil
+            </Button>
+          )}
           <Button size="sm" variant="secondary" onClick={() => navigate(`/agents/crm?leadId=${lead.id}`)}>
-            Agent CRM
+            Assistente de CRM
           </Button>
           <Button
             size="sm"
@@ -172,6 +241,10 @@ export function LeadDetailPage() {
         </div>
       </div>
 
+      {pipelineFeedback ? (
+        <Alert tone={pipelineFeedback.tone} title={pipelineFeedback.message} />
+      ) : null}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader title="Informações" />
@@ -180,7 +253,7 @@ export function LeadDetailPage() {
             <InfoRow icon={Mail} label="E-mail" value={lead.email} />
             <InfoRow
               icon={Globe}
-              label="Website"
+              label="Site"
               value={
                 safeWebsite ? (
                   <a
@@ -200,7 +273,7 @@ export function LeadDetailPage() {
             />
             <InfoRow icon={MapPin} label="Endereço" value={[lead.address, lead.city, lead.state].filter(Boolean).join(', ') || undefined} />
             <div className="pt-2">
-              <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Tags</p>
+              <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Etiquetas</p>
               <div className="flex flex-wrap gap-1">
                 {lead.tags.length === 0 ? (
                   <span className="text-zinc-400">—</span>
@@ -221,7 +294,7 @@ export function LeadDetailPage() {
               <dl className="space-y-2 text-sm text-zinc-300">
                 <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">Fonte</dt>
-                  <dd>{SOURCE_LABEL[lead.source] ?? lead.source}</dd>
+                  <dd>{SOURCE_LABEL[lead.source] ?? 'Outra fonte'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">Coletado em</dt>
@@ -236,7 +309,7 @@ export function LeadDetailPage() {
                   <dd>{lead.confidenceLevel ? CONFIDENCE_LABEL[lead.confidenceLevel] : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Website (fonte)</dt>
+                  <dt className="text-zinc-500">Site (fonte)</dt>
                   <dd>{websitePresenceLabel(lead.websitePresence)}</dd>
                 </div>
                 {lead.websiteStatusReason ? (
@@ -284,7 +357,7 @@ export function LeadDetailPage() {
                   disabled={!lead.website}
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden />
-                  {lead.website ? 'Verificar site' : 'Verificar (precisa de website)'}
+                  {lead.website ? 'Verificar site' : 'Verificar (precisa de site)'}
                 </Button>
                 {!lead.website ? (
                   <p className="mt-2 text-xs text-zinc-500">
@@ -299,7 +372,7 @@ export function LeadDetailPage() {
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <CardHeader
-              title="Score de oportunidade"
+              title="Pontuação de oportunidade"
               action={<ScoreBadge score={lead.score} />}
             />
             <CardContent>
@@ -307,7 +380,7 @@ export function LeadDetailPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3 text-center text-sm">
                     <DimensionStat
-                      label={t('scoreExplain.fit', { defaultValue: 'Fit' })}
+                      label={t('scoreExplain.fit', { defaultValue: 'Aderência' })}
                       value={latestScore.fit ?? 0}
                     />
                     <DimensionStat
@@ -383,7 +456,7 @@ export function LeadDetailPage() {
                 </div>
               ) : (
                 <p className="text-sm text-zinc-500">
-                  Score detalhado aparece após a primeira análise ou recálculo.
+                  A pontuação detalhada aparece após a primeira análise ou recálculo.
                 </p>
               )}
             </CardContent>
@@ -391,7 +464,7 @@ export function LeadDetailPage() {
 
           <Card>
             <CardHeader
-              title="Análise do website"
+              title="Análise do site"
               action={
                 lead.website ? (
                   <Button
@@ -437,7 +510,7 @@ export function LeadDetailPage() {
                   {activitiesQuery.data.data.map((activity) => (
                     <li key={activity.id} className="relative">
                       <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500/150" aria-hidden />
-                      <p className="text-sm font-medium text-zinc-50">{activity.type}</p>
+                      <p className="text-sm font-medium text-zinc-50">{formatActivityType(activity.type)}</p>
                       {activity.description ? (
                         <p className="text-sm text-zinc-300">{activity.description}</p>
                       ) : null}
@@ -479,7 +552,7 @@ export function LeadDetailPage() {
                         </p>
                       </div>
                       <Badge tone={task.status === 'DONE' ? 'green' : task.priority === 'HIGH' ? 'red' : 'slate'}>
-                        {task.status}
+                        {TASK_STATUS_LABELS[task.status]}
                       </Badge>
                     </li>
                   ))}
@@ -603,7 +676,7 @@ const CONFIDENCE_LABEL: Record<string, string> = {
 const MISSING_FIELD_LABEL: Record<string, string> = {
   phone: 'Telefone',
   email: 'E-mail',
-  website: 'Website',
+  website: 'Site',
   whatsapp: 'WhatsApp',
   address: 'Endereço',
   city: 'Cidade',
@@ -619,9 +692,8 @@ function websitePresenceLabel(presence?: string | null): string {
     case 'WEBSITE_FOUND':
       return 'Site informado pela fonte';
     case 'NEEDS_REVIEW':
-      return 'Revisão de website necessária';
+      return 'Revisão do site necessária';
     default:
-      return 'Website não cadastrado';
+      return 'Site não cadastrado';
   }
 }
-

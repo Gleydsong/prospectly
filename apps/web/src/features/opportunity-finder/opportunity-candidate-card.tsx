@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { OpportunityCandidateView } from '@/types';
+import { formatCategoryTag } from './format-category-tag';
 
 const categoryPresentation = {
   EXCELLENT: { label: 'Excelente', tone: 'green' },
@@ -42,7 +43,9 @@ export function OpportunityCandidateCard({
               {candidate.company.companyName}
             </h3>
             <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-              {candidate.company.category ?? 'Categoria não informada'}
+              {candidate.company.category
+                ? formatCategoryTag(candidate.company.category)
+                : 'Categoria não informada'}
             </p>
           </div>
           <div className="shrink-0 text-right">
@@ -56,9 +59,9 @@ export function OpportunityCandidateCard({
           {candidate.company.phone ? <p className="flex items-center gap-2"><Phone className="h-4 w-4" />{candidate.company.phone}</p> : null}
           {safeWebsite ? (
             <a className="flex items-center gap-2 text-[color:var(--accent)] hover:underline" href={safeWebsite} target="_blank" rel="noreferrer">
-              <ExternalLink className="h-4 w-4" /> Abrir website
+              <ExternalLink className="h-4 w-4" /> Abrir site
             </a>
-          ) : <p className="flex items-center gap-2"><Building2 className="h-4 w-4" />Website não reportado pela fonte</p>}
+          ) : <p className="flex items-center gap-2"><Building2 className="h-4 w-4" />Site não informado pela fonte</p>}
         </div>
 
         <div className="mt-auto grid grid-cols-2 gap-2 rounded-control bg-[color:var(--surface-hover)] p-3 text-xs">

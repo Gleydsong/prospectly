@@ -44,8 +44,9 @@ ABACATE_API_BASE_URL=https://api.abacatepay.com/v2
 
 - **Credits + PIX:** `{ mode: 'pix', brCode, ... }` → in-app QR → poll `/billing/status` for credit balance.
 - **Credits + card:** `{ mode: 'redirect', url }` → Stripe Checkout.
-- **Monthly + PIX:** transparent PIX → webhook activates monthly for 30 days; renew = new PIX.
-- **Monthly + card:** Stripe subscription redirect; portal for cancel/manage.
+- **Monthly + PIX:** transparent PIX → webhook activates monthly for 30 days; renew = new PIX. `currentPeriodEnd` is enforced on search/billing reads (expired orgs drop to FREE). Cancel in-app without a subscription id.
+- **Monthly + card:** Stripe subscription redirect; portal for cancel/manage (no in-app cancel).
+- **Lifetime checkout** is rejected. Existing `LIFETIME` orgs keep access; new sales are credits or monthly.
 - **Abacate legacy CARD subscription:** still cancelable via `POST /billing/cancel` when `abacateSubscriptionId` is set.
 
 ## Cancel / portal

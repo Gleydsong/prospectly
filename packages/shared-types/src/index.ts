@@ -474,6 +474,8 @@ export interface OpportunityFinderSignal {
 
 export interface OpportunityProfile {
   service: string;
+  /** Explicit target niche. Optional for profiles persisted before niche separation. */
+  niche?: string;
   targetCustomer: string[];
   relevantSignals: OpportunityFinderSignalType[];
   categories: ProspectingCategory[];
@@ -574,6 +576,8 @@ export interface OpportunityRunView {
 
 export interface CreateOpportunityRunInput {
   service: string;
+  /** Optional during the backwards-compatible rollout; the web client always supplies it. */
+  niche?: string;
   city: string;
   state: string;
   country?: 'BR';

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createTask,
   createTaskForLead,
+  deleteTask,
   fetchTasks,
   updateTask,
   type CreateTaskInput,
@@ -42,6 +43,17 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: ({ id, ...input }: { id: string } & Partial<CreateTaskInput & { status: Task['status'] }>) =>
       updateTask(id, input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteTask(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });

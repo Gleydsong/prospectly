@@ -128,9 +128,9 @@
   },
   "principal": {
     "greeting": {
-      "morning": "Good morning, {{name}}! 👋",
-      "afternoon": "Good afternoon, {{name}}! 👋",
-      "evening": "Good evening, {{name}}! 👋"
+      "morning": "Good morning, {{name}}!",
+      "afternoon": "Good afternoon, {{name}}!",
+      "evening": "Good evening, {{name}}!"
     },
     "headline": "Here’s what needs your attention today.",
     "statNew": "{{count}} new clients to review",
@@ -192,13 +192,14 @@
   "support": {
     "eyebrow": "Support",
     "title": "How can we help?",
-    "subtitle": "Tell us what happened. We’ll reply with your account context.",
+    "subtitle": "Tell us what happened. Submitting opens email to the support team.",
     "subject": "Subject",
     "subjectPlaceholder": "E.g. error opening a lead",
     "details": "Details",
     "detailsPlaceholder": "What were you doing? What did you expect?",
     "submit": "Send request",
-    "sent": "Request logged. We’ll get back to you soon."
+    "sent": "Your email client opened to {{email}}. If nothing happened, send the message to that address.",
+    "sendError": "Could not open the support email. Please try again."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -377,11 +378,13 @@
     "pack5000Title": "5,000 credits",
     "pack5000Price": "R$ 19.99",
     "packUnlimitedTitle": "Unlimited",
-    "packUnlimitedDesc": "Unlimited searches and leads preserved for 60 days.",
+    "packUnlimitedDesc": "Searches and Opportunity Finder with no credit debit.",
     "packUnlimitedPrice": "R$ 49.99",
     "packUnlimitedSuffix": "/ month",
-    "packFeatureSearch": "Quality-focused search",
-    "packFeaturePdf": "Strategic PDF per contact",
+    "packFeatureSearch": "Maps 14 cr · Opportunity Finder 16 cr",
+    "packFeaturePdf": "CSV export after purchase",
+    "packFeatureUnlimitedSearch": "Uncapped Maps and Opportunity Finder",
+    "packFeatureUnlimitedCsv": "CSV export included",
     "bestChoice": "Best choice",
     "buyCredits": "Buy credits",
     "subscribeUnlimited": "Subscribe unlimited",

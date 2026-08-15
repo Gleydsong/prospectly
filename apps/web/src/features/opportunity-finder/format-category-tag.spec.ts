@@ -10,5 +10,6 @@ describe('formatCategoryTag', () => {
     expect(formatCategoryTag('hairdresser')).toBe('Cabeleireiro');
     expect(formatCategoryTag('clinic')).toBe('Clínica');
     expect(formatCategoryTag('clothes')).toBe('Loja de roupas');
+    expect(formatCategoryTag('hostel')).toBe('Albergue');
   });
 });

@@ -13,6 +13,8 @@ import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
+import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
+import { EntitlementService } from './entitlement.service';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -44,13 +46,15 @@ export class BillingService {
     private readonly stripeProvider: StripePaymentProvider,
     private readonly abacateProvider: AbacatePaymentProvider,
     private readonly creditPurchases: CreditPurchaseService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
-    const org = await this.requireOrg(organizationId);
+    const org = await this.hydrateOrg(organizationId);
     const provider = org.paymentProvider;
     const searchUsage = await this.getSearchUsage(org);
     const canManage = role === 'OWNER' || role === 'ADMIN';
+    const unlimited = hasUnlimitedAccess(org);
     return {
       searchUsage,
       plan: org.plan,
@@ -64,10 +68,10 @@ export class BillingService {
         : false,
       canCancelSubscription: canManage
         ? org.plan === OrgPlan.STARTER_MONTHLY &&
-          org.planStatus === PlanStatus.ACTIVE &&
-          ((provider === PaymentProvider.STRIPE && Boolean(org.stripeSubscriptionId)) ||
-            (provider === PaymentProvider.ABACATE && Boolean(org.abacateSubscriptionId)))
+          unlimited &&
+          provider === PaymentProvider.ABACATE
         : false,
+      canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
     };
@@ -81,7 +85,7 @@ export class BillingService {
     const used = await this.countBillableRuns(org.id);
     const creditBalance = org.creditBalance ?? 0;
     const creditEquivalent = Math.floor(creditBalance / CREDIT_COSTS.mapsSearch);
-    const limit = org.planStatus === PlanStatus.ACTIVE ? null : FREE_SEARCH_LIMIT + creditEquivalent;
+    const limit = hasUnlimitedAccess(org) ? null : FREE_SEARCH_LIMIT + creditEquivalent;
     return {
       used,
       limit,
@@ -94,8 +98,8 @@ export class BillingService {
     organizationId: string,
     requiredCredits: number = CREDIT_COSTS.mapsSearch,
   ): Promise<void> {
-    const org = await this.requireOrg(organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) {
+    const org = await this.hydrateOrg(organizationId);
+    if (hasUnlimitedAccess(org)) {
       return;
     }
 
@@ -220,6 +224,11 @@ export class BillingService {
   ): Promise<CheckoutResult> {
     if (currency !== 'BRL') {
       throw new BadRequestException('Only BRL billing is supported');
+    }
+    if (interval === 'lifetime') {
+      throw new BadRequestException(
+        'Lifetime checkout is no longer available. Buy credits or subscribe monthly.',
+      );
     }
     const org = await this.requireOrg(organizationId);
     if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
@@ -496,7 +505,7 @@ export class BillingService {
     usesFreeQuota?: boolean;
   }): Promise<void> {
     const org = await this.requireOrg(params.organizationId);
-    if (org.planStatus === PlanStatus.ACTIVE) return;
+    if (hasUnlimitedAccess(org)) return;
 
     if (params.usesFreeQuota) {
       const used = await this.countBillableRuns(params.organizationId);
@@ -592,6 +601,18 @@ export class BillingService {
         },
       });
     });
+  }
+
+  private async hydrateOrg(organizationId: string): Promise<Organization> {
+    const org = await this.requireOrg(organizationId);
+    if (!isMonthlyPeriodExpired(org)) {
+      return org;
+    }
+    await this.activation.syncMonthlyStatus({
+      organizationId: org.id,
+      status: PlanStatus.CANCELED,
+    });
+    return this.requireOrg(organizationId);
   }
 
   private async requireOrg(organizationId: string): Promise<Organization> {

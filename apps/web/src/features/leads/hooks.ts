@@ -66,6 +66,8 @@ export function useDeleteLead() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['leads'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void queryClient.invalidateQueries({ queryKey: ['pipeline'] });
     },
   });
 }

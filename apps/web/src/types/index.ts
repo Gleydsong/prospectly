@@ -285,6 +285,13 @@ export interface PipelineBoardStage extends LeadStage {
   hasMore: boolean;
 }
 
+export interface PipelineListItem {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  stages: Array<LeadStage & { order: number }>;
+}
+
 export interface PipelineBoard {
   pipeline: { id: string; name: string };
   stages: PipelineBoardStage[];

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
+import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
 import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
@@ -25,6 +26,7 @@ import {
 } from '@/features/leads/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { getLeadStatusLabel } from '@/lib/lead-status';
+import { useBillingStatus } from '@/features/billing/hooks';
 import { useDeleteLead, useLeads } from '@/features/leads/hooks';
 import { LeadStatus } from '@/types';
 
@@ -47,6 +49,8 @@ export function LeadsPage() {
   const [exportMessage, setExportMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const deleteLead = useDeleteLead();
+  const billing = useBillingStatus();
+  const canExportCsv = Boolean(billing.data?.canExportCsv);
 
   useEffect(() => {
     const urlQ = (searchParams.get('q') ?? '').trim();
@@ -124,10 +128,12 @@ export function LeadsPage() {
         description={t('principal.clientsDesc')}
         actions={
           <>
-            <Button variant="outline" onClick={() => setExportOpen(true)}>
-              <Download className="h-4 w-4" aria-hidden />
-              {t('leads.export')}
-            </Button>
+            {canExportCsv ? (
+              <Button variant="outline" onClick={() => setExportOpen(true)}>
+                <Download className="h-4 w-4" aria-hidden />
+                {t('leads.export')}
+              </Button>
+            ) : null}
             <Button onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden />
               {t('principal.newClient')}
@@ -225,7 +231,10 @@ export function LeadsPage() {
                       <div className="min-w-0">
                         <p className="truncate font-medium text-zinc-50">{lead.companyName}</p>
                         <p className="text-xs text-zinc-500">
-                          {[lead.city, lead.segment ?? lead.category].filter(Boolean).join(' · ') || '—'}
+                          {[
+                            lead.city,
+                            lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
+                          ].filter(Boolean).join(' · ') || '—'}
                         </p>
                       </div>
                       <ScoreBadge score={lead.score} />
@@ -233,7 +242,7 @@ export function LeadsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <LeadStatusBadge status={lead.status} />
                       {!lead.website ? (
-                        <Badge tone="amber" title="Sem website">
+                        <Badge tone="amber" title="Sem site">
                           <Globe className="h-3 w-3" aria-hidden /> sem site
                         </Badge>
                       ) : null}
@@ -250,9 +259,9 @@ export function LeadsPage() {
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
                   <th scope="col" className="px-5 py-3 font-medium">Cidade</th>
                   <th scope="col" className="px-5 py-3 font-medium">Status</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Score</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Pontuação</th>
                   <th scope="col" className="px-5 py-3 font-medium">Responsável</th>
-                  <th scope="col" className="px-5 py-3 font-medium">Tags</th>
+                  <th scope="col" className="px-5 py-3 font-medium">Etiquetas</th>
                   <th scope="col" className="px-5 py-3 font-medium">
                     <span className="sr-only">Ações</span>
                   </th>
@@ -275,7 +284,9 @@ export function LeadsPage() {
                           >
                             {lead.companyName}
                           </Link>
-                          <p className="text-xs text-zinc-500">{lead.segment ?? lead.category ?? '—'}</p>
+                          <p className="text-xs text-zinc-500">
+                            {lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : '—')}
+                          </p>
                         </div>
                         {!lead.website ? (
                           <Badge tone="amber" title="Sem website">

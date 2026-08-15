@@ -38,6 +38,7 @@ const statusLabels: Record<string, string> = {
 
 export function OpportunityFinderPage() {
   const [service, setService] = useState('');
+  const [niche, setNiche] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
   const [runId, setRunId] = useState('');
@@ -64,15 +65,15 @@ export function OpportunityFinderPage() {
   const audience = run?.profile ? specificAudience(run.profile.targetCustomer) : [];
 
   const start = async () => {
-    if (!service.trim() || !state || !city) {
-      setError('Informe o serviço, o estado e a cidade.');
+    if (!service.trim() || !niche.trim() || !state || !city) {
+      setError('Informe o serviço, o nicho, o estado e a cidade.');
       return;
     }
     setError(null);
     setSelected(null);
     try {
       const created = await createRun.mutateAsync({
-        service: service.trim(), city, state, country: 'BR', idempotencyKey: crypto.randomUUID(),
+        service: service.trim(), niche: niche.trim(), city, state, country: 'BR', idempotencyKey: crypto.randomUUID(),
       });
       setRunId(created.id);
     } catch (requestError) {
@@ -103,12 +104,13 @@ export function OpportunityFinderPage() {
       <Link to="/tools" className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]">
         <ArrowLeft className="h-4 w-4" /> Voltar para Ferramentas
       </Link>
-      <PageHeader eyebrow="Inteligência comercial" title="AI Opportunity Finder" description="Descreva o que você vende. A Prospectly busca empresas brasileiras, verifica sinais públicos e prioriza oportunidades com evidências." />
+      <PageHeader eyebrow="Inteligência comercial" title="Localizador de Oportunidades com IA" description="Informe sua oferta e o nicho desejado. A Prospectly busca empresas brasileiras desse segmento, verifica sinais públicos e prioriza oportunidades com evidências." />
 
       <Card>
         <CardContent className="space-y-5 p-6">
-          <div className="grid gap-4 md:grid-cols-[2fr_1fr_1fr]">
-            <Input id="opportunity-service" label="O que você vende?" placeholder="Ex.: criação de sites para clínicas" value={service} maxLength={240} onChange={(event) => setService(event.target.value)} />
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_2fr_1fr_1fr]">
+            <Input id="opportunity-service" label="O que você vende?" placeholder="Ex.: criação de sites" value={service} maxLength={240} onChange={(event) => setService(event.target.value)} />
+            <Input id="opportunity-niche" label="Qual nicho deseja encontrar?" placeholder="Ex.: roupas no atacado" value={niche} maxLength={120} onChange={(event) => setNiche(event.target.value)} />
             <Select id="opportunity-state" label="Estado" value={state} onChange={(event) => { setState(event.target.value); setCity(''); }} disabled={regionsQuery.isLoading}>
               <option value="">Selecione</option>
               {(regionsQuery.data ?? []).map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
@@ -127,11 +129,12 @@ export function OpportunityFinderPage() {
 
       {error ? <Alert tone="error">{error}</Alert> : null}
       {run ? (
-        <Alert tone={run.status === 'FAILED' ? 'error' : run.status === 'PARTIAL' ? 'warning' : 'info'} title={statusLabels[run.status] ?? run.status}>
+        <Alert tone={run.status === 'FAILED' ? 'error' : run.status === 'PARTIAL' ? 'warning' : 'info'} title={statusLabels[run.status] ?? 'Estado não identificado'}>
           <div className="flex flex-wrap gap-3">
             <span>{run.analyzedCount} analisadas</span><span>{run.candidateCount} encontradas</span>
             {run.failedCount ? <span>{run.failedCount} falharam</span> : null}
           </div>
+          {run.status === 'FAILED' && run.errorMessage ? <p className="mt-2">{run.errorMessage}</p> : null}
           {isRunning ? <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full w-full animate-pulse rounded-full bg-[color:var(--accent)]" /></div> : null}
         </Alert>
       ) : null}
@@ -145,8 +148,8 @@ export function OpportunityFinderPage() {
                 <div>
                   <h2 className="font-bold text-[color:var(--ink)]">Nichos desta busca</h2>
                   <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">
-                    A partir de “{run.profile.service || run.service}”, a Prospectly está procurando
-                    estes tipos de negócio em {run.city}/{run.state}. A lista abaixo vem daí.
+                    Para oferecer “{run.profile.service || run.service}”, a Prospectly está procurando
+                    “{run.profile.niche || niche}” em {run.city}/{run.state}.
                   </p>
                 </div>
                 {audience.length ? (
@@ -167,7 +170,7 @@ export function OpportunityFinderPage() {
 
       {candidates.length ? (
         <section className="space-y-3">
-          <div><h2 className="text-lg font-bold text-[color:var(--ink)]">{candidates.length} oportunidades priorizadas</h2><p className="text-sm text-[color:var(--ink-muted)]">Ranking determinístico; a IA explica os dados, mas não define a pontuação.</p></div>
+          <div><h2 className="text-lg font-bold text-[color:var(--ink)]">{candidates.length} oportunidades priorizadas</h2><p className="text-sm text-[color:var(--ink-muted)]">Ordenação determinística; a IA explica os dados, mas não define a pontuação.</p></div>
           <div className="flex flex-wrap gap-2" aria-label="Filtrar oportunidades por prioridade">
             {(['ALL', 'EXCELLENT', 'HIGH', 'MEDIUM', 'LOW'] as const).map((category) => (
               <Button key={category} size="sm" variant={rankingFilter === category ? 'primary' : 'secondary'} onClick={() => setRankingFilter(category)}>
@@ -177,7 +180,7 @@ export function OpportunityFinderPage() {
           </div>
           {visibleCandidates.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visibleCandidates.map((candidate) => <OpportunityCandidateCard key={candidate.id} candidate={candidate} onOpen={setSelected} />)}</div> : <Alert>Nenhuma oportunidade corresponde a este filtro.</Alert>}
         </section>
-      ) : run && !isRunning && run.status !== 'FAILED' ? <Alert title="Nenhuma oportunidade encontrada">Tente ajustar a descrição do serviço ou selecionar outra cidade brasileira.</Alert> : null}
+      ) : run && !isRunning && run.status !== 'FAILED' ? <Alert title="Nenhuma oportunidade encontrada">Tente ajustar o nicho ou selecionar outra cidade brasileira.</Alert> : null}
 
       <OpportunityCandidateModal candidate={selected} open={Boolean(selected)} onClose={() => setSelected(null)} onExplain={() => void explainSelected()} onSave={() => void saveSelected()} explaining={explain.isPending} saving={saveLead.isPending} />
     </div>

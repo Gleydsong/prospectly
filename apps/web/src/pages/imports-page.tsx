@@ -14,14 +14,14 @@ const FIELD_LABELS: Record<CsvImportField, string> = {
   companyName: 'Nome da empresa',
   phone: 'Telefone',
   email: 'E-mail',
-  website: 'Website',
+  website: 'Site',
   category: 'Categoria',
   address: 'Endereço',
   city: 'Cidade',
   state: 'UF',
   postalCode: 'CEP',
   notes: 'Observações',
-  tags: 'Tags',
+  tags: 'Etiquetas',
 };
 
 const IMPORT_STATUS_LABEL = {

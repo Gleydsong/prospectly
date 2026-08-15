@@ -7,6 +7,13 @@ import { OPPORTUNITY_FINDER_QUEUE, PROCESS_OPPORTUNITY_RUN_JOB, type ProcessOppo
 import { OpportunityFinderService } from './opportunity-finder.service';
 import { runWithBypass, runWithTenant } from '../../common/prisma/tenant-context';
 
+const UNRECOVERABLE_CODES = new Set([
+  'NO_COMPANIES_FOUND',
+  'NICHE_NOT_IDENTIFIED',
+  'NICHE_AMBIGUOUS',
+  'ENTITLEMENT_CATEGORIES',
+]);
+
 @Processor(OPPORTUNITY_FINDER_QUEUE)
 export class OpportunityFinderProcessor extends WorkerHost {
   private readonly logger = new Logger(OpportunityFinderProcessor.name);
@@ -23,10 +30,11 @@ export class OpportunityFinderProcessor extends WorkerHost {
       await withScope(() => this.service.processRun(job.data.runId));
       this.metrics.recordJob(OPPORTUNITY_FINDER_QUEUE, 'completed', Date.now() - started);
     } catch (error) {
-      if (error instanceof Error && error.message === 'NO_COMPANIES_FOUND') {
-        await withScope(() => this.service.recordFailure(job.data.runId, 'NO_COMPANIES_FOUND'));
+      const errorCode = error instanceof Error ? error.message : 'PROCESSING_FAILED';
+      if (UNRECOVERABLE_CODES.has(errorCode)) {
+        await withScope(() => this.service.recordFailure(job.data.runId, errorCode));
         this.metrics.recordJob(OPPORTUNITY_FINDER_QUEUE, 'failed', Date.now() - started);
-        throw new UnrecoverableError('NO_COMPANIES_FOUND');
+        throw new UnrecoverableError(errorCode);
       }
       const finalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
       this.metrics.recordJob(OPPORTUNITY_FINDER_QUEUE, finalAttempt ? 'failed' : 'retry', Date.now() - started);

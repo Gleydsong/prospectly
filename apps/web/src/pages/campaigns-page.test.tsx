@@ -287,9 +287,9 @@ describe('CampaignDetailPage', () => {
   it('blocks do-not-contact leads in the picker', async () => {
     const user = userEvent.setup();
     renderDetail();
-    await user.click(screen.getByRole('button', { name: 'Adicionar leads' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar clientes potenciais' }));
     expect(screen.getByText('Blocked Co')).toBeInTheDocument();
-    expect(screen.getByText(/Opt-out \/ não contactar/i)).toBeInTheDocument();
+    expect(screen.getByText(/Marcado para não contatar/i)).toBeInTheDocument();
     const dncCheckbox = screen.getByText('Blocked Co').closest('label')?.querySelector('input');
     expect(dncCheckbox).toBeDisabled();
   });
@@ -324,10 +324,10 @@ describe('CampaignDetailPage', () => {
     renderDetail();
 
     await user.click(screen.getByRole('button', { name: 'Ação manual' }));
-    await user.click(screen.getByRole('button', { name: /Preview: Abertura/i }));
+    await user.click(screen.getByRole('button', { name: /Prévia: Abertura/i }));
 
     expect(mutateAsync).toHaveBeenCalled();
-    expect(await screen.findByText(/Preview assistido/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Prévia assistida/i)).toBeInTheDocument();
     expect(mocks.sendCampaignMessage).not.toHaveBeenCalled();
   });
 });

@@ -102,21 +102,21 @@ const faqPt: FaqItem[] = [
     category: 'usage',
     question: 'O pipeline substitui o meu CRM?',
     answer:
-      'No MVP o pipeline organiza estágios e tarefas dentro do Prospectly. Integrações nativas com HubSpot ou Pipedrive e exportação CSV ficam para depois — por agora o fluxo fica no app.',
+      'No MVP o pipeline organiza estágios e tarefas dentro do Prospectly. Exportação CSV libera depois da compra de créditos ou no plano ilimitado. Integrações nativas com HubSpot ou Pipedrive ficam para depois.',
   },
   {
     id: 'free',
     category: 'pricing',
     question: 'Posso testar sem pagar?',
     answer:
-      'Sim. O Free libera até 3 buscas para validar o fluxo. Depois você compra pacotes de créditos (R$ 9,99 / R$ 19,99) ou assina o ilimitado (R$ 49,99/mês).',
+      'Sim. O Free inclui 3 execuções grátis (Pesquisa Maps e Opportunity Finder somadas) e 400 créditos de bónus. Depois compra pacotes (R$ 9,99 / R$ 19,99) ou assina o ilimitado (R$ 49,99/mês).',
   },
   {
     id: 'plans',
     category: 'pricing',
     question: 'Qual a diferença entre créditos e ilimitado?',
     answer:
-      'Créditos avulsos (2.000 ou 5.000) acumulam, não expiram e não têm mensalidade. O ilimitado é assinatura mensal com buscas sem limite. Os dois usam o mesmo fluxo de prospecção.',
+      'Créditos avulsos (2.000 ou 5.000) acumulam, não expiram e não têm mensalidade. Cada busca Maps custa 14 créditos; Opportunity Finder custa 16. O ilimitado não debita créditos. CSV libera após a primeira compra de créditos ou no ilimitado.',
   },
   {
     id: 'currency',
@@ -245,21 +245,21 @@ const faqEn: FaqItem[] = [
     category: 'usage',
     question: 'Does the pipeline replace my CRM?',
     answer:
-      'In the MVP, the pipeline handles stages and tasks inside Prospectly. Native HubSpot or Pipedrive integrations and CSV export come later — for now the flow stays in the app.',
+      'In the MVP, the pipeline handles stages and tasks inside Prospectly. CSV export unlocks after a credit purchase or on the unlimited plan. Native HubSpot or Pipedrive integrations come later.',
   },
   {
     id: 'free',
     category: 'pricing',
     question: 'Can I try it without paying?',
     answer:
-      'Yes. Free includes up to 3 searches so you can validate the flow. Then buy credit packs (R$ 9.99 / R$ 19.99) or subscribe to unlimited (R$ 49.99/month).',
+      'Yes. Free includes 3 complimentary runs (Maps search and Opportunity Finder combined) plus 400 bonus credits. Then buy packs (R$ 9.99 / R$ 19.99) or subscribe to unlimited (R$ 49.99/month).',
   },
   {
     id: 'plans',
     category: 'pricing',
     question: 'Credits vs unlimited?',
     answer:
-      'One-off credit packs (2,000 or 5,000) accumulate, never expire, and have no monthly fee. Unlimited is a monthly subscription with uncapped searches. Both use the same prospecting flow.',
+      'One-off credit packs (2,000 or 5,000) accumulate, never expire, and have no monthly fee. Each Maps search costs 14 credits; Opportunity Finder costs 16. Unlimited does not debit credits. CSV unlocks after the first credit purchase or on unlimited.',
   },
   {
     id: 'currency',

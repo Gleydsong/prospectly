@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import {
   ConfidenceLevel,
   LeadSource,
@@ -50,10 +50,19 @@ import {
   buildDeterministicSearchStrategy,
   OpportunityProfileSchema,
   OpportunitySearchStrategySchema,
+  resolveOpportunityNiche,
 } from './domain/opportunity-profile';
 import { buildOpportunitySignals, scoreOpportunity } from './domain/opportunity-scoring';
 import type { CreateOpportunityRunDto } from './dto/create-opportunity-run.dto';
 import type { QueryOpportunityCandidatesDto } from './dto/query-opportunity-candidates.dto';
+
+const PUBLIC_FAILURE_MESSAGES: Record<string, string> = {
+  NO_COMPANIES_FOUND: 'Nenhuma empresa foi encontrada para esse nicho e localização.',
+  NICHE_NOT_IDENTIFIED: 'Não foi possível identificar o nicho informado.',
+  NICHE_AMBIGUOUS: 'Informe apenas um nicho por busca.',
+  ENTITLEMENT_CATEGORIES: 'O nicho informado não está disponível no plano atual.',
+  PROCESSING_FAILED: 'Não foi possível concluir a análise. Tente novamente.',
+};
 
 @Injectable()
 export class OpportunityFinderService {
@@ -83,6 +92,33 @@ export class OpportunityFinderService {
       });
       if (existing) return this.toRunView(existing);
     }
+    const niche = dto.niche?.trim() || dto.service;
+    const resolution = resolveOpportunityNiche(niche);
+    if (resolution.status === 'NOT_IDENTIFIED') {
+      throw new BadRequestException({
+        code: 'NICHE_NOT_IDENTIFIED',
+        message: 'Não foi possível identificar o nicho. Informe um tipo de empresa, como lojas de roupas, clínicas ou restaurantes.',
+      });
+    }
+    if (resolution.status === 'AMBIGUOUS') {
+      throw new BadRequestException({
+        code: 'NICHE_AMBIGUOUS',
+        message: 'Informe apenas um nicho por busca.',
+        categories: resolution.categories,
+      });
+    }
+    const category = resolution.category;
+    const catalog = await this.prospecting.listCategories(organizationId);
+    const categoryOption = catalog.categories.find((option) => option.value === category);
+    if (!categoryOption?.available) {
+      throw new ForbiddenException({
+        code: 'ENTITLEMENT_CATEGORIES',
+        message: 'O nicho informado não está disponível no plano atual.',
+        requiredPlan: catalog.requiredPlan,
+        categories: [category],
+      });
+    }
+    const initialProfile = buildDeterministicOpportunityProfile(dto.service, niche, category);
     await this.billing.assertCanCreateSearch(organizationId, CREDIT_COSTS.opportunityFinder);
     if (!this.providers.list().some((provider) => provider.available)) {
       throw new BadRequestException('No company search provider is available');
@@ -97,6 +133,7 @@ export class OpportunityFinderService {
       country: 'BR',
       idempotencyKey: dto.idempotencyKey,
       correlationId,
+      profile: initialProfile as unknown as Prisma.InputJsonValue,
       scoringVersion: OPPORTUNITY_SCORE_VERSION,
     };
     let run;
@@ -128,7 +165,7 @@ export class OpportunityFinderService {
       await this.prisma.opportunityRun.delete({ where: { id: run.id } });
       throw error;
     }
-    await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_RUN_CREATED', entity: 'OpportunityRun', entityId: run.id, metadata: { city: dto.city, state: dto.state } });
+    await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_RUN_CREATED', entity: 'OpportunityRun', entityId: run.id, metadata: { city: dto.city, state: dto.state, category } });
     return this.toRunView(run);
   }
 
@@ -245,16 +282,34 @@ export class OpportunityFinderService {
     const context = { organizationId: run.organizationId, userId: run.userId, opportunityRunId: run.id };
 
     await this.prisma.opportunityRun.update({ where: { id: run.id }, data: { status: OpportunityRunStatus.PREPARING, errorCode: null, errorMessage: null } });
-    const aiProfile = await this.ai.buildOpportunityProfile(context, run.service);
-    const profile = OpportunityProfileSchema.parse(aiProfile ?? buildDeterministicOpportunityProfile(run.service));
+    const storedProfile = OpportunityProfileSchema.safeParse(run.profile);
+    const niche = storedProfile.success && storedProfile.data.niche
+      ? storedProfile.data.niche
+      : run.service;
+    const resolution = resolveOpportunityNiche(niche);
+    if (resolution.status === 'NOT_IDENTIFIED') throw new Error('NICHE_NOT_IDENTIFIED');
+    if (resolution.status === 'AMBIGUOUS') throw new Error('NICHE_AMBIGUOUS');
+    const category = resolution.category;
     const catalog = await this.prospecting.listCategories(run.organizationId);
-    const available = new Set(catalog.categories.filter((category) => category.available).map((category) => category.value));
-    profile.categories = profile.categories.filter((category) => available.has(category));
-    if (profile.categories.length === 0) profile.categories = catalog.categories.filter((category) => category.available).slice(0, 5).map((category) => category.value);
+    const categoryOption = catalog.categories.find((option) => option.value === category);
+    if (!categoryOption?.available) throw new Error('ENTITLEMENT_CATEGORIES');
+    const deterministicProfile = buildDeterministicOpportunityProfile(run.service, niche, category);
+    const aiProfile = await this.ai.buildOpportunityProfile(context, {
+      service: run.service,
+      niche,
+      categories: [category],
+    });
+    const profile = OpportunityProfileSchema.parse({
+      ...(aiProfile ?? deterministicProfile),
+      service: run.service,
+      niche,
+      categories: [category],
+    });
     const aiStrategy = await this.ai.buildSearchStrategy(context, profile);
-    const strategy = OpportunitySearchStrategySchema.parse(aiStrategy ?? buildDeterministicSearchStrategy(profile));
-    strategy.categories = strategy.categories.filter((category) => available.has(category));
-    if (strategy.categories.length === 0) strategy.categories = profile.categories;
+    const strategy = OpportunitySearchStrategySchema.parse({
+      ...(aiStrategy ?? buildDeterministicSearchStrategy(profile)),
+      categories: [category],
+    });
 
     await this.prisma.opportunityRun.update({
       where: { id: run.id },
@@ -278,6 +333,7 @@ export class OpportunityFinderService {
       limit: OPPORTUNITY_LIMITS.maxCandidates,
     })));
     const businesses = mergeProviderResults(settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []))
+      .filter((business) => business.category === category)
       .filter((business) => strategy.minimumRating == null || business.rating == null || business.rating >= strategy.minimumRating)
       .filter((business) => strategy.minimumReviews == null || business.reviewCount == null || business.reviewCount >= strategy.minimumReviews)
       .slice(0, OPPORTUNITY_LIMITS.maxCandidates);
@@ -357,10 +413,12 @@ export class OpportunityFinderService {
       OpportunityRunStatus.CANCELLED,
     ];
     if (terminal.includes(run.status)) return;
-    const publicCode = code === 'NO_COMPANIES_FOUND' ? code : 'PROCESSING_FAILED';
+    const publicCode = Object.prototype.hasOwnProperty.call(PUBLIC_FAILURE_MESSAGES, code)
+      ? code
+      : 'PROCESSING_FAILED';
     await this.prisma.opportunityRun.updateMany({
       where: { id: runId, status: { notIn: terminal } },
-      data: { status: OpportunityRunStatus.FAILED, errorCode: publicCode, errorMessage: 'Não foi possível concluir a análise. Tente novamente.', completedAt: new Date() },
+      data: { status: OpportunityRunStatus.FAILED, errorCode: publicCode, errorMessage: PUBLIC_FAILURE_MESSAGES[publicCode], completedAt: new Date() },
     });
     await this.billing.refundOpportunityRunCredit(run.organizationId, runId, publicCode);
   }

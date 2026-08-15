@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle2,
   Clock3,
+  Hand,
   KanbanSquare,
   List,
   Search,
@@ -85,7 +86,10 @@ export function DashboardPage() {
           />
           <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <div>
-              <p className="text-sm font-medium text-zinc-400">{greeting}</p>
+              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+                {greeting}
+                <Hand className="h-4 w-4 text-amber-300" aria-hidden />
+              </p>
               <h1 className="mt-2 max-w-[22ch] text-balance text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
                 {t('principal.headline')}
               </h1>

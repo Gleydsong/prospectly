@@ -44,11 +44,11 @@ describe('Opportunity Finder HTTP contract', () => {
   it('accepts a valid Brazil-only run and forwards tenant identity', async () => {
     service.create.mockResolvedValue({ id: '00000000-0000-4000-8000-000000000001', status: 'PREPARING' });
     await request(app.getHttpServer()).post('/api/v1/opportunity-finder/runs').set('x-correlation-id', 'e2e-correlation').send({
-      service: 'Criação de sites', city: 'Curitiba', state: 'pr', country: 'br',
+      service: 'Criação de sites', niche: 'Roupas no atacado', city: 'Curitiba', state: 'pr', country: 'br',
       idempotencyKey: '00000000-0000-4000-8000-000000000002',
     }).expect(202);
     expect(service.create).toHaveBeenCalledWith('org-1', 'user-1', expect.objectContaining({
-      city: 'Curitiba', state: 'PR', country: 'BR',
+      service: 'Criação de sites', niche: 'Roupas no atacado', city: 'Curitiba', state: 'PR', country: 'BR',
     }), undefined);
   });
 

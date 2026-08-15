@@ -11,6 +11,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
+import { EntitlementService } from '../billing/entitlement.service';
 import { InviteMemberDto } from './dto/invite-member.dto';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class OrganizationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async getCurrent(organizationId: string) {
@@ -74,6 +76,7 @@ export class OrganizationsService {
     if (dto.role === 'OWNER') {
       throw new BadRequestException('Cannot invite members as OWNER');
     }
+    await this.entitlements.assertTeamSeat(organizationId);
     const email = dto.email.toLowerCase().trim();
 
     const existing = await this.prisma.user.findUnique({
