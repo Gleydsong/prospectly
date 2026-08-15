@@ -3,6 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppErrorBoundary } from './app-error-boundary';
+import { captureClientError } from '@/lib/observability';
+
+vi.mock('@/lib/observability', () => ({
+  captureClientError: vi.fn(),
+}));
 
 function Bomb({ blow }: { blow: boolean }) {
   if (blow) {
@@ -60,6 +65,22 @@ describe('AppErrorBoundary', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Ir para o início' })).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it('reports the error to client observability', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    render(
+      <AppErrorBoundary correlationId="corr-obs">
+        <Bomb blow />
+      </AppErrorBoundary>,
+    );
+
+    expect(captureClientError).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Boom from child' }),
+      expect.objectContaining({ correlationId: 'corr-obs' }),
+    );
     spy.mockRestore();
   });
 });
