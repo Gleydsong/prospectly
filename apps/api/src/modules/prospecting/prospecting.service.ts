@@ -362,13 +362,23 @@ export class ProspectingService {
     };
     for (const result of results) {
       if (result.importedLeadId) {
-        summary.skipped += 1;
-        summary.items.push({
-          resultId: result.id,
-          status: 'SKIPPED',
-          leadId: result.importedLeadId,
+        const activeLead = await this.prisma.lead.findFirst({
+          where: { id: result.importedLeadId, organizationId, deletedAt: null },
+          select: { id: true },
         });
-        continue;
+        if (activeLead) {
+          summary.skipped += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'SKIPPED',
+            leadId: activeLead.id,
+          });
+          continue;
+        }
+        await this.prisma.searchResult.updateMany({
+          where: { id: result.id, importedLeadId: result.importedLeadId },
+          data: { importedLeadId: null },
+        });
       }
       const business = this.readNormalizedBusiness(result.normalizedData);
       if (!business) {
