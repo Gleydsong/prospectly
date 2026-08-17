@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -17,6 +18,7 @@ import {
 } from '@/features/auth/api';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
+import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import type { PaymentMethod } from '@/features/billing/types';
 import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
@@ -40,22 +42,24 @@ export function CreditsPage() {
       : null;
   });
   const [pendingOffer, setPendingOffer] = useState<CreditOfferId | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(() => {
     const value = searchParams.get('method');
     return value === 'pix' || value === 'card' ? value : null;
   });
 
   const billing = useQuery({
-    queryKey: ['billing', 'status'],
+    queryKey: BILLING_STATUS_QUERY_KEY,
     queryFn: getBillingStatus,
   });
 
   const creditCheckout = useMutation({
     mutationFn: (input: { offer: 'credits-2000' | 'credits-5000'; paymentMethod: PaymentMethod }) =>
       createCreditCheckout(input),
-    onSuccess: (data) =>
+    onSuccess: (data, variables) =>
       handleCheckoutResult(data, {
         purpose: 'credits',
+        offer: variables.offer,
         baselineCreditBalance: billing.data?.creditBalance ?? 0,
       }),
     onError: () => setBillingError(t('settings.billingError')),
@@ -64,7 +68,12 @@ export function CreditsPage() {
   const planCheckout = useMutation({
     mutationFn: (method: PaymentMethod) =>
       createCheckoutSession({ interval: 'monthly', currency: 'BRL', paymentMethod: method }),
-    onSuccess: (data) => handleCheckoutResult(data, { purpose: 'plan' }),
+    onSuccess: (data) =>
+      handleCheckoutResult(data, {
+        purpose: 'plan',
+        plan: 'monthly',
+        baselineCreditBalance: billing.data?.creditBalance ?? 0,
+      }),
     onError: () => setBillingError(t('settings.billingError')),
   });
 
@@ -77,8 +86,9 @@ export function CreditsPage() {
   const cancelSub = useMutation({
     mutationFn: cancelBillingSubscription,
     onSuccess: async () => {
+      setConfirmCancel(false);
       setBillingError(null);
-      await queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
+      await queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY });
     },
     onError: () => setBillingError(t('settings.billingError')),
   });
@@ -265,10 +275,16 @@ export function CreditsPage() {
                         : t('settings.packFeaturePdf')}
                     </li>
                     {offer.id === 'unlimited' ? (
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                        {t('settings.packFeaturePixMonthly')}
-                      </li>
+                      <>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                          {t('settings.packFeaturePixMonthly')}
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                          {t('settings.packFeatureCardMonthly')}
+                        </li>
+                      </>
                     ) : null}
                   </ul>
 
@@ -313,9 +329,8 @@ export function CreditsPage() {
               <Button
                 type="button"
                 variant="outline"
-                loading={cancelSub.isPending}
-                disabled={!emailVerified}
-                onClick={() => cancelSub.mutate()}
+                disabled={!emailVerified || cancelSub.isPending}
+                onClick={() => setConfirmCancel(true)}
               >
                 {t('settings.cancelSubscription')}
               </Button>
@@ -324,6 +339,27 @@ export function CreditsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <Modal
+        open={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        title={t('settings.cancelSubscriptionTitle')}
+      >
+        <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.cancelSubscriptionBody')}</p>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={() => setConfirmCancel(false)}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            loading={cancelSub.isPending}
+            onClick={() => cancelSub.mutate()}
+          >
+            {t('settings.cancelSubscriptionConfirm')}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -33,8 +33,9 @@ describe('BillingService', () => {
       create: jest.fn(),
     },
     billingWebhookEvent: {
+      findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({}),
-      delete: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({}),
     },
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -55,8 +56,12 @@ describe('BillingService', () => {
     applyWebhookEvent: jest.fn(),
   };
 
+  const creditPurchases = {
+    createPending: jest.fn(),
+    attachPayment: jest.fn(),
+  };
+
   const activation = {
-    bindCheckoutIntent: jest.fn().mockResolvedValue(undefined),
     syncMonthlyStatus: jest.fn().mockResolvedValue(undefined),
   };
 
@@ -79,6 +84,8 @@ describe('BillingService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     prisma.opportunityRun.count.mockResolvedValue(0);
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
+    prisma.billingWebhookEvent.create.mockResolvedValue({});
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -87,7 +94,7 @@ describe('BillingService', () => {
         { provide: BillingActivationService, useValue: activation },
         { provide: StripePaymentProvider, useValue: stripeProvider },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
-        { provide: CreditPurchaseService, useValue: { createPending: jest.fn(), attachPayment: jest.fn() } },
+        { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
       ],
     }).compile();
@@ -170,7 +177,7 @@ describe('BillingService', () => {
     await expect(service.getOrganizationBilling('org1', 'VIEWER')).resolves.toEqual(
       expect.objectContaining({
         creditBalance: 10,
-        hasStripeCustomer: false,
+        legacyStripeSubscription: false,
         canOpenPortal: false,
         canCancelSubscription: false,
       }),
@@ -194,14 +201,14 @@ describe('BillingService', () => {
 
     await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
       expect.objectContaining({
-        hasStripeCustomer: true,
+        legacyStripeSubscription: true,
         canOpenPortal: true,
         canCancelSubscription: false,
       }),
     );
   });
 
-  it('routes card monthly checkout to Stripe redirect', async () => {
+  it('routes card monthly checkout to AbacatePay redirect', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       name: 'Acme',
@@ -209,11 +216,11 @@ describe('BillingService', () => {
       paymentProvider: null,
       deletedAt: null,
     });
-    stripeProvider.createCheckout.mockResolvedValue({
+    abacateProvider.createCheckout.mockResolvedValue({
       mode: 'redirect',
-      url: 'https://checkout.stripe.com/test',
-      provider: 'STRIPE',
-      externalCustomerId: 'cus_1',
+      url: 'https://app.abacatepay.com/pay/bill_1',
+      provider: 'ABACATE',
+      externalCheckoutId: 'bill_1',
     });
 
     const result = await service.createCheckoutSession(
@@ -224,10 +231,12 @@ describe('BillingService', () => {
       'card',
     );
     expect(result).toEqual(
-      expect.objectContaining({ mode: 'redirect', url: 'https://checkout.stripe.com/test' }),
+      expect.objectContaining({ mode: 'redirect', url: 'https://app.abacatepay.com/pay/bill_1' }),
     );
-    expect(stripeProvider.createCheckout).toHaveBeenCalled();
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+    expect(abacateProvider.createCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentMethod: 'card' }),
+    );
+    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
   });
 
   it('rejects new lifetime checkouts', async () => {
@@ -315,6 +324,61 @@ describe('BillingService', () => {
     expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
   });
 
+  it('allows a canceled Stripe org to start an AbacatePay plan', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: PaymentProvider.STRIPE,
+      planStatus: PlanStatus.CANCELED,
+      stripeCustomerId: 'cus_1',
+      deletedAt: null,
+    });
+    abacateProvider.createCheckout.mockResolvedValue({
+      mode: 'redirect',
+      provider: 'ABACATE',
+      url: 'https://app.abacatepay.com/pay/bill_new',
+    });
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
+    ).resolves.toEqual(expect.objectContaining({ provider: 'ABACATE' }));
+    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('allows AbacatePay credit checkout while a Stripe plan is active', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.STRIPE,
+      planStatus: PlanStatus.ACTIVE,
+      deletedAt: null,
+    });
+    creditPurchases.createPending.mockResolvedValue({ id: 'purchase_1' });
+    abacateProvider.createCreditCheckout.mockResolvedValue({
+      mode: 'redirect',
+      provider: 'ABACATE',
+      url: 'https://app.abacatepay.com/pay/bill_credits',
+    });
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).resolves.toEqual(expect.objectContaining({ provider: 'ABACATE' }));
+    expect(stripeProvider.createCreditCheckout).not.toHaveBeenCalled();
+    expect(creditPurchases.createPending).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: PaymentProvider.ABACATE, paymentMethod: 'card' }),
+    );
+  });
+
+  it('keeps the Stripe portal for legacy organizations', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.STRIPE,
+      stripeCustomerId: 'cus_1',
+      deletedAt: null,
+    });
+    stripeProvider.createPortal.mockResolvedValue({ url: 'https://billing.stripe.com/p/session' });
+    await expect(service.createPortalSession('org1')).resolves.toEqual({
+      url: 'https://billing.stripe.com/p/session',
+    });
+  });
+
   it('rejects invalid Stripe webhook signature', async () => {
     stripeProvider.verifyAndParseWebhook.mockRejectedValue(new BadRequestException('bad sig'));
     await expect(
@@ -339,9 +403,15 @@ describe('BillingService', () => {
       data: expect.objectContaining({
         eventId: 'evt_1',
         type: 'checkout.session.completed',
+        status: 'PROCESSING',
       }),
     });
     expect(stripeProvider.applyWebhookEvent).toHaveBeenCalled();
+    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'PROCESSED' }),
+      }),
+    );
   });
 
   it('ignores duplicate webhook events', async () => {
@@ -350,7 +420,11 @@ describe('BillingService', () => {
       type: 'checkout.session.completed',
       payload: { id: 'evt_dup' },
     });
-    prisma.billingWebhookEvent.create.mockRejectedValue({ code: 'P2002' });
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      status: 'PROCESSED',
+      updatedAt: new Date(),
+      attempts: 1,
+    });
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
@@ -358,26 +432,23 @@ describe('BillingService', () => {
     expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
   });
 
-  it('releases webhook claim when apply fails so retries can succeed', async () => {
+  it('marks webhook FAILED when apply fails so retries can succeed', async () => {
     stripeProvider.verifyAndParseWebhook.mockResolvedValue({
       eventId: 'evt_fail',
       type: 'checkout.session.completed',
       payload: { id: 'evt_fail' },
     });
-        prisma.billingWebhookEvent.create.mockResolvedValue({});
-stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
+    prisma.billingWebhookEvent.create.mockResolvedValue({});
+    stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
 
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
     ).rejects.toThrow('db down');
-    expect(prisma.billingWebhookEvent.delete).toHaveBeenCalledWith({
-      where: {
-        provider_eventId: {
-          provider: 'STRIPE',
-          eventId: 'evt_fail',
-        },
-      },
-    });
+    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED', lastError: 'db down' }),
+      }),
+    );
   });
 
   it('allows a free organization to search when purchased credits remain', async () => {

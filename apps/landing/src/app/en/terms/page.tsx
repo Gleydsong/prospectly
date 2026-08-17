@@ -10,7 +10,7 @@ export default function EnTermsPage() {
     <article className="legal mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Terms of Use</h1>
       <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-        Last updated: 25 July 2026. Version: 2026-07-25
+        Last updated: 17 August 2026. Version: 2026-08-17
       </p>
       <div className="mt-8 space-y-4 text-base leading-relaxed text-[color:var(--ink-muted)]">
         <p>
@@ -19,9 +19,10 @@ export default function EnTermsPage() {
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">Plans</h2>
         <p>
-          We offer credit packs (one-time) and a monthly unlimited subscription. Billing via Stripe
-          and/or PIX depending on the method. Cancel monthly plans in the Customer Portal. Credits
-          do not auto-renew.
+          We offer credit packs (one-time) and a monthly unlimited subscription. New PIX and card
+          charges go through AbacatePay. Legacy Stripe card subscriptions may remain until canceled.
+          Cancel an AbacatePay monthly plan immediately in-app under Credits. Legacy Stripe plans
+          use the billing portal. Credit packs do not auto-renew.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Acceptable use

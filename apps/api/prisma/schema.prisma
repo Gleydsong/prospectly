@@ -161,6 +161,17 @@ enum CreditPurchaseStatus {
   FAILED
 }
 
+enum BillingPaymentMethod {
+  PIX
+  CARD
+}
+
+enum BillingWebhookEventStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 /// Reasons for credit balance movements. SEARCH_CONSUME (Maps), AI_CONSUME (Opportunity Finder / explain / save lead),
 /// SIGNUP_BONUS, PURCHASE and REFUND (failed paid actions return the consumed amount).
 enum CreditLedgerReason {
@@ -995,14 +1006,21 @@ model AuditLog {
 
 /// Provider-agnostic webhook idempotency (Stripe + Abacate).
 model BillingWebhookEvent {
-  id          String           @id @default(uuid())
+  id          String                     @id @default(uuid())
   provider    PaymentProvider
   eventId     String
   type        String
-  processedAt DateTime         @default(now())
+  status      BillingWebhookEventStatus  @default(PROCESSING)
+  attempts    Int                        @default(1)
+  lastError   String?
+  createdAt   DateTime                   @default(now())
+  processedAt DateTime?
+  failedAt    DateTime?
+  updatedAt   DateTime                   @updatedAt
 
   @@unique([provider, eventId])
   @@index([processedAt])
+  @@index([status, updatedAt])
 }
 
 model CreditPurchase {
@@ -1013,6 +1031,7 @@ model CreditPurchase {
   amountCentavos    Int
   currency          String               @default("BRL")
   provider          PaymentProvider
+  paymentMethod     BillingPaymentMethod?
   status            CreditPurchaseStatus @default(PENDING)
   externalId        String               @unique
   externalPaymentId String?              @unique

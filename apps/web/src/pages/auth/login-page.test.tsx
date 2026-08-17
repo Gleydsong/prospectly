@@ -43,4 +43,14 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Senha obrigatória')).toBeInTheDocument();
   });
+
+  it('preserves card method when switching to register', async () => {
+    renderWithProviders(<LoginPage />, {
+      initialEntries: ['/login?offer=credits-2000&method=card'],
+    });
+    expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute(
+      'href',
+      '/register?offer=credits-2000&method=card',
+    );
+  });
 });

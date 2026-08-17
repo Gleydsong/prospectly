@@ -75,34 +75,30 @@ projects:
                 sync: false
               - key: STRIPE_WEBHOOK_SECRET
                 sync: false
-              - key: STRIPE_PRICE_MONTHLY_EUR
-                sync: false
-              - key: STRIPE_PRICE_MONTHLY_USD
-                sync: false
-              - key: STRIPE_PRICE_LIFETIME_EUR
-                sync: false
-              - key: STRIPE_PRICE_LIFETIME_USD
-                sync: false
-              - key: STRIPE_SUCCESS_URL
-                sync: false
-              - key: STRIPE_CANCEL_URL
-                sync: false
               - key: STRIPE_PORTAL_RETURN_URL
                 sync: false
               - key: ABACATE_API_KEY
                 sync: false
               - key: ABACATE_WEBHOOK_SECRET
                 sync: false
+              - key: ABACATE_WEBHOOK_HMAC_KEY
+                sync: false
               - key: ABACATE_PRODUCT_MONTHLY_BRL
                 sync: false
-              - key: ABACATE_LIFETIME_AMOUNT_CENTAVOS
-                value: "99700"
+              - key: ABACATE_PRODUCT_CREDITS_2000_BRL
+                sync: false
+              - key: ABACATE_PRODUCT_CREDITS_5000_BRL
+                sync: false
+              - key: ABACATE_MONTHLY_AMOUNT_CENTAVOS
+                value: "4999"
               - key: ABACATE_SUCCESS_URL
                 sync: false
               - key: ABACATE_CANCEL_URL
                 sync: false
               - key: ABACATE_API_BASE_URL
                 value: https://api.abacatepay.com/v2
+              - key: ABACATE_HTTP_TIMEOUT_MS
+                value: "15000"
               - key: OSM_USER_AGENT
                 value: Prospectly/1.0 (https://prospectly.dev)
               - key: SMTP_HOST

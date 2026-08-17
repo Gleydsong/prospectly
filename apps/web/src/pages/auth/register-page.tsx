@@ -16,6 +16,7 @@ import {
   type AuthResponse,
 } from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
+import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
@@ -99,7 +100,7 @@ export function RegisterPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?upgrade=1&plan=${plan}&method=${paymentMethod}`, { replace: true });
@@ -110,7 +111,7 @@ export function RegisterPage() {
     if (offer === 'credits-2000' || offer === 'credits-5000') {
       try {
         const checkout = await createCreditCheckout({ offer, paymentMethod });
-        handleCheckoutResult(checkout, { purpose: 'credits' });
+        handleCheckoutResult(checkout, { purpose: 'credits', offer });
         return;
       } catch {
         navigate(`/credits?offer=${offer}&method=${paymentMethod}`, { replace: true });
@@ -125,7 +126,7 @@ export function RegisterPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?offer=unlimited&method=${paymentMethod}`, { replace: true });
@@ -133,7 +134,7 @@ export function RegisterPage() {
       }
     }
 
-    navigate(offer ? `/credits?offer=${offer}` : '/', { replace: true });
+    navigate(offer ? `/credits?offer=${offer}&method=${paymentMethod}` : '/', { replace: true });
   };
 
   const onSubmit = async (values: RegisterForm) => {
@@ -173,7 +174,7 @@ export function RegisterPage() {
         <>
           {t('auth.hasAccount')}{' '}
           <Link
-            to={offer ? `/login?offer=${offer}` : plan ? `/login?plan=${plan}&method=${paymentMethod}` : '/login'}
+            to={`/login${billingAuthQuery({ offer, plan, method: paymentMethod })}`}
             className="font-medium text-brand-400 hover:text-brand-300"
           >
             {t('auth.login')}

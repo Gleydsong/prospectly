@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createCheckoutSession, createCreditCheckout, login, type AuthResponse } from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
+import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
@@ -67,7 +68,7 @@ export function LoginPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?upgrade=1&plan=${plan}&method=${paymentMethod}`, { replace: true });
@@ -78,7 +79,7 @@ export function LoginPage() {
     if (offer === 'credits-2000' || offer === 'credits-5000') {
       try {
         const checkout = await createCreditCheckout({ offer, paymentMethod });
-        handleCheckoutResult(checkout, { purpose: 'credits' });
+        handleCheckoutResult(checkout, { purpose: 'credits', offer });
         return;
       } catch {
         navigate(`/credits?offer=${offer}&method=${paymentMethod}`, { replace: true });
@@ -93,7 +94,7 @@ export function LoginPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?offer=unlimited&method=${paymentMethod}`, { replace: true });
@@ -102,7 +103,7 @@ export function LoginPage() {
     }
 
     if (offer) {
-      navigate(`/credits?offer=${offer}`, { replace: true });
+      navigate(`/credits?offer=${offer}&method=${paymentMethod}`, { replace: true });
       return;
     }
 
@@ -120,11 +121,7 @@ export function LoginPage() {
     }
   };
 
-  const registerHref = offer
-    ? `/register?offer=${offer}`
-    : plan
-      ? `/register?plan=${plan}&method=${paymentMethod}`
-      : '/register';
+  const registerHref = `/register${billingAuthQuery({ offer, plan, method: paymentMethod })}`;
 
   return (
     <AuthShell

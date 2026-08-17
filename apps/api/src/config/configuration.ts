@@ -55,25 +55,15 @@ export const configuration = () => ({
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY ?? '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
-    successUrl: process.env.STRIPE_SUCCESS_URL,
-    cancelUrl: process.env.STRIPE_CANCEL_URL,
     portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL,
-    prices: {
-      monthly: {
-        brl: process.env.STRIPE_PRICE_MONTHLY_BRL ?? '',
-      },
-      credits: {
-        'credits-2000': process.env.STRIPE_PRICE_CREDITS_2000_BRL ?? '',
-        'credits-5000': process.env.STRIPE_PRICE_CREDITS_5000_BRL ?? '',
-      },
-    },
   },
   abacate: {
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
-    webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY ?? '',
-    /** @deprecated Legacy Abacate CARD subscriptions — kept for cancel of old orgs. */
+    webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY?.trim() ?? '',
     productMonthlyBrl: process.env.ABACATE_PRODUCT_MONTHLY_BRL ?? '',
+    productCredits2000Brl: process.env.ABACATE_PRODUCT_CREDITS_2000_BRL ?? '',
+    productCredits5000Brl: process.env.ABACATE_PRODUCT_CREDITS_5000_BRL ?? '',
     lifetimeAmountCentavos: parseInt(
       process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900',
       10,
@@ -85,6 +75,7 @@ export const configuration = () => ({
     successUrl: process.env.ABACATE_SUCCESS_URL,
     cancelUrl: process.env.ABACATE_CANCEL_URL,
     apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
+    httpTimeoutMs: parseInt(process.env.ABACATE_HTTP_TIMEOUT_MS ?? '15000', 10),
   },
   sentryDsn: process.env.SENTRY_DSN,
   whatsappAi: {

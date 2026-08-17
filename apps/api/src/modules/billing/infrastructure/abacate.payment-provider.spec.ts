@@ -1,6 +1,6 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentProvider } from '@prisma/client';
+import { PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { createHmac } from 'node:crypto';
 
@@ -18,6 +18,7 @@ describe('AbacatePaymentProvider', () => {
 
   const client = {
     createTransparentPix: jest.fn(),
+    createOneTimeCheckout: jest.fn(),
     createSubscriptionCheckout: jest.fn(),
     cancelSubscription: jest.fn(),
   };
@@ -43,20 +44,37 @@ describe('AbacatePaymentProvider', () => {
     attachPayment: jest.fn(),
     completeFromWebhook: jest.fn(),
     refundFromWebhook: jest.fn(),
+    findMatching: jest.fn().mockResolvedValue(null),
   };
 
   const configGet = jest.fn((key: string) => {
     const map: Record<string, string | number> = {
       'abacate.webhookSecret': 'whsec_test',
-      'abacate.lifetimeAmountCentavos': 39900,
       'abacate.monthlyAmountCentavos': 4999,
       'abacate.productMonthlyBrl': 'prod_monthly',
+      'abacate.productCredits2000Brl': 'prod_credits_2000',
+      'abacate.productCredits5000Brl': 'prod_credits_5000',
     };
     return map[key];
   });
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    creditPurchases.findMatching.mockResolvedValue(null);
+    configGet.mockImplementation((key: string) => {
+      const map: Record<string, string | number> = {
+        'abacate.webhookSecret': 'whsec_test',
+        'abacate.monthlyAmountCentavos': 4999,
+        'abacate.productMonthlyBrl': 'prod_monthly',
+        'abacate.productCredits2000Brl': 'prod_credits_2000',
+        'abacate.productCredits5000Brl': 'prod_credits_5000',
+      };
+      return map[key];
+    });
+    prisma.organization.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) => {
+      if (typeof where.id === 'string') return { id: where.id };
+      return null;
+    });
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AbacatePaymentProvider,
@@ -68,29 +86,6 @@ describe('AbacatePaymentProvider', () => {
       ],
     }).compile();
     provider = module.get(AbacatePaymentProvider);
-  });
-
-  it('creates lifetime PIX (transparent)', async () => {
-    client.createTransparentPix.mockResolvedValue({
-      id: 'pix_1',
-      amount: 39900,
-      brCode: '000201',
-      brCodeBase64: 'data:image/png;base64,abc',
-      expiresAt: '2026-07-25T12:00:00.000Z',
-    });
-
-    const result = await provider.createCheckout({
-      organizationId: 'org1',
-      customerEmail: 'a@b.com',
-      interval: 'lifetime',
-      currency: 'BRL',
-      successUrl: 'https://app/success',
-      cancelUrl: 'https://app/cancel',
-    });
-
-    expect(result.mode).toBe('pix');
-    expect(client.createTransparentPix).toHaveBeenCalled();
-    expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
   });
 
   it('creates monthly PIX (transparent 30-day)', async () => {
@@ -106,6 +101,7 @@ describe('AbacatePaymentProvider', () => {
       customerEmail: 'a@b.com',
       interval: 'monthly',
       currency: 'BRL',
+      paymentMethod: 'pix',
       successUrl: 'https://app/success',
       cancelUrl: 'https://app/cancel',
     });
@@ -114,143 +110,335 @@ describe('AbacatePaymentProvider', () => {
     expect(client.createTransparentPix).toHaveBeenCalledWith(
       expect.objectContaining({
         amountCentavos: 4999,
-        metadata: expect.objectContaining({ interval: 'monthly' }),
+        metadata: expect.objectContaining({ interval: 'monthly', purpose: 'plan' }),
+        externalId: expect.stringMatching(/^org:org1:monthly:[0-9a-f-]{36}$/i),
       }),
     );
     expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
   });
 
-  it('creates a PIX checkout with the selected credit offer metadata', async () => {
-    client.createTransparentPix.mockResolvedValue({
-      id: 'pix_credits_1', amount: 999, brCode: '000201', brCodeBase64: 'data:image/png;base64,abc',
+  it('creates monthly card via subscriptions/create', async () => {
+    client.createSubscriptionCheckout.mockResolvedValue({
+      id: 'bill_sub',
+      url: 'https://app.abacatepay.com/pay/bill_sub',
+      customerId: 'cust_1',
     });
-    const result = await provider.createCreditCheckout({
-      organizationId: 'org1', offer: 'credits-2000', purchaseId: 'purchase_1',
-      externalId: 'org:org1:credits:purchase_1', successUrl: 'https://app/success', cancelUrl: 'https://app/cancel',
+    const result = await provider.createCheckout({
+      organizationId: 'org1',
+      customerEmail: 'a@b.com',
+      interval: 'monthly',
+      currency: 'BRL',
+      paymentMethod: 'card',
+      successUrl: 'https://app/success',
+      cancelUrl: 'https://app/cancel',
     });
-    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 999 }));
-    expect(client.createTransparentPix).toHaveBeenCalledWith(expect.objectContaining({
-      amountCentavos: 999,
-      metadata: expect.objectContaining({ purchaseId: 'purchase_1', offer: 'credits-2000', credits: '2000' }),
-    }));
-    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');
+    expect(result).toEqual(
+      expect.objectContaining({
+        mode: 'redirect',
+        provider: 'ABACATE',
+        url: 'https://app.abacatepay.com/pay/bill_sub',
+        externalCheckoutId: 'bill_sub',
+      }),
+    );
+    expect(client.createSubscriptionCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ productId: 'prod_monthly' }),
+    );
+    expect(client.createTransparentPix).not.toHaveBeenCalled();
   });
 
-  it('routes confirmed credit webhooks to the credit purchase service', async () => {
-    await provider.applyWebhookEvent({ id: 'pix_credits_1', data: { metadata: { purchaseId: 'purchase_1' } } }, 'transparent.completed');
-    expect(creditPurchases.completeFromWebhook).toHaveBeenCalledWith({ metadata: { purchaseId: 'purchase_1' } });
-    expect(activation.activateLifetime).not.toHaveBeenCalled();
-  });
-
-  it('fails lifetime when amount env missing', async () => {
-    configGet.mockImplementation((key: string) => {
-      if (key === 'abacate.lifetimeAmountCentavos') return 0;
-      if (key === 'abacate.webhookSecret') return 'whsec_test';
-      return undefined;
-    });
+  it('rejects lifetime checkout', async () => {
     await expect(
       provider.createCheckout({
         organizationId: 'org1',
         customerEmail: 'a@b.com',
         interval: 'lifetime',
         currency: 'BRL',
+        paymentMethod: 'pix',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates a PIX checkout with the selected credit offer metadata', async () => {
+    client.createTransparentPix.mockResolvedValue({
+      id: 'pix_credits_1',
+      amount: 999,
+      brCode: '000201',
+      brCodeBase64: 'data:image/png;base64,abc',
+    });
+    const result = await provider.createCreditCheckout({
+      organizationId: 'org1',
+      offer: 'credits-2000',
+      paymentMethod: 'pix',
+      purchaseId: 'purchase_1',
+      externalId: 'org:org1:credits:purchase_1',
+      successUrl: 'https://app/success',
+      cancelUrl: 'https://app/cancel',
+    });
+    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 999 }));
+    expect(client.createTransparentPix).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountCentavos: 999,
+        metadata: expect.objectContaining({
+          purchaseId: 'purchase_1',
+          offer: 'credits-2000',
+          purpose: 'credits',
+        }),
+      }),
+    );
+    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');
+  });
+
+  it('creates credit card checkout with the mapped product', async () => {
+    client.createOneTimeCheckout.mockResolvedValue({
+      id: 'bill_credits',
+      url: 'https://app.abacatepay.com/pay/bill_credits',
+    });
+    const result = await provider.createCreditCheckout({
+      organizationId: 'org1',
+      offer: 'credits-5000',
+      paymentMethod: 'card',
+      purchaseId: 'purchase_2',
+      externalId: 'org:org1:credits:purchase_2',
+      successUrl: 'https://app/success',
+      cancelUrl: 'https://app/cancel',
+    });
+    expect(result).toEqual(
+      expect.objectContaining({ mode: 'redirect', provider: 'ABACATE', externalCheckoutId: 'bill_credits' }),
+    );
+    expect(client.createOneTimeCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId: 'prod_credits_5000',
+        externalId: 'org:org1:credits:purchase_2',
+      }),
+    );
+    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_2', 'bill_credits');
+  });
+
+  it('fails credit card checkout when product id is missing', async () => {
+    configGet.mockImplementation((key: string) => {
+      if (key === 'abacate.productCredits2000Brl') return '';
+      if (key === 'abacate.webhookSecret') return 'whsec_test';
+      return undefined;
+    });
+    await expect(
+      provider.createCreditCheckout({
+        organizationId: 'org1',
+        offer: 'credits-2000',
+        paymentMethod: 'card',
+        purchaseId: 'purchase_1',
+        externalId: 'ext',
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('activates lifetime on transparent.completed', async () => {
+  it('completes PIX credits from nested transparent.completed', async () => {
+    creditPurchases.findMatching.mockResolvedValue({
+      id: 'purchase_1',
+      organizationId: 'org1',
+    });
     await provider.applyWebhookEvent(
       {
-        id: 'log_1',
+        id: 'log_pix',
         event: 'transparent.completed',
         data: {
-          id: 'pix_1',
-          metadata: { organizationId: 'org1', interval: 'lifetime' },
+          transparent: {
+            id: 'pix_credits_1',
+            status: 'PAID',
+            paidAmount: 999,
+            amount: 999,
+            metadata: { purchaseId: 'purchase_1', purpose: 'credits' },
+          },
         },
       },
       'transparent.completed',
     );
-    expect(activation.activateLifetime).toHaveBeenCalledWith(
-      expect.objectContaining({
-        organizationId: 'org1',
-        provider: PaymentProvider.ABACATE,
-        abacatePaymentId: 'pix_1',
-      }),
-    );
-    expect(client.cancelSubscription).not.toHaveBeenCalled();
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalled();
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
   });
 
-  it('cancels prior monthly Abacate subscription after lifetime upgrade', async () => {
-    activation.activateLifetime.mockResolvedValue({
-      previousStripeSubscriptionId: null,
-      previousAbacateSubscriptionId: 'subs_old',
+  it('completes card credits from nested checkout.completed', async () => {
+    creditPurchases.findMatching.mockResolvedValue({
+      id: 'purchase_1',
+      organizationId: 'org1',
     });
-
     await provider.applyWebhookEvent(
       {
-        id: 'log_upgrade',
-        event: 'transparent.completed',
+        event: 'checkout.completed',
         data: {
-          id: 'pix_2',
-          metadata: { organizationId: 'org1', interval: 'lifetime' },
+          checkout: {
+            id: 'bill_abc123xyz',
+            externalId: 'org:org1:credits:purchase_1',
+            amount: 999,
+            paidAmount: 999,
+            frequency: 'ONE_TIME',
+            status: 'PAID',
+            methods: ['CARD'],
+            metadata: { purchaseId: 'purchase_1', purpose: 'credits' },
+          },
+          customer: { id: 'cust_abc123' },
         },
       },
-      'transparent.completed',
+      'checkout.completed',
     );
-
-    expect(client.cancelSubscription).toHaveBeenCalledWith('subs_old');
+    expect(creditPurchases.completeFromWebhook).toHaveBeenCalled();
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
   });
 
-  it('revokes lifetime on transparent.refunded', async () => {
-    prisma.organization.findUnique.mockResolvedValue({
-      id: 'org1',
-      plan: 'LIFETIME',
-      paymentProvider: PaymentProvider.ABACATE,
-    });
+  it('does not complete credits from a subscription checkout.completed', async () => {
+    await provider.applyWebhookEvent(
+      {
+        event: 'checkout.completed',
+        data: {
+          checkout: {
+            id: 'bill_sub',
+            frequency: 'SUBSCRIPTION',
+            status: 'PAID',
+            paidAmount: 4999,
+            amount: 4999,
+            metadata: { purpose: 'plan', interval: 'monthly', organizationId: 'org1' },
+          },
+        },
+      },
+      'checkout.completed',
+    );
+    expect(creditPurchases.completeFromWebhook).not.toHaveBeenCalled();
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
+  });
+
+  it('refunds credits on checkout.refunded without going negative', async () => {
+    creditPurchases.findMatching.mockResolvedValue({ id: 'purchase_1', organizationId: 'org1' });
     await provider.applyWebhookEvent(
       {
         id: 'log_refund',
-        event: 'transparent.refunded',
+        event: 'checkout.refunded',
         data: {
-          id: 'pix_1',
-          metadata: { organizationId: 'org1', interval: 'lifetime' },
+          checkout: {
+            id: 'bill_abc123xyz',
+            status: 'PAID',
+            metadata: { purchaseId: 'purchase_1', purpose: 'credits' },
+          },
         },
       },
-      'transparent.refunded',
+      'checkout.refunded',
     );
-    expect(activation.revokeLifetime).toHaveBeenCalledWith({
-      organizationId: 'org1',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_1',
-    });
-    expect(activation.activateLifetime).not.toHaveBeenCalled();
+    expect(creditPurchases.refundFromWebhook).toHaveBeenCalled();
   });
 
-  it('revokes lifetime on transparent.lost via abacatePaymentId lookup', async () => {
-    prisma.organization.findFirst.mockResolvedValue({ id: 'org1' });
-    prisma.organization.findUnique.mockResolvedValue({
-      id: 'org1',
-      plan: 'LIFETIME',
-      paymentProvider: PaymentProvider.ABACATE,
-    });
+  it('activates monthly PIX on transparent.completed', async () => {
     await provider.applyWebhookEvent(
       {
-        id: 'log_lost',
-        event: 'transparent.lost',
-        data: { id: 'pix_lost' },
+        id: 'log_m',
+        event: 'transparent.completed',
+        data: {
+          transparent: {
+            id: 'pix_m1',
+            status: 'PAID',
+            paidAmount: 4999,
+            amount: 4999,
+            metadata: { organizationId: 'org1', interval: 'monthly', purpose: 'plan' },
+          },
+        },
       },
-      'transparent.lost',
+      'transparent.completed',
     );
-    expect(prisma.organization.findFirst).toHaveBeenCalledWith({
-      where: { abacatePaymentId: 'pix_lost' },
-    });
-    expect(activation.revokeLifetime).toHaveBeenCalledWith({
-      organizationId: 'org1',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_lost',
-    });
+    expect(activation.activateMonthly).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        provider: PaymentProvider.ABACATE,
+      }),
+    );
+  });
+
+  it('activates plan on subscription.completed using nested ids', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_taQArRTApemxwcbw5EJeF3hS',
+        event: 'subscription.completed',
+        data: {
+          subscription: { id: 'subs_tAFqDWBhcEYTjQh2K0ZYDHau', status: 'ACTIVE' },
+          customer: { id: 'cust_def456' },
+          checkout: {
+            id: 'bill_jskd3TMfScHZDJe5NSZjTmQ4',
+            frequency: 'SUBSCRIPTION',
+            metadata: { organizationId: 'org1', purpose: 'plan', interval: 'monthly' },
+          },
+        },
+      },
+      'subscription.completed',
+    );
+    expect(activation.activateMonthly).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        abacateSubscriptionId: 'subs_tAFqDWBhcEYTjQh2K0ZYDHau',
+        abacateCustomerId: 'cust_def456',
+      }),
+    );
+  });
+
+  it('keeps the plan active on subscription.renewed', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_renew',
+        event: 'subscription.renewed',
+        data: {
+          subscription: { id: 'subs_1', status: 'ACTIVE' },
+          customer: { id: 'cust_1' },
+          checkout: { metadata: { organizationId: 'org1', purpose: 'plan' } },
+        },
+      },
+      'subscription.renewed',
+    );
+    expect(activation.activateMonthly).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org1', abacateSubscriptionId: 'subs_1' }),
+    );
+  });
+
+  it('marks PAST_DUE on subscription.payment_failed', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_fail',
+        event: 'subscription.payment_failed',
+        data: {
+          subscription: { id: 'subs_1', status: 'ACTIVE' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.payment_failed',
+    );
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org1', status: PlanStatus.PAST_DUE }),
+    );
+  });
+
+  it('cancels the plan on subscription.cancelled', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_1', status: 'CANCELLED' },
+          customer: { id: 'cust_1' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org1', status: PlanStatus.CANCELED }),
+    );
+  });
+
+  it('ignores unknown events without changing entitlement', async () => {
+    const result = await provider.applyWebhookEvent(
+      { id: 'log_x', event: 'customer.created', data: { customer: { id: 'cust_1' } } },
+      'customer.created',
+    );
+    expect(result.handled).toBe(false);
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
   });
 
   it('verifies webhook HMAC + secret', async () => {
@@ -268,22 +456,29 @@ describe('AbacatePaymentProvider', () => {
     expect(parsed.eventId).toBe('log_1');
   });
 
-  it('accepts webhook secret from header (preferred over query)', async () => {
+  it('treats blank HMAC override as the public key', async () => {
+    configGet.mockImplementation((key: string) => {
+      if (key === 'abacate.webhookHmacKey') return '   ';
+      const map: Record<string, string | number> = {
+        'abacate.webhookSecret': 'whsec_test',
+        'abacate.monthlyAmountCentavos': 4999,
+        'abacate.productMonthlyBrl': 'prod_monthly',
+        'abacate.productCredits2000Brl': 'prod_credits_2000',
+        'abacate.productCredits5000Brl': 'prod_credits_5000',
+      };
+      return map[key];
+    });
     const raw = Buffer.from(
-      JSON.stringify({ id: 'log_2', event: 'transparent.completed', data: {} }),
+      JSON.stringify({ id: 'log_blank', event: 'transparent.completed', data: {} }),
       'utf8',
     );
     const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
-
     const parsed = await provider.verifyAndParseWebhook(
       raw,
-      {
-        'x-webhook-signature': signature,
-        'x-abacate-webhook-secret': 'whsec_test',
-      },
-      { webhookSecret: 'wrong-query-ignored' },
+      { 'x-webhook-signature': signature },
+      { webhookSecret: 'whsec_test' },
     );
-    expect(parsed.eventId).toBe('log_2');
+    expect(parsed.eventId).toBe('log_blank');
   });
 
   it('rejects bad webhook signature', async () => {
@@ -295,5 +490,17 @@ describe('AbacatePaymentProvider', () => {
         { webhookSecret: 'whsec_test' },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejects wrong webhook secret', async () => {
+    const raw = Buffer.from(JSON.stringify({ id: 'log_1', event: 'x', data: {} }), 'utf8');
+    const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
+    await expect(
+      provider.verifyAndParseWebhook(
+        raw,
+        { 'x-webhook-signature': signature },
+        { webhookSecret: 'wrong' },
+      ),
+    ).rejects.toBeInstanceOf(Error);
   });
 });

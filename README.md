@@ -219,7 +219,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 ### Operação e rollout
 
 - Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
-- Billing dual (Abacate BRL + Stripe EUR/USD): [`docs/billing/dual-gateways.md`](docs/billing/dual-gateways.md).
+- Billing (AbacatePay PIX + cartão; Stripe só legado): [`docs/billing/dual-gateways.md`](docs/billing/dual-gateways.md).
 - `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
   obrigatória retorna `503`.
 - A migration de hardening canonicaliza domínio, e-mail e telefone legados e

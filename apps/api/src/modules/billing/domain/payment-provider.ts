@@ -9,6 +9,7 @@ export type CreditOffer = 'credits-2000' | 'credits-5000';
 export type CreditCheckoutRequest = {
   organizationId: string;
   offer: CreditOffer;
+  paymentMethod: PaymentMethod;
   successUrl: string;
   cancelUrl: string;
   purchaseId: string;
@@ -21,12 +22,13 @@ export type CheckoutRequest = {
   customerName?: string;
   interval: BillingInterval;
   currency: BillingCurrency;
+  paymentMethod: PaymentMethod;
   successUrl: string;
   cancelUrl: string;
   existingCustomerId?: string | null;
 };
 
-/** Resposta discriminada: redirect (Stripe cartão) ou PIX in-app (Abacate). */
+/** Resposta discriminada: redirect (checkout hospedado) ou PIX in-app. */
 export type CheckoutResult =
   | {
       mode: 'redirect';
@@ -60,6 +62,7 @@ export type WebhookApplyResult = {
 export interface PaymentProviderAdapter {
   readonly id: PaymentProviderId;
   createCheckout(input: CheckoutRequest): Promise<CheckoutResult>;
+  createCreditCheckout?(input: CreditCheckoutRequest): Promise<CheckoutResult>;
   createPortal?(input: {
     organizationId: string;
     externalCustomerId: string;

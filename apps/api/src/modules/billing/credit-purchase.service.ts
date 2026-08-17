@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { CreditPurchaseStatus, PaymentProvider } from '@prisma/client';
+import { BillingPaymentMethod, CreditPurchaseStatus, PaymentProvider } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
-import type { CreditOffer } from './domain/payment-provider';
+import type { CreditOffer, PaymentMethod } from './domain/payment-provider';
 
 @Injectable()
 export class CreditPurchaseService {
@@ -16,6 +16,7 @@ export class CreditPurchaseService {
     offer: CreditOffer;
     externalId: string;
     provider?: PaymentProvider;
+    paymentMethod?: PaymentMethod;
   }) {
     const pack = CREDIT_PACKAGES[input.offer];
     return this.prisma.creditPurchase.create({
@@ -26,6 +27,8 @@ export class CreditPurchaseService {
         amountCentavos: pack.amountCentavos,
         currency: 'BRL',
         provider: input.provider ?? PaymentProvider.ABACATE,
+        paymentMethod:
+          input.paymentMethod === 'card' ? BillingPaymentMethod.CARD : BillingPaymentMethod.PIX,
         externalId: input.externalId,
       },
     });
@@ -38,14 +41,31 @@ export class CreditPurchaseService {
     });
   }
 
-  async completeFromWebhook(data: Record<string, unknown>): Promise<void> {
+  async findMatching(data: Record<string, unknown>) {
     const metadata = this.readMetadata(data);
     const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    const purchase = metadata.purchaseId
-      ? await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } })
-      : paymentId
-        ? await this.prisma.creditPurchase.findUnique({ where: { externalPaymentId: paymentId } })
-        : null;
+    const externalId = typeof data.externalId === 'string' ? data.externalId : undefined;
+
+    if (metadata.purchaseId) {
+      const byId = await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } });
+      if (byId) return byId;
+    }
+    if (paymentId) {
+      const byPayment = await this.prisma.creditPurchase.findUnique({
+        where: { externalPaymentId: paymentId },
+      });
+      if (byPayment) return byPayment;
+    }
+    if (externalId) {
+      const byExternal = await this.prisma.creditPurchase.findUnique({ where: { externalId } });
+      if (byExternal) return byExternal;
+    }
+    return null;
+  }
+
+  async completeFromWebhook(data: Record<string, unknown>): Promise<void> {
+    const purchase = await this.findMatching(data);
+    const paymentId = typeof data.id === 'string' ? data.id : undefined;
     if (!purchase) {
       this.logger.warn('Credit payment completed without a matching purchase');
       return;
@@ -72,13 +92,7 @@ export class CreditPurchaseService {
   }
 
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
-    const metadata = this.readMetadata(data);
-    const paymentId = typeof data.id === 'string' ? data.id : undefined;
-    const purchase = metadata.purchaseId
-      ? await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } })
-      : paymentId
-        ? await this.prisma.creditPurchase.findUnique({ where: { externalPaymentId: paymentId } })
-        : null;
+    const purchase = await this.findMatching(data);
     if (!purchase || purchase.status === CreditPurchaseStatus.REFUNDED) return;
 
     await this.prisma.$transaction(async (tx) => {
@@ -108,7 +122,9 @@ export class CreditPurchaseService {
     const raw = data.metadata;
     if (!raw || typeof raw !== 'object') return {};
     return Object.fromEntries(
-      Object.entries(raw as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+      Object.entries(raw as Record<string, unknown>).filter(
+        (entry): entry is [string, string] => typeof entry[1] === 'string',
+      ),
     );
   }
 }

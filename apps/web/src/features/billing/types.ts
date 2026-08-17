@@ -35,7 +35,7 @@ export type BillingStatus = {
   planCurrency: string | null;
   paymentProvider: 'STRIPE' | 'ABACATE' | null;
   currentPeriodEnd: string | null;
-  hasStripeCustomer: boolean;
+  legacyStripeSubscription: boolean;
   canOpenPortal: boolean;
   canCancelSubscription: boolean;
   canExportCsv: boolean;
