@@ -132,7 +132,7 @@ projects:
             region: frankfurt
             branch: main
             autoDeployTrigger: checksPass
-            buildCommand: corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --frozen-lockfile --filter @prospectly/web... && pnpm --filter @prospectly/web run build
+            buildCommand: pnpm install --frozen-lockfile --filter @prospectly/web... && pnpm --filter @prospectly/shared-types run build && pnpm --filter @prospectly/web run build
             staticPublishPath: apps/web/dist
             buildFilter:
               paths:
