@@ -38,6 +38,7 @@ describe('isCheckoutConfirmed', () => {
           canCancelSubscription: false,
           canExportCsv: false,
           freeSearchLimit: 3,
+          monthlyCardEnabled: false,
         },
       ),
     ).toBe(true);
@@ -60,6 +61,7 @@ describe('isCheckoutConfirmed', () => {
           canCancelSubscription: true,
           canExportCsv: true,
           freeSearchLimit: 3,
+          monthlyCardEnabled: false,
         },
       ),
     ).toBe(true);

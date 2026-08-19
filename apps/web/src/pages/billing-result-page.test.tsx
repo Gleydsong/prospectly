@@ -25,6 +25,7 @@ const unpaidStatus = {
   canCancelSubscription: false,
   canExportCsv: false,
   freeSearchLimit: 3,
+  monthlyCardEnabled: false,
 };
 
 describe('BillingSuccessPage', () => {
@@ -72,6 +73,7 @@ describe('BillingSuccessPage', () => {
       canCancelSubscription: false,
       canExportCsv: false,
       freeSearchLimit: 3,
+      monthlyCardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
@@ -95,6 +97,7 @@ describe('BillingSuccessPage', () => {
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
+      monthlyCardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
