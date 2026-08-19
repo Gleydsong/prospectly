@@ -1,0 +1,3 @@
+# Render Static Site: serve the SPA for client routes.
+# Existing files (assets, index.html) are matched first.
+/*    /index.html   200
