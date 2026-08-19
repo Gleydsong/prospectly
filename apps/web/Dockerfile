@@ -5,7 +5,7 @@ WORKDIR /app
 FROM base AS deps
 ARG VITE_API_URL=http://localhost:3000/api/v1
 ENV VITE_API_URL=$VITE_API_URL
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* .npmrc ./
 COPY apps/web/package.json apps/web/
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/tsconfig/package.json packages/tsconfig/

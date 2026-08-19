@@ -132,7 +132,8 @@ projects:
             region: frankfurt
             branch: main
             autoDeployTrigger: checksPass
-            buildCommand: pnpm install --frozen-lockfile --filter @prospectly/web... && pnpm --filter @prospectly/shared-types run build && pnpm --filter @prospectly/web run build
+            # pnpm is already on PATH; --config.production=false keeps Vite/tsc (devDependencies).
+            buildCommand: pnpm install --frozen-lockfile --filter @prospectly/web... --config.production=false && pnpm --filter @prospectly/shared-types run build && pnpm --filter @prospectly/web run build
             staticPublishPath: apps/web/dist
             buildFilter:
               paths:

@@ -15,7 +15,7 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 | Static | `prospectly-web` | Vite SPA |
 | Web (Node) | `prospectly-landing` | Next.js marketing site (substitui o antigo `prospectly-mvp`) |
 
-**Build tip:** never use `corepack enable` on Render Node builds — the image FS is read-only (`EROFS` on `/usr/bin/pnpm`). Use plain `pnpm` (preinstalled) + `--config.production=false` so Next gets TypeScript/Tailwind from devDependencies.
+**Build tip:** never use `corepack enable` on Render Node builds — the image FS is read-only (`EROFS` on `/usr/bin/pnpm`). Use plain `pnpm` (preinstalled) + `--config.production=false` so Vite/Next get TypeScript from devDependencies. Root `.npmrc` also sets `production=false` so the static `prospectly-web` install keeps working even if the Dashboard build command omits the flag.
 
 ## Landing (substitui `prospectly-mvp`)
 
