@@ -74,7 +74,13 @@ export class BillingService {
       canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
+      monthlyCardEnabled: this.hasConfiguredProduct('abacate.productMonthlyBrl'),
     };
+  }
+
+  private hasConfiguredProduct(configKey: string): boolean {
+    const value = this.config.get<string>(configKey);
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   async getSearchUsage(

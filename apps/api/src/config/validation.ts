@@ -135,7 +135,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     const requiredAbacate = [
       'ABACATE_API_KEY',
       'ABACATE_WEBHOOK_SECRET',
-      'ABACATE_PRODUCT_MONTHLY_BRL',
       'ABACATE_PRODUCT_CREDITS_2000_BRL',
       'ABACATE_PRODUCT_CREDITS_5000_BRL',
       'ABACATE_SUCCESS_URL',

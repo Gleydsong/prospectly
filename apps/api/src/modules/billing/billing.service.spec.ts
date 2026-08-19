@@ -204,7 +204,29 @@ describe('BillingService', () => {
         legacyStripeSubscription: true,
         canOpenPortal: true,
         canCancelSubscription: false,
+        monthlyCardEnabled: false,
       }),
+    );
+  });
+
+  it('exposes monthlyCardEnabled when the monthly product id is configured', async () => {
+    configGet.mockImplementation((key: string) => {
+      if (key === 'abacate.productMonthlyBrl') return 'prod_monthly';
+      return undefined;
+    });
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.INACTIVE,
+      planCurrency: null,
+      paymentProvider: null,
+      currentPeriodEnd: null,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(0);
+
+    await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
+      expect.objectContaining({ monthlyCardEnabled: true }),
     );
   });
 

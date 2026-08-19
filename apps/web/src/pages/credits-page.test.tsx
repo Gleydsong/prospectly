@@ -47,6 +47,7 @@ describe('CreditsPage', () => {
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
+      monthlyCardEnabled: false,
     });
     useAuthStore.setState({
       user: {
@@ -105,10 +106,20 @@ describe('CreditsPage', () => {
       canCancelSubscription: false,
       canExportCsv: true,
       freeSearchLimit: 3,
+      monthlyCardEnabled: false,
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     expect(
       await screen.findByRole('button', { name: 'Portal legado do cartão (Stripe)' }),
     ).toBeInTheDocument();
+  });
+
+  it('keeps unlimited card disabled until the monthly product exists', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+    await user.click(await screen.findByRole('button', { name: 'Assinar ilimitado' }));
+    const card = screen.getByRole('button', { name: /Cartão via AbacatePay/ });
+    expect(card).toBeDisabled();
+    expect(screen.getByText(/Cartão do Ilimitado ainda não está no catálogo de teste/)).toBeInTheDocument();
   });
 });

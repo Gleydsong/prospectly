@@ -424,6 +424,7 @@
     "payWithPixHint": "Instant QR code. Unlimited via PIX lasts 30 days (no auto-renew).",
     "payWithCard": "Card via AbacatePay",
     "payWithCardHint": "Credit card. Monthly unlimited renews automatically.",
+    "payWithCardUnavailableHint": "Unlimited card is not in the test catalog yet. Use PIX (30 days) or buy credits.",
     "packFeaturePixMonthly": "Monthly PIX = 30 days of access",
     "packFeatureCardMonthly": "Monthly card = automatic renewal",
     "cancelSubscription": "Cancel subscription",

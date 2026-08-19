@@ -33,9 +33,9 @@ Keep the Stripe webhook enabled while any Stripe subscription remains.
 ABACATE_API_KEY=
 ABACATE_WEBHOOK_SECRET=
 ABACATE_WEBHOOK_HMAC_KEY=          # optional; defaults to Abacate public HMAC key
-ABACATE_PRODUCT_MONTHLY_BRL=       # MONTHLY cycle product
-ABACATE_PRODUCT_CREDITS_2000_BRL=  # one-time product, no cycle
-ABACATE_PRODUCT_CREDITS_5000_BRL=  # one-time product, no cycle
+ABACATE_PRODUCT_MONTHLY_BRL=       # optional until live catalog; MONTHLY cycle product
+ABACATE_PRODUCT_CREDITS_2000_BRL=  # one-time product, no cycle (R$ 9,99)
+ABACATE_PRODUCT_CREDITS_5000_BRL=  # one-time product, no cycle (R$ 19,99)
 ABACATE_MONTHLY_AMOUNT_CENTAVOS=4999
 ABACATE_SUCCESS_URL=
 ABACATE_CANCEL_URL=
@@ -43,16 +43,16 @@ ABACATE_API_BASE_URL=https://api.abacatepay.com/v2
 ABACATE_HTTP_TIMEOUT_MS=15000
 ```
 
-Production/staging fail startup if the AbacatePay checkout variables above (except HMAC override and timeout) are empty. Local/test may omit product IDs; checkout then returns `503`.
+Production/staging fail startup if API key, webhook secret, both credit product IDs, and success/cancel URLs are empty. `ABACATE_PRODUCT_MONTHLY_BRL` is optional: without it, monthly **card** returns `503` and the UI offers PIX only. Local/test may omit product IDs; checkout then returns `503`.
 
 Do **not** create products at runtime. IDs come from the dashboard.
 
 ## External runbook (dashboard — not done by this repo)
 
-1. Create three products in the AbacatePay dashboard:
-   - **Prospectly Ilimitado**: BRL, cycle `MONTHLY`.
-   - **Prospectly 2.000 créditos**: BRL, one-time (no cycle).
-   - **Prospectly 5.000 créditos**: BRL, one-time (no cycle).
+1. Create products in the AbacatePay dashboard. Dev catalogs may only allow two:
+   - **Prospectly 2.000 créditos**: BRL, one-time (no cycle), R$ 9,99.
+   - **Prospectly 5.000 créditos**: BRL, one-time (no cycle), R$ 19,99.
+   - **Prospectly Ilimitado** (live account, third slot): BRL, cycle `MONTHLY`, R$ 49,99. Until then, monthly is PIX-only.
 2. Store the public product IDs as secrets/env vars.
 3. Create an HTTPS v2 webhook pointing to `/api/v1/billing/webhook/abacate?webhookSecret=<secret>`.
 4. Select checkout, transparent, and subscription events used by the app (`completed`, `refunded`, `disputed`, `lost` if offered, `subscription.renewed`, `subscription.cancelled`, `subscription.payment_failed`).

@@ -94,8 +94,14 @@ export function CreditsPage() {
   });
 
   const checkoutPending = creditCheckout.isPending || planCheckout.isPending;
+  const monthlyCardEnabled = Boolean(billing.data?.monthlyCardEnabled);
+  const hideUnlimitedCard = pendingOffer === 'unlimited' && !monthlyCardEnabled;
 
   const startCheckout = (offer: CreditOfferId, method: PaymentMethod) => {
+    if (offer === 'unlimited' && method === 'card' && !monthlyCardEnabled) {
+      setBillingError(t('settings.payWithCardUnavailableHint'));
+      return;
+    }
     setCreditOffer(offer);
     setPaymentMethod(method);
     setBillingError(null);
@@ -195,7 +201,7 @@ export function CreditsPage() {
                   type="button"
                   variant="secondary"
                   className="h-auto justify-start gap-3 px-4 py-3"
-                  disabled={!emailVerified || checkoutPending}
+                  disabled={!emailVerified || checkoutPending || hideUnlimitedCard}
                   loading={checkoutPending && paymentMethod === 'card'}
                   onClick={() => startCheckout(pendingOffer, 'card')}
                 >
@@ -203,7 +209,9 @@ export function CreditsPage() {
                   <span className="text-left">
                     <span className="block font-semibold">{t('settings.payWithCard')}</span>
                     <span className="block text-xs font-normal text-[color:var(--ink-muted)]">
-                      {t('settings.payWithCardHint')}
+                      {hideUnlimitedCard
+                        ? t('settings.payWithCardUnavailableHint')
+                        : t('settings.payWithCardHint')}
                     </span>
                   </span>
                 </Button>
@@ -280,10 +288,12 @@ export function CreditsPage() {
                           <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
                           {t('settings.packFeaturePixMonthly')}
                         </li>
-                        <li className="flex items-center gap-2">
-                          <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                          {t('settings.packFeatureCardMonthly')}
-                        </li>
+                        {monthlyCardEnabled ? (
+                          <li className="flex items-center gap-2">
+                            <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
+                            {t('settings.packFeatureCardMonthly')}
+                          </li>
+                        ) : null}
                       </>
                     ) : null}
                   </ul>

@@ -146,6 +146,27 @@ describe('AbacatePaymentProvider', () => {
     expect(client.createTransparentPix).not.toHaveBeenCalled();
   });
 
+  it('fails monthly card checkout when the monthly product id is missing', async () => {
+    configGet.mockImplementation((key: string) => {
+      if (key === 'abacate.productMonthlyBrl') return '';
+      if (key === 'abacate.webhookSecret') return 'whsec_test';
+      if (key === 'abacate.monthlyAmountCentavos') return 4999;
+      return undefined;
+    });
+    await expect(
+      provider.createCheckout({
+        organizationId: 'org1',
+        customerEmail: 'a@b.com',
+        interval: 'monthly',
+        currency: 'BRL',
+        paymentMethod: 'card',
+        successUrl: 'https://app/success',
+        cancelUrl: 'https://app/cancel',
+      }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
+  });
+
   it('rejects lifetime checkout', async () => {
     await expect(
       provider.createCheckout({

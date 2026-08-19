@@ -41,4 +41,5 @@ export type BillingStatus = {
   canExportCsv: boolean;
   freeSearchLimit: number;
   creditBalance: number;
+  monthlyCardEnabled: boolean;
 };

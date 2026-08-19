@@ -424,6 +424,7 @@
     "payWithPixHint": "QR Code instantâneo. Ilimitado PIX vale 30 dias (sem renovação automática).",
     "payWithCard": "Cartão via AbacatePay",
     "payWithCardHint": "Cartão de crédito. Ilimitado mensal renova automaticamente.",
+    "payWithCardUnavailableHint": "Cartão do Ilimitado ainda não está no catálogo de teste. Use PIX (30 dias) ou compre créditos.",
     "packFeaturePixMonthly": "PIX mensal = 30 dias de acesso",
     "packFeatureCardMonthly": "Cartão mensal = renovação automática",
     "cancelSubscription": "Cancelar assinatura",
