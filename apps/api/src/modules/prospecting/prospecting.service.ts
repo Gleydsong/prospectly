@@ -224,6 +224,9 @@ export class ProspectingService {
   async process(searchId: string): Promise<void> {
     const search = await this.prisma.search.findUnique({ where: { id: searchId } });
     if (!search) return;
+    // BullMQ can retry after a successful run if the ack is lost. Never re-enter
+    // a completed search — a later empty provider response would wipe results.
+    if (search.status === SearchStatus.COMPLETED) return;
 
     await this.prisma.search.update({
       where: { id: searchId },
@@ -465,12 +468,16 @@ export class ProspectingService {
           update: data,
         });
       }
-      await transaction.searchResult.deleteMany({
-        where: {
-          searchId,
-          ...(externalIds.length ? { externalId: { notIn: externalIds } } : {}),
-        },
-      });
+      // Empty provider payloads must not delete existing rows. Without a `notIn`
+      // filter, `{ searchId }` alone would wipe every result for this search.
+      if (externalIds.length > 0) {
+        await transaction.searchResult.deleteMany({
+          where: {
+            searchId,
+            externalId: { notIn: externalIds },
+          },
+        });
+      }
     });
   }
 

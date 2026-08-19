@@ -341,6 +341,7 @@ describe('ProspectingService', () => {
       id: 'search-1',
       organizationId: 'org-1',
       provider: 'OPENSTREETMAP',
+      status: 'PENDING',
       input: searchInput,
     });
     prisma.search.update.mockResolvedValue(undefined);
@@ -371,6 +372,45 @@ describe('ProspectingService', () => {
     expect(prisma.searchResult.deleteMany).toHaveBeenCalledWith({
       where: { searchId: 'search-1', externalId: { notIn: ['node/1'] } },
     });
+    expect(prisma.search.update).toHaveBeenLastCalledWith({
+      where: { id: 'search-1' },
+      data: { status: 'COMPLETED', error: null, completedAt: expect.any(Date) },
+    });
+  });
+
+  it('skips reprocessing a completed search so BullMQ retries cannot wipe results', async () => {
+    const { prisma, provider, service } = createService();
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      status: 'COMPLETED',
+      input: searchInput,
+    });
+
+    await service.process('search-1');
+
+    expect(provider.search).not.toHaveBeenCalled();
+    expect(prisma.search.update).not.toHaveBeenCalled();
+    expect(prisma.searchResult.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('does not wipe existing results when providers return an empty batch', async () => {
+    const { prisma, provider, service } = createService();
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      status: 'PROCESSING',
+      input: searchInput,
+    });
+    prisma.search.update.mockResolvedValue(undefined);
+    provider.search.mockResolvedValue([]);
+
+    await service.process('search-1');
+
+    expect(prisma.searchResult.upsert).not.toHaveBeenCalled();
+    expect(prisma.searchResult.deleteMany).not.toHaveBeenCalled();
     expect(prisma.search.update).toHaveBeenLastCalledWith({
       where: { id: 'search-1' },
       data: { status: 'COMPLETED', error: null, completedAt: expect.any(Date) },
