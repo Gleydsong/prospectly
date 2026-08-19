@@ -7,10 +7,9 @@ import { extendPrismaClient } from './tenant-prisma';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor(config: ConfigService) {
-    const url =
-      config.get<string>('databaseAppUrl') ??
-      config.get<string>('databaseUrl') ??
-      process.env.DATABASE_URL;
+    const appUrl = config.get<string>('databaseAppUrl')?.trim();
+    const ownerUrl = config.get<string>('databaseUrl')?.trim();
+    const url = (appUrl && appUrl.length > 0 ? appUrl : undefined) ?? ownerUrl ?? process.env.DATABASE_URL;
     super(url ? { datasources: { db: { url } } } : undefined);
     const extended = extendPrismaClient(this);
     Object.defineProperty(extended, 'onModuleInit', {
