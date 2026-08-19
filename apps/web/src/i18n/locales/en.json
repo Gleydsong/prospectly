@@ -61,6 +61,8 @@
     "languagePt": "Português",
     "languageEn": "English",
     "hasAccount": "Already have an account?",
+    "registerConflict": "This email already has an account. Sign in with the password you used, or try another email.",
+    "registerConflictLogin": "Sign in to this account",
     "emailInvalid": "Invalid email",
     "passwordRequired": "Password is required",
     "nameRequired": "Name is required",

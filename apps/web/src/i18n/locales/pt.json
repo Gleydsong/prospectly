@@ -61,6 +61,8 @@
     "languagePt": "Português",
     "languageEn": "English",
     "hasAccount": "Já tem conta?",
+    "registerConflict": "Este e-mail já tem conta. Entra com a senha que usaste no registo, ou tenta outro e-mail.",
+    "registerConflictLogin": "Entrar nesta conta",
     "emailInvalid": "E-mail inválido",
     "passwordRequired": "Senha obrigatória",
     "nameRequired": "Nome obrigatório",

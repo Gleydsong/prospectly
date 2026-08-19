@@ -55,7 +55,13 @@ export function LoginPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: searchParams.get('email')?.trim() ?? '',
+      password: '',
+    },
+  });
 
   const finishAuth = async (response: AuthResponse) => {
     setAuth(response);

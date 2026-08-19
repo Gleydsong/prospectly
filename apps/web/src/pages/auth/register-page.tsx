@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -40,6 +41,7 @@ export function RegisterPage() {
   const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [conflictEmail, setConflictEmail] = useState<string | null>(null);
 
   const plan = useMemo(() => {
     const value = searchParams.get('plan');
@@ -139,6 +141,7 @@ export function RegisterPage() {
 
   const onSubmit = async (values: RegisterForm) => {
     setServerError(null);
+    setConflictEmail(null);
     try {
       const response = await registerUser({
         name: values.name,
@@ -150,6 +153,11 @@ export function RegisterPage() {
       });
       await finishAuth(response, values.locale);
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        setConflictEmail(values.email);
+        setServerError(t('auth.registerConflict'));
+        return;
+      }
       setServerError(getApiErrorMessage(error));
     }
   };
@@ -159,6 +167,15 @@ export function RegisterPage() {
       setServerError(t('auth.acceptTermsRequired'));
     }
   };
+
+  const conflictLoginHref = (() => {
+    const params = new URLSearchParams(
+      billingAuthQuery({ offer, plan, method: paymentMethod }).replace(/^\?/, ''),
+    );
+    if (conflictEmail) params.set('email', conflictEmail);
+    const query = params.toString();
+    return query ? `/login?${query}` : '/login';
+  })();
 
   return (
     <AuthShell
@@ -253,6 +270,17 @@ export function RegisterPage() {
         {serverError ? (
           <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
             {serverError}
+            {conflictEmail ? (
+              <>
+                {' '}
+                <Link
+                  to={conflictLoginHref}
+                  className="font-medium text-brand-400 hover:text-brand-300"
+                >
+                  {t('auth.registerConflictLogin')}
+                </Link>
+              </>
+            ) : null}
           </p>
         ) : null}
 
