@@ -65,6 +65,8 @@
     "registerConflictLogin": "Entrar nesta conta",
     "emailInvalid": "E-mail inválido",
     "passwordRequired": "Senha obrigatória",
+    "invalidCredentials": "E-mail ou senha inválidos. Confira os dados ou redefina sua senha.",
+    "accountTemporarilyLocked": "Conta temporariamente bloqueada após várias tentativas. Aguarde 15 minutos ou redefina sua senha.",
     "nameRequired": "Nome obrigatório",
     "orgRequired": "Nome da organização obrigatório",
     "passwordMin": "Mínimo 8 caracteres",
