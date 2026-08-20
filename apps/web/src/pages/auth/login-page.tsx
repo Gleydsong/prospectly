@@ -8,12 +8,17 @@ import { z } from 'zod';
 import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createCheckoutSession, createCreditCheckout, login, type AuthResponse } from '@/features/auth/api';
+import {
+  createCheckoutSession,
+  createCreditCheckout,
+  login,
+  type AuthResponse,
+} from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
-import { getApiErrorCode, getApiErrorMessage } from '@/lib/api';
+import { getApiErrorCode, getApiErrorMessage, isApiTimeoutError } from '@/lib/api';
 import { resolveInternalRedirect } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -123,6 +128,10 @@ export function LoginPage() {
       const response = await login(values);
       await finishAuth(response);
     } catch (error) {
+      if (isApiTimeoutError(error)) {
+        setServerError(t('auth.requestTimeout'));
+        return;
+      }
       if (getApiErrorCode(error) === 'RATE_LIMITED') {
         setServerError(t('auth.tooManyAttempts'));
         return;

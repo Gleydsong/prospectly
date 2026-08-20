@@ -95,6 +95,26 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a localized message when the authentication request times out', async () => {
+    authApiMocks.login.mockRejectedValueOnce({
+      isAxiosError: true,
+      code: 'ECONNABORTED',
+      message: 'timeout of 60000ms exceeded',
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'secret1');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText(
+        'O servidor demorou mais que o esperado para responder. Tente novamente em instantes.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('prefills email from the query string', () => {
     renderWithProviders(<LoginPage />, {
       initialEntries: ['/login?email=ana%40agency.dev'],
