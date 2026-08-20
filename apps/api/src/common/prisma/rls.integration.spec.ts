@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import { PrismaClient } from '@prisma/client';
 
-import { runWithTenant } from './tenant-context';
+import { runWithBypass, runWithTenant } from './tenant-context';
 import { assertTenantOperation } from './tenant-guard';
+import { extendPrismaClient } from './tenant-prisma';
 
 const shouldRun = process.env.RUN_RLS_TEST === 'true';
 const describeWithDatabase = shouldRun ? describe : describe.skip;
@@ -107,6 +108,39 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     });
 
     expect(changed).toBe(0);
+  });
+
+  it('keeps tenant GUCs on the same connection as extended client queries', async () => {
+    const password = `rls-${randomUUID()}`;
+    await prisma!.$executeRawUnsafe(
+      `ALTER ROLE prospectly_app LOGIN PASSWORD '${password}'`,
+    );
+
+    const runtimeUrl = new URL(databaseUrl!);
+    runtimeUrl.username = 'prospectly_app';
+    runtimeUrl.password = password;
+    const runtimePrisma = extendPrismaClient(
+      new PrismaClient({ datasources: { db: { url: runtimeUrl.toString() } } }),
+    );
+
+    try {
+      const bypassOrganization = await runWithBypass(async () =>
+        runtimePrisma.organization.findUnique({ where: { id: orgA }, select: { id: true } }),
+      );
+      expect(bypassOrganization).toEqual({ id: orgA });
+
+      const tenantRows = await runWithTenant(orgA, async () =>
+        runtimePrisma.lead.findMany({
+          where: { id: { in: [leadA, leadB] } },
+          select: { id: true },
+          orderBy: { id: 'asc' },
+        }),
+      );
+      expect(tenantRows).toEqual([{ id: leadA }]);
+    } finally {
+      await runtimePrisma.$disconnect();
+      await prisma!.$executeRawUnsafe('ALTER ROLE prospectly_app NOLOGIN PASSWORD NULL');
+    }
   });
 });
 

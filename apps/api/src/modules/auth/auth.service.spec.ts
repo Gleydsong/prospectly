@@ -357,6 +357,33 @@ describe('AuthService', () => {
     );
   });
 
+  it('login returns a stable error code when no organization is visible', async () => {
+    (argon2.verify as jest.Mock).mockResolvedValue(true);
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'a@b.dev',
+      passwordHash: 'hash',
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      memberships: [],
+    });
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+
+    let thrown: unknown;
+    try {
+      await service.login({ email: 'a@b.dev', password: 'RightPass1' });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(UnauthorizedException);
+    expect((thrown as UnauthorizedException).getResponse()).toEqual({
+      message: 'No active organization is associated with this account',
+      code: 'NO_ORGANIZATION',
+    });
+  });
+
   it('refresh rejects revoked token', async () => {
     const jwt = makeJwt();
     (jwt.verifyAsync as jest.Mock).mockResolvedValue({ sub: 'u1', jti: 'jti-1' });

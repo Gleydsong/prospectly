@@ -95,6 +95,32 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('translates an account without an active organization', async () => {
+    authApiMocks.login.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          message: 'No active organization is associated with this account',
+          error: 'Unauthorized',
+          code: 'NO_ORGANIZATION',
+        },
+        status: 401,
+      },
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'secret1');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText(
+        'Sua conta não está vinculada a uma organização ativa. Entre em contato com o responsável pela sua equipe.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('shows a localized message when the authentication request times out', async () => {
     authApiMocks.login.mockRejectedValueOnce({
       isAxiosError: true,

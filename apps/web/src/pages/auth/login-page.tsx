@@ -136,6 +136,10 @@ export function LoginPage() {
         setServerError(t('auth.tooManyAttempts'));
         return;
       }
+      if (getApiErrorCode(error) === 'NO_ORGANIZATION') {
+        setServerError(t('auth.noOrganization'));
+        return;
+      }
       const message = getApiErrorMessage(error);
       if (message === 'Invalid credentials') {
         setServerError(t('auth.invalidCredentials'));
