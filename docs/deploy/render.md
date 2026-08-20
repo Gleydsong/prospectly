@@ -17,6 +17,8 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 
 **Build tip:** never use `corepack enable` on Render Node builds — the image FS is read-only (`EROFS` on `/usr/bin/pnpm`). Use plain `pnpm` (preinstalled) + `--config.production=false` so Vite/Next get TypeScript from devDependencies. Root `.npmrc` also sets `production=false` so the static `prospectly-web` install keeps working even if the Dashboard build command omits the flag.
 
+The Vite app uses React Router. Keep the Static Site rewrite declared in the Blueprint (`/*` → `/index.html`, action `Rewrite`) and confirm it is present under **Redirects/Rewrites** after every first sync or service import. Render does not consume Netlify-style `_redirects` files; without the service-level rule, direct access and refreshes on `/login`, `/register`, and every other client route return `404`.
+
 ## Landing (substitui `prospectly-mvp`)
 
 Serviço ativo criado via plugin (free / frankfurt):

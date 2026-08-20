@@ -129,7 +129,6 @@ projects:
           - type: web
             name: prospectly-web
             runtime: static
-            region: frankfurt
             branch: main
             autoDeployTrigger: checksPass
             # pnpm is already on PATH; --config.production=false keeps Vite/tsc (devDependencies).
