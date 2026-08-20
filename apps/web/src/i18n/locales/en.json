@@ -65,6 +65,8 @@
     "registerConflictLogin": "Sign in to this account",
     "emailInvalid": "Invalid email",
     "passwordRequired": "Password is required",
+    "invalidCredentials": "Invalid email or password. Check your details or reset your password.",
+    "accountTemporarilyLocked": "Account temporarily locked after several attempts. Wait 15 minutes or reset your password.",
     "nameRequired": "Name is required",
     "orgRequired": "Organization name is required",
     "passwordMin": "At least 8 characters",

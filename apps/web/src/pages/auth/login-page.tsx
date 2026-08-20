@@ -123,7 +123,16 @@ export function LoginPage() {
       const response = await login(values);
       await finishAuth(response);
     } catch (error) {
-      setServerError(getApiErrorMessage(error));
+      const message = getApiErrorMessage(error);
+      if (message === 'Invalid credentials') {
+        setServerError(t('auth.invalidCredentials'));
+        return;
+      }
+      if (message === 'Account temporarily locked. Try again later.') {
+        setServerError(t('auth.accountTemporarilyLocked'));
+        return;
+      }
+      setServerError(message);
     }
   };
 

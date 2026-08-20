@@ -1,10 +1,18 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { renderWithProviders } from '@/test/render';
 import { LoginPage } from './login-page';
+
+const authApiMocks = vi.hoisted(() => ({
+  login: vi.fn(),
+  createCheckoutSession: vi.fn(),
+  createCreditCheckout: vi.fn(),
+}));
+
+vi.mock('@/features/auth/api', () => authApiMocks);
 
 const renderPage = () => renderWithProviders(<LoginPage />, { initialEntries: ['/login'] });
 
@@ -42,6 +50,23 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
     expect(await screen.findByText('Senha obrigatória')).toBeInTheDocument();
+  });
+
+  it('shows a helpful localized message for invalid credentials', async () => {
+    authApiMocks.login.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { data: { message: 'Invalid credentials' }, status: 401 },
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText('E-mail ou senha inválidos. Confira os dados ou redefina sua senha.'),
+    ).toBeInTheDocument();
   });
 
   it('prefills email from the query string', () => {
