@@ -24,7 +24,9 @@ import {
   parseExpiresInToSeconds,
   readCookie,
   REFRESH_COOKIE_NAME,
+  resolveRefreshCookieSameSite,
   setRefreshCookie,
+  type RefreshCookieSameSite,
 } from '../../common/auth/refresh-cookie';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -210,16 +212,22 @@ export class AuthController {
 
   private attachRefreshCookie(res: Response, refreshToken: string): void {
     const maxAge = parseExpiresInToSeconds(this.config.get<string>('jwt.refreshExpiresIn'));
-    const secure = this.isSecureCookie();
-    setRefreshCookie(res, refreshToken, maxAge, secure);
+    const sameSite = this.refreshCookieSameSite();
+    setRefreshCookie(res, refreshToken, maxAge, this.isSecureCookie(sameSite), sameSite);
   }
 
   private clearCookie(res: Response): void {
-    clearRefreshCookie(res, this.isSecureCookie());
+    const sameSite = this.refreshCookieSameSite();
+    clearRefreshCookie(res, this.isSecureCookie(sameSite), sameSite);
   }
 
-  private isSecureCookie(): boolean {
+  private refreshCookieSameSite(): RefreshCookieSameSite {
     const env = this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
-    return env === 'production' || env === 'staging';
+    return resolveRefreshCookieSameSite(this.config.get<string>('refreshCookie.sameSite'), env);
+  }
+
+  private isSecureCookie(sameSite: RefreshCookieSameSite = 'lax'): boolean {
+    const env = this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+    return env === 'production' || env === 'staging' || sameSite === 'none';
   }
 }

@@ -67,6 +67,8 @@ projects:
                 value: 15m
               - key: JWT_REFRESH_EXPIRES_IN
                 value: 7d
+              - key: REFRESH_COOKIE_SAME_SITE
+                value: none
               - key: FRONTEND_URL
                 sync: false
               - key: CORS_ORIGINS

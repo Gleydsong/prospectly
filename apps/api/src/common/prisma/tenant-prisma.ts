@@ -15,12 +15,26 @@ const RAW_OPERATIONS = new Set([
   '$queryRawUnsafe',
 ]);
 
+type InteractiveTransaction = <R>(
+  fn: (tx: Prisma.TransactionClient) => Promise<R>,
+  options?: Parameters<PrismaClient['$transaction']>[1],
+) => Promise<R>;
+
+type TransactionModelClient = Record<
+  string,
+  Record<string, (operationArgs: unknown) => Promise<unknown>>
+>;
+
 function tenantGucValues(ctx: TenantStore) {
   return {
     orgId: ctx.bypass ? '' : (ctx.organizationId ?? ''),
     userId: ctx.userId ?? '',
     bypass: ctx.bypass ? 'on' : '',
   };
+}
+
+export function modelDelegateName(model: string): string {
+  return model.charAt(0).toLowerCase() + model.slice(1);
 }
 
 export async function applyTenantGuc(
@@ -31,7 +45,23 @@ export async function applyTenantGuc(
   await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true), set_config('app.current_user_id', ${userId}, true), set_config('app.rls_bypass', ${bypass}, true)`;
 }
 
+export function runOnTransactionClient(
+  tx: Prisma.TransactionClient,
+  model: string,
+  operation: string,
+  args: unknown,
+): Promise<unknown> {
+  const table = (tx as unknown as TransactionModelClient)[modelDelegateName(model)];
+  const fn = table?.[operation];
+  if (typeof fn !== 'function') {
+    throw new Error(`Unsupported tenant operation ${model}.${operation}`);
+  }
+  return fn.call(table, args);
+}
+
 export function extendPrismaClient<T extends PrismaClient>(client: T): T {
+  const interactive: { run: InteractiveTransaction | null } = { run: null };
+
   const extended = client.$extends({
     name: 'tenant-rls',
     query: {
@@ -52,19 +82,20 @@ export function extendPrismaClient<T extends PrismaClient>(client: T): T {
           return query(args);
         }
 
-        return runInRlsTransaction(async () => {
-          const { orgId, userId, bypass } = tenantGucValues(ctx);
-
-          // `query(args)` is bound to the extended client. Running it from an
-          // interactive transaction callback does not bind it to that callback's
-          // connection, so the transaction-local GUCs are invisible to the query.
-          // A batch transaction keeps the GUC statement and operation on the same
-          // connection and preserves their execution order.
-          const [, result] = await client.$transaction([
-            client.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true), set_config('app.current_user_id', ${userId}, true), set_config('app.rls_bypass', ${bypass}, true)`,
-            query(args),
-          ]);
-          return result;
+        // `query(args)` is bound to the caller client, not to an interactive
+        // transaction connection. Re-issuing the operation on `tx` keeps
+        // transaction-local GUCs and the protected query on the same connection.
+        return runInRlsTransaction(() => {
+          if (!interactive.run) {
+            throw new Error('Tenant Prisma client is not ready');
+          }
+          return interactive.run(async (tx) => {
+            await applyTenantGuc(tx, ctx);
+            if (!model) {
+              throw new Error(`Tenant-scoped query is missing a Prisma model for ${operation}`);
+            }
+            return runOnTransactionClient(tx, model, operation, args);
+          });
         });
       },
     },
@@ -99,6 +130,8 @@ export function extendPrismaClient<T extends PrismaClient>(client: T): T {
     writable: true,
     configurable: true,
   });
+
+  interactive.run = wrappedTransaction as InteractiveTransaction;
 
   return extended as unknown as T;
 }

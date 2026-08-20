@@ -1,9 +1,12 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Route, Routes } from 'react-router-dom';
 
 import i18n from '@/i18n';
 import { renderWithProviders } from '@/test/render';
+import { Role } from '@/types';
+import { useAuthStore } from '@/stores/auth.store';
 import { LoginPage } from './login-page';
 
 const authApiMocks = vi.hoisted(() => ({
@@ -19,6 +22,12 @@ const renderPage = () => renderWithProviders(<LoginPage />, { initialEntries: ['
 describe('LoginPage', () => {
   beforeAll(async () => {
     await i18n.changeLanguage('pt');
+  });
+
+  beforeEach(() => {
+    authApiMocks.login.mockReset();
+    useAuthStore.setState({ user: null, accessToken: null, bootstrapped: false });
+    localStorage.clear();
   });
 
   it('renders email and password fields', () => {
@@ -139,6 +148,41 @@ describe('LoginPage', () => {
         'O servidor demorou mais que o esperado para responder. Tente novamente em instantes.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('stores the access token in memory and navigates to the app', async () => {
+    authApiMocks.login.mockResolvedValueOnce({
+      accessToken: 'access-token',
+      user: {
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@example.com',
+        organizationId: 'org-1',
+        organizationName: 'Acme',
+        role: Role.OWNER,
+        locale: 'pt',
+      },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<div>Dashboard autenticado</div>} />
+      </Routes>,
+      { initialEntries: ['/login'] },
+    );
+
+    await user.type(screen.getByLabelText('E-mail'), 'ana@example.com');
+    await user.type(screen.getByLabelText('Senha'), 'secret1');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('Dashboard autenticado')).toBeInTheDocument();
+    expect(useAuthStore.getState().accessToken).toBe('access-token');
+    await waitFor(() => {
+      const persisted = localStorage.getItem('prospectly-auth');
+      expect(persisted).toBeTruthy();
+      expect(persisted).not.toContain('access-token');
+    });
   });
 
   it('prefills email from the query string', () => {

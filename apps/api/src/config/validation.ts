@@ -1,3 +1,6 @@
+import { parseRefreshCookieSameSite } from '../common/auth/refresh-cookie';
+import { parseRedisConnection } from './redis';
+
 const REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
 
 const WEAK_JWT_PATTERNS = [/change-me/i, /changeme/i, /secret-min-32/i, /your[_-]?secret/i, /example/i];
@@ -36,6 +39,13 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     if (typeof appUrl !== 'string' || appUrl.length === 0) {
       throw new Error('DATABASE_APP_URL is required in production (runtime role without BYPASSRLS)');
     }
+  }
+
+  const sameSite = parseRefreshCookieSameSite(config.REFRESH_COOKIE_SAME_SITE);
+  if (sameSite === 'none' && !isProdLike) {
+    throw new Error(
+      'REFRESH_COOKIE_SAME_SITE=none requires NODE_ENV production or staging (Secure cookies)',
+    );
   }
 
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
@@ -179,4 +189,3 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   return config;
 }
-import { parseRedisConnection } from './redis';
