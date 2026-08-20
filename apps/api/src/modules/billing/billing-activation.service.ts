@@ -194,7 +194,9 @@ export class BillingActivationService {
           : {}),
         ...(input.currentPeriodEnd !== undefined
           ? { currentPeriodEnd: input.currentPeriodEnd }
-          : {}),
+          : canceled
+            ? { currentPeriodEnd: null }
+            : {}),
       },
     });
   }

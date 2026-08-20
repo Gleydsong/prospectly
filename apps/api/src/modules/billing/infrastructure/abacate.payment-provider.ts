@@ -440,12 +440,15 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       this.logger.warn('subscription active event without organization mapping');
       return;
     }
+    // Card subscriptions are open-ended until subscription.cancelled. Always clear
+    // currentPeriodEnd so a prior PIX 30-day window cannot expire a paid card sub.
     await this.activation.activateMonthly({
       organizationId,
       currency: 'BRL',
       provider: PaymentProvider.ABACATE,
       abacateSubscriptionId: resolveSubscriptionId(normalized),
       abacateCustomerId: resolveCustomerId(normalized),
+      currentPeriodEnd: null,
     });
   }
 
