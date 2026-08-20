@@ -296,8 +296,8 @@ export class AuthService {
 
     const normalized = email.toLowerCase().trim();
     const user = await this.prisma.user.findUnique({ where: { email: normalized } });
-    if (!user || !user.passwordHash) {
-      // Do not reveal account existence (or Google-only accounts without password).
+    if (!user) {
+      // Do not reveal account existence.
       return;
     }
 

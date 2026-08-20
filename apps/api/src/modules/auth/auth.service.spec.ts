@@ -691,7 +691,7 @@ describe('AuthService', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it('forgotPassword does not send email for Google-only account without password', async () => {
+  it('forgotPassword lets a Google-only account set a password after email verification', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue({
       id: 'u1',
@@ -699,13 +699,27 @@ describe('AuthService', () => {
       passwordHash: null,
       locale: 'pt',
     });
+    prisma.user.update.mockResolvedValue({});
     const mail = makeMail();
     const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
 
     await service.forgotPassword('google@agency.dev');
 
-    expect(mail.send).not.toHaveBeenCalled();
-    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1' },
+        data: expect.objectContaining({
+          resetTokenHash: expect.any(String),
+          resetTokenExpiresAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'google@agency.dev',
+        subject: expect.stringMatching(/senha|password/i),
+      }),
+    );
   });
 
   it('forgotPassword sends reset email without logging the raw token', async () => {
