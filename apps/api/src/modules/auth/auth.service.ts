@@ -50,6 +50,14 @@ const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const GENERIC_VERIFY_FAIL = 'Invalid or expired verification token';
 const GENERIC_RESET_MAIL_FAIL = 'Unable to process password reset right now. Please try again later.';
 const REFRESH_REUSE_GRACE_MS = 60_000;
+const NO_ORGANIZATION_CODE = 'NO_ORGANIZATION';
+
+function noOrganizationException(): UnauthorizedException {
+  return new UnauthorizedException({
+    message: 'No active organization is associated with this account',
+    code: NO_ORGANIZATION_CODE,
+  });
+}
 
 @Injectable()
 export class AuthService {
@@ -115,7 +123,7 @@ export class AuthService {
     if (byGoogle) {
       const membership = byGoogle.memberships[0];
       if (!membership) {
-        throw new UnauthorizedException('User has no organization');
+        throw noOrganizationException();
       }
       if (avatarUrl && avatarUrl !== byGoogle.avatarUrl) {
         await this.prisma.user.update({
@@ -142,7 +150,7 @@ export class AuthService {
 
       const membership = byEmail.memberships[0];
       if (!membership) {
-        throw new UnauthorizedException('User has no organization');
+        throw noOrganizationException();
       }
 
       const linked = await this.prisma.user.update({
@@ -213,7 +221,7 @@ export class AuthService {
 
     const membership = user.memberships[0];
     if (!membership) {
-      throw new UnauthorizedException('User has no organization');
+      throw noOrganizationException();
     }
 
     await this.prisma.user.update({
@@ -747,7 +755,7 @@ export class AuthService {
         },
       });
       if (!membership) {
-        throw new UnauthorizedException('User has no organization');
+        throw noOrganizationException();
       }
       return membership;
     }

@@ -20,7 +20,11 @@ const makePrisma = () => {
       create: jest.fn(),
     },
     user: { findUnique: jest.fn(), create: jest.fn() },
+    $transaction: jest.fn(),
   };
+  prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+    fn(prisma),
+  );
   return prisma as unknown as PrismaService & {
     organizationMember: {
       findFirst: jest.Mock;
@@ -30,6 +34,7 @@ const makePrisma = () => {
       create: jest.Mock;
     };
     user: { findUnique: jest.Mock; create: jest.Mock };
+    $transaction: jest.Mock;
   };
 };
 
@@ -217,6 +222,40 @@ describe('OrganizationsService.inviteMember', () => {
     expect(prisma.organizationMember.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: { userId: 'u2', organizationId: 'org1', role: 'SALES' },
+      }),
+    );
+  });
+
+  it('creates a new user and membership in the same transaction', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.user.create.mockResolvedValue({ id: 'u-new' });
+    prisma.organizationMember.create.mockResolvedValue({
+      id: 'm-new',
+      userId: 'u-new',
+      role: 'SALES',
+      user: { id: 'u-new', name: 'New', email: 'new@company.com' },
+    });
+    const service = makeService(prisma);
+
+    await service.inviteMember('org1', {
+      email: 'new@company.com',
+      name: 'New',
+      role: 'SALES',
+      temporaryPassword: 'TempPass1!',
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'new@company.com',
+        name: 'New',
+        passwordHash: 'hashed',
+      },
+    });
+    expect(prisma.organizationMember.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { userId: 'u-new', organizationId: 'org1', role: 'SALES' },
       }),
     );
   });

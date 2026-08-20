@@ -67,6 +67,7 @@
     "passwordRequired": "Password is required",
     "invalidCredentials": "Invalid email or password. Check your details or reset your password.",
     "accountTemporarilyLocked": "Account temporarily locked after several attempts. Wait 15 minutes or reset your password.",
+    "noOrganization": "Your account is not linked to an active organization. Contact your team owner.",
     "tooManyAttempts": "Too many attempts in a short time. Wait about a minute and try again.",
     "requestTimeout": "The server took longer than expected to respond. Please try again shortly.",
     "nameRequired": "Name is required",

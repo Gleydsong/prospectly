@@ -15,13 +15,19 @@ const RAW_OPERATIONS = new Set([
   '$queryRawUnsafe',
 ]);
 
+function tenantGucValues(ctx: TenantStore) {
+  return {
+    orgId: ctx.bypass ? '' : (ctx.organizationId ?? ''),
+    userId: ctx.userId ?? '',
+    bypass: ctx.bypass ? 'on' : '',
+  };
+}
+
 export async function applyTenantGuc(
   tx: { $executeRaw: PrismaClient['$executeRaw'] },
   ctx: TenantStore,
 ): Promise<void> {
-  const orgId = ctx.bypass ? '' : (ctx.organizationId ?? '');
-  const userId = ctx.userId ?? '';
-  const bypass = ctx.bypass ? 'on' : '';
+  const { orgId, userId, bypass } = tenantGucValues(ctx);
   await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true), set_config('app.current_user_id', ${userId}, true), set_config('app.rls_bypass', ${bypass}, true)`;
 }
 
@@ -46,12 +52,20 @@ export function extendPrismaClient<T extends PrismaClient>(client: T): T {
           return query(args);
         }
 
-        return runInRlsTransaction(() =>
-          client.$transaction(async (tx) => {
-            await applyTenantGuc(tx, ctx);
-            return query(args);
-          }),
-        );
+        return runInRlsTransaction(async () => {
+          const { orgId, userId, bypass } = tenantGucValues(ctx);
+
+          // `query(args)` is bound to the extended client. Running it from an
+          // interactive transaction callback does not bind it to that callback's
+          // connection, so the transaction-local GUCs are invisible to the query.
+          // A batch transaction keeps the GUC statement and operation on the same
+          // connection and preserves their execution order.
+          const [, result] = await client.$transaction([
+            client.$executeRaw`SELECT set_config('app.current_org_id', ${orgId}, true), set_config('app.current_user_id', ${userId}, true), set_config('app.rls_bypass', ${bypass}, true)`,
+            query(args),
+          ]);
+          return result;
+        });
       },
     },
   });

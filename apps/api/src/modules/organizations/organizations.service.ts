@@ -91,15 +91,15 @@ export class OrganizationsService {
 
     const member = existing
       ? await this.attachVerifiedExistingUser(existing, organizationId, dto.role)
-      : await (async () => {
-          const user = await this.prisma.user.create({
+      : await this.prisma.$transaction(async (tx) => {
+          const user = await tx.user.create({
             data: { email, name: dto.name.trim(), passwordHash },
           });
-          return this.prisma.organizationMember.create({
+          return tx.organizationMember.create({
             data: { userId: user.id, organizationId, role: dto.role },
             include: { user: { select: { id: true, name: true, email: true } } },
           });
-        })();
+        });
 
     await this.audit.log({
       organizationId,
