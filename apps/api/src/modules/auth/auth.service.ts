@@ -14,6 +14,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { runWithBypass } from '../../common/prisma/tenant-context';
 import { MailService } from '../../common/mail/mail.service';
 import { SIGNUP_BONUS_CREDITS, TERMS_VERSION } from '../billing/billing.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -73,16 +74,17 @@ export class AuthService {
     }
 
     const passwordHash = await argon2.hash(dto.password);
-    const { user, organizationId, role } = await this.provisionOwnerAccount({
-      email,
-      name: dto.name.trim(),
-      passwordHash,
-      organizationName: dto.organizationName.trim(),
-      locale: dto.locale,
+    return runWithBypass(async () => {
+      const { user, organizationId, role } = await this.provisionOwnerAccount({
+        email,
+        name: dto.name.trim(),
+        passwordHash,
+        organizationName: dto.organizationName.trim(),
+        locale: dto.locale,
+      });
+      const verifiedUser = await this.completeEmailVerificationAfterRegister(user);
+      return this.buildAuthResponse(verifiedUser, organizationId, role);
     });
-
-    await this.issueEmailVerification(user.id, user.email, user.locale);
-    return this.buildAuthResponse(user, organizationId, role);
   }
 
   async googleAuth(dto: GoogleAuthDto): Promise<AuthResponse> {
@@ -166,18 +168,19 @@ export class AuthService {
     ).slice(0, 120);
     const locale = dto.locale ?? 'pt';
 
-    const { user, organizationId, role } = await this.provisionOwnerAccount({
-      email,
-      name: displayName,
-      passwordHash: null,
-      organizationName,
-      locale,
-      googleId,
-      avatarUrl,
-      emailVerifiedAt: emailVerified ? new Date() : null,
+    return runWithBypass(async () => {
+      const { user, organizationId, role } = await this.provisionOwnerAccount({
+        email,
+        name: displayName,
+        passwordHash: null,
+        organizationName,
+        locale,
+        googleId,
+        avatarUrl,
+        emailVerifiedAt: emailVerified ? new Date() : null,
+      });
+      return this.buildAuthResponse(user, organizationId, role);
     });
-
-    return this.buildAuthResponse(user, organizationId, role);
   }
 
   async login(dto: LoginDto): Promise<AuthResponse> {
@@ -661,6 +664,33 @@ export class AuthService {
         emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
       },
     };
+  }
+
+  /**
+   * Production with Resend/SMTP: send verification mail (checkout stays gated until click).
+   * Staging without a mail provider: auto-verify so register + payments work.
+   * Mail configured but send fails: account exists, stays unverified — never 500.
+   */
+  private async completeEmailVerificationAfterRegister(user: User): Promise<User> {
+    if (!this.mail.isConfigured()) {
+      this.logger.warn(
+        `Mail not configured — auto-verifying ${user.email} (set RESEND_API_KEY or SMTP_* to require inbox confirmation)`,
+      );
+      return this.prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerifiedAt: new Date() },
+      });
+    }
+
+    try {
+      await this.issueEmailVerification(user.id, user.email, user.locale);
+    } catch (err) {
+      this.logger.error(
+        `Verification email failed for ${user.email}; account created but remains unverified`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+    return user;
   }
 
   private async issueEmailVerification(

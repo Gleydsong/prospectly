@@ -43,4 +43,21 @@ describe('LoginPage', () => {
 
     expect(await screen.findByText('Senha obrigatória')).toBeInTheDocument();
   });
+
+  it('prefills email from the query string', () => {
+    renderWithProviders(<LoginPage />, {
+      initialEntries: ['/login?email=ana%40agency.dev'],
+    });
+    expect(screen.getByLabelText('E-mail')).toHaveValue('ana@agency.dev');
+  });
+
+  it('preserves card method when switching to register', async () => {
+    renderWithProviders(<LoginPage />, {
+      initialEntries: ['/login?offer=credits-2000&method=card'],
+    });
+    expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute(
+      'href',
+      '/register?offer=credits-2000&method=card',
+    );
+  });
 });

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
-import type { BillingCurrency, BillingInterval } from './domain/payment-provider';
+import type { BillingCurrency } from './domain/payment-provider';
 
 @Injectable()
 export class BillingActivationService {
@@ -208,25 +208,6 @@ export class BillingActivationService {
       data: {
         planStatus: PlanStatus.ACTIVE,
         plan: OrgPlan.STARTER_MONTHLY,
-      },
-    });
-  }
-
-  async bindCheckoutIntent(input: {
-    organizationId: string;
-    provider: PaymentProvider;
-    interval: BillingInterval;
-    abacatePaymentId?: string | null;
-    abacateCustomerId?: string | null;
-    stripeCustomerId?: string | null;
-  }): Promise<void> {
-    await this.prisma.organization.update({
-      where: { id: input.organizationId },
-      data: {
-        paymentProvider: input.provider,
-        ...(input.abacatePaymentId ? { abacatePaymentId: input.abacatePaymentId } : {}),
-        ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
       },
     });
   }

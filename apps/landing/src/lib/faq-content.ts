@@ -123,14 +123,14 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'Checkout apenas em BRL (Brasil). PIX via AbacatePay ou cartão (crédito/débito) via Stripe. Exemplos: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
+      'Checkout apenas em BRL (Brasil). PIX e cartão via AbacatePay. Exemplos: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'Como cancelo a assinatura mensal?',
     answer:
-      'Cartão Stripe: use o portal de cobrança. PIX mensal (Abacate): cancele no app em Créditos. Pacotes de créditos não têm renovação.',
+      'Cartão AbacatePay: cancele no app em Créditos (imediato). PIX mensal: também em Créditos. Assinaturas Stripe antigas: portal legado. Pacotes de créditos não têm renovação.',
   },
   {
     id: 'sources',
@@ -266,14 +266,14 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'Checkout is BRL only (Brazil). PIX via AbacatePay or card (credit/debit) via Stripe. Examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
+      'Checkout is BRL only (Brazil). PIX and card via AbacatePay. Examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'How do I cancel a monthly plan?',
     answer:
-      'Stripe card: use the billing portal. Monthly PIX (Abacate): cancel in-app under Credits. Credit packs have no renewal.',
+      'AbacatePay card: cancel in-app under Credits (immediate). Monthly PIX: also under Credits. Legacy Stripe subscriptions: billing portal. Credit packs have no renewal.',
   },
   {
     id: 'sources',

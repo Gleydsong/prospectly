@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PaymentProvider, PlanStatus, type Organization, type Role } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus, BillingWebhookEventStatus, type Organization, type Role } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
@@ -21,9 +21,7 @@ import type {
   CreditOffer,
   CheckoutResult,
   PaymentMethod,
-  PaymentProviderId,
 } from './domain/payment-provider';
-import { resolvePaymentProviderId } from './domain/payment-router';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
@@ -62,7 +60,9 @@ export class BillingService {
       planCurrency: org.planCurrency,
       paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
-      hasStripeCustomer: canManage ? Boolean(org.stripeCustomerId) : false,
+      legacyStripeSubscription: canManage
+        ? provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId)
+        : false,
       canOpenPortal: canManage
         ? provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId)
         : false,
@@ -74,7 +74,13 @@ export class BillingService {
       canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
+      monthlyCardEnabled: this.hasConfiguredProduct('abacate.productMonthlyBrl'),
     };
+  }
+
+  private hasConfiguredProduct(configKey: string): boolean {
+    const value = this.config.get<string>(configKey);
+    return typeof value === 'string' && value.trim().length > 0;
   }
 
   async getSearchUsage(
@@ -236,54 +242,25 @@ export class BillingService {
         'Organization already has an active lifetime plan. Further checkouts are not allowed.',
       );
     }
-    const providerId = resolvePaymentProviderId(paymentMethod);
-    this.assertPlanProviderCompatible(org, providerId);
-
-    const provider =
-      providerId === 'ABACATE' ? this.abacateProvider : this.stripeProvider;
+    this.assertCanStartAbacatePlanCheckout(org);
 
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
     const successUrl =
-      providerId === 'ABACATE'
-        ? (this.config.get<string>('abacate.successUrl') ??
-          `${frontendUrl}/billing/success`)
-        : (this.config.get<string>('stripe.successUrl') ??
-          `${frontendUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`);
+      this.config.get<string>('abacate.successUrl') ?? `${frontendUrl}/billing/success`;
     const cancelUrl =
-      providerId === 'ABACATE'
-        ? (this.config.get<string>('abacate.cancelUrl') ?? `${frontendUrl}/billing/cancel`)
-        : (this.config.get<string>('stripe.cancelUrl') ?? `${frontendUrl}/billing/cancel`);
+      this.config.get<string>('abacate.cancelUrl') ?? `${frontendUrl}/billing/cancel`;
 
-    const existingCustomerId =
-      providerId === 'ABACATE' ? org.abacateCustomerId : org.stripeCustomerId;
-
-    const result = await provider.createCheckout({
+    return this.abacateProvider.createCheckout({
       organizationId,
       customerEmail: userEmail,
       customerName: org.name,
       interval,
       currency: 'BRL',
+      paymentMethod,
       successUrl,
       cancelUrl,
-      existingCustomerId,
+      existingCustomerId: org.abacateCustomerId,
     });
-
-    await this.activation.bindCheckoutIntent({
-      organizationId,
-      provider: providerId === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
-      interval,
-      abacatePaymentId: result.mode === 'pix' ? result.externalPaymentId : undefined,
-      abacateCustomerId:
-        result.mode === 'redirect' && result.provider === 'ABACATE'
-          ? result.externalCustomerId
-          : undefined,
-      stripeCustomerId:
-        result.mode === 'redirect' && result.provider === 'STRIPE'
-          ? result.externalCustomerId
-          : undefined,
-    });
-
-    return result;
   }
 
   async createCreditCheckoutSession(
@@ -295,31 +272,22 @@ export class BillingService {
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
 
-    const providerId = resolvePaymentProviderId(paymentMethod);
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
     const purchase = await this.creditPurchases.createPending({
       organizationId,
       offer,
       externalId,
-      provider: providerId === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+      provider: PaymentProvider.ABACATE,
+      paymentMethod,
     });
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
     const successUrl = `${frontendUrl}/billing/success`;
     const cancelUrl = `${frontendUrl}/billing/cancel`;
     try {
-      if (providerId === 'ABACATE') {
-        return await this.abacateProvider.createCreditCheckout({
-          organizationId,
-          offer,
-          purchaseId: purchase.id,
-          externalId,
-          successUrl,
-          cancelUrl,
-        });
-      }
-      return await this.stripeProvider.createCreditCheckout({
+      return await this.abacateProvider.createCreditCheckout({
         organizationId,
         offer,
+        paymentMethod,
         purchaseId: purchase.id,
         externalId,
         successUrl,
@@ -336,9 +304,9 @@ export class BillingService {
 
   async createPortalSession(organizationId: string): Promise<{ url: string }> {
     const org = await this.requireOrg(organizationId);
-    if (org.paymentProvider === PaymentProvider.ABACATE) {
+    if (org.paymentProvider !== PaymentProvider.STRIPE) {
       throw new BadRequestException(
-        'Customer portal is only available for Stripe card subscriptions. Cancel PIX plans via the cancel endpoint.',
+        'Customer portal is only available for legacy Stripe subscriptions.',
       );
     }
     if (!org.stripeCustomerId) {
@@ -392,15 +360,15 @@ export class BillingService {
     headers: Record<string, string | string[] | undefined>,
   ): Promise<{ received: true }> {
     const parsed = await this.stripeProvider.verifyAndParseWebhook(rawBody, headers);
-    const firstTime = await this.claimWebhookEvent('STRIPE', parsed.eventId, parsed.type);
-    if (!firstTime) {
+    const claimed = await this.claimWebhookEvent('STRIPE', parsed.eventId, parsed.type);
+    if (!claimed) {
       return { received: true };
     }
     try {
       await this.stripeProvider.applyWebhookEvent(parsed.payload, parsed.type);
+      await this.markWebhookProcessed('STRIPE', parsed.eventId);
     } catch (error) {
-      // Release the claim so provider retries can re-process after a transient failure.
-      await this.releaseWebhookEvent('STRIPE', parsed.eventId);
+      await this.markWebhookFailed('STRIPE', parsed.eventId, error);
       throw error;
     }
     return { received: true };
@@ -417,73 +385,141 @@ export class BillingService {
     query: Record<string, string | string[] | undefined>,
   ): Promise<{ received: true }> {
     const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers, query);
-    const firstTime = await this.claimWebhookEvent('ABACATE', parsed.eventId, parsed.type);
-    if (!firstTime) {
+    const claimed = await this.claimWebhookEvent('ABACATE', parsed.eventId, parsed.type);
+    if (!claimed) {
       return { received: true };
     }
     try {
       await this.abacateProvider.applyWebhookEvent(parsed.payload, parsed.type);
+      await this.markWebhookProcessed('ABACATE', parsed.eventId);
     } catch (error) {
-      await this.releaseWebhookEvent('ABACATE', parsed.eventId);
+      await this.markWebhookFailed('ABACATE', parsed.eventId, error);
       throw error;
     }
     return { received: true };
   }
 
-  private assertPlanProviderCompatible(org: Organization, next: PaymentProviderId): void {
-    if (!org.paymentProvider) return;
-    if (org.paymentProvider === next) return;
-    if (org.planStatus === PlanStatus.ACTIVE) {
+  private assertCanStartAbacatePlanCheckout(org: Organization): void {
+    if (org.paymentProvider !== PaymentProvider.STRIPE) return;
+    if (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE) {
       throw new ForbiddenException(
-        'Organization already has an active plan on another payment provider. Gateway migration is not supported.',
+        'Organization already has an active Stripe subscription. Cancel it via the customer portal before starting an AbacatePay plan.',
       );
     }
-    throw new ForbiddenException(
-      'Organization is bound to another payment provider for plans. Use the same payment method as the existing gateway.',
-    );
+  }
+
+  private prismaProvider(provider: 'STRIPE' | 'ABACATE'): PaymentProvider {
+    return provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE;
   }
 
   private async claimWebhookEvent(
-    provider: PaymentProviderId,
+    provider: 'STRIPE' | 'ABACATE',
     eventId: string,
     type: string,
   ): Promise<boolean> {
+    const prismaProvider = this.prismaProvider(provider);
+    const existing = await this.prisma.billingWebhookEvent.findUnique({
+      where: { provider_eventId: { provider: prismaProvider, eventId } },
+    });
+    if (existing) {
+      return this.reclaimWebhookEvent(existing, prismaProvider, eventId);
+    }
     try {
       await this.prisma.billingWebhookEvent.create({
         data: {
-          provider: provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
+          provider: prismaProvider,
           eventId,
           type,
+          status: BillingWebhookEventStatus.PROCESSING,
+          attempts: 1,
         },
       });
       return true;
     } catch (error) {
-      if (this.isUniqueConstraintViolation(error)) {
+      if (!this.isUniqueConstraintViolation(error)) throw error;
+      const raced = await this.prisma.billingWebhookEvent.findUnique({
+        where: { provider_eventId: { provider: prismaProvider, eventId } },
+      });
+      if (!raced) {
         this.logger.debug(`Ignoring duplicate ${provider} webhook event ${eventId}`);
         return false;
       }
-      throw error;
+      return this.reclaimWebhookEvent(raced, prismaProvider, eventId);
     }
   }
 
-  private async releaseWebhookEvent(
-    provider: PaymentProviderId,
+  private async reclaimWebhookEvent(
+    existing: { status: BillingWebhookEventStatus; updatedAt: Date; attempts: number },
+    provider: PaymentProvider,
+    eventId: string,
+  ): Promise<boolean> {
+    if (existing.status === BillingWebhookEventStatus.PROCESSED) {
+      this.logger.debug(`Ignoring duplicate ${provider} webhook event ${eventId}`);
+      return false;
+    }
+    const staleMs = 2 * 60 * 1000;
+    const stale =
+      existing.status === BillingWebhookEventStatus.PROCESSING &&
+      Date.now() - existing.updatedAt.getTime() > staleMs;
+    if (existing.status === BillingWebhookEventStatus.PROCESSING && !stale) {
+      this.logger.debug(`Ignoring in-flight ${provider} webhook event ${eventId}`);
+      return false;
+    }
+    await this.prisma.billingWebhookEvent.update({
+      where: { provider_eventId: { provider, eventId } },
+      data: {
+        status: BillingWebhookEventStatus.PROCESSING,
+        attempts: { increment: 1 },
+        lastError: null,
+        failedAt: null,
+      },
+    });
+    return true;
+  }
+
+  private async markWebhookProcessed(
+    provider: 'STRIPE' | 'ABACATE',
     eventId: string,
   ): Promise<void> {
+    await this.prisma.billingWebhookEvent.update({
+      where: {
+        provider_eventId: { provider: this.prismaProvider(provider), eventId },
+      },
+      data: {
+        status: BillingWebhookEventStatus.PROCESSED,
+        processedAt: new Date(),
+        lastError: null,
+      },
+    });
+  }
+
+  private async markWebhookFailed(
+    provider: 'STRIPE' | 'ABACATE',
+    eventId: string,
+    error: unknown,
+  ): Promise<void> {
+    const lastError = this.sanitizeWebhookError(error);
     try {
-      await this.prisma.billingWebhookEvent.delete({
+      await this.prisma.billingWebhookEvent.update({
         where: {
-          provider_eventId: {
-            provider: provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE,
-            eventId,
-          },
+          provider_eventId: { provider: this.prismaProvider(provider), eventId },
+        },
+        data: {
+          status: BillingWebhookEventStatus.FAILED,
+          lastError,
+          failedAt: new Date(),
         },
       });
-    } catch (error) {
+    } catch (updateError) {
       this.logger.error(
-        `Failed to release ${provider} webhook claim ${eventId}: ${(error as Error).message}`,
+        `Failed to mark ${provider} webhook ${eventId} as FAILED: ${(updateError as Error).message}`,
       );
     }
+  }
+
+  private sanitizeWebhookError(error: unknown): string {
+    const message = error instanceof Error ? error.message : 'processing_failed';
+    return message.replace(/Bearer\s+\S+/gi, '[redacted]').slice(0, 500);
   }
 
   private async countBillableRuns(organizationId: string): Promise<number> {

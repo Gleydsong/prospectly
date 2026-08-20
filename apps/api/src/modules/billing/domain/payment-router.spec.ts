@@ -5,7 +5,7 @@ describe('resolvePaymentProviderId', () => {
     expect(resolvePaymentProviderId('pix')).toBe('ABACATE');
   });
 
-  it('routes card to STRIPE', () => {
-    expect(resolvePaymentProviderId('card')).toBe('STRIPE');
+  it('routes card to ABACATE', () => {
+    expect(resolvePaymentProviderId('card')).toBe('ABACATE');
   });
 });

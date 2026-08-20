@@ -36,6 +36,29 @@ describe('Redis configuration', () => {
         ...baseConfig,
         NODE_ENV: 'production',
         DATABASE_APP_URL: 'postgresql://prospectly_app:secret@localhost:5432/prospectly',
+        ABACATE_API_KEY: 'ak_test',
+        ABACATE_WEBHOOK_SECRET: 'whsec_test',
+        ABACATE_PRODUCT_MONTHLY_BRL: 'prod_monthly',
+        ABACATE_PRODUCT_CREDITS_2000_BRL: 'prod_credits_2000',
+        ABACATE_PRODUCT_CREDITS_5000_BRL: 'prod_credits_5000',
+        ABACATE_SUCCESS_URL: 'https://app.example/billing/success',
+        ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
+      }),
+    ).not.toThrow();
+  });
+
+  it('allows production without the monthly AbacatePay product id', () => {
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        NODE_ENV: 'production',
+        DATABASE_APP_URL: 'postgresql://prospectly_app:secret@localhost:5432/prospectly',
+        ABACATE_API_KEY: 'ak_test',
+        ABACATE_WEBHOOK_SECRET: 'whsec_test',
+        ABACATE_PRODUCT_CREDITS_2000_BRL: 'prod_credits_2000',
+        ABACATE_PRODUCT_CREDITS_5000_BRL: 'prod_credits_5000',
+        ABACATE_SUCCESS_URL: 'https://app.example/billing/success',
+        ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
       }),
     ).not.toThrow();
   });

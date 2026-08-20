@@ -26,10 +26,13 @@ function formatBrl(centavos: number): string {
 
 function isPixPaid(
   pix: PixPayload | null,
-  status: { planStatus: string; plan: string; creditBalance: number } | undefined,
+  status: { planStatus: string; plan: string; creditBalance: number; paymentProvider?: string | null } | undefined,
   baselineOverride: number | null,
 ): boolean {
   if (!status) return false;
+  if (pix?.purpose === 'plan') {
+    return status.planStatus === 'ACTIVE' && status.plan === 'STARTER_MONTHLY';
+  }
   if (status.planStatus === 'ACTIVE' && status.plan === 'LIFETIME') return true;
   if (pix?.purpose !== 'credits') return false;
   const expected = CREDITS_BY_AMOUNT[pix.amountCentavos];

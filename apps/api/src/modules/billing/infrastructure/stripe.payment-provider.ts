@@ -11,12 +11,10 @@ import Stripe from 'stripe';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
 import { CreditPurchaseService } from '../credit-purchase.service';
-import { CREDIT_PACKAGES } from '../credit-purchase.constants';
 import type {
   BillingCurrency,
   BillingInterval,
   CreditCheckoutRequest,
-  CreditOffer,
   CheckoutRequest,
   CheckoutResult,
   ParsedWebhookEvent,
@@ -47,122 +45,16 @@ export class StripePaymentProvider implements PaymentProviderAdapter {
     return this.stripe;
   }
 
-  resolvePriceId(interval: BillingInterval, currency: BillingCurrency): string {
-    if (currency !== 'BRL') {
-      throw new BadRequestException('Only BRL Stripe checkout is supported');
-    }
-    if (interval !== 'monthly') {
-      throw new BadRequestException('Stripe card checkout supports monthly plans only');
-    }
-    const priceId = this.config.get<string>('stripe.prices.monthly.brl');
-    if (!priceId) {
-      throw new BadRequestException('STRIPE_PRICE_MONTHLY_BRL is not configured');
-    }
-    return priceId;
+  async createCheckout(_input: CheckoutRequest): Promise<CheckoutResult> {
+    throw new BadRequestException(
+      'Stripe no longer creates new checkouts. Use AbacatePay for PIX and card.',
+    );
   }
 
-  resolveCreditPriceId(offer: CreditOffer): string {
-    const priceId = this.config.get<string>(`stripe.prices.credits.${offer}`);
-    if (!priceId) {
-      throw new BadRequestException(`Stripe price not configured for ${offer}`);
-    }
-    return priceId;
-  }
-
-  async createCheckout(input: CheckoutRequest): Promise<CheckoutResult> {
-    const stripe = this.requireStripe();
-    if (input.currency !== 'BRL') {
-      throw new BadRequestException('Only BRL Stripe checkout is supported');
-    }
-    if (input.interval !== 'monthly') {
-      throw new BadRequestException('Stripe card checkout supports monthly plans only');
-    }
-    const priceId = this.resolvePriceId(input.interval, input.currency);
-    let customerId = input.existingCustomerId ?? undefined;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: input.customerEmail,
-        name: input.customerName,
-        metadata: { organizationId: input.organizationId },
-      });
-      customerId = customer.id;
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      client_reference_id: input.organizationId,
-      metadata: {
-        organizationId: input.organizationId,
-        interval: input.interval,
-        currency: 'BRL',
-        purpose: 'plan',
-      },
-      subscription_data: {
-        metadata: { organizationId: input.organizationId, currency: 'BRL' },
-      },
-    });
-
-    if (!session.url) {
-      throw new BadRequestException('Stripe did not return a checkout URL');
-    }
-
-    return {
-      mode: 'redirect',
-      url: session.url,
-      provider: 'STRIPE',
-      externalCustomerId: customerId,
-      externalCheckoutId: session.id,
-    };
-  }
-
-  async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
-    const stripe = this.requireStripe();
-    const priceId = this.resolveCreditPriceId(input.offer);
-    const pack = CREDIT_PACKAGES[input.offer];
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      customer_email: undefined,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: input.successUrl,
-      cancel_url: input.cancelUrl,
-      client_reference_id: input.organizationId,
-      metadata: {
-        organizationId: input.organizationId,
-        purchaseId: input.purchaseId,
-        offer: input.offer,
-        credits: String(pack.credits),
-        currency: 'BRL',
-        purpose: 'credits',
-        externalId: input.externalId,
-      },
-      payment_intent_data: {
-        metadata: {
-          organizationId: input.organizationId,
-          purchaseId: input.purchaseId,
-          offer: input.offer,
-          purpose: 'credits',
-        },
-      },
-    });
-
-    if (!session.url) {
-      throw new BadRequestException('Stripe did not return a checkout URL');
-    }
-
-    await this.creditPurchases.attachPayment(input.purchaseId, session.id);
-
-    return {
-      mode: 'redirect',
-      url: session.url,
-      provider: 'STRIPE',
-      externalCheckoutId: session.id,
-    };
+  async createCreditCheckout(_input: CreditCheckoutRequest): Promise<CheckoutResult> {
+    throw new BadRequestException(
+      'Stripe no longer creates new credit checkouts. Use AbacatePay for PIX and card.',
+    );
   }
 
   async createPortal(input: {

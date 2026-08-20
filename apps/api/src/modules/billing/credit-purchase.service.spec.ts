@@ -40,4 +40,33 @@ describe('CreditPurchaseService', () => {
     await service.completeFromWebhook({ metadata: { purchaseId: 'purchase_1' } });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+
+  it('refunds at most the remaining balance', async () => {
+    const purchase = {
+      id: 'purchase_1',
+      organizationId: 'org_1',
+      credits: 2000,
+      status: CreditPurchaseStatus.COMPLETED,
+    };
+    const tx = {
+      creditPurchase: {
+        findUnique: jest.fn().mockResolvedValue(purchase),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      organization: {
+        findUnique: jest.fn().mockResolvedValue({ creditBalance: 50 }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const prisma = {
+      creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
+    };
+    const service = new CreditPurchaseService(prisma as never);
+    await service.refundFromWebhook({ id: 'bill_1', metadata: { purchaseId: 'purchase_1' } });
+    expect(tx.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: { creditBalance: { decrement: 50 } },
+    });
+  });
 });

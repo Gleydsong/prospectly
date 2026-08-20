@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentProvider } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -161,5 +162,33 @@ describe('StripePaymentProvider', () => {
     );
 
     expect(activation.markInvoicePaid).toHaveBeenCalledWith('org_1');
+  });
+
+  it('refuses to create new Stripe plan checkouts', async () => {
+    await expect(
+      provider.createCheckout({
+        organizationId: 'org_1',
+        customerEmail: 'a@b.com',
+        interval: 'monthly',
+        currency: 'BRL',
+        paymentMethod: 'card',
+        successUrl: 'https://app.example/ok',
+        cancelUrl: 'https://app.example/cancel',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses to create new Stripe credit checkouts', async () => {
+    await expect(
+      provider.createCreditCheckout({
+        organizationId: 'org_1',
+        offer: 'credits-2000',
+        paymentMethod: 'card',
+        purchaseId: 'pur_1',
+        externalId: 'ext_1',
+        successUrl: 'https://app.example/ok',
+        cancelUrl: 'https://app.example/cancel',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

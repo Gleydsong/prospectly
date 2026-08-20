@@ -36,17 +36,25 @@ export class MailService {
       'no-reply@prospectly.dev';
 
     if (resendKey) {
-      const resend = new Resend(resendKey);
-      const { error } = await resend.emails.send({
-        from,
-        to: message.to,
-        subject: message.subject,
-        text: message.text,
-        html: message.html,
-      });
-      if (error) {
-        this.logger.error(`Resend failed for ${message.to}: ${error.message}`);
-        throw new Error(`Resend send failed: ${error.message}`);
+      try {
+        const resend = new Resend(resendKey);
+        const { error } = await resend.emails.send({
+          from,
+          to: message.to,
+          subject: message.subject,
+          text: message.text,
+          html: message.html,
+        });
+        if (error) {
+          this.logger.error(`Resend failed for ${message.to}: ${error.message}`);
+          throw new ServiceUnavailableException(`Failed to send email via Resend: ${error.message}`);
+        }
+      } catch (err) {
+        this.logger.error(`Resend send threw for ${message.to}`, err);
+        if (err instanceof ServiceUnavailableException) {
+          throw err;
+        }
+        throw new ServiceUnavailableException('Failed to send email via Resend');
       }
       return;
     }
@@ -75,12 +83,17 @@ export class MailService {
       },
     });
 
-    await transporter.sendMail({
-      from,
-      to: message.to,
-      subject: message.subject,
-      text: message.text,
-      html: message.html,
-    });
+    try {
+      await transporter.sendMail({
+        from,
+        to: message.to,
+        subject: message.subject,
+        text: message.text,
+        html: message.html,
+      });
+    } catch (err) {
+      this.logger.error(`SMTP send failed for ${message.to}`, err);
+      throw new ServiceUnavailableException('Failed to send email via SMTP');
+    }
   }
 }

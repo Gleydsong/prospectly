@@ -1,0 +1,31 @@
+export type CheckoutIntent = {
+  purpose: 'credits' | 'plan';
+  offer?: 'credits-2000' | 'credits-5000';
+  plan?: 'monthly';
+  baselineCreditBalance?: number;
+  provider: 'STRIPE' | 'ABACATE';
+  externalCheckoutId?: string;
+};
+
+const KEY = 'prospectly.checkoutIntent';
+
+export function saveCheckoutIntent(intent: CheckoutIntent): void {
+  sessionStorage.setItem(KEY, JSON.stringify(intent));
+}
+
+export function readCheckoutIntent(): CheckoutIntent | null {
+  const raw = sessionStorage.getItem(KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CheckoutIntent;
+    if (parsed.purpose !== 'credits' && parsed.purpose !== 'plan') return null;
+    if (parsed.provider !== 'ABACATE' && parsed.provider !== 'STRIPE') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCheckoutIntent(): void {
+  sessionStorage.removeItem(KEY);
+}

@@ -10,7 +10,7 @@ export default function PrivacyPage() {
     <article className="legal mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Política de Privacidade</h1>
       <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-        Última atualização: 25 de julho de 2026. Versão: 2026-07-25
+        Última atualização: 17 de agosto de 2026. Versão: 2026-08-17
       </p>
       <div className="mt-8 space-y-4 text-base leading-relaxed text-[color:var(--ink-muted)]">
         <p>
@@ -24,7 +24,10 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li>Conta: nome, e-mail, organização, consentimento de termos.</li>
           <li>Uso: buscas, leads importados, pipeline e tarefas da sua organização.</li>
-          <li>Pagamento: processado pela Stripe (não armazenamos cartão completo).</li>
+          <li>
+            Pagamento: processado pela AbacatePay (PIX e cartão novos). Assinaturas Stripe
+            legadas, quando existirem. Não armazenamos o número completo do cartão.
+          </li>
           <li>
             Dados de negócios públicos obtidos via OpenStreetMap / Google Places - podem incluir
             telefone ou e-mail de MEI/pessoas físicas identificáveis.
@@ -45,8 +48,8 @@ export default function PrivacyPage() {
           Compartilhamento
         </h2>
         <p>
-          Subprocessadores típicos: hospedagem (Render/Vercel), banco PostgreSQL, Redis, Stripe,
-          provedores de mapas. Não vendemos listas de leads.
+          Subprocessadores típicos: hospedagem (Render/Vercel), banco PostgreSQL, Redis,
+          AbacatePay, Stripe (legado), provedores de mapas. Não vendemos listas de leads.
         </p>
         <h2 className="pt-4 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Direitos do titular

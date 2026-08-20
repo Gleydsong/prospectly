@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -16,6 +17,7 @@ import {
   type AuthResponse,
 } from '@/features/auth/api';
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
+import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
 import { getApiErrorMessage } from '@/lib/api';
@@ -39,6 +41,7 @@ export function RegisterPage() {
   const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((state) => state.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [conflictEmail, setConflictEmail] = useState<string | null>(null);
 
   const plan = useMemo(() => {
     const value = searchParams.get('plan');
@@ -99,7 +102,7 @@ export function RegisterPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?upgrade=1&plan=${plan}&method=${paymentMethod}`, { replace: true });
@@ -110,7 +113,7 @@ export function RegisterPage() {
     if (offer === 'credits-2000' || offer === 'credits-5000') {
       try {
         const checkout = await createCreditCheckout({ offer, paymentMethod });
-        handleCheckoutResult(checkout, { purpose: 'credits' });
+        handleCheckoutResult(checkout, { purpose: 'credits', offer });
         return;
       } catch {
         navigate(`/credits?offer=${offer}&method=${paymentMethod}`, { replace: true });
@@ -125,7 +128,7 @@ export function RegisterPage() {
           currency: 'BRL',
           paymentMethod,
         });
-        handleCheckoutResult(checkout);
+        handleCheckoutResult(checkout, { purpose: 'plan', plan: 'monthly' });
         return;
       } catch {
         navigate(`/credits?offer=unlimited&method=${paymentMethod}`, { replace: true });
@@ -133,11 +136,12 @@ export function RegisterPage() {
       }
     }
 
-    navigate(offer ? `/credits?offer=${offer}` : '/', { replace: true });
+    navigate(offer ? `/credits?offer=${offer}&method=${paymentMethod}` : '/', { replace: true });
   };
 
   const onSubmit = async (values: RegisterForm) => {
     setServerError(null);
+    setConflictEmail(null);
     try {
       const response = await registerUser({
         name: values.name,
@@ -149,6 +153,11 @@ export function RegisterPage() {
       });
       await finishAuth(response, values.locale);
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        setConflictEmail(values.email);
+        setServerError(t('auth.registerConflict'));
+        return;
+      }
       setServerError(getApiErrorMessage(error));
     }
   };
@@ -158,6 +167,15 @@ export function RegisterPage() {
       setServerError(t('auth.acceptTermsRequired'));
     }
   };
+
+  const conflictLoginHref = (() => {
+    const params = new URLSearchParams(
+      billingAuthQuery({ offer, plan, method: paymentMethod }).replace(/^\?/, ''),
+    );
+    if (conflictEmail) params.set('email', conflictEmail);
+    const query = params.toString();
+    return query ? `/login?${query}` : '/login';
+  })();
 
   return (
     <AuthShell
@@ -173,7 +191,7 @@ export function RegisterPage() {
         <>
           {t('auth.hasAccount')}{' '}
           <Link
-            to={offer ? `/login?offer=${offer}` : plan ? `/login?plan=${plan}&method=${paymentMethod}` : '/login'}
+            to={`/login${billingAuthQuery({ offer, plan, method: paymentMethod })}`}
             className="font-medium text-brand-400 hover:text-brand-300"
           >
             {t('auth.login')}
@@ -252,6 +270,17 @@ export function RegisterPage() {
         {serverError ? (
           <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
             {serverError}
+            {conflictEmail ? (
+              <>
+                {' '}
+                <Link
+                  to={conflictLoginHref}
+                  className="font-medium text-brand-400 hover:text-brand-300"
+                >
+                  {t('auth.registerConflictLogin')}
+                </Link>
+              </>
+            ) : null}
           </p>
         ) : null}
 

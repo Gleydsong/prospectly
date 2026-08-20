@@ -1,6 +1,6 @@
 import type { PaymentMethod, PaymentProviderId } from './payment-provider';
 
-/** Brazil-only routing: PIX → Abacate, card → Stripe. */
-export function resolvePaymentProviderId(method: PaymentMethod): PaymentProviderId {
-  return method === 'pix' ? 'ABACATE' : 'STRIPE';
+/** New sales (PIX and card) always go through AbacatePay. Stripe is legacy-only. */
+export function resolvePaymentProviderId(_method: PaymentMethod): PaymentProviderId {
+  return 'ABACATE';
 }

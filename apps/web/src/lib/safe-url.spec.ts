@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
+  assignCheckoutRedirect,
   resolveInternalRedirect,
   sanitizeAvatarSrc,
   sanitizeExternalUrl,
@@ -65,5 +66,21 @@ describe('sanitizePixQrSrc', () => {
 
   it('rejects html data urls', () => {
     expect(sanitizePixQrSrc('data:text/html;base64,PHNjcmlwdD4=')).toBeNull();
+  });
+});
+
+describe('assignCheckoutRedirect', () => {
+  it('accepts AbacatePay https hosts', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    assignCheckoutRedirect('https://app.abacatepay.com/pay/bill_1', 'ABACATE');
+    expect(assign).toHaveBeenCalledWith('https://app.abacatepay.com/pay/bill_1');
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects a malicious host for card redirect', () => {
+    expect(() => assignCheckoutRedirect('https://evil.example/pay', 'ABACATE')).toThrow(
+      'Invalid AbacatePay redirect URL',
+    );
   });
 });
