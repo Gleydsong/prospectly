@@ -134,7 +134,7 @@ export class AuthService {
       if (byEmail.googleId && byEmail.googleId !== googleId) {
         throw new ConflictException('Unable to complete registration with the provided data');
       }
-      if (!emailVerified && !byEmail.googleId) {
+      if (!byEmail.googleId && !emailVerified) {
         throw new UnauthorizedException(
           'Sign in with your email and password to link Google to this account',
         );
@@ -143,6 +143,23 @@ export class AuthService {
       const membership = byEmail.memberships[0];
       if (!membership) {
         throw new UnauthorizedException('User has no organization');
+      }
+
+      // Unverified password squat: Google proved inbox ownership; registrant did not.
+      // Attach Google, strip the squat password, revoke sessions so the squatter is locked out.
+      if (!byEmail.googleId && !byEmail.emailVerifiedAt && emailVerified) {
+        const reclaimed = await this.prisma.user.update({
+          where: { id: byEmail.id },
+          data: {
+            googleId,
+            passwordHash: null,
+            emailVerifiedAt: new Date(),
+            ...(avatarUrl ? { avatarUrl } : {}),
+            ...(displayName ? { name: displayName } : {}),
+          },
+        });
+        await this.logoutAll(reclaimed.id);
+        return this.buildAuthResponse(reclaimed, membership.organizationId, membership.role);
       }
 
       const linked = await this.prisma.user.update({
@@ -667,14 +684,22 @@ export class AuthService {
   }
 
   /**
-   * Production with Resend/SMTP: send verification mail (checkout stays gated until click).
-   * Staging without a mail provider: auto-verify so register + payments work.
+   * Mail configured: send verification (checkout stays gated until click).
+   * Local/dev/test without mail: auto-verify for DX.
+   * Production/staging without mail: keep unverified — never mint trusted email ownership
+   * without inbox proof (blocks invite hijack / Google squat takeover).
    * Mail configured but send fails: account exists, stays unverified — never 500.
    */
   private async completeEmailVerificationAfterRegister(user: User): Promise<User> {
     if (!this.mail.isConfigured()) {
+      if (this.isProdLike()) {
+        this.logger.error(
+          `Mail not configured in ${this.nodeEnv()} — leaving ${user.email} unverified (set RESEND_API_KEY or SMTP_*)`,
+        );
+        return user;
+      }
       this.logger.warn(
-        `Mail not configured — auto-verifying ${user.email} (set RESEND_API_KEY or SMTP_* to require inbox confirmation)`,
+        `Mail not configured — auto-verifying ${user.email} in ${this.nodeEnv()} only`,
       );
       return this.prisma.user.update({
         where: { id: user.id },
@@ -691,6 +716,15 @@ export class AuthService {
       );
     }
     return user;
+  }
+
+  private nodeEnv(): string {
+    return this.config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+  }
+
+  private isProdLike(): boolean {
+    const env = this.nodeEnv();
+    return env === 'production' || env === 'staging';
   }
 
   private async issueEmailVerification(

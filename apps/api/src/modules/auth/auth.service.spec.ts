@@ -183,7 +183,7 @@ describe('AuthService', () => {
     expect(result.user.locale).toBe('en');
   });
 
-  it('register auto-verifies when mail is not configured', async () => {
+  it('register auto-verifies when mail is not configured outside prod-like envs', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue(null);
     const createdUser = {
@@ -221,7 +221,7 @@ describe('AuthService', () => {
     (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
 
     const mail = makeMail({ isConfigured: jest.fn().mockReturnValue(false) });
-    const service = new AuthService(prisma, makeJwt(), makeConfig(), mail);
+    const service = new AuthService(prisma, makeJwt(), makeConfig({ nodeEnv: 'test' }), mail);
     const result = await service.register({
       name: 'Ana',
       email: 'ana@agency.dev',
@@ -238,6 +238,57 @@ describe('AuthService', () => {
       }),
     );
     expect(result.user.emailVerifiedAt).toBe('2026-08-20T00:00:00.000Z');
+  });
+
+  it('register does not auto-verify in production when mail is not configured', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const createdUser = {
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt' as const,
+      emailVerifiedAt: null,
+    };
+    (prisma.organization as unknown as { findUnique: jest.Mock }).findUnique = jest
+      .fn()
+      .mockResolvedValue(null);
+    (prisma.organization as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ id: 'org1', name: 'Agency', slug: 'agency' });
+    (prisma.user as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue(createdUser);
+    (prisma.organizationMember as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ userId: 'u1', organizationId: 'org1', role: 'OWNER' });
+    (prisma.pipeline as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({ id: 'p1' });
+    (prisma.pipelineStage as unknown as { createMany: jest.Mock }).createMany = jest
+      .fn()
+      .mockResolvedValue({ count: 10 });
+    prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+      fn(prisma),
+    );
+    (prisma.organization as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'org1', name: 'Agency' });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue(createdUser);
+    (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
+
+    const mail = makeMail({ isConfigured: jest.fn().mockReturnValue(false) });
+    const service = new AuthService(prisma, makeJwt(), makeConfig({ nodeEnv: 'production' }), mail);
+    const result = await service.register({
+      name: 'Ana',
+      email: 'ana@agency.dev',
+      password: 'Passw0rd!',
+      organizationName: 'Agency',
+      locale: 'pt',
+      acceptTerms: true,
+    });
+
+    expect(mail.send).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(result.user.emailVerifiedAt).toBeNull();
   });
 
   it('register succeeds when verification email send fails', async () => {
@@ -567,15 +618,79 @@ describe('AuthService', () => {
       memberships: [{ organizationId: 'org1', role: 'OWNER' }],
     });
     prisma.organization.findUniqueOrThrow = jest.fn().mockResolvedValue({ id: 'org1', name: 'Org' });
-    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
-      .fn()
-      .mockResolvedValue({ id: 'u1', email: 'ana@agency.dev', locale: 'pt' });
-    prisma.refreshToken.create = jest.fn().mockResolvedValue({});
+    prisma.user.findUniqueOrThrow = jest.fn().mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt',
+    });
+    prisma.refreshToken.create.mockResolvedValue({});
 
     const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
     const result = await service.googleAuth({ idToken: 'valid-id-token' });
     expect(result.user.organizationId).toBe('org1');
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('googleAuth reclaims unverified password squat when Google email is verified', async () => {
+    verifyIdToken.mockResolvedValue({
+      getPayload: () => ({
+        sub: 'google-sub-1',
+        email: 'victim@gmail.com',
+        email_verified: true,
+        name: 'Victim',
+        picture: 'https://lh3.googleusercontent.com/a/victim',
+      }),
+    });
+
+    const prisma = makePrisma();
+    const squat = {
+      id: 'u-squat',
+      email: 'victim@gmail.com',
+      name: 'Attacker',
+      locale: 'pt' as const,
+      googleId: null,
+      emailVerifiedAt: null,
+      avatarUrl: null,
+      memberships: [{ organizationId: 'org-squat', role: 'OWNER' as const }],
+    };
+    prisma.user.findUnique
+      .mockResolvedValueOnce(null) // by googleId
+      .mockResolvedValueOnce(squat); // by email
+
+    const reclaimed = {
+      ...squat,
+      googleId: 'google-sub-1',
+      passwordHash: null,
+      emailVerifiedAt: new Date('2026-08-20T00:00:00.000Z'),
+      name: 'Victim',
+      avatarUrl: 'https://lh3.googleusercontent.com/a/victim',
+    };
+    prisma.user.update.mockResolvedValue(reclaimed);
+    prisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'org-squat', name: 'Squat Org' });
+    prisma.user.findUniqueOrThrow = jest.fn().mockResolvedValue(reclaimed);
+    prisma.refreshToken.create.mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+    const result = await service.googleAuth({ idToken: 'valid-id-token' });
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u-squat' },
+      data: expect.objectContaining({
+        googleId: 'google-sub-1',
+        passwordHash: null,
+        emailVerifiedAt: expect.any(Date),
+        name: 'Victim',
+      }),
+    });
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: 'u-squat', revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(result.user.organizationId).toBe('org-squat');
+    expect(result.user.emailVerifiedAt).toBe('2026-08-20T00:00:00.000Z');
   });
 
   it('googleAuth accepts accessToken via Google userinfo', async () => {
