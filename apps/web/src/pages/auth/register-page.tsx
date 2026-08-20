@@ -20,7 +20,7 @@ import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
-import { getApiErrorMessage } from '@/lib/api';
+import { getApiErrorCode, getApiErrorMessage, isApiTimeoutError } from '@/lib/api';
 import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -153,9 +153,17 @@ export function RegisterPage() {
       });
       await finishAuth(response, values.locale);
     } catch (error) {
+      if (isApiTimeoutError(error)) {
+        setServerError(t('auth.requestTimeout'));
+        return;
+      }
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         setConflictEmail(values.email);
         setServerError(t('auth.registerConflict'));
+        return;
+      }
+      if (getApiErrorCode(error) === 'RATE_LIMITED') {
+        setServerError(t('auth.tooManyAttempts'));
         return;
       }
       setServerError(getApiErrorMessage(error));

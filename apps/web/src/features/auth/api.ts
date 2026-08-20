@@ -1,5 +1,7 @@
-import { api } from '@/lib/api';
+import { api, AUTH_REQUEST_TIMEOUT_MS } from '@/lib/api';
 import type { AuthUser } from '@/types';
+
+const authRequestConfig = { timeout: AUTH_REQUEST_TIMEOUT_MS };
 
 export type { BillingStatus, CheckoutResult } from '@/features/billing/types';
 export {
@@ -16,7 +18,7 @@ export interface AuthResponse {
 }
 
 export async function login(input: { email: string; password: string }): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/login', input);
+  const { data } = await api.post<AuthResponse>('/auth/login', input, authRequestConfig);
   return data;
 }
 
@@ -27,7 +29,7 @@ export async function googleAuth(input: {
   locale?: 'pt' | 'en';
   acceptTerms?: true;
 }): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/google', input);
+  const { data } = await api.post<AuthResponse>('/auth/google', input, authRequestConfig);
   return data;
 }
 
@@ -39,7 +41,7 @@ export async function register(input: {
   locale: 'pt' | 'en';
   acceptTerms: true;
 }): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>('/auth/register', input);
+  const { data } = await api.post<AuthResponse>('/auth/register', input, authRequestConfig);
   return data;
 }
 
@@ -67,11 +69,15 @@ export async function changeEmail(input: {
 }
 
 export async function verifyEmail(token: string): Promise<void> {
-  await api.post('/auth/verify-email', { token });
+  await api.post('/auth/verify-email', { token }, authRequestConfig);
 }
 
 export async function resendVerification(): Promise<{ message: string }> {
-  const { data } = await api.post<{ message: string }>('/auth/resend-verification');
+  const { data } = await api.post<{ message: string }>(
+    '/auth/resend-verification',
+    undefined,
+    authRequestConfig,
+  );
   return data;
 }
 
@@ -104,17 +110,18 @@ export async function requestDataExport(notes?: string): Promise<{ id: string; s
 }
 
 export async function logout(): Promise<void> {
-  await api.post('/auth/logout', {});
+  await api.post('/auth/logout', {}, authRequestConfig);
 }
 
 export async function forgotPassword(email: string): Promise<{ message: string }> {
-  const { data } = await api.post<{ message: string }>('/auth/forgot-password', { email });
+  const { data } = await api.post<{ message: string }>(
+    '/auth/forgot-password',
+    { email },
+    authRequestConfig,
+  );
   return data;
 }
 
-export async function resetPassword(input: {
-  token: string;
-  newPassword: string;
-}): Promise<void> {
-  await api.post('/auth/reset-password', input);
+export async function resetPassword(input: { token: string; newPassword: string }): Promise<void> {
+  await api.post('/auth/reset-password', input, authRequestConfig);
 }

@@ -3,6 +3,8 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/stores/auth.store';
 import type { Role } from '@/types';
 
+export const AUTH_REQUEST_TIMEOUT_MS = 60_000;
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
   timeout: 20_000,
@@ -31,6 +33,7 @@ async function refreshAccessToken(): Promise<string> {
       {},
       {
         withCredentials: true,
+        timeout: AUTH_REQUEST_TIMEOUT_MS,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
       },
     );
@@ -45,7 +48,8 @@ async function refreshAccessToken(): Promise<string> {
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
-    const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+    const original = error.config as
+      (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
     const isAuthEndpoint = original?.url?.includes('/auth/');
     if (error.response?.status === 401 && original && !original._retried && !isAuthEndpoint) {
       original._retried = true;
@@ -60,12 +64,22 @@ api.interceptors.response.use(
   },
 );
 
+export function getApiErrorCode(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return undefined;
+  }
+  const data = error.response?.data as { code?: string; error?: { code?: string } } | undefined;
+  return data?.code ?? data?.error?.code;
+}
+
+export function isApiTimeoutError(error: unknown): boolean {
+  return axios.isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT');
+}
+
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      | { message?: string | string[]; code?: string; error?: { code?: string } }
-      | undefined;
-    if (data?.code === 'EMAIL_NOT_VERIFIED' || data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+    const data = error.response?.data as { message?: string | string[] } | undefined;
+    if (getApiErrorCode(error) === 'EMAIL_NOT_VERIFIED') {
       return 'EMAIL_NOT_VERIFIED';
     }
     if (data?.message) {
@@ -79,7 +93,8 @@ export function getApiErrorMessage(error: unknown): string {
 }
 
 export async function bootstrapSession(): Promise<boolean> {
-  const { accessToken, user, setAuth, setBootstrapped, updateUser, clear } = useAuthStore.getState();
+  const { accessToken, user, setAuth, setBootstrapped, updateUser, clear } =
+    useAuthStore.getState();
   if (accessToken) {
     setBootstrapped(true);
     void syncProfile(updateUser);
@@ -95,6 +110,7 @@ export async function bootstrapSession(): Promise<boolean> {
       {},
       {
         withCredentials: true,
+        timeout: AUTH_REQUEST_TIMEOUT_MS,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
       },
     );
@@ -110,14 +126,16 @@ export async function bootstrapSession(): Promise<boolean> {
 }
 
 async function syncProfile(
-  updateUser: (patch: Partial<{
-    avatarUrl?: string | null;
-    name?: string;
-    emailVerifiedAt?: string | null;
-    role?: Role;
-    organizationId?: string;
-    organizationName?: string;
-  }>) => void,
+  updateUser: (
+    patch: Partial<{
+      avatarUrl?: string | null;
+      name?: string;
+      emailVerifiedAt?: string | null;
+      role?: Role;
+      organizationId?: string;
+      organizationName?: string;
+    }>,
+  ) => void,
 ): Promise<void> {
   try {
     const { data } = await api.get<{

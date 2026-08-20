@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import { configuration } from './config/configuration';
@@ -12,6 +12,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantContextInterceptor } from './common/prisma/tenant-context.interceptor';
 import { HealthModule } from './common/health/health.module';
 import { MailModule } from './common/mail/mail.module';
+import { RateLimitGuard } from './common/throttler/rate-limit.guard';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -121,7 +122,7 @@ import { OpportunityFinderModule } from './modules/opportunity-finder/opportunit
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: EmailVerifiedGuard },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
   ],
 })
