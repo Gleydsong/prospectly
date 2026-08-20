@@ -69,6 +69,32 @@ describe('LoginPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('translates rate limited responses instead of showing the raw server message', async () => {
+    authApiMocks.login.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          message: 'Too many attempts. Wait a moment and try again.',
+          error: 'Too Many Requests',
+          code: 'RATE_LIMITED',
+        },
+        status: 429,
+      },
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'secret1');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText(
+        'Muitas tentativas em pouco tempo. Aguarde cerca de um minuto e tente novamente.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('prefills email from the query string', () => {
     renderWithProviders(<LoginPage />, {
       initialEntries: ['/login?email=ana%40agency.dev'],

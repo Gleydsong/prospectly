@@ -60,12 +60,18 @@ api.interceptors.response.use(
   },
 );
 
+export function getApiErrorCode(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return undefined;
+  }
+  const data = error.response?.data as { code?: string; error?: { code?: string } } | undefined;
+  return data?.code ?? data?.error?.code;
+}
+
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      | { message?: string | string[]; code?: string; error?: { code?: string } }
-      | undefined;
-    if (data?.code === 'EMAIL_NOT_VERIFIED' || data?.error?.code === 'EMAIL_NOT_VERIFIED') {
+    const data = error.response?.data as { message?: string | string[] } | undefined;
+    if (getApiErrorCode(error) === 'EMAIL_NOT_VERIFIED') {
       return 'EMAIL_NOT_VERIFIED';
     }
     if (data?.message) {

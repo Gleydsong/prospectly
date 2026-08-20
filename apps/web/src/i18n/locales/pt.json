@@ -67,6 +67,7 @@
     "passwordRequired": "Senha obrigatória",
     "invalidCredentials": "E-mail ou senha inválidos. Confira os dados ou redefina sua senha.",
     "accountTemporarilyLocked": "Conta temporariamente bloqueada após várias tentativas. Aguarde 15 minutos ou redefina sua senha.",
+    "tooManyAttempts": "Muitas tentativas em pouco tempo. Aguarde cerca de um minuto e tente novamente.",
     "nameRequired": "Nome obrigatório",
     "orgRequired": "Nome da organização obrigatório",
     "passwordMin": "Mínimo 8 caracteres",

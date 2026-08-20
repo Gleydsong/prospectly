@@ -14,6 +14,22 @@ interface ErrorResponseBody {
   correlationId?: string;
 }
 
+// Exceptions built from a plain string (e.g. ThrottlerException) carry no `error` label,
+// so derive the standard reason phrase from the status instead of leaking the 500 default.
+function statusLabel(status: number): string {
+  const name = Object.entries(HttpStatus).find(
+    ([key, value]) => value === status && Number.isNaN(Number(key)),
+  )?.[0];
+  if (!name) {
+    return 'Error';
+  }
+  return name
+    .toLowerCase()
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -30,13 +46,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
+      error = statusLabel(status);
       const body = exception.getResponse();
       if (typeof body === 'string') {
         message = body;
       } else if (typeof body === 'object' && body !== null) {
         const payload = body as { message?: string | string[]; error?: string; code?: string };
         message = payload.message ?? exception.message;
-        error = payload.error ?? exception.name;
+        error = payload.error ?? error;
         code = payload.code;
       }
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {

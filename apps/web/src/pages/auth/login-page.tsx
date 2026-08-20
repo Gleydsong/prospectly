@@ -13,7 +13,7 @@ import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { setAppLocale } from '@/i18n';
-import { getApiErrorMessage } from '@/lib/api';
+import { getApiErrorCode, getApiErrorMessage } from '@/lib/api';
 import { resolveInternalRedirect } from '@/lib/safe-url';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -123,6 +123,10 @@ export function LoginPage() {
       const response = await login(values);
       await finishAuth(response);
     } catch (error) {
+      if (getApiErrorCode(error) === 'RATE_LIMITED') {
+        setServerError(t('auth.tooManyAttempts'));
+        return;
+      }
       const message = getApiErrorMessage(error);
       if (message === 'Invalid credentials') {
         setServerError(t('auth.invalidCredentials'));
