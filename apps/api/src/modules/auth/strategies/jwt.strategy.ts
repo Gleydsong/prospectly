@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // Re-check membership so removed members lose access immediately.
     const membership = await runWithTenant(
       payload.orgId,
-      () =>
+      async () =>
         this.prisma.organizationMember.findUnique({
           where: { userId_organizationId: { userId: payload.sub, organizationId: payload.orgId } },
         }),

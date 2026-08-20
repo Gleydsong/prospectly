@@ -1,10 +1,14 @@
 import { randomUUID } from 'node:crypto';
 
+import { UnauthorizedException } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
+import type { PrismaService } from './prisma.service';
 import { runWithBypass, runWithTenant } from './tenant-context';
 import { assertTenantOperation } from './tenant-guard';
 import { extendPrismaClient } from './tenant-prisma';
+import { JwtStrategy } from '../../modules/auth/strategies/jwt.strategy';
 
 const shouldRun = process.env.RUN_RLS_TEST === 'true';
 const describeWithDatabase = shouldRun ? describe : describe.skip;
@@ -19,6 +23,10 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const orgB = randomUUID();
   const leadA = randomUUID();
   const leadB = randomUUID();
+  const userA = randomUUID();
+  const userB = randomUUID();
+  const memberAOrgA = randomUUID();
+  const memberBOrgB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -47,6 +55,19 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         leadB,
         orgB,
       );
+      await tx.$executeRaw`
+        INSERT INTO "User" (id, email, name, locale, "createdAt", "updatedAt")
+        VALUES (${userA}, ${`rls-a-${userA.slice(0, 8)}@example.test`}, 'RLS User A', 'pt'::"AppLocale", NOW(), NOW()),
+               (${userB}, ${`rls-b-${userB.slice(0, 8)}@example.test`}, 'RLS User B', 'pt'::"AppLocale", NOW(), NOW())
+      `;
+      const memberInserts = await tx.$executeRaw`
+        INSERT INTO "OrganizationMember" (id, "userId", "organizationId", role, "createdAt", "updatedAt")
+        VALUES (${memberAOrgA}, ${userA}, ${orgA}, 'OWNER'::"Role", NOW(), NOW()),
+               (${memberBOrgB}, ${userB}, ${orgB}, 'MEMBER'::"Role", NOW(), NOW())
+      `;
+      if (memberInserts !== 2) {
+        throw new Error(`Expected 2 organization members, inserted ${memberInserts}`);
+      }
     });
   });
 
@@ -56,10 +77,16 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
       await tx.$executeRawUnsafe(
+        `DELETE FROM "OrganizationMember" WHERE id IN ($1, $2)`,
+        memberAOrgA,
+        memberBOrgB,
+      );
+      await tx.$executeRawUnsafe(
         `DELETE FROM "Lead" WHERE "organizationId" IN ($1, $2)`,
         orgA,
         orgB,
       );
+      await tx.$executeRawUnsafe(`DELETE FROM "User" WHERE id IN ($1, $2)`, userA, userB);
       await tx.$executeRawUnsafe(`DELETE FROM "Organization" WHERE id IN ($1, $2)`, orgA, orgB);
     });
     await prisma.$disconnect();
@@ -137,6 +164,118 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         }),
       );
       expect(tenantRows).toEqual([{ id: leadA }]);
+
+      const ownerMembers = await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        return tx.$queryRaw<Array<{ id: string; userId: string; organizationId: string }>>`
+          SELECT id, "userId", "organizationId" FROM "OrganizationMember" ORDER BY id
+        `;
+      });
+      expect(ownerMembers).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: memberAOrgA, userId: userA, organizationId: orgA }),
+        ]),
+      );
+
+      const roleMembers = await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', ${userA}, true), set_config('app.rls_bypass', '', true)`;
+        return tx.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM "OrganizationMember" ORDER BY id
+        `;
+      });
+      expect(roleMembers).toEqual([{ id: memberAOrgA }]);
+
+      const membershipsViaBypass = await runWithBypass(() =>
+        runtimePrisma.organizationMember.findMany({
+          select: { id: true, userId: true, organizationId: true, role: true },
+          orderBy: { createdAt: 'asc' },
+        }),
+      );
+      expect(membershipsViaBypass).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: memberAOrgA, userId: userA, organizationId: orgA }),
+        ]),
+      );
+
+      const membershipsViaTenant = await runWithTenant(
+        orgA,
+        () =>
+          runtimePrisma.organizationMember.findMany({
+            where: { userId: userA, organizationId: orgA },
+          }),
+        userA,
+      );
+      expect(membershipsViaTenant.map((row) => row.id)).toEqual([memberAOrgA]);
+
+      const membership = await runWithTenant(
+        orgA,
+        () =>
+          runtimePrisma.organizationMember.findUnique({
+            where: { userId_organizationId: { userId: userA, organizationId: orgA } },
+          }),
+        userA,
+      );
+      expect(membership?.id).toBe(memberAOrgA);
+
+      const foreignMembership = await runWithTenant(
+        orgA,
+        () =>
+          runtimePrisma.organizationMember.findUnique({
+            where: { userId_organizationId: { userId: userB, organizationId: orgB } },
+          }),
+        userA,
+      );
+      expect(foreignMembership).toBeNull();
+
+      const otherUserMembership = await runWithTenant(
+        orgB,
+        () =>
+          runtimePrisma.organizationMember.findUnique({
+            where: { userId_organizationId: { userId: userA, organizationId: orgA } },
+          }),
+        userB,
+      );
+      expect(otherUserMembership).toBeNull();
+
+      const strategy = new JwtStrategy(
+        { getOrThrow: () => 'access-secret-min-32-characters!!' } as unknown as ConfigService,
+        runtimePrisma as unknown as PrismaService,
+      );
+      await expect(
+        strategy.validate({
+          sub: userA,
+          email: 'rls-a@example.test',
+          orgId: orgA,
+          role: 'MEMBER',
+        }),
+      ).resolves.toMatchObject({
+        id: userA,
+        organizationId: orgA,
+        role: 'OWNER',
+      });
+
+      await expect(
+        strategy.validate({
+          sub: userA,
+          email: 'rls-a@example.test',
+          orgId: orgB,
+          role: 'OWNER',
+        }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      await runWithBypass(() =>
+        runtimePrisma.organizationMember.delete({ where: { id: memberAOrgA } }),
+      );
+
+      await expect(
+        strategy.validate({
+          sub: userA,
+          email: 'rls-a@example.test',
+          orgId: orgA,
+          role: 'OWNER',
+        }),
+      ).rejects.toThrow('Membership revoked');
     } finally {
       await runtimePrisma.$disconnect();
       await prisma!.$executeRawUnsafe('ALTER ROLE prospectly_app NOLOGIN PASSWORD NULL');

@@ -10,6 +10,9 @@ export const configuration = () => ({
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
+  refreshCookie: {
+    sameSite: process.env.REFRESH_COOKIE_SAME_SITE,
+  },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
   corsOrigins: process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001',
   google: {

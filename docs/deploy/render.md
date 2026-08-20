@@ -96,6 +96,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 - Custom domains: attach in Dashboard, then update CORS / frontend URLs / webhook endpoints.
 - `autoDeployTrigger: checksPass` waits for GitHub CI on `main`.
 - **SEC-001:** deploy API + web together (refresh cookie + `withCredentials`). Do not ship one without the other.
+- **Refresh cookie:** `onrender.com` is a public suffix, so `prospectly-web.onrender.com` and `prospectly-api.onrender.com` are different sites. Production therefore sets `REFRESH_COOKIE_SAME_SITE=none` with `Secure` and keeps CSRF via `X-Requested-With`. A same-site pair such as `app.prospectly.com` + `api.prospectly.com` is the structural fix and can go back to `lax`. Do not set `Domain=.onrender.com`.
 - **SEC-017:** configure SMTP so verification emails leave the no-op queue; critical mutations require `emailVerifiedAt`.
 
 ## Post-deploy checklist

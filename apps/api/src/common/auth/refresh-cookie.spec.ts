@@ -2,8 +2,10 @@ import {
   clearRefreshCookie,
   hasCsrfHeader,
   parseExpiresInToSeconds,
+  parseRefreshCookieSameSite,
   readCookie,
   REFRESH_COOKIE_NAME,
+  resolveRefreshCookieSameSite,
   setRefreshCookie,
 } from './refresh-cookie';
 
@@ -40,14 +42,35 @@ describe('refresh-cookie helpers', () => {
       },
     } as never;
 
-    setRefreshCookie(res, 'token-value', 3600, true);
+    setRefreshCookie(res, 'token-value', 3600, false, 'lax');
     expect(cookies[0]).toMatchObject({
       name: REFRESH_COOKIE_NAME,
       value: 'token-value',
-      options: { httpOnly: true, secure: true, sameSite: 'lax', path: '/api/v1/auth' },
+      options: { httpOnly: true, secure: false, sameSite: 'lax', path: '/api/v1/auth' },
     });
 
-    clearRefreshCookie(res, true);
-    expect(cleared[0]?.name).toBe(REFRESH_COOKIE_NAME);
+    setRefreshCookie(res, 'token-value', 3600, true, 'none');
+    expect(cookies[1]).toMatchObject({
+      options: { httpOnly: true, secure: true, sameSite: 'none', path: '/api/v1/auth' },
+    });
+
+    clearRefreshCookie(res, true, 'none');
+    expect(cleared[0]).toEqual({
+      name: REFRESH_COOKIE_NAME,
+      options: { httpOnly: true, secure: true, sameSite: 'none', path: '/api/v1/auth' },
+    });
+  });
+
+  it('defaults SameSite to none in production and lax locally', () => {
+    expect(resolveRefreshCookieSameSite(undefined, 'production')).toBe('none');
+    expect(resolveRefreshCookieSameSite(undefined, 'development')).toBe('lax');
+    expect(resolveRefreshCookieSameSite('lax', 'production')).toBe('lax');
+    expect(parseRefreshCookieSameSite('NONE')).toBe('none');
+  });
+
+  it('rejects SameSite=None without Secure', () => {
+    expect(() => setRefreshCookie({ cookie: jest.fn() } as never, 'token', 60, false, 'none')).toThrow(
+      'SameSite=None requires the Secure cookie attribute',
+    );
   });
 });
