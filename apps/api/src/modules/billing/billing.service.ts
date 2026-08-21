@@ -458,15 +458,27 @@ export class BillingService {
       return false;
     }
     const staleMs = 2 * 60 * 1000;
+    const staleBefore = new Date(Date.now() - staleMs);
     const stale =
       existing.status === BillingWebhookEventStatus.PROCESSING &&
-      Date.now() - existing.updatedAt.getTime() > staleMs;
+      existing.updatedAt.getTime() < staleBefore.getTime();
     if (existing.status === BillingWebhookEventStatus.PROCESSING && !stale) {
       this.logger.debug(`Ignoring in-flight ${provider} webhook event ${eventId}`);
       return false;
     }
-    await this.prisma.billingWebhookEvent.update({
-      where: { provider_eventId: { provider, eventId } },
+    // Only one retrier may reclaim FAILED / stale PROCESSING — avoids concurrent apply.
+    const claimed = await this.prisma.billingWebhookEvent.updateMany({
+      where: {
+        provider,
+        eventId,
+        OR: [
+          { status: BillingWebhookEventStatus.FAILED },
+          {
+            status: BillingWebhookEventStatus.PROCESSING,
+            updatedAt: { lt: staleBefore },
+          },
+        ],
+      },
       data: {
         status: BillingWebhookEventStatus.PROCESSING,
         attempts: { increment: 1 },
@@ -474,6 +486,10 @@ export class BillingService {
         failedAt: null,
       },
     });
+    if (claimed.count !== 1) {
+      this.logger.debug(`Ignoring raced reclaim of ${provider} webhook event ${eventId}`);
+      return false;
+    }
     return true;
   }
 
