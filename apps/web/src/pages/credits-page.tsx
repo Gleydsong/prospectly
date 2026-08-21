@@ -20,11 +20,23 @@ import { canManageOrg } from '@/features/settings/can-manage-org';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import type { PaymentMethod } from '@/features/billing/types';
+import { getApiErrorMessage } from '@/lib/api';
 import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 
 type CreditOfferId = 'credits-2000' | 'credits-5000' | 'unlimited';
+
+function checkoutErrorMessage(
+  error: unknown,
+  fallback: string,
+  emailHint: string,
+): string {
+  const message = getApiErrorMessage(error);
+  if (message === 'EMAIL_NOT_VERIFIED') return emailHint;
+  if (message && message !== 'Ocorreu um erro inesperado.') return message;
+  return fallback;
+}
 
 export function CreditsPage() {
   const { t } = useTranslation();
@@ -32,6 +44,7 @@ export function CreditsPage() {
   const [searchParams] = useSearchParams();
   const user = useAuthStore((state) => state.user);
   const emailVerified = Boolean(user?.emailVerifiedAt);
+  const roleReady = Boolean(user?.role);
   const manage = canManageOrg(user?.role);
 
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -62,7 +75,7 @@ export function CreditsPage() {
         offer: variables.offer,
         baselineCreditBalance: billing.data?.creditBalance ?? 0,
       }),
-    onError: () => setBillingError(t('settings.billingError')),
+    onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
   });
 
   const planCheckout = useMutation({
@@ -74,13 +87,13 @@ export function CreditsPage() {
         plan: 'monthly',
         baselineCreditBalance: billing.data?.creditBalance ?? 0,
       }),
-    onError: () => setBillingError(t('settings.billingError')),
+    onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
   });
 
   const portal = useMutation({
     mutationFn: createBillingPortal,
     onSuccess: (data) => assignStripeRedirect(data.url),
-    onError: () => setBillingError(t('settings.billingError')),
+    onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
   });
 
   const cancelSub = useMutation({
@@ -90,7 +103,7 @@ export function CreditsPage() {
       setBillingError(null);
       await queryClient.invalidateQueries({ queryKey: BILLING_STATUS_QUERY_KEY });
     },
-    onError: () => setBillingError(t('settings.billingError')),
+    onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
   });
 
   const checkoutPending = creditCheckout.isPending || planCheckout.isPending;
@@ -227,7 +240,9 @@ export function CreditsPage() {
             </div>
           ) : null}
 
-          {manage ? (
+          {!roleReady ? (
+            <Skeleton className="h-48" />
+          ) : manage ? (
           <div className="grid gap-3 lg:grid-cols-3">
             {offers.map((offer) => {
               const pending = checkoutPending && creditOffer === offer.id;

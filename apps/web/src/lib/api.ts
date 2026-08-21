@@ -85,6 +85,9 @@ export function getApiErrorMessage(error: unknown): string {
     if (data?.message) {
       return Array.isArray(data.message) ? data.message.join(', ') : data.message;
     }
+    if (isApiTimeoutError(error)) {
+      return 'O servidor demorou para responder. Tente novamente.';
+    }
     if (error.code === 'ERR_NETWORK') {
       return 'Não foi possível contactar o servidor.';
     }
@@ -96,8 +99,8 @@ export async function bootstrapSession(): Promise<boolean> {
   const { accessToken, user, setAuth, setBootstrapped, updateUser, clear } =
     useAuthStore.getState();
   if (accessToken) {
+    await syncProfile(updateUser);
     setBootstrapped(true);
-    void syncProfile(updateUser);
     return true;
   }
   if (!user) {
@@ -115,8 +118,8 @@ export async function bootstrapSession(): Promise<boolean> {
       },
     );
     setAuth({ user, accessToken: response.data.accessToken });
+    await syncProfile(updateUser);
     setBootstrapped(true);
-    void syncProfile(updateUser);
     return true;
   } catch {
     clear();
