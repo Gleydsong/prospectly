@@ -76,14 +76,17 @@ export class CreditPurchaseService {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchase.id } });
       if (!current || current.status !== CreditPurchaseStatus.PENDING) return;
 
-      await tx.creditPurchase.update({
-        where: { id: current.id },
+      // Atomic claim: concurrent stale webhook reclaimers must not both increment.
+      const claimed = await tx.creditPurchase.updateMany({
+        where: { id: current.id, status: CreditPurchaseStatus.PENDING },
         data: {
           status: CreditPurchaseStatus.COMPLETED,
           completedAt: new Date(),
           ...(paymentId ? { externalPaymentId: paymentId } : {}),
         },
       });
+      if (claimed.count !== 1) return;
+
       await tx.organization.update({
         where: { id: current.organizationId },
         data: { creditBalance: { increment: current.credits } },
@@ -98,6 +101,13 @@ export class CreditPurchaseService {
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchase.id } });
       if (!current || current.status === CreditPurchaseStatus.REFUNDED) return;
+
+      const claimed = await tx.creditPurchase.updateMany({
+        where: { id: current.id, status: current.status },
+        data: { status: CreditPurchaseStatus.REFUNDED, refundedAt: new Date() },
+      });
+      if (claimed.count !== 1) return;
+
       if (current.status === CreditPurchaseStatus.COMPLETED) {
         const organization = await tx.organization.findUnique({
           where: { id: current.organizationId },
@@ -111,10 +121,6 @@ export class CreditPurchaseService {
           });
         }
       }
-      await tx.creditPurchase.update({
-        where: { id: current.id },
-        data: { status: CreditPurchaseStatus.REFUNDED, refundedAt: new Date() },
-      });
     });
   }
 
