@@ -17,7 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { getHomeFaqItems } from '@/lib/faq-content';
-import { enterExplainerUrl } from '@/lib/pricing';
+import { appLoginUrl, enterExplainerUrl } from '@/lib/pricing';
 import { TEAM_EMAIL, type Locale } from '@/lib/i18n';
 import { CookieBanner } from '@/components/cookie-banner';
 import { BrandIntro } from '@/components/brand-intro';
@@ -54,6 +54,7 @@ function V2Brand() {
 
 export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'home' | 'how' | 'section' }) {
   const [open, setOpen] = useState(false);
+  const loginUrl = appLoginUrl();
   const enterUrl = enterExplainerUrl(locale);
   const howUrl = '/como-funciona';
   const benefitsUrl = '/beneficios';
@@ -78,7 +79,7 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
           <Link href={howUrl} aria-current={page === 'how' ? 'page' : undefined}>Como funciona</Link><a href={benefitsUrl}>Benefícios</a><a href={audienceUrl}>Para quem é</a><a href={faqUrl}>Dúvidas frequentes</a>
         </nav>
         <div className="landing-v2-header-actions">
-          <Link href={enterUrl} className="landing-v2-login">Entrar</Link>
+          <a href={loginUrl} className="landing-v2-login">Entrar</a>
           <Link href={enterUrl} className="landing-v2-dark-button landing-v2-header-cta">Começar agora <ArrowRight weight="bold" aria-hidden /></Link>
           <button type="button" className="landing-v2-menu-button" aria-expanded={open} aria-controls="landing-v2-mobile-nav" aria-label={open ? 'Fechar menu' : 'Abrir menu'} onClick={() => setOpen((value) => !value)}>
             {open ? <X weight="bold" aria-hidden /> : <List weight="bold" aria-hidden />}
@@ -86,7 +87,7 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
         </div>
       </div>
       {open ? <nav id="landing-v2-mobile-nav" className="landing-v2-mobile-nav" aria-label="Navegação móvel">
-        <Link href={howUrl} onClick={close}>Como funciona</Link><a href={benefitsUrl} onClick={close}>Benefícios</a><a href={audienceUrl} onClick={close}>Para quem é</a><a href={faqUrl} onClick={close}>Dúvidas frequentes</a><Link href={enterUrl} onClick={close}>Entrar</Link>
+        <Link href={howUrl} onClick={close}>Como funciona</Link><a href={benefitsUrl} onClick={close}>Benefícios</a><a href={audienceUrl} onClick={close}>Para quem é</a><a href={faqUrl} onClick={close}>Dúvidas frequentes</a><a href={loginUrl} onClick={close}>Entrar</a>
       </nav> : null}
     </header>
   );

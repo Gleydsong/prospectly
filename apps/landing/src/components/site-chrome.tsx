@@ -7,7 +7,7 @@ import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
 import { CtaButton } from '@/components/ui/cta-button';
 import { prefix, t, type Locale } from '@/lib/i18n';
-import { enterExplainerUrl } from '@/lib/pricing';
+import { appLoginUrl, enterExplainerUrl } from '@/lib/pricing';
 
 const LIGHT_THEME_PATHS = new Set([
   '/',
@@ -86,7 +86,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 {t(locale, 'navPricing')}
               </CtaButton>
               <CtaButton
-                href={enterExplainerUrl(locale)}
+                href={appLoginUrl()}
                 variant="ghost"
                 size="sm"
                 className="font-medium"
@@ -152,7 +152,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               {t(locale, 'navPricing')}
             </CtaButton>
             <CtaButton
-              href={enterExplainerUrl(locale)}
+              href={appLoginUrl()}
               variant="ghost"
               size="md"
               className="w-full justify-start font-medium"
