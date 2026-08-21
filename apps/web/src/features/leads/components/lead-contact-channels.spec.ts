@@ -23,6 +23,17 @@ describe('lead-contact-channels', () => {
     expect(msg).toContain('booking');
   });
 
+  it('does not leak scoring action codes into the WhatsApp message', () => {
+    const msg = buildWhatsAppOutreachMessage({
+      companyName: 'Café da Ana - am',
+      city: 'Manaus',
+      recommendedAction: 'PRIORITIZE_OUTREACH',
+    });
+    expect(msg).not.toContain('PRIORITIZE_OUTREACH');
+    expect(msg).toContain('Priorizar contato comercial');
+    expect(buildWhatsAppHref('+5592984863168', msg)).not.toContain('PRIORITIZE_OUTREACH');
+  });
+
   it('builds wa.me href with encoded text', () => {
     const href = buildWhatsAppHref('+351912345678', 'Olá! Teste');
     expect(href).toBe('https://wa.me/351912345678?text=Ol%C3%A1!%20Teste');

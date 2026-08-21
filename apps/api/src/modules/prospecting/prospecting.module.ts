@@ -14,6 +14,7 @@ import {
 } from './domain/search-provider';
 import { GooglePlacesProvider } from './infrastructure/google-places.provider';
 import { OpenStreetMapProvider } from './infrastructure/openstreetmap.provider';
+import { NominatimBoundingBoxResolver } from './infrastructure/nominatim-bounding-box.resolver';
 import {
   RedisNominatimRateLimiter,
   type RedisEvalClient,
@@ -50,8 +51,8 @@ import { ProspectingService } from './prospecting.service';
     },
     {
       provide: GOOGLE_PLACES_SEARCH_PROVIDER,
-      inject: [ConfigService],
-      useFactory: (config: ConfigService): SearchProvider | null => {
+      inject: [ConfigService, getQueueToken(PROSPECTING_QUEUE)],
+      useFactory: (config: ConfigService, queue: Queue): SearchProvider | null => {
         const apiKey = config.get<string>('googlePlaces.apiKey')?.trim() ?? '';
         if (!apiKey) return null;
         return new GooglePlacesProvider({
@@ -59,6 +60,14 @@ import { ProspectingService } from './prospecting.service';
           baseUrl: config.get<string>('googlePlaces.baseUrl'),
           timeoutMs: config.getOrThrow<number>('googlePlaces.timeoutMs'),
           resultLimit: config.getOrThrow<number>('googlePlaces.resultLimit'),
+          boundingBoxResolver: new NominatimBoundingBoxResolver({
+            nominatimUrl: config.getOrThrow<string>('openStreetMap.nominatimUrl'),
+            userAgent: config.getOrThrow<string>('openStreetMap.userAgent'),
+            timeoutMs: config.getOrThrow<number>('openStreetMap.timeoutMs'),
+            rateLimiter: new RedisNominatimRateLimiter(
+              queue.client as unknown as Promise<RedisEvalClient>,
+            ),
+          }),
         });
       },
     },

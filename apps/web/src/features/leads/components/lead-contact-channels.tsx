@@ -1,4 +1,5 @@
 import { ExternalLink, Globe, Mail, MessageCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import { sanitizeExternalUrl, sanitizeMailtoHref } from '@/lib/safe-url';
@@ -26,13 +27,31 @@ export function toWhatsAppDigits(raw: string): string | null {
   return digits;
 }
 
+/** Fallback PT-BR when i18n is unavailable (pure helper / tests). */
+const RECOMMENDED_ACTION_LABELS: Record<string, string> = {
+  RESPECT_DNC: 'Respeitar não contatar',
+  ENRICH_CONTACT: 'Enriquecer telefone/e-mail',
+  RUN_WEBSITE_ANALYSIS: 'Executar análise do site',
+  PRIORITIZE_OUTREACH: 'Priorizar contato comercial',
+  ADVANCE_PIPELINE: 'Avançar no funil',
+  ENRICH_PROFILE: 'Completar perfil do cliente potencial',
+  NURTURE: 'Nutrir relacionamento',
+};
+
+export function humanizeRecommendedAction(action: string): string {
+  const key = action.trim();
+  return RECOMMENDED_ACTION_LABELS[key] ?? key;
+}
+
 /**
  * Mensagem sugerida para outreach (contexto do lead + ação recomendada).
  * Sem chamada LLM extra no MVP — usa regras/score já calculados.
  */
 export function buildWhatsAppOutreachMessage(lead: LeadContactChannelInput): string {
   const city = lead.city?.trim() ? ` em ${lead.city.trim()}` : '';
-  const tip = lead.recommendedAction?.trim();
+  const tip = lead.recommendedAction?.trim()
+    ? humanizeRecommendedAction(lead.recommendedAction)
+    : undefined;
   if (tip) {
     return `Olá! Vi a ${lead.companyName}${city} e queria partilhar uma ideia: ${tip} Posso enviar mais detalhes?`;
   }
@@ -68,12 +87,21 @@ interface LeadContactChannelsProps {
  * Sem verificação oficial “tem WhatsApp?” — Cloud API não oferece isso.
  */
 export function LeadContactChannels({ lead, className }: LeadContactChannelsProps) {
+  const { t } = useTranslation();
   const blocked = Boolean(lead.doNotContact);
   const email = lead.email?.trim() || null;
   const emailHref = email ? sanitizeMailtoHref(email) : null;
   const websiteHref = lead.website ? sanitizeExternalUrl(lead.website) : null;
   const whatsappRaw = (lead.whatsapp?.trim() || lead.phone?.trim() || '') || null;
-  const message = buildWhatsAppOutreachMessage(lead);
+  const recommendedAction = lead.recommendedAction?.trim();
+  const message = buildWhatsAppOutreachMessage({
+    ...lead,
+    recommendedAction: recommendedAction
+      ? t(`scoreExplain.actions.${recommendedAction}`, {
+          defaultValue: humanizeRecommendedAction(recommendedAction),
+        })
+      : recommendedAction,
+  });
   const whatsappHref =
     !blocked && whatsappRaw ? buildWhatsAppHref(whatsappRaw, message) : null;
 

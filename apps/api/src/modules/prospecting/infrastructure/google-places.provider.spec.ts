@@ -1,6 +1,7 @@
 import { WebsitePresence } from '@prisma/client';
 
 import { GooglePlacesProvider } from './google-places.provider';
+import { NominatimBoundingBoxResolver } from './nominatim-bounding-box.resolver';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -237,5 +238,142 @@ describe('GooglePlacesProvider', () => {
         city: 'Curitiba',
       }),
     ]);
+  });
+
+  it('keeps only places in the requested city when Google ranks a nearby capital higher', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        places: [
+          {
+            id: 'ChIJManaus',
+            displayName: { text: 'Café da Ana - am' },
+            formattedAddress: 'Av. Ten. Roxana Bonessi, 1692, Manaus - AM, 69093-828',
+            primaryType: 'cafe',
+            addressComponents: [
+              { longText: 'Manaus', types: ['locality'] },
+              { shortText: 'AM', types: ['administrative_area_level_1'] },
+            ],
+          },
+          {
+            id: 'ChIJAnama',
+            displayName: { text: 'Restaurante Regional' },
+            formattedAddress: 'Estr. Anama Cuia, 240, Anamã - AM, 69445-000',
+            primaryType: 'restaurant',
+            types: ['restaurant', 'food'],
+            addressComponents: [
+              { longText: 'Anamã', types: ['locality'] },
+              { shortText: 'AM', types: ['administrative_area_level_1'] },
+            ],
+          },
+        ],
+      }),
+    );
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    const results = await provider.search({
+      category: 'cafe',
+      city: 'Anamã',
+      state: 'AM',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+    });
+
+    expect(fetchMock.mock.calls[0]?.[1]?.headers['X-Goog-FieldMask']).toContain('places.primaryType');
+    expect(results).toHaveLength(1);
+    expect(results[0]).toEqual(
+      expect.objectContaining({
+        companyName: 'Restaurante Regional',
+        city: 'Anamã',
+        category: 'restaurant',
+      }),
+    );
+  });
+
+  it('sends a Nominatim bounding box as Google locationRestriction', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({
+        places: [
+          {
+            id: 'ChIJAnama',
+            displayName: { text: 'Restaurante Regional' },
+            formattedAddress: 'Estr. Anama Cuia, 240, Anamã - AM, 69445-000',
+            addressComponents: [
+              { longText: 'Anamã', types: ['locality'] },
+              { shortText: 'AM', types: ['administrative_area_level_1'] },
+            ],
+          },
+        ],
+      }),
+    );
+    const resolver = new NominatimBoundingBoxResolver({
+      nominatimUrl: 'https://nominatim.test/search',
+      userAgent: 'Prospectly-test',
+      timeoutMs: 5_000,
+      fetch: jest.fn().mockResolvedValue(
+        jsonResponse([
+          {
+            display_name: 'Anamã, Amazonas, Brasil',
+            boundingbox: ['-3.6849083', '-3.2631108', '-62.0879000', '-61.2791861'],
+            address: {
+              village: 'Anamã',
+              state: 'Amazonas',
+              ISO3166_2_lvl4: 'BR-AM',
+              country_code: 'br',
+            },
+          },
+        ]),
+      ) as unknown as typeof fetch,
+    });
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+      boundingBoxResolver: resolver,
+    });
+
+    await provider.search({
+      category: 'cafe',
+      city: 'Anamã',
+      state: 'AM',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.locationRestriction.rectangle.low.longitude).toBeLessThan(-61.2);
+    expect(body.locationRestriction.rectangle.high.longitude).toBeLessThan(-60.5);
+    expect(body.locationRestriction.rectangle.high.latitude).toBeLessThan(-3.2);
+  });
+
+  it('searches without restriction when Nominatim cannot resolve the city', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ places: [] }));
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+      boundingBoxResolver: {
+        resolve: async () => {
+          throw new Error('nominatim down');
+        },
+      },
+    });
+
+    await provider.search({
+      category: 'cafe',
+      city: 'Anamã',
+      state: 'AM',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+    });
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.locationRestriction).toBeUndefined();
   });
 });

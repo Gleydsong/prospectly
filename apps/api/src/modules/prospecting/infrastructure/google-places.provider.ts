@@ -1,6 +1,10 @@
 import { WebsitePresence } from '@prisma/client';
 
 import type { NormalizedBusiness } from '../domain/normalized-business';
+import {
+  toGoogleLocationRestriction,
+  type GeographicBoundingBox,
+} from '../domain/geographic-bounding-box';
 import { SearchProviderError } from '../domain/search-provider-error';
 import {
   isBrazilianStateCode,
@@ -9,7 +13,12 @@ import {
   type SearchProvider,
   type SearchProviderInput,
 } from '../domain/search-provider';
-import { googleLanguageCode, mapCategoryToGoogleTextQuery } from './google-category-map';
+import {
+  googleLanguageCode,
+  mapCategoryToGoogleTextQuery,
+  resolveGooglePlaceCategory,
+} from './google-category-map';
+import type { BoundingBoxResolver } from './nominatim-bounding-box.resolver';
 
 /** Places API (New) text search caps a single response at 20 places. */
 const GOOGLE_MAX_RESULTS_PER_REQUEST = 20;
@@ -25,6 +34,8 @@ const FIELD_MASK = [
   'places.rating',
   'places.userRatingCount',
   'places.addressComponents',
+  'places.primaryType',
+  'places.types',
 ].join(',');
 
 export interface GooglePlacesProviderOptions {
@@ -33,6 +44,7 @@ export interface GooglePlacesProviderOptions {
   timeoutMs: number;
   resultLimit: number;
   fetch?: typeof fetch;
+  boundingBoxResolver?: BoundingBoxResolver;
 }
 
 interface GooglePlacesTextSearchResponse {
@@ -49,6 +61,8 @@ interface GooglePlace {
   location?: { latitude?: number; longitude?: number };
   rating?: number;
   userRatingCount?: number;
+  primaryType?: string;
+  types?: string[];
   addressComponents?: Array<{
     longText?: string;
     shortText?: string;
@@ -69,6 +83,40 @@ function component(
   type: string,
 ): { longText?: string; shortText?: string } | undefined {
   return place.addressComponents?.find((entry) => entry.types?.includes(type));
+}
+
+function normalizeLocationText(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function locationTextEquals(left: string, right: string): boolean {
+  return normalizeLocationText(left) === normalizeLocationText(right);
+}
+
+function locationTextContainsToken(haystack: string, needle: string): boolean {
+  const token = normalizeLocationText(needle);
+  if (token.length < 3) return false;
+  return ` ${normalizeLocationText(haystack)} `.includes(` ${token} `);
+}
+
+/** Drop Google ranking spillover (e.g. Manaus results for a search in Anamã). */
+function placeBelongsToRequestedCity(place: GooglePlace, requestedCity: string): boolean {
+  const locality = component(place, 'locality')?.longText?.trim();
+  const admin2 = component(place, 'administrative_area_level_2')?.longText?.trim();
+  if (locality && locationTextEquals(locality, requestedCity)) return true;
+  if (admin2 && locationTextEquals(admin2, requestedCity)) return true;
+  if (locality && !locationTextEquals(locality, requestedCity)) return false;
+
+  const address = place.formattedAddress?.trim();
+  if (address && locationTextContainsToken(address, requestedCity)) return true;
+  if (!locality && !admin2 && !address) return true;
+  return false;
 }
 
 function normalizePlace(
@@ -187,6 +235,8 @@ export class GooglePlacesProvider implements SearchProvider {
       Math.max(1, Math.min(this.options.resultLimit, requestedLimit)),
     );
 
+    const locationRestriction = await this.resolveLocationRestriction(input, region, country);
+
     const categoryBatches = await Promise.all(
       categories.map(async (category) => {
         const response = await this.requestTextSearch({
@@ -200,10 +250,12 @@ export class GooglePlacesProvider implements SearchProvider {
           languageCode: googleLanguageCode(country),
           regionCode: country,
           maxResultCount: perCategoryLimit,
+          ...(locationRestriction ? { locationRestriction } : {}),
         });
 
         const businesses: NormalizedBusiness[] = [];
         for (const place of response.places ?? []) {
+          if (!placeBelongsToRequestedCity(place, input.city)) continue;
           const business = normalizePlace(place, input.city.trim(), region, country);
           if (!business) continue;
           if (
@@ -212,7 +264,10 @@ export class GooglePlacesProvider implements SearchProvider {
           ) {
             continue;
           }
-          businesses.push({ ...business, category });
+          businesses.push({
+            ...business,
+            category: resolveGooglePlaceCategory(place, category),
+          });
         }
         return businesses;
       }),
@@ -225,6 +280,26 @@ export class GooglePlacesProvider implements SearchProvider {
     }
 
     return [...merged.values()];
+  }
+
+  private async resolveLocationRestriction(
+    input: SearchProviderInput,
+    region: string,
+    country: ProspectingCountryCode,
+  ) {
+    const resolver = this.options.boundingBoxResolver;
+    if (!resolver) return undefined;
+    try {
+      const box: GeographicBoundingBox | undefined = await resolver.resolve({
+        city: input.city.trim(),
+        region,
+        country,
+        neighborhood: input.neighborhood?.trim() || undefined,
+      });
+      return box ? toGoogleLocationRestriction(box) : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private async requestTextSearch(body: Record<string, unknown>): Promise<GooglePlacesTextSearchResponse> {

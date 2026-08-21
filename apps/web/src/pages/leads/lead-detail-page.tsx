@@ -28,6 +28,7 @@ import { requestLeadWebsiteAnalysis } from '@/features/scoring/api';
 import { fetchTasks } from '@/features/tasks/api';
 import { useCreateTaskForLead } from '@/features/tasks/hooks';
 import { getApiErrorMessage } from '@/lib/api';
+import { formatLeadAddressLine } from '@/lib/format-lead-address';
 import { TASK_STATUS_LABELS, formatActivityType } from '@/lib/presentation-labels';
 import { sanitizeExternalUrl } from '@/lib/safe-url';
 import { formatDateTime } from '@/lib/utils';
@@ -271,7 +272,15 @@ export function LeadDetailPage() {
                 )
               }
             />
-            <InfoRow icon={MapPin} label="Endereço" value={[lead.address, lead.city, lead.state].filter(Boolean).join(', ') || undefined} />
+            <InfoRow
+              icon={MapPin}
+              label="Endereço"
+              value={formatLeadAddressLine({
+                address: lead.address,
+                city: lead.city,
+                state: lead.state,
+              })}
+            />
             <div className="pt-2">
               <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Etiquetas</p>
               <div className="flex flex-wrap gap-1">
