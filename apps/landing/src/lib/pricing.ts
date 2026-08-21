@@ -33,7 +33,7 @@ export function appLoginUrl(offer?: CreditOffer): string {
   return `${base}/login${params}`;
 }
 
-/** Temporary “Entrar” destination while the app is not live. */
+/** Waitlist explainer. Login uses `appLoginUrl`. */
 export function enterExplainerUrl(locale: Locale): string {
   return locale === 'en' ? '/en/enter' : '/entrar';
 }

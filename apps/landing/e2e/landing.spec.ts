@@ -47,6 +47,23 @@ test.describe('landing navigation', () => {
     await expect(page.getByRole('heading', { name: 'Menos volume. Mais chance de fechar.' })).toBeVisible();
   });
 
+  test('Entrar aponta para o login do app', async ({ page }, testInfo) => {
+    await page.goto('/');
+
+    if (testInfo.project.name === 'mobile-chromium') {
+      await page.getByRole('button', { name: 'Abrir menu' }).click();
+      await expect(
+        page.getByRole('navigation', { name: 'Navegação móvel' }).getByRole('link', { name: 'Entrar', exact: true }),
+      ).toHaveAttribute('href', /\/login$/);
+      return;
+    }
+
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toHaveAttribute(
+      'href',
+      /\/login$/,
+    );
+  });
+
   test('mobile menu opens the questions page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chromium', 'mobile menu is covered in the mobile project');
     await page.goto('/');
