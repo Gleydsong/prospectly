@@ -1,3 +1,4 @@
+import { AxiosError } from 'axios';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -121,5 +122,33 @@ describe('CreditsPage', () => {
     const card = screen.getByRole('button', { name: /Cartão via AbacatePay/ });
     expect(card).toBeDisabled();
     expect(screen.getByText(/Cartão do Ilimitado ainda não está no catálogo de teste/)).toBeInTheDocument();
+  });
+
+  it('surfaces the API checkout error instead of a generic billing message', async () => {
+    const user = userEvent.setup();
+    const error = new AxiosError('fail');
+    error.response = {
+      status: 503,
+      data: { message: 'AbacatePay is not configured' },
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+    };
+    createCreditCheckout.mockRejectedValue(error);
+
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+    await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
+    await user.click(screen.getByRole('button', { name: /^PIX/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('AbacatePay is not configured');
+  });
+
+  it('does not treat a missing role as read-only while the profile hydrates', () => {
+    useAuthStore.setState((state) => ({
+      ...state,
+      user: state.user ? { ...state.user, role: undefined as never } : state.user,
+    }));
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+    expect(screen.queryByText(/Apenas proprietários/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Comprar créditos' })).not.toBeInTheDocument();
   });
 });

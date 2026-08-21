@@ -13,8 +13,8 @@ import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finde
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 
 /**
- * Registers BullMQ processors. Imported only by WorkerModule — AppModule
- * keeps feature modules as queue producers without workers.
+ * Registers BullMQ processors. Imported by WorkerModule and, until a dedicated
+ * Render worker exists, by AppModule as an inline fallback.
  */
 @Module({
   imports: [

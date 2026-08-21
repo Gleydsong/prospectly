@@ -2,8 +2,8 @@ import axios, { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig }
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Role, type AuthUser } from '@/types';
-import { useAuthStore } from '@/stores/auth.store';
-import { api, bootstrapSession } from './api';
+import { persistableUser, useAuthStore } from '@/stores/auth.store';
+import { api, bootstrapSession, getApiErrorMessage } from './api';
 
 const user: AuthUser = {
   id: 'u1',
@@ -108,10 +108,23 @@ describe('api session interceptor', () => {
   });
 
   it('restores the access token from a valid refresh cookie on reload', async () => {
-    useAuthStore.setState({ user, accessToken: null, bootstrapped: false });
+    useAuthStore.setState({
+      user: persistableUser(user) as AuthUser,
+      accessToken: null,
+      bootstrapped: false,
+    });
     vi.spyOn(axios, 'post').mockResolvedValue({ data: { accessToken: 'restored-token' } });
     api.defaults.adapter = (async (config) => ({
-      data: { name: user.name },
+      data: {
+        name: user.name,
+        emailVerifiedAt: '2026-08-01T00:00:00.000Z',
+        memberships: [
+          {
+            role: Role.OWNER,
+            organization: { id: user.organizationId, name: user.organizationName },
+          },
+        ],
+      },
       status: 200,
       statusText: 'OK',
       headers: {},
@@ -121,8 +134,31 @@ describe('api session interceptor', () => {
     await expect(bootstrapSession()).resolves.toBe(true);
     expect(useAuthStore.getState()).toMatchObject({
       accessToken: 'restored-token',
-      user: expect.objectContaining({ id: user.id }),
+      user: expect.objectContaining({
+        id: user.id,
+        role: Role.OWNER,
+        emailVerifiedAt: '2026-08-01T00:00:00.000Z',
+      }),
       bootstrapped: true,
     });
+  });
+});
+
+describe('getApiErrorMessage', () => {
+  it('surfaces the API message from checkout and search failures', () => {
+    const error = new AxiosError('fail');
+    error.response = {
+      status: 503,
+      data: { message: 'AbacatePay is not configured' },
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+    };
+    expect(getApiErrorMessage(error)).toBe('AbacatePay is not configured');
+  });
+
+  it('maps request timeouts instead of a generic unexpected error', () => {
+    const error = new AxiosError('timeout', 'ECONNABORTED');
+    expect(getApiErrorMessage(error)).toBe('O servidor demorou para responder. Tente novamente.');
   });
 });

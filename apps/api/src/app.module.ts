@@ -38,6 +38,7 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
+import { WorkersModule } from './modules/workers/workers.module';
 
 @Module({
   imports: [
@@ -117,6 +118,9 @@ import { OpportunityFinderModule } from './modules/opportunity-finder/opportunit
     IntegrationsModule,
     AgentsModule,
     OpportunityFinderModule,
+    // Production Render currently has no dedicated worker service. Process
+    // BullMQ jobs in the API so searches/checkout side-effects do not stall.
+    WorkersModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
