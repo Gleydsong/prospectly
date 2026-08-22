@@ -36,6 +36,7 @@ describe('BillingService', () => {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -451,6 +452,39 @@ describe('BillingService', () => {
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
     ).resolves.toEqual({ received: true });
+    expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it('reclaims only one stale PROCESSING webhook when retries overlap', async () => {
+    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
+      eventId: 'evt_stale',
+      type: 'checkout.session.completed',
+      payload: { id: 'evt_stale' },
+    });
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      status: 'PROCESSING',
+      updatedAt: new Date(Date.now() - 3 * 60 * 1000),
+      attempts: 1,
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
+    ).resolves.toEqual({ received: true });
+    expect(prisma.billingWebhookEvent.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          eventId: 'evt_stale',
+          OR: expect.arrayContaining([
+            expect.objectContaining({ status: 'FAILED' }),
+            expect.objectContaining({
+              status: 'PROCESSING',
+              updatedAt: expect.objectContaining({ lt: expect.any(Date) }),
+            }),
+          ]),
+        }),
+      }),
+    );
     expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
   });
 

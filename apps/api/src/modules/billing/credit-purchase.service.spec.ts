@@ -10,7 +10,7 @@ describe('CreditPurchaseService', () => {
     const tx = {
       creditPurchase: {
         findUnique: jest.fn().mockResolvedValueOnce(purchase),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       organization: { update: jest.fn().mockResolvedValue({}) },
     };
@@ -22,9 +22,13 @@ describe('CreditPurchaseService', () => {
 
     await service.completeFromWebhook({ id: 'pix_1', metadata: { purchaseId: 'purchase_1' } });
 
-    expect(tx.creditPurchase.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ status: CreditPurchaseStatus.COMPLETED }),
-    }));
+    expect(tx.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: { id: 'purchase_1', status: CreditPurchaseStatus.PENDING },
+      data: expect.objectContaining({
+        status: CreditPurchaseStatus.COMPLETED,
+        externalPaymentId: 'pix_1',
+      }),
+    });
     expect(tx.organization.update).toHaveBeenCalledWith({
       where: { id: 'org_1' }, data: { creditBalance: { increment: 2000 } },
     });
@@ -41,6 +45,32 @@ describe('CreditPurchaseService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('skips credit increment when a concurrent handler already claimed the purchase', async () => {
+    const purchase = {
+      id: 'purchase_1',
+      organizationId: 'org_1',
+      offer: 'credits-2000',
+      credits: 2000,
+      status: CreditPurchaseStatus.PENDING,
+    };
+    const tx = {
+      creditPurchase: {
+        findUnique: jest.fn().mockResolvedValue(purchase),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      organization: { update: jest.fn() },
+    };
+    const prisma = {
+      creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
+    };
+    const service = new CreditPurchaseService(prisma as never);
+
+    await service.completeFromWebhook({ id: 'pix_1', metadata: { purchaseId: 'purchase_1' } });
+
+    expect(tx.organization.update).not.toHaveBeenCalled();
+  });
+
   it('refunds at most the remaining balance', async () => {
     const purchase = {
       id: 'purchase_1',
@@ -51,7 +81,7 @@ describe('CreditPurchaseService', () => {
     const tx = {
       creditPurchase: {
         findUnique: jest.fn().mockResolvedValue(purchase),
-        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       organization: {
         findUnique: jest.fn().mockResolvedValue({ creditBalance: 50 }),
@@ -64,9 +94,40 @@ describe('CreditPurchaseService', () => {
     };
     const service = new CreditPurchaseService(prisma as never);
     await service.refundFromWebhook({ id: 'bill_1', metadata: { purchaseId: 'purchase_1' } });
+    expect(tx.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: { id: 'purchase_1', status: CreditPurchaseStatus.COMPLETED },
+      data: expect.objectContaining({ status: CreditPurchaseStatus.REFUNDED }),
+    });
     expect(tx.organization.update).toHaveBeenCalledWith({
       where: { id: 'org_1' },
       data: { creditBalance: { decrement: 50 } },
     });
+  });
+
+  it('does not debit twice when a concurrent refund already claimed the purchase', async () => {
+    const purchase = {
+      id: 'purchase_1',
+      organizationId: 'org_1',
+      credits: 2000,
+      status: CreditPurchaseStatus.COMPLETED,
+    };
+    const tx = {
+      creditPurchase: {
+        findUnique: jest.fn().mockResolvedValue(purchase),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      organization: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    const prisma = {
+      creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
+    };
+    const service = new CreditPurchaseService(prisma as never);
+    await service.refundFromWebhook({ id: 'bill_1', metadata: { purchaseId: 'purchase_1' } });
+    expect(tx.organization.findUnique).not.toHaveBeenCalled();
+    expect(tx.organization.update).not.toHaveBeenCalled();
   });
 });
