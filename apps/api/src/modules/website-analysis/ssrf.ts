@@ -1,4 +1,7 @@
 import { lookup } from 'node:dns/promises';
+import type { LookupAddress, LookupOptions } from 'node:dns';
+import http from 'node:http';
+import https from 'node:https';
 import { isIP } from 'node:net';
 
 const BLOCKED_HOSTNAME_SUFFIXES = ['.localhost', '.local', '.internal'];
@@ -16,6 +19,12 @@ export class SsrfBlockedError extends Error {
     this.name = 'SsrfBlockedError';
   }
 }
+
+export type SafePublicUrl = {
+  url: URL;
+  /** Addresses validated by assertSafePublicUrl — pin these at connect time. */
+  addresses: string[];
+};
 
 export function isBlockedIp(ip: string): boolean {
   const candidate = ip.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0] ?? '';
@@ -52,7 +61,152 @@ export function isBlockedIp(ip: string): boolean {
   return false;
 }
 
-export async function assertSafePublicUrl(rawUrl: string): Promise<URL> {
+function normalizeAddress(address: string): string {
+  return address.toLowerCase().replace(/^\[|\]$/g, '').split('%')[0] ?? '';
+}
+
+/**
+ * DNS lookup that only returns pre-validated addresses. Prevents TOCTOU /
+ * DNS rebinding between assertSafePublicUrl and the TCP/TLS connect.
+ */
+export function createPinnedLookup(addresses: string[]) {
+  const pinned = addresses.map(normalizeAddress).filter(Boolean);
+  if (pinned.length === 0) {
+    throw new SsrfBlockedError('No resolved addresses to pin');
+  }
+
+  type LookupCallback = (
+    err: NodeJS.ErrnoException | null,
+    address: string | LookupAddress[],
+    family?: number,
+  ) => void;
+
+  return (
+    _hostname: string,
+    options: LookupOptions | LookupCallback,
+    callback?: LookupCallback,
+  ): void => {
+    const cb = (typeof options === 'function' ? options : callback) as LookupCallback;
+    const opts = (typeof options === 'function' ? {} : options) as LookupOptions;
+
+    const ipv4 = pinned.find((addr) => isIP(addr) === 4);
+    const ipv6 = pinned.find((addr) => isIP(addr) === 6);
+    const selected = ipv4 ?? ipv6 ?? pinned[0]!;
+    const family = isIP(selected) || 4;
+
+    if (opts.all) {
+      cb(
+        null,
+        pinned.map((address) => ({
+          address,
+          family: (isIP(address) || 4) as 4 | 6,
+        })),
+      );
+      return;
+    }
+
+    cb(null, selected, family);
+  };
+}
+
+type PinnedFetchInit = {
+  method?: string;
+  headers?: Record<string, string>;
+  signal?: AbortSignal;
+  /** Analyzer always uses manual redirects; ignore follow. */
+  redirect?: RequestRedirect;
+};
+
+/**
+ * HTTP(S) GET/request that connects only to `addresses` while keeping the
+ * original hostname for Host / TLS SNI + certificate verification.
+ */
+export async function fetchWithPinnedDns(
+  url: string,
+  addresses: string[],
+  init: PinnedFetchInit = {},
+): Promise<Response> {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new SsrfBlockedError('Only http and https URLs are allowed');
+  }
+
+  const isHttps = parsed.protocol === 'https:';
+  const lib = isHttps ? https : http;
+  const lookupFn = createPinnedLookup(addresses);
+
+  return new Promise<Response>((resolve, reject) => {
+    const request = lib.request(
+      {
+        protocol: parsed.protocol,
+        hostname: parsed.hostname,
+        servername: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: `${parsed.pathname}${parsed.search}`,
+        method: init.method ?? 'GET',
+        headers: init.headers,
+        lookup: lookupFn,
+      },
+      (incoming) => {
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(incoming.headers)) {
+          if (value === undefined) continue;
+          if (Array.isArray(value)) {
+            for (const item of value) headers.append(key, item);
+          } else {
+            headers.set(key, value);
+          }
+        }
+
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            incoming.on('data', (chunk: Buffer | string) => {
+              const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+              controller.enqueue(new Uint8Array(buffer));
+            });
+            incoming.on('end', () => {
+              try {
+                controller.close();
+              } catch {
+                // already closed
+              }
+            });
+            incoming.on('error', (err) => controller.error(err));
+          },
+          cancel() {
+            incoming.destroy();
+          },
+        });
+
+        resolve(
+          new Response(stream, {
+            status: incoming.statusCode ?? 0,
+            statusText: incoming.statusMessage,
+            headers,
+          }),
+        );
+      },
+    );
+
+    request.on('error', reject);
+
+    if (init.signal) {
+      if (init.signal.aborted) {
+        request.destroy(new DOMException('This operation was aborted', 'AbortError'));
+        return;
+      }
+      const onAbort = () => {
+        request.destroy(new DOMException('This operation was aborted', 'AbortError'));
+      };
+      init.signal.addEventListener('abort', onAbort, { once: true });
+      request.on('close', () => init.signal?.removeEventListener('abort', onAbort));
+    }
+
+    request.end();
+  });
+}
+
+export async function assertSafePublicUrl(rawUrl: string): Promise<SafePublicUrl> {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -80,10 +234,12 @@ export async function assertSafePublicUrl(rawUrl: string): Promise<URL> {
     if (isBlockedIp(hostname)) {
       throw new SsrfBlockedError('Private IP addresses are not allowed');
     }
-    return parsed;
+    return { url: parsed, addresses: [normalizeAddress(hostname)] };
   }
 
-  // Resolve DNS on every call (including redirects) so TOCTOU / DNS rebinding is re-checked.
+  // Resolve DNS on every call (including redirects). Callers must pin these
+  // addresses at connect time — a later fetch() re-resolve can rebind to a
+  // private IP (TOCTOU).
   let records: Array<{ address: string }>;
   try {
     records = await lookup(hostname, { all: true, verbatim: true });
@@ -93,11 +249,14 @@ export async function assertSafePublicUrl(rawUrl: string): Promise<URL> {
   if (records.length === 0) {
     throw new SsrfBlockedError('Unable to resolve hostname');
   }
+  const addresses: string[] = [];
   for (const record of records) {
-    if (isBlockedIp(record.address)) {
+    const address = normalizeAddress(record.address);
+    if (isBlockedIp(address)) {
       throw new SsrfBlockedError('Hostname resolves to a private IP address');
     }
+    addresses.push(address);
   }
 
-  return parsed;
+  return { url: parsed, addresses };
 }
