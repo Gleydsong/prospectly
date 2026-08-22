@@ -140,7 +140,7 @@ export async function fetchWithPinnedDns(
       {
         protocol: parsed.protocol,
         hostname: parsed.hostname,
-        servername: parsed.hostname,
+        ...(isHttps ? { servername: parsed.hostname } : {}),
         port: parsed.port || (isHttps ? 443 : 80),
         path: `${parsed.pathname}${parsed.search}`,
         method: init.method ?? 'GET',
