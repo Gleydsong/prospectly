@@ -396,8 +396,36 @@ describe('AbacatePaymentProvider', () => {
         organizationId: 'org1',
         abacateSubscriptionId: 'subs_tAFqDWBhcEYTjQh2K0ZYDHau',
         abacateCustomerId: 'cust_def456',
+        currentPeriodEnd: null,
       }),
     );
+  });
+
+  it('clears stale PIX currentPeriodEnd on subscription.completed after prior PIX month', async () => {
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_card_after_pix',
+        event: 'subscription.completed',
+        data: {
+          subscription: { id: 'subs_after_pix', status: 'ACTIVE' },
+          customer: { id: 'cust_after_pix' },
+          checkout: {
+            id: 'bill_after_pix',
+            frequency: 'SUBSCRIPTION',
+            metadata: { organizationId: 'org1', purpose: 'plan', interval: 'monthly' },
+          },
+        },
+      },
+      'subscription.completed',
+    );
+    expect(activation.activateMonthly).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_after_pix',
+      abacateCustomerId: 'cust_after_pix',
+      currentPeriodEnd: null,
+    });
   });
 
   it('keeps the plan active on subscription.renewed', async () => {
@@ -414,7 +442,11 @@ describe('AbacatePaymentProvider', () => {
       'subscription.renewed',
     );
     expect(activation.activateMonthly).toHaveBeenCalledWith(
-      expect.objectContaining({ organizationId: 'org1', abacateSubscriptionId: 'subs_1' }),
+      expect.objectContaining({
+        organizationId: 'org1',
+        abacateSubscriptionId: 'subs_1',
+        currentPeriodEnd: null,
+      }),
     );
   });
 
