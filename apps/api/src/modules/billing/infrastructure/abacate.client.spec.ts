@@ -71,6 +71,39 @@ describe('AbacateClient', () => {
     expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('/subscriptions/create');
   });
 
+  it('recovers a subscription checkout by external id', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: [
+          {
+            id: 'bill_sub',
+            externalId: 'org:org1:monthly-card:stable',
+            url: 'https://app.abacatepay.com/pay/bill_sub',
+            status: 'PENDING',
+          },
+        ],
+        error: null,
+      }),
+    } as Response);
+
+    await expect(
+      client.findSubscriptionCheckoutByExternalId('org:org1:monthly-card:stable'),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: 'bill_sub',
+        externalId: 'org:org1:monthly-card:stable',
+        status: 'PENDING',
+      }),
+    );
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('/subscriptions/list?');
+    expect(url).toContain('externalId=org%3Aorg1%3Amonthly-card%3Astable');
+    expect(init.method).toBe('GET');
+    expect(init.body).toBeUndefined();
+  });
+
   it('maps missing checkout url to a safe ServiceUnavailableException', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

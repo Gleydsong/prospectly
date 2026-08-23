@@ -5,6 +5,7 @@ import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
+import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import { AbacateClient } from './infrastructure/abacate.client';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
@@ -16,6 +17,7 @@ import { StripePaymentProvider } from './infrastructure/stripe.payment-provider'
     CreditPurchaseService,
     BillingActivationService,
     EntitlementService,
+    MonthlyCheckoutAttemptService,
     StripePaymentProvider,
     AbacateClient,
     AbacatePaymentProvider,

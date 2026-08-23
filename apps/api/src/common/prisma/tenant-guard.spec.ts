@@ -32,6 +32,14 @@ describe('assertTenantOperation', () => {
     expect(args.where).toEqual({ id: 'lead-1', organizationId: 'org-1' });
   });
 
+  it('applies tenant scope to monthly checkout attempts', () => {
+    const args = { where: { id: 'attempt-1' } };
+    runWithTenant('org-1', () => {
+      assertTenantOperation('MonthlyCheckoutAttempt', 'updateMany', args);
+    });
+    expect(args.where).toEqual({ id: 'attempt-1', organizationId: 'org-1' });
+  });
+
   it('allows an explicit matching organizationId', () => {
     const args = { where: { id: 'lead-1', organizationId: 'org-1' } };
     runWithTenant('org-1', () => {

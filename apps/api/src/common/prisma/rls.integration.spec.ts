@@ -27,6 +27,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const userB = randomUUID();
   const memberAOrgA = randomUUID();
   const memberBOrgB = randomUUID();
+  const checkoutAttemptA = randomUUID();
+  const checkoutAttemptB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -68,6 +70,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       if (memberInserts !== 2) {
         throw new Error(`Expected 2 organization members, inserted ${memberInserts}`);
       }
+      await tx.$executeRaw`
+        INSERT INTO "MonthlyCheckoutAttempt"
+          (id, "organizationId", provider, "paymentMethod", status, "externalId", "createdAt", "updatedAt")
+        VALUES
+          (${checkoutAttemptA}, ${orgA}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptA}`}, NOW(), NOW()),
+          (${checkoutAttemptB}, ${orgB}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptB}`}, NOW(), NOW())
+      `;
     });
   });
 
@@ -110,6 +119,18 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     });
 
     expect(rows).toEqual([{ id: leadA }]);
+  });
+
+  it('isolates monthly checkout attempts by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "MonthlyCheckoutAttempt" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: checkoutAttemptA }]);
   });
 
   it('rejects a cross-tenant insert', async () => {

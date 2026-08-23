@@ -29,6 +29,7 @@ export const TENANT_MODELS = new Set([
   'ScoreConfiguration',
   'UsageLedger',
   'CreditPurchase',
+  'MonthlyCheckoutAttempt',
   'CreditLedgerEntry',
   'OpportunityRun',
   'AiRun',

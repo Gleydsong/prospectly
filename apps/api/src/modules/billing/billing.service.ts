@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
@@ -15,6 +16,10 @@ import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
 import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
 import { EntitlementService } from './entitlement.service';
+import {
+  MonthlyCheckoutAttemptService,
+  type MonthlyCheckoutClaim,
+} from './monthly-checkout-attempt.service';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -45,6 +50,7 @@ export class BillingService {
     private readonly abacateProvider: AbacatePaymentProvider,
     private readonly creditPurchases: CreditPurchaseService,
     private readonly entitlements: EntitlementService,
+    private readonly monthlyCheckoutAttempts: MonthlyCheckoutAttemptService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
@@ -250,7 +256,7 @@ export class BillingService {
     const cancelUrl =
       this.config.get<string>('abacate.cancelUrl') ?? `${frontendUrl}/billing/cancel`;
 
-    return this.abacateProvider.createCheckout({
+    const checkoutInput = {
       organizationId,
       customerEmail: userEmail,
       customerName: org.name,
@@ -260,7 +266,54 @@ export class BillingService {
       successUrl,
       cancelUrl,
       existingCustomerId: org.abacateCustomerId,
-    });
+    } as const;
+
+    if (paymentMethod === 'card') {
+      return this.createIdempotentMonthlyCardCheckout(organizationId, checkoutInput);
+    }
+    return this.abacateProvider.createCheckout(checkoutInput);
+  }
+
+  private async createIdempotentMonthlyCardCheckout(
+    organizationId: string,
+    input: Parameters<AbacatePaymentProvider['createCheckout']>[0],
+  ): Promise<CheckoutResult> {
+    const begin = await this.monthlyCheckoutAttempts.beginCard(organizationId);
+    if (begin.state === 'ready') return begin.checkout;
+
+    let claim: MonthlyCheckoutClaim = begin.claim;
+    try {
+      if (claim.recoverProviderState) {
+        const recovered = await this.abacateProvider.recoverMonthlyCardCheckout(
+          claim.externalId,
+        );
+        if (recovered) {
+          await this.monthlyCheckoutAttempts.markReady(organizationId, claim, recovered);
+          return recovered;
+        }
+        claim = await this.monthlyCheckoutAttempts.rotateExternalId(
+          organizationId,
+          claim,
+        );
+      }
+
+      const checkout = await this.abacateProvider.createCheckout({
+        ...input,
+        externalId: claim.externalId,
+      });
+      if (checkout.mode !== 'redirect') {
+        throw new ServiceUnavailableException('AbacatePay card checkout did not return a redirect');
+      }
+      await this.monthlyCheckoutAttempts.markReady(organizationId, claim, checkout);
+      return checkout;
+    } catch (error) {
+      try {
+        await this.monthlyCheckoutAttempts.markFailed(organizationId, claim, error);
+      } catch {
+        this.logger.error(`Failed to persist monthly checkout failure for ${organizationId}`);
+      }
+      throw error;
+    }
   }
 
   async createCreditCheckoutSession(

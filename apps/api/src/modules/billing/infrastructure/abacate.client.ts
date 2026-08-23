@@ -118,6 +118,24 @@ export class AbacateClient {
     return this.requireHostedCheckout(data);
   }
 
+  async findSubscriptionCheckoutByExternalId(
+    externalId: string,
+  ): Promise<AbacateHostedCheckout | null> {
+    const data = await this.get('/subscriptions/list', {
+      externalId,
+      limit: '1',
+    });
+    if (!Array.isArray(data)) {
+      this.logger.warn('AbacatePay subscription list response is not an array');
+      throw new ServiceUnavailableException('AbacatePay request failed');
+    }
+    const match = data.find((item) => {
+      const record = asRecord(item);
+      return readString(record, 'externalId') === externalId;
+    });
+    return match ? this.requireHostedCheckout(match) : null;
+  }
+
   async cancelSubscription(subscriptionId: string): Promise<void> {
     await this.post('/subscriptions/cancel', { id: subscriptionId });
   }
@@ -161,6 +179,15 @@ export class AbacateClient {
   }
 
   private async post(path: string, body: unknown): Promise<unknown> {
+    return this.request('POST', path, body);
+  }
+
+  private async get(path: string, query: Record<string, string>): Promise<unknown> {
+    const params = new URLSearchParams(query);
+    return this.request('GET', `${path}?${params.toString()}`);
+  }
+
+  private async request(method: 'GET' | 'POST', path: string, body?: unknown): Promise<unknown> {
     const apiKey = this.requireApiKey();
     const url = `${this.baseUrl()}${path}`;
     const controller = new AbortController();
@@ -169,13 +196,13 @@ export class AbacateClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        method: 'POST',
+        method,
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
           Accept: 'application/json',
         },
-        body: JSON.stringify(body),
+        ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
         signal: controller.signal,
       });
     } catch (error) {

@@ -172,6 +172,12 @@ enum BillingWebhookEventStatus {
   FAILED
 }
 
+enum BillingCheckoutAttemptStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
 /// Reasons for credit balance movements. SEARCH_CONSUME (Maps), AI_CONSUME (Opportunity Finder / explain / save lead),
 /// SIGNUP_BONUS, PURCHASE and REFUND (failed paid actions return the consumed amount).
 enum CreditLedgerReason {
@@ -288,6 +294,7 @@ model Organization {
   auditLogs          AuditLog[]
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
+  monthlyCheckoutAttempts MonthlyCheckoutAttempt[]
   creditLedgerEntries CreditLedgerEntry[]
   opportunityRuns     OpportunityRun[]
   aiRuns              AiRun[]
@@ -1020,6 +1027,28 @@ model BillingWebhookEvent {
 
   @@unique([provider, eventId])
   @@index([processedAt])
+  @@index([status, updatedAt])
+}
+
+/// Durable idempotency state for recurring AbacatePay checkout creation.
+model MonthlyCheckoutAttempt {
+  id                 String                       @id @default(uuid())
+  organizationId     String
+  provider           PaymentProvider              @default(ABACATE)
+  paymentMethod      BillingPaymentMethod
+  status             BillingCheckoutAttemptStatus @default(PROCESSING)
+  externalId         String                       @unique
+  externalCheckoutId String?                      @unique
+  externalCustomerId String?
+  checkoutUrl        String?
+  attempts           Int                          @default(1)
+  lastError          String?
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, provider, paymentMethod])
   @@index([status, updatedAt])
 }
 
