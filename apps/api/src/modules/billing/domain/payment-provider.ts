@@ -26,6 +26,8 @@ export type CheckoutRequest = {
   successUrl: string;
   cancelUrl: string;
   existingCustomerId?: string | null;
+  /** Stable application id used to recover a recurring checkout after a lost response. */
+  externalId?: string;
 };
 
 /** Resposta discriminada: redirect (checkout hospedado) ou PIX in-app. */

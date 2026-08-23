@@ -8,6 +8,7 @@ import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
+import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
@@ -36,6 +37,7 @@ describe('BillingService', () => {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({}),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
@@ -51,6 +53,7 @@ describe('BillingService', () => {
   const abacateProvider = {
     createCheckout: jest.fn(),
     createCreditCheckout: jest.fn(),
+    recoverMonthlyCardCheckout: jest.fn(),
     cancelSubscription: jest.fn(),
     verifyAndParseWebhook: jest.fn(),
     applyWebhookEvent: jest.fn(),
@@ -67,6 +70,13 @@ describe('BillingService', () => {
 
   const entitlements = {
     canExportCsv: jest.fn().mockResolvedValue(false),
+  };
+
+  const monthlyCheckoutAttempts = {
+    beginCard: jest.fn(),
+    rotateExternalId: jest.fn(),
+    markReady: jest.fn(),
+    markFailed: jest.fn(),
   };
 
   const configGet = jest.fn((key: string) => {
@@ -86,6 +96,22 @@ describe('BillingService', () => {
     prisma.opportunityRun.count.mockResolvedValue(0);
     prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
     prisma.billingWebhookEvent.create.mockResolvedValue({});
+    monthlyCheckoutAttempts.beginCard.mockResolvedValue({
+      state: 'acquired',
+      claim: {
+        id: 'attempt_1',
+        externalId: 'org:org1:monthly-card:stable',
+        recoverProviderState: false,
+      },
+    });
+    monthlyCheckoutAttempts.rotateExternalId.mockImplementation(async (_org, claim) => ({
+      ...claim,
+      externalId: 'org:org1:monthly-card:rotated',
+      recoverProviderState: false,
+    }));
+    monthlyCheckoutAttempts.markReady.mockResolvedValue(undefined);
+    monthlyCheckoutAttempts.markFailed.mockResolvedValue(undefined);
+    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -96,6 +122,7 @@ describe('BillingService', () => {
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
+        { provide: MonthlyCheckoutAttemptService, useValue: monthlyCheckoutAttempts },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -256,9 +283,123 @@ describe('BillingService', () => {
       expect.objectContaining({ mode: 'redirect', url: 'https://app.abacatepay.com/pay/bill_1' }),
     );
     expect(abacateProvider.createCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentMethod: 'card' }),
+      expect.objectContaining({
+        paymentMethod: 'card',
+        externalId: 'org:org1:monthly-card:stable',
+      }),
+    );
+    expect(monthlyCheckoutAttempts.markReady).toHaveBeenCalledWith(
+      'org1',
+      expect.objectContaining({ id: 'attempt_1' }),
+      expect.objectContaining({ externalCheckoutId: 'bill_1' }),
     );
     expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('returns the persisted monthly card checkout on a duplicate request', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: null,
+      deletedAt: null,
+    });
+    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
+      state: 'ready',
+      checkout: {
+        mode: 'redirect',
+        provider: 'ABACATE',
+        url: 'https://app.abacatepay.com/pay/bill_existing',
+        externalCheckoutId: 'bill_existing',
+      },
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
+    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_existing' }));
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('recovers provider state after a failed or stale monthly card attempt', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: null,
+      deletedAt: null,
+    });
+    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
+      state: 'acquired',
+      claim: {
+        id: 'attempt_1',
+        externalId: 'stable',
+        recoverProviderState: true,
+      },
+    });
+    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValueOnce({
+      mode: 'redirect',
+      provider: 'ABACATE',
+      url: 'https://app.abacatepay.com/pay/bill_recovered',
+      externalCheckoutId: 'bill_recovered',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
+    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_recovered' }));
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+    expect(monthlyCheckoutAttempts.markReady).toHaveBeenCalled();
+  });
+
+  it('rotates the external id only after provider recovery finds no reusable checkout', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: null,
+      deletedAt: null,
+    });
+    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
+      state: 'acquired',
+      claim: {
+        id: 'attempt_1',
+        externalId: 'stable',
+        recoverProviderState: true,
+      },
+    });
+    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValueOnce(null);
+    abacateProvider.createCheckout.mockResolvedValueOnce({
+      mode: 'redirect',
+      provider: 'ABACATE',
+      url: 'https://app.abacatepay.com/pay/bill_new',
+      externalCheckoutId: 'bill_new',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
+    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_new' }));
+    expect(monthlyCheckoutAttempts.rotateExternalId).toHaveBeenCalledWith(
+      'org1',
+      expect.objectContaining({ externalId: 'stable' }),
+    );
+    expect(abacateProvider.createCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ externalId: 'org:org1:monthly-card:rotated' }),
+    );
+  });
+
+  it('marks the monthly card attempt failed when the gateway rejects creation', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      paymentProvider: null,
+      deletedAt: null,
+    });
+    abacateProvider.createCheckout.mockRejectedValueOnce(new Error('gateway unavailable'));
+
+    await expect(
+      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
+    ).rejects.toThrow('gateway unavailable');
+    expect(monthlyCheckoutAttempts.markFailed).toHaveBeenCalledWith(
+      'org1',
+      expect.objectContaining({ id: 'attempt_1' }),
+      expect.any(Error),
+    );
   });
 
   it('rejects new lifetime checkouts', async () => {
@@ -451,6 +592,39 @@ describe('BillingService', () => {
     await expect(
       service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
     ).resolves.toEqual({ received: true });
+    expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it('reclaims only one stale PROCESSING webhook when retries overlap', async () => {
+    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
+      eventId: 'evt_stale',
+      type: 'checkout.session.completed',
+      payload: { id: 'evt_stale' },
+    });
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      status: 'PROCESSING',
+      updatedAt: new Date(Date.now() - 3 * 60 * 1000),
+      attempts: 1,
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
+    ).resolves.toEqual({ received: true });
+    expect(prisma.billingWebhookEvent.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          eventId: 'evt_stale',
+          OR: expect.arrayContaining([
+            expect.objectContaining({ status: 'FAILED' }),
+            expect.objectContaining({
+              status: 'PROCESSING',
+              updatedAt: expect.objectContaining({ lt: expect.any(Date) }),
+            }),
+          ]),
+        }),
+      }),
+    );
     expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
   });
 

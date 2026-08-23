@@ -178,6 +178,32 @@ describe('BillingActivationService', () => {
       data: expect.objectContaining({
         plan: OrgPlan.FREE,
         planStatus: PlanStatus.CANCELED,
+        currentPeriodEnd: null,
+      }),
+    });
+  });
+
+  it('clears PIX period end when activating Abacate card subscription', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+    });
+    prisma.organization.update.mockResolvedValue({});
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_card',
+      currentPeriodEnd: null,
+    });
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({
+        plan: OrgPlan.STARTER_MONTHLY,
+        planStatus: PlanStatus.ACTIVE,
+        abacateSubscriptionId: 'subs_card',
+        currentPeriodEnd: null,
       }),
     });
   });

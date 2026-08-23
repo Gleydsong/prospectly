@@ -89,6 +89,23 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     return this.createCreditPixCheckout(input);
   }
 
+  async recoverMonthlyCardCheckout(
+    externalId: string,
+  ): Promise<Extract<CheckoutResult, { mode: 'redirect' }> | null> {
+    const checkout = await this.client.findSubscriptionCheckoutByExternalId(externalId);
+    if (!checkout) return null;
+    if (['EXPIRED', 'CANCELLED', 'REFUNDED'].includes(checkout.status ?? '')) {
+      return null;
+    }
+    return {
+      mode: 'redirect',
+      provider: 'ABACATE',
+      url: checkout.url,
+      externalCheckoutId: checkout.id,
+      externalCustomerId: checkout.customerId ?? undefined,
+    };
+  }
+
   async cancelSubscription(input: {
     organizationId: string;
     externalSubscriptionId: string;
@@ -234,7 +251,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       productId,
       returnUrl: input.cancelUrl,
       completionUrl: input.successUrl,
-      externalId: `org:${input.organizationId}:monthly:${randomUUID()}`,
+      externalId: input.externalId ?? `org:${input.organizationId}:monthly:${randomUUID()}`,
       metadata: {
         organizationId: input.organizationId,
         purpose: 'plan',
@@ -440,12 +457,15 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       this.logger.warn('subscription active event without organization mapping');
       return;
     }
+    // Card subscriptions are open-ended until subscription.cancelled. Always clear
+    // currentPeriodEnd so a prior PIX 30-day window cannot expire a paid card sub.
     await this.activation.activateMonthly({
       organizationId,
       currency: 'BRL',
       provider: PaymentProvider.ABACATE,
       abacateSubscriptionId: resolveSubscriptionId(normalized),
       abacateCustomerId: resolveCustomerId(normalized),
+      currentPeriodEnd: null,
     });
   }
 
