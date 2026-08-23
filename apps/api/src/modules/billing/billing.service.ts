@@ -128,6 +128,7 @@ export class BillingService {
       amount: CREDIT_COSTS.mapsSearch,
       reason: 'SEARCH_CONSUME',
       idempotencyKey: `search-consume:${searchId}`,
+      refundIdempotencyKey: `search-refund:${searchId}`,
       searchId,
       usesFreeQuota: true,
     });
@@ -139,6 +140,7 @@ export class BillingService {
       amount: CREDIT_COSTS.opportunityFinder,
       reason: 'AI_CONSUME',
       idempotencyKey: `opportunity-consume:${runId}`,
+      refundIdempotencyKey: `opportunity-refund:${runId}`,
       opportunityRunId: runId,
       metadata: { feature: 'AI_OPPORTUNITY_FINDER' },
       usesFreeQuota: true,
@@ -155,6 +157,7 @@ export class BillingService {
       amount: CREDIT_COSTS.explain,
       reason: 'AI_CONSUME',
       idempotencyKey: `explain-consume:${candidateId}`,
+      refundIdempotencyKey: `explain-refund:${candidateId}`,
       opportunityRunId,
       metadata: { feature: 'EXPLAIN', candidateId },
     });
@@ -170,6 +173,7 @@ export class BillingService {
       amount: CREDIT_COSTS.saveLead,
       reason: 'AI_CONSUME',
       idempotencyKey: `save-lead-consume:${candidateId}`,
+      refundIdempotencyKey: `save-lead-refund:${candidateId}`,
       opportunityRunId,
       metadata: { feature: 'SAVE_LEAD', candidateId },
     });
@@ -535,6 +539,8 @@ export class BillingService {
     amount: number;
     reason: 'SEARCH_CONSUME' | 'AI_CONSUME';
     idempotencyKey: string;
+    /** Paired refund key — when present, a prior refund allows a fresh debit. */
+    refundIdempotencyKey?: string;
     searchId?: string;
     opportunityRunId?: string;
     metadata?: Record<string, string>;
@@ -557,7 +563,24 @@ export class BillingService {
           },
         },
       });
-      if (existing) return;
+      if (existing) {
+        const refund = params.refundIdempotencyKey
+          ? await tx.creditLedgerEntry.findUnique({
+              where: {
+                organizationId_idempotencyKey: {
+                  organizationId: params.organizationId,
+                  idempotencyKey: params.refundIdempotencyKey,
+                },
+              },
+            })
+          : null;
+        // Refunded consume left the original key in place — drop it so retry can debit again.
+        if (refund && refund.createdAt >= existing.createdAt) {
+          await tx.creditLedgerEntry.delete({ where: { id: existing.id } });
+        } else {
+          return;
+        }
+      }
 
       const consumed = await tx.organization.updateMany({
         where: { id: params.organizationId, creditBalance: { gte: params.amount } },
@@ -617,13 +640,34 @@ export class BillingService {
           },
         }),
       ]);
-      if (!consume || existingRefund) return;
+      if (!consume) return;
+      // Same consume already refunded (refund row is at/after this consume).
+      if (existingRefund && existingRefund.createdAt >= consume.createdAt) return;
 
       const updated = await tx.organization.update({
         where: { id: params.organizationId },
         data: { creditBalance: { increment: Math.abs(consume.delta) } },
         select: { creditBalance: true },
       });
+
+      // Free the consume idempotency key so a later retry can debit again.
+      await tx.creditLedgerEntry.delete({ where: { id: consume.id } });
+
+      if (existingRefund) {
+        // Prior cycle's refund — replace with this cycle's restoration.
+        await tx.creditLedgerEntry.update({
+          where: { id: existingRefund.id },
+          data: {
+            delta: Math.abs(consume.delta),
+            balanceAfter: updated.creditBalance,
+            ...(params.searchId ? { searchId: params.searchId } : {}),
+            ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
+            ...(params.metadata ? { metadata: params.metadata } : {}),
+          },
+        });
+        return;
+      }
+
       await tx.creditLedgerEntry.create({
         data: {
           organizationId: params.organizationId,
