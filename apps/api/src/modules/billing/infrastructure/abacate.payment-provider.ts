@@ -391,6 +391,13 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     if (!org) return;
 
     if (org.plan === OrgPlan.STARTER_MONTHLY && org.paymentProvider === PaymentProvider.ABACATE) {
+      // Card subscription is authoritative — do not cancel it from a prior PIX charge revoke.
+      if (org.abacateSubscriptionId) {
+        this.logger.warn(
+          `Ignoring ${type} for org ${organizationId}: active Abacate subscription takes precedence over PIX payment events`,
+        );
+        return;
+      }
       if (paymentId && org.abacatePaymentId && org.abacatePaymentId !== paymentId) {
         this.logger.warn(
           `Ignoring ${type} for org ${organizationId}: payment does not match current monthly PIX`,
@@ -446,6 +453,8 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       provider: PaymentProvider.ABACATE,
       abacateSubscriptionId: resolveSubscriptionId(normalized),
       abacateCustomerId: resolveCustomerId(normalized),
+      // Drop prior PIX charge id so an old transparent.refunded cannot cancel this card plan.
+      abacatePaymentId: null,
     });
   }
 

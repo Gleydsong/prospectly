@@ -1,6 +1,6 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentProvider, PlanStatus } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { createHmac } from 'node:crypto';
 
@@ -396,6 +396,7 @@ describe('AbacatePaymentProvider', () => {
         organizationId: 'org1',
         abacateSubscriptionId: 'subs_tAFqDWBhcEYTjQh2K0ZYDHau',
         abacateCustomerId: 'cust_def456',
+        abacatePaymentId: null,
       }),
     );
   });
@@ -414,7 +415,63 @@ describe('AbacatePaymentProvider', () => {
       'subscription.renewed',
     );
     expect(activation.activateMonthly).toHaveBeenCalledWith(
-      expect.objectContaining({ organizationId: 'org1', abacateSubscriptionId: 'subs_1' }),
+      expect.objectContaining({
+        organizationId: 'org1',
+        abacateSubscriptionId: 'subs_1',
+        abacatePaymentId: null,
+      }),
+    );
+  });
+
+  it('does not cancel a card monthly plan when an old PIX charge is refunded', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_old',
+      abacateSubscriptionId: 'subs_live',
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_old_pix_refund',
+        event: 'transparent.refunded',
+        data: {
+          transparent: {
+            id: 'pix_old',
+            status: 'REFUNDED',
+            metadata: { organizationId: 'org1', interval: 'monthly', purpose: 'plan' },
+          },
+        },
+      },
+      'transparent.refunded',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('cancels PIX-only monthly when the matching charge is refunded', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      paymentProvider: PaymentProvider.ABACATE,
+      abacatePaymentId: 'pix_m1',
+      abacateSubscriptionId: null,
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_pix_refund',
+        event: 'transparent.refunded',
+        data: {
+          transparent: {
+            id: 'pix_m1',
+            status: 'REFUNDED',
+            metadata: { organizationId: 'org1', interval: 'monthly', purpose: 'plan' },
+          },
+        },
+      },
+      'transparent.refunded',
+    );
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org1', status: PlanStatus.CANCELED }),
     );
   });
 

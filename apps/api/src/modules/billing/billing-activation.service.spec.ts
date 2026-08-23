@@ -98,6 +98,29 @@ describe('BillingActivationService', () => {
     });
   });
 
+  it('clears a prior PIX payment id when activating an Abacate card subscription', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      abacatePaymentId: 'pix_stale',
+    });
+    prisma.organization.update.mockResolvedValue({});
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_1',
+      abacatePaymentId: null,
+    });
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({
+        abacateSubscriptionId: 'subs_1',
+        abacatePaymentId: null,
+      }),
+    });
+  });
+
   it('does not overwrite lifetime with monthly activation', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
