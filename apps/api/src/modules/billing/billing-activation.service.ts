@@ -118,6 +118,8 @@ export class BillingActivationService {
     stripeSubscriptionId?: string | null;
     abacateCustomerId?: string | null;
     abacateSubscriptionId?: string | null;
+    /** Pass null when activating card subscription to drop a prior PIX charge id. */
+    abacatePaymentId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
     const org = await this.prisma.organization.findUnique({
@@ -149,6 +151,9 @@ export class BillingActivationService {
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
         ...(input.abacateSubscriptionId
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
+          : {}),
+        ...(input.abacatePaymentId !== undefined
+          ? { abacatePaymentId: input.abacatePaymentId }
           : {}),
         ...(input.currentPeriodEnd !== undefined
           ? { currentPeriodEnd: input.currentPeriodEnd }
