@@ -57,6 +57,7 @@ export const GLOBAL_MODELS = new Set([
   'User',
   'WaitlistEntry',
   'BillingWebhookEvent',
+  'AppmaxInstallation',
   'RefreshToken',
 ]);
 

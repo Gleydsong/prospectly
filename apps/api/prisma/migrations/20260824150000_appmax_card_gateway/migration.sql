@@ -63,3 +63,19 @@ ALTER TABLE "AppmaxCheckoutAttempt" FORCE ROW LEVEL SECURITY;
 CREATE POLICY "AppmaxCheckoutAttempt_tenant_isolation" ON "AppmaxCheckoutAttempt"
   USING (prospectly_rls_bypass() OR "organizationId" = prospectly_current_org())
   WITH CHECK (prospectly_rls_bypass() OR "organizationId" = prospectly_current_org());
+
+-- Installation health checks persist identifiers only. Merchant secrets remain in Render secrets.
+CREATE TABLE "AppmaxInstallation" (
+  "id" TEXT NOT NULL,
+  "appId" INTEGER NOT NULL,
+  "externalId" TEXT NOT NULL,
+  "merchantClientId" TEXT,
+  "externalKey" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "AppmaxInstallation_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "AppmaxInstallation_externalId_key" ON "AppmaxInstallation"("externalId");
+CREATE UNIQUE INDEX "AppmaxInstallation_merchantClientId_key" ON "AppmaxInstallation"("merchantClientId");
+CREATE INDEX "AppmaxInstallation_appId_createdAt_idx" ON "AppmaxInstallation"("appId", "createdAt");
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "AppmaxInstallation" TO prospectly_app;

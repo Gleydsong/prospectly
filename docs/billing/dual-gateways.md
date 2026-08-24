@@ -36,9 +36,9 @@ APPMAX_RECONCILE_INTERVAL_MS=30000
 
 Keep `APPMAX_ENABLED=false` during deployment and migration. Set it to `true` only after all Appmax credentials, the monthly product, webhook URLs and sandbox smoke tests are ready. PIX remains available while the card rollout is disabled.
 
-Production must use `https://auth.appmax.com.br` and `https://api.appmax.com.br`. `CLIENT_SECRET` is a Render secret and must never be exposed to the browser. `EXTERNAL_ID` is rendered to the browser because Appmax JS requires it for tokenization.
+Production must use `https://auth.appmax.com.br` and `https://api.appmax.com.br`. `CLIENT_SECRET` is a Render secret and must never be exposed to the browser. After installation, the generated `EXTERNAL_ID` is copied from the persisted installation evidence to Render because Appmax JS requires it for tokenization.
 
-App installation health check: `GET` or `POST /api/v1/billing/appmax/health`. Webhook: `POST /api/v1/billing/webhook/appmax`.
+App installation validation URL: `POST /api/v1/billing/appmax/health`. It creates and persists a fresh UUID for every Appmax health check while deliberately discarding `client_secret`. `GET` on the same path is a non-mutating readiness probe. Webhook: `POST /api/v1/billing/webhook/appmax`.
 
 ## Security and entitlement rule
 

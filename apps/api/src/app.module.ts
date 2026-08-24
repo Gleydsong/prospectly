@@ -64,6 +64,7 @@ import { WorkersModule } from './modules/workers/workers.module';
               'req.body.refreshToken',
               'req.body.token',
               'req.body.cardToken',
+              'req.body.client_secret',
               'req.body.documentNumber',
               'req.body.phone',
               'req.body.ip',

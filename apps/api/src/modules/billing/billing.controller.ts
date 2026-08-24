@@ -13,14 +13,17 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
-import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
 import { CreateCheckoutDto, CreateCreditCheckoutDto } from './dto/create-checkout.dto';
 import { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
-
+import { AppmaxInstallationHealthDto } from './dto/appmax-installation-health.dto';
 
 @ApiTags('billing')
 @Controller({ path: 'billing', version: '1' })
@@ -55,15 +58,8 @@ export class BillingController {
   @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
   @Post('credits/checkout')
-  createCreditCheckout(
-    @CurrentOrg() organizationId: string,
-    @Body() dto: CreateCreditCheckoutDto,
-  ) {
-    return this.billing.createCreditCheckoutSession(
-      organizationId,
-      dto.offer,
-      dto.paymentMethod,
-    );
+  createCreditCheckout(@CurrentOrg() organizationId: string, @Body() dto: CreateCreditCheckoutDto) {
+    return this.billing.createCreditCheckoutSession(organizationId, dto.offer, dto.paymentMethod);
   }
 
   @ApiBearerAuth()
@@ -87,13 +83,13 @@ export class BillingController {
   @Public()
   @Get('appmax/health')
   getAppmaxHealth() {
-    return this.billing.getAppmaxHealthCheck();
+    return this.billing.getAppmaxHealthStatus();
   }
 
   @Public()
   @Post('appmax/health')
-  postAppmaxHealth() {
-    return this.billing.getAppmaxHealthCheck();
+  postAppmaxHealth(@Body() dto: AppmaxInstallationHealthDto) {
+    return this.billing.handleAppmaxInstallationHealth(dto);
   }
 
   @ApiBearerAuth()
@@ -120,9 +116,7 @@ export class BillingController {
 
   @Public()
   @Post('webhook/appmax')
-  handleAppmaxWebhook(
-    @Req() req: RawBodyRequest<Request>,
-  ) {
+  handleAppmaxWebhook(@Req() req: RawBodyRequest<Request>) {
     const rawBody = req.rawBody;
     if (!rawBody) {
       throw new BadRequestException('Raw body missing for Appmax webhook');

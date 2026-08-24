@@ -16,7 +16,7 @@ import {
   PlanStatus,
   type AppmaxCheckoutAttempt,
 } from '@prisma/client';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { runWithBypass } from '../../common/prisma/tenant-context';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -26,6 +26,7 @@ import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CreditPurchaseService } from './credit-purchase.service';
 import type { CreditOffer } from './domain/payment-provider';
 import type { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
+import type { AppmaxInstallationHealthDto } from './dto/appmax-installation-health.dto';
 import { AppmaxClient, AppmaxRequestError } from './infrastructure/appmax.client';
 
 const APPROVED_ORDER_STATUSES = new Set(['APROVADO', 'INTEGRADO', 'APPROVED', 'INTEGRATED']);
@@ -108,8 +109,27 @@ export class AppmaxPaymentService implements OnApplicationBootstrap, OnModuleDes
     };
   }
 
-  getHealthCheck(): { external_id: string } {
-    return { external_id: this.client.getExternalId() };
+  getHealthStatus(): { ready: true } {
+    return { ready: true };
+  }
+
+  async createInstallationHealthCheck(
+    input: AppmaxInstallationHealthDto,
+  ): Promise<{ external_id: string; alias: string }> {
+    const expectedAppId = this.config.get<string>('appmax.appId')?.trim();
+    if (expectedAppId && String(input.app_id) !== expectedAppId) {
+      throw new BadRequestException('Appmax installation app_id does not match');
+    }
+    const externalId = randomUUID();
+    await this.prisma.appmaxInstallation.create({
+      data: {
+        appId: input.app_id,
+        externalId,
+        merchantClientId: input.client_id?.trim() || null,
+        externalKey: input.external_key?.trim() || input.client_key?.trim() || null,
+      },
+    });
+    return { external_id: externalId, alias: 'Prospectly' };
   }
 
   async createCardCheckout(input: CardCheckoutInput) {

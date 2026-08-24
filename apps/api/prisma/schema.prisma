@@ -1050,6 +1050,18 @@ model BillingWebhookEvent {
   @@index([status, updatedAt])
 }
 
+/// Non-secret evidence emitted by Appmax installation health checks.
+model AppmaxInstallation {
+  id               String   @id @default(uuid())
+  appId            Int
+  externalId       String   @unique
+  merchantClientId String?  @unique
+  externalKey      String?
+  createdAt        DateTime @default(now())
+
+  @@index([appId, createdAt])
+}
+
 /// Durable Appmax card state. Entitlements are released only after authenticated reconciliation.
 model AppmaxCheckoutAttempt {
   id                     String                  @id @default(uuid())

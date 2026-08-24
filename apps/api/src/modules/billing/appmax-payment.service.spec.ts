@@ -29,6 +29,7 @@ describe('AppmaxPaymentService', () => {
   };
 
   const prisma = {
+    appmaxInstallation: { create: jest.fn() },
     appmaxCheckoutAttempt: {
       findUnique: jest.fn(),
       update: jest.fn(),
@@ -91,6 +92,31 @@ describe('AppmaxPaymentService', () => {
     });
     expect(client.getOrder).not.toHaveBeenCalled();
     expect(creditPurchases.completeById).not.toHaveBeenCalled();
+  });
+
+  it('generates and persists a fresh UUID without storing the merchant secret', async () => {
+    prisma.appmaxInstallation.create.mockResolvedValue({ id: 'installation-1' });
+
+    const result = await service.createInstallationHealthCheck({
+      app_id: 123,
+      client_id: 'merchant-client',
+      client_secret: 'must-not-be-persisted',
+      external_key: 'prospectly-store',
+    });
+
+    expect(result.external_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(result.alias).toBe('Prospectly');
+    expect(prisma.appmaxInstallation.create).toHaveBeenCalledWith({
+      data: {
+        appId: 123,
+        externalId: result.external_id,
+        merchantClientId: 'merchant-client',
+        externalKey: 'prospectly-store',
+      },
+    });
+    expect(JSON.stringify(prisma.appmaxInstallation.create.mock.calls)).not.toContain(
+      'must-not-be-persisted',
+    );
   });
 
   it('does not persist untrusted webhook noise for an unknown Appmax resource', async () => {

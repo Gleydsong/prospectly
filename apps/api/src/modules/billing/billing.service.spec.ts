@@ -61,7 +61,8 @@ describe('BillingService', () => {
   const appmaxPayments = {
     createCardCheckout: jest.fn(),
     getBrowserConfig: jest.fn(),
-    getHealthCheck: jest.fn(),
+    getHealthStatus: jest.fn(),
+    createInstallationHealthCheck: jest.fn(),
     acceptWebhook: jest.fn(),
     cancelSubscription: jest.fn(),
   };

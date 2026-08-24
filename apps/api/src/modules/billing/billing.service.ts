@@ -27,6 +27,7 @@ import type {
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { AppmaxPaymentService } from './appmax-payment.service';
 import type { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
+import type { AppmaxInstallationHealthDto } from './dto/appmax-installation-health.dto';
 
 export interface SearchUsageSnapshot {
   used: number;
@@ -357,8 +358,12 @@ export class BillingService {
     return this.appmaxPayments.getBrowserConfig();
   }
 
-  getAppmaxHealthCheck() {
-    return this.appmaxPayments.getHealthCheck();
+  getAppmaxHealthStatus() {
+    return this.appmaxPayments.getHealthStatus();
+  }
+
+  handleAppmaxInstallationHealth(dto: AppmaxInstallationHealthDto) {
+    return this.appmaxPayments.createInstallationHealthCheck(dto);
   }
 
   async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
