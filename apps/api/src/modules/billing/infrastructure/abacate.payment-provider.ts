@@ -384,6 +384,13 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   private async onSubscriptionPastDue(normalized: NormalizedAbacateWebhook): Promise<void> {
     const organizationId = await this.resolveOrganizationId(normalized);
     if (!organizationId) return;
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org || org.paymentProvider !== PaymentProvider.ABACATE) {
+      this.logger.warn(
+        `Ignoring subscription past_due for org ${organizationId}: provider is no longer Abacate`,
+      );
+      return;
+    }
     await this.activation.syncMonthlyStatus({
       organizationId,
       status: PlanStatus.PAST_DUE,
@@ -395,6 +402,13 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   private async onSubscriptionCancelled(normalized: NormalizedAbacateWebhook): Promise<void> {
     const organizationId = await this.resolveOrganizationId(normalized);
     if (!organizationId) return;
+    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!org || org.paymentProvider !== PaymentProvider.ABACATE) {
+      this.logger.warn(
+        `Ignoring subscription.cancelled for org ${organizationId}: provider is no longer Abacate`,
+      );
+      return;
+    }
     await this.activation.syncMonthlyStatus({
       organizationId,
       status: PlanStatus.CANCELED,

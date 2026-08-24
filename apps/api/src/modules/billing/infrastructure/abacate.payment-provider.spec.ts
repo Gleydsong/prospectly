@@ -387,6 +387,10 @@ describe('AbacatePaymentProvider', () => {
   });
 
   it('marks PAST_DUE on subscription.payment_failed', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+    });
     await provider.applyWebhookEvent(
       {
         id: 'log_fail',
@@ -404,6 +408,10 @@ describe('AbacatePaymentProvider', () => {
   });
 
   it('cancels the plan on subscription.cancelled', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+    });
     await provider.applyWebhookEvent(
       {
         id: 'log_cancel',
@@ -419,6 +427,25 @@ describe('AbacatePaymentProvider', () => {
     expect(activation.syncMonthlyStatus).toHaveBeenCalledWith(
       expect.objectContaining({ organizationId: 'org1', status: PlanStatus.CANCELED }),
     );
+  });
+
+  it('ignores subscription.cancelled after org moved to Appmax', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.APPMAX,
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel_stale',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_old', status: 'CANCELLED' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
   });
 
   it('ignores unknown events without changing entitlement', async () => {

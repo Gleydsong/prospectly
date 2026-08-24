@@ -1,4 +1,4 @@
-import { AppmaxCheckoutKind, AppmaxCheckoutStatus, PaymentProvider } from '@prisma/client';
+import { AppmaxCheckoutKind, AppmaxCheckoutStatus, PaymentProvider, PlanStatus } from '@prisma/client';
 
 import { AppmaxPaymentService } from './appmax-payment.service';
 import { AppmaxRequestError } from './infrastructure/appmax.client';
@@ -184,6 +184,96 @@ describe('AppmaxPaymentService', () => {
 
     expect(creditPurchases.refundById).toHaveBeenCalledWith('purchase-1');
     expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not cancel an existing plan when a monthly card checkout is declined', async () => {
+    const monthlyAttempt = {
+      ...attempt,
+      kind: AppmaxCheckoutKind.MONTHLY,
+      offer: null,
+      amountCentavos: 4999,
+      purchaseId: null,
+      externalSubscriptionId: null,
+    };
+    prisma.appmaxCheckoutAttempt.findUnique.mockResolvedValue(monthlyAttempt);
+    client.getOrder.mockResolvedValue({
+      id: 12345,
+      status: 'recusado',
+      total: 4999,
+      customer_id: 29,
+    });
+
+    await service.reconcileAttempt(monthlyAttempt.id);
+
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+    expect(prisma.appmaxCheckoutAttempt.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: monthlyAttempt.id },
+        data: expect.objectContaining({ status: AppmaxCheckoutStatus.FAILED }),
+      }),
+    );
+  });
+
+  it('cancels monthly entitlement only after the attempt attached an Appmax subscription', async () => {
+    const monthlyAttempt = {
+      ...attempt,
+      kind: AppmaxCheckoutKind.MONTHLY,
+      offer: null,
+      amountCentavos: 4999,
+      purchaseId: null,
+      externalSubscriptionId: 'subscription-1',
+    };
+    prisma.appmaxCheckoutAttempt.findUnique.mockResolvedValue(monthlyAttempt);
+    client.getOrder.mockResolvedValue({
+      id: 12345,
+      status: 'estornado',
+      total: 4999,
+      customer_id: 29,
+    });
+
+    await service.reconcileAttempt(monthlyAttempt.id);
+
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org-1',
+      status: PlanStatus.CANCELED,
+    });
+  });
+
+  it('clears stale Abacate ids when attaching an Appmax monthly subscription', async () => {
+    const monthlyAttempt = {
+      ...attempt,
+      kind: AppmaxCheckoutKind.MONTHLY,
+      offer: null,
+      amountCentavos: 4999,
+      purchaseId: null,
+      externalSubscriptionId: null,
+    };
+    prisma.appmaxCheckoutAttempt.findUnique.mockResolvedValue(monthlyAttempt);
+    client.getOrder.mockResolvedValue({
+      id: 12345,
+      status: 'aprovado',
+      total: 4999,
+      customer_id: 29,
+    });
+    client.listSubscriptions.mockResolvedValue({ subscriptions: [] });
+    client.createSubscription.mockResolvedValue({ id: 'subscription-new' });
+
+    await service.reconcileAttempt(monthlyAttempt.id);
+
+    expect(activation.activateMonthly).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        provider: PaymentProvider.APPMAX,
+      }),
+    );
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org-1' },
+      data: expect.objectContaining({
+        appmaxSubscriptionId: 'subscription-new',
+        abacateSubscriptionId: null,
+        abacatePaymentId: null,
+      }),
+    });
   });
 
   it('reconciles instead of repeating an ambiguous subscription creation', async () => {

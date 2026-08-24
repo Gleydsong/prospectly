@@ -417,7 +417,14 @@ export class AppmaxPaymentService implements OnApplicationBootstrap, OnModuleDes
               data: { status: 'FAILED' },
             });
           }
-        } else if (attempt.kind === AppmaxCheckoutKind.MONTHLY) {
+        } else if (
+          attempt.kind === AppmaxCheckoutKind.MONTHLY &&
+          attempt.externalSubscriptionId
+        ) {
+          // Declined/failed first charges never attach a subscription. Canceling
+          // here would wipe an unrelated live Abacate PIX/card month (or any
+          // prior plan). Only revoke after THIS attempt activated a subscription
+          // (e.g. later chargeback/refund of that Appmax order).
           await this.activation.syncMonthlyStatus({
             organizationId: attempt.organizationId,
             status: PlanStatus.CANCELED,
@@ -638,12 +645,16 @@ export class AppmaxPaymentService implements OnApplicationBootstrap, OnModuleDes
       provider: PaymentProvider.APPMAX,
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
+    // Drop stale Abacate PIX/card ids so later Abacate refund/cancel webhooks
+    // cannot resolve+downgrade this Appmax-paid org via leftover identifiers.
     await this.prisma.organization.update({
       where: { id: attempt.organizationId },
       data: {
         appmaxCustomerId: attempt.externalCustomerId,
         appmaxSubscriptionId: subscriptionId,
         appmaxLastReconciledAt: new Date(),
+        abacateSubscriptionId: null,
+        abacatePaymentId: null,
       },
     });
     await this.completeAttempt(attempt.id, orderStatus);
