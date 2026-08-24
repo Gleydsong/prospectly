@@ -17,6 +17,18 @@ export function handleCheckoutResult(result: CheckoutResult, meta?: PixCheckoutM
     window.location.assign('/billing/pix');
     return;
   }
+  if (result.mode === 'pending') {
+    saveCheckoutIntent({
+      purpose: meta?.purpose ?? 'plan',
+      offer: meta?.offer,
+      plan: meta?.plan ?? (meta?.purpose === 'credits' ? undefined : 'monthly'),
+      baselineCreditBalance: meta?.baselineCreditBalance,
+      provider: result.provider,
+      externalCheckoutId: result.externalOrderId,
+    });
+    window.location.assign('/billing/success');
+    return;
+  }
   saveCheckoutIntent({
     purpose: meta?.purpose ?? 'plan',
     offer: meta?.offer,

@@ -1,6 +1,6 @@
 import type { PaymentMethod, PaymentProviderId } from './payment-provider';
 
-/** New sales (PIX and card) always go through AbacatePay. Stripe is legacy-only. */
-export function resolvePaymentProviderId(_method: PaymentMethod): PaymentProviderId {
-  return 'ABACATE';
+/** PIX stays on AbacatePay; cards are tokenized and charged by Appmax. */
+export function resolvePaymentProviderId(method: PaymentMethod): PaymentProviderId {
+  return method === 'pix' ? 'ABACATE' : 'APPMAX';
 }

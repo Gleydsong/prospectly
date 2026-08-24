@@ -23,8 +23,27 @@ export async function createCreditCheckout(input: {
   return data;
 }
 
-export async function createBillingPortal(): Promise<{ url: string }> {
-  const { data } = await api.post<{ url: string }>('/billing/portal');
+export type AppmaxCardCheckoutInput = {
+  checkoutKey: string;
+  purpose: 'monthly' | 'credits';
+  offer?: CreditOffer;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  ip: string;
+  cardToken: string;
+  documentNumber: string;
+  holderName: string;
+};
+
+export async function createAppmaxCardCheckout(input: AppmaxCardCheckoutInput): Promise<CheckoutResult> {
+  const { data } = await api.post<CheckoutResult>('/billing/card/checkout', input);
+  return data;
+}
+
+export async function getAppmaxCardConfig(): Promise<{ externalId: string; scriptUrl: string }> {
+  const { data } = await api.get<{ externalId: string; scriptUrl: string }>('/billing/card/config');
   return data;
 }
 

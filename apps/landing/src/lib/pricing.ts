@@ -11,7 +11,7 @@ export const DISPLAY_PRICES: Record<
   },
   // Legacy key kept for register?plan=lifetime deep-links; maps to credit packs UX.
   lifetime: {
-    BRL: { amount: 19.99, formatted: 'R$ 19,99' },
+    BRL: { amount: 23.99, formatted: 'R$ 23,99' },
   },
 };
 

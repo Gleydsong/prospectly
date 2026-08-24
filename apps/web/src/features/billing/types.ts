@@ -2,7 +2,7 @@ export type CheckoutResult =
   | {
       mode: 'redirect';
       url: string;
-      provider: 'STRIPE' | 'ABACATE';
+      provider: 'ABACATE';
       externalCustomerId?: string;
       externalCheckoutId?: string;
     }
@@ -14,6 +14,12 @@ export type CheckoutResult =
       externalPaymentId: string;
       amountCentavos: number;
       expiresAt?: string;
+    }
+  | {
+      mode: 'pending';
+      provider: 'APPMAX';
+      externalOrderId: string;
+      status: string;
     };
 
 export type SearchUsage = {
@@ -33,13 +39,12 @@ export type BillingStatus = {
   plan: string;
   planStatus: string;
   planCurrency: string | null;
-  paymentProvider: 'STRIPE' | 'ABACATE' | null;
+  paymentProvider: 'STRIPE' | 'ABACATE' | 'APPMAX' | null;
   currentPeriodEnd: string | null;
-  legacyStripeSubscription: boolean;
-  canOpenPortal: boolean;
   canCancelSubscription: boolean;
   canExportCsv: boolean;
   freeSearchLimit: number;
   creditBalance: number;
   monthlyCardEnabled: boolean;
+  cardEnabled: boolean;
 };

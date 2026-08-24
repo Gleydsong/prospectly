@@ -95,6 +95,12 @@ export function RegisterPage() {
     setAuth(response);
     await setAppLocale(response.user.locale ?? fallbackLocale ?? 'pt');
 
+    if (paymentMethod === 'card' && (plan || offer)) {
+      const selected = offer ?? (plan ? 'unlimited' : null);
+      navigate(`/credits?offer=${selected ?? 'unlimited'}&method=card`, { replace: true });
+      return;
+    }
+
     if (plan) {
       try {
         const checkout = await createCheckoutSession({

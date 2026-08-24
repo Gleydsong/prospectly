@@ -20,12 +20,11 @@ const unpaidStatus = {
   searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
   planCurrency: null,
   currentPeriodEnd: null,
-  legacyStripeSubscription: false,
-  canOpenPortal: false,
   canCancelSubscription: false,
   canExportCsv: false,
   freeSearchLimit: 3,
   monthlyCardEnabled: false,
+  cardEnabled: false,
 };
 
 describe('BillingSuccessPage', () => {
@@ -68,12 +67,11 @@ describe('BillingSuccessPage', () => {
       searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
       planCurrency: null,
       currentPeriodEnd: null,
-      legacyStripeSubscription: false,
-      canOpenPortal: false,
       canCancelSubscription: false,
       canExportCsv: false,
       freeSearchLimit: 3,
       monthlyCardEnabled: false,
+      cardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
@@ -92,12 +90,11 @@ describe('BillingSuccessPage', () => {
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
       currentPeriodEnd: null,
-      legacyStripeSubscription: false,
-      canOpenPortal: false,
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
       monthlyCardEnabled: false,
+      cardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });

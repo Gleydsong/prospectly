@@ -136,7 +136,7 @@
       "OpenStreetMap Overpass",
       "Google Places",
       "Google OAuth",
-      "Stripe",
+      "Appmax",
       "AbacatePay",
       "SMTP",
       "sites públicos para análise"
@@ -357,7 +357,7 @@
       "kind": "backend-module",
       "layer": "commerce",
       "status": "implemented",
-      "responsibility": "Status do plano, checkout/portal/cancelamento, roteamento por moeda e webhooks idempotentes Stripe/Abacate.",
+      "responsibility": "Status do plano, PIX Abacate, cartão Appmax, cancelamento e reconciliação autenticada de pagamentos.",
       "evidence": ["apps/api/src/modules/billing", "docs/billing/dual-gateways.md"]
     },
     {
@@ -534,11 +534,11 @@
     },
     {
       "id": "external-payments",
-      "name": "Stripe + AbacatePay",
+      "name": "Appmax + AbacatePay",
       "kind": "external-service-group",
       "layer": "integration",
       "status": "implemented",
-      "responsibility": "Checkout por moeda/região, portal/cancelamento e eventos webhook.",
+      "responsibility": "Cartão via Appmax, PIX via AbacatePay, cancelamento e eventos webhook.",
       "evidence": [
         "apps/api/src/modules/billing/infrastructure",
         "apps/api/src/modules/billing/billing.controller.ts"
@@ -751,11 +751,11 @@
         "operations": [
           "GET /billing/status",
           "POST /billing/checkout",
-          "POST /billing/portal",
+          "POST /billing/card/checkout",
+          "GET /billing/card/config",
           "POST /billing/cancel",
-          "POST /billing/webhook/stripe",
           "POST /billing/webhook/abacate",
-          "POST /billing/webhook (legacy Stripe)"
+          "POST /billing/webhook/appmax"
         ]
       },
       {
@@ -948,9 +948,9 @@
       "name": "Checkout e ativação",
       "steps": [
         "Landing envia plan/currency para /register ou Web inicia checkout",
-        "PaymentRouter escolhe Abacate para BRL e Stripe para EUR/USD",
-        "Provider cria checkout/PIX e retorna URL ou dados do pagamento",
-        "Webhook com assinatura validada é deduplicado por provider+eventId",
+        "PaymentRouter escolhe Abacate para PIX e Appmax para cartão, ambos em BRL",
+        "O navegador tokeniza o cartão com Appmax JS; PAN/CVV não passam pela API",
+        "Webhooks apenas sinalizam; a API autenticada do gateway confirma o estado",
         "BillingActivationService atualiza plano/status da organização"
       ],
       "evidence": [
@@ -1188,8 +1188,8 @@
       "why": "OpenStreetMap é padrão e Google Places é opcional sem condicionar o fluxo de aplicação a um fornecedor."
     },
     {
-      "decision": "Billing roteado por moeda",
-      "why": "Abacate atende BRL/Pix e Stripe atende EUR/USD, preservando uma abstração comum de provider."
+      "decision": "Billing roteado por método de pagamento",
+      "why": "AbacatePay atende PIX e Appmax atende cartão; confirmações autenticadas e reconciliação protegem os benefícios concedidos."
     }
   ],
   "knownBoundariesAndGaps": [

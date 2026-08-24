@@ -1,5 +1,5 @@
 import { AxiosError } from 'axios';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,12 +43,11 @@ describe('CreditsPage', () => {
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
       currentPeriodEnd: null,
-      legacyStripeSubscription: false,
-      canOpenPortal: false,
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
       monthlyCardEnabled: false,
+      cardEnabled: true,
     });
     useAuthStore.setState({
       user: {
@@ -66,7 +65,7 @@ describe('CreditsPage', () => {
     });
   });
 
-  it('sends paymentMethod card for AbacatePay checkout', async () => {
+  it('opens the Appmax card form without sending card data to AbacatePay', async () => {
     const user = userEvent.setup();
     createCreditCheckout.mockResolvedValue({
       mode: 'redirect',
@@ -75,13 +74,9 @@ describe('CreditsPage', () => {
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
-    await user.click(screen.getByRole('button', { name: /Cartão via AbacatePay/ }));
-    await waitFor(() => {
-      expect(createCreditCheckout).toHaveBeenCalledWith({
-        offer: 'credits-2000',
-        paymentMethod: 'card',
-      });
-    });
+    await user.click(screen.getByRole('button', { name: /Cartão via Appmax/ }));
+    expect(await screen.findByRole('dialog', { name: 'Pagamento seguro com cartão' })).toBeInTheDocument();
+    expect(createCreditCheckout).not.toHaveBeenCalled();
   });
 
   it('shows an accessible cancel confirmation and hides Stripe portal for Abacate orgs', async () => {
@@ -89,11 +84,11 @@ describe('CreditsPage', () => {
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     expect(screen.queryByRole('button', { name: 'Portal legado do cartão (Stripe)' })).not.toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Cancelar assinatura' }));
-    expect(await screen.findByRole('dialog', { name: 'Cancelar assinatura AbacatePay?' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Cancelar assinatura?' })).toBeInTheDocument();
     expect(screen.getByText(/O cancelamento é imediato/)).toBeInTheDocument();
   });
 
-  it('shows the legacy Stripe portal only for Stripe orgs', async () => {
+  it('does not expose a Stripe portal for historical Stripe rows', async () => {
     getBillingStatus.mockResolvedValue({
       plan: 'STARTER_MONTHLY',
       planStatus: 'ACTIVE',
@@ -102,26 +97,24 @@ describe('CreditsPage', () => {
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
       currentPeriodEnd: null,
-      legacyStripeSubscription: true,
-      canOpenPortal: true,
       canCancelSubscription: false,
       canExportCsv: true,
       freeSearchLimit: 3,
       monthlyCardEnabled: false,
+      cardEnabled: true,
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
-    expect(
-      await screen.findByRole('button', { name: 'Portal legado do cartão (Stripe)' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Créditos disponíveis')).toBeInTheDocument();
+    expect(screen.queryByText(/Stripe/)).not.toBeInTheDocument();
   });
 
   it('keeps unlimited card disabled until the monthly product exists', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click(await screen.findByRole('button', { name: 'Assinar ilimitado' }));
-    const card = screen.getByRole('button', { name: /Cartão via AbacatePay/ });
+    const card = screen.getByRole('button', { name: /Cartão via Appmax/ });
     expect(card).toBeDisabled();
-    expect(screen.getByText(/Cartão do Ilimitado ainda não está no catálogo de teste/)).toBeInTheDocument();
+    expect(screen.getByText(/checkout Appmax ainda não está configurado/)).toBeInTheDocument();
   });
 
   it('surfaces the API checkout error instead of a generic billing message', async () => {

@@ -6,10 +6,11 @@ const authRequestConfig = { timeout: AUTH_REQUEST_TIMEOUT_MS };
 export type { BillingStatus, CheckoutResult } from '@/features/billing/types';
 export {
   cancelBillingSubscription,
-  createBillingPortal,
+  createAppmaxCardCheckout,
   createCheckoutSession,
   createCreditCheckout,
   getBillingStatus,
+  getAppmaxCardConfig,
 } from '@/features/billing/api';
 
 export interface AuthResponse {

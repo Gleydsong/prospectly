@@ -33,12 +33,11 @@ describe('isCheckoutConfirmed', () => {
           searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
           planCurrency: null,
           currentPeriodEnd: null,
-          legacyStripeSubscription: false,
-          canOpenPortal: false,
           canCancelSubscription: false,
           canExportCsv: false,
           freeSearchLimit: 3,
           monthlyCardEnabled: false,
+          cardEnabled: false,
         },
       ),
     ).toBe(true);
@@ -56,12 +55,33 @@ describe('isCheckoutConfirmed', () => {
           searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
           planCurrency: 'BRL',
           currentPeriodEnd: null,
-          legacyStripeSubscription: false,
-          canOpenPortal: false,
           canCancelSubscription: true,
           canExportCsv: true,
           freeSearchLimit: 3,
           monthlyCardEnabled: false,
+          cardEnabled: false,
+        },
+      ),
+    ).toBe(true);
+  });
+
+  it('confirms an active Appmax monthly plan after reconciliation', () => {
+    expect(
+      isCheckoutConfirmed(
+        { purpose: 'plan', plan: 'monthly', provider: 'APPMAX' },
+        {
+          plan: 'STARTER_MONTHLY',
+          planStatus: 'ACTIVE',
+          paymentProvider: 'APPMAX',
+          creditBalance: 400,
+          searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
+          planCurrency: 'BRL',
+          currentPeriodEnd: '2026-09-24T00:00:00.000Z',
+          canCancelSubscription: true,
+          canExportCsv: true,
+          freeSearchLimit: 3,
+          monthlyCardEnabled: true,
+          cardEnabled: true,
         },
       ),
     ).toBe(true);

@@ -1,134 +1,73 @@
-# Dual payment methods (AbacatePay PIX + card) — Brazil only
+# Billing: AbacatePay PIX + Appmax card
 
-Prospectly routes **all new checkouts** through **AbacatePay**, always in **BRL**:
+## Runtime ownership
 
-| Method | Provider | Credits (2k/5k) | Monthly unlimited |
-|--------|----------|-----------------|-------------------|
-| PIX | AbacatePay | Transparent PIX (QR in-app) | Transparent PIX → `STARTER_MONTHLY` for **30 days** (no auto-renew) |
-| Card | AbacatePay | Hosted checkout `POST /v2/checkouts/create` `methods: ["CARD"]` | Hosted subscription `POST /v2/subscriptions/create` `methods: ["CARD"]` (auto-renew) |
+| Payment method                         | Provider   | Confirmation                              |
+| -------------------------------------- | ---------- | ----------------------------------------- |
+| PIX, credit packs and 30-day unlimited | AbacatePay | Signed webhook already implemented        |
+| Card, credit packs                     | Appmax     | Authenticated `GET /v1/orders/{id}`       |
+| Card, monthly unlimited                | Appmax     | Confirmed order, then Appmax subscription |
 
-EUR/USD and Europe markets are **not supported**.
+Stripe is no longer part of the application runtime: there is no SDK, provider, portal or webhook route. Historical database identifiers remain temporarily for financial traceability and must only be dropped after a production audit proves that no active or past-due Stripe subscription remains.
 
-Stripe remains **legacy-only**: portal, webhook, and sync for organizations that already have a Stripe subscription. New card sales never call Stripe Checkout.
+## Prices
 
-Credits do **not** lock `Organization.paymentProvider`. Plan checkout does **not** bind the gateway until a confirmed webhook. Stripe `ACTIVE` / `PAST_DUE` orgs cannot start an AbacatePay **plan** until the Stripe subscription is resolved. Stripe `CANCELED` / `INACTIVE` orgs may start AbacatePay. Credits remain purchasable on AbacatePay even with a legacy Stripe plan.
+- 2,000 credits: `1499` cents (R$ 14.99).
+- 5,000 credits: `2399` cents (R$ 23.99).
+- Unlimited monthly: `4999` cents (R$ 49.99).
 
-Activation happens **only** after an authenticated AbacatePay webhook. Browser redirects never grant entitlement.
+Backend constants are authoritative. The landing page and application display the same values.
 
-## Environment
+## Required Appmax environment
 
-### Stripe (legacy only)
-
-```bash
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_PORTAL_RETURN_URL=
+```dotenv
+APPMAX_ENABLED=false
+APPMAX_CLIENT_ID=
+APPMAX_CLIENT_SECRET=
+APPMAX_EXTERNAL_ID=
+APPMAX_APP_ID=
+APPMAX_SITE_ID=
+APPMAX_MONTHLY_PRODUCT_ID=
+APPMAX_AUTH_BASE_URL=https://auth.sandboxappmax.com.br
+APPMAX_API_BASE_URL=https://api.sandboxappmax.com.br
+APPMAX_HTTP_TIMEOUT_MS=12000
+APPMAX_RECONCILE_INTERVAL_MS=30000
 ```
 
-Keep the Stripe webhook enabled while any Stripe subscription remains.
+Keep `APPMAX_ENABLED=false` during deployment and migration. Set it to `true` only after all Appmax credentials, the monthly product, webhook URLs and sandbox smoke tests are ready. PIX remains available while the card rollout is disabled.
 
-### AbacatePay (new PIX + card)
+Production must use `https://auth.appmax.com.br` and `https://api.appmax.com.br`. `CLIENT_SECRET` is a Render secret and must never be exposed to the browser. `EXTERNAL_ID` is rendered to the browser because Appmax JS requires it for tokenization.
 
-```bash
-ABACATE_API_KEY=
-ABACATE_WEBHOOK_SECRET=
-ABACATE_WEBHOOK_HMAC_KEY=          # optional; defaults to Abacate public HMAC key
-ABACATE_PRODUCT_MONTHLY_BRL=       # optional until live catalog; MONTHLY cycle product
-ABACATE_PRODUCT_CREDITS_2000_BRL=  # one-time product, no cycle (R$ 9,99)
-ABACATE_PRODUCT_CREDITS_5000_BRL=  # one-time product, no cycle (R$ 19,99)
-ABACATE_MONTHLY_AMOUNT_CENTAVOS=4999
-ABACATE_SUCCESS_URL=
-ABACATE_CANCEL_URL=
-ABACATE_API_BASE_URL=https://api.abacatepay.com/v2
-ABACATE_HTTP_TIMEOUT_MS=15000
-```
+App installation health check: `GET` or `POST /api/v1/billing/appmax/health`. Webhook: `POST /api/v1/billing/webhook/appmax`.
 
-Production/staging fail startup if API key, webhook secret, both credit product IDs, and success/cancel URLs are empty. `ABACATE_PRODUCT_MONTHLY_BRL` is optional: without it, monthly **card** returns `503` and the UI offers PIX only. Local/test may omit product IDs; checkout then returns `503`.
+## Security and entitlement rule
 
-Do **not** create products at runtime. IDs come from the dashboard.
+The browser loads `https://scripts.appmax.com.br/appmax.min.js`. PAN, expiry and CVV are tokenized there and never enter the Prospectly API, logs or database. The API accepts only the short-lived token, Appmax-collected IP and required customer/holder fields.
 
-## External runbook (dashboard — not done by this repo)
+Appmax webhooks have no signature or event ID. They only schedule reconciliation. No entitlement is granted from their body. Credits or unlimited access are released only after an authenticated Appmax API read confirms the expected order, customer and exact amount.
 
-1. Create products in the AbacatePay dashboard. Dev catalogs may only allow two:
-   - **Prospectly 2.000 créditos**: BRL, one-time (no cycle), R$ 9,99.
-   - **Prospectly 5.000 créditos**: BRL, one-time (no cycle), R$ 19,99.
-   - **Prospectly Ilimitado** (live account, third slot): BRL, cycle `MONTHLY`, R$ 49,99. Until then, monthly is PIX-only.
-2. Store the public product IDs as secrets/env vars.
-3. Create an HTTPS v2 webhook pointing to `/api/v1/billing/webhook/abacate?webhookSecret=<secret>`.
-4. Select checkout, transparent, and subscription events used by the app (`completed`, `refunded`, `disputed`, `lost` if offered, `subscription.renewed`, `subscription.cancelled`, `subscription.payment_failed`).
-5. Grant the API key `checkout`/`billing` create, `subscription` create/delete, and any other permissions required by current AbacatePay docs.
-6. Test first with a `devMode` key.
-7. Do **not** disable the Stripe webhook while legacy Stripe subscriptions exist.
+## Idempotency and uncertainty
 
-## App flows
+`AppmaxCheckoutAttempt.checkoutKey` is created once by the browser and persisted before external mutations. The same key returns the existing order and cannot create a second local purchase.
 
-- **Credits + PIX:** `{ mode: 'pix', brCode, ... }` → in-app QR → poll `/billing/status` for credit balance.
-- **Credits + card:** `{ mode: 'redirect', provider: 'ABACATE', url }` → AbacatePay hosted checkout. Webhook `checkout.completed` completes `CreditPurchase` once.
-- **Monthly + PIX:** transparent PIX → webhook activates monthly for 30 days; renew = new PIX. `currentPeriodEnd` is enforced on search/billing reads (expired orgs drop to FREE). Cancel in-app without a subscription id.
-- **Monthly + card:** AbacatePay subscription checkout; `subscription.completed` / `subscription.renewed` keep `STARTER_MONTHLY` + `ACTIVE`. `subscription.payment_failed` → `PAST_DUE`. `subscription.cancelled` → `FREE` + `CANCELED`. Cancel is immediate (`POST /v2/subscriptions/cancel`).
-- **Lifetime checkout** is rejected. Existing `LIFETIME` orgs keep access; new sales are credits or monthly.
-- **Redirect `/billing/success` never activates entitlement.** The UI polls `/billing/status`.
+Appmax does not document an idempotency header:
 
-## Webhooks (AbacatePay API v2)
+- a lost order-creation response becomes `REVIEW_REQUIRED`; the API does not blindly create another order;
+- a lost payment response is recovered with `GET /v1/orders/{id}`;
+- a lost subscription response is recovered by listing subscriptions and matching `charges[].order_id` before any further action;
+- after bounded unsuccessful recovery, the attempt becomes `REVIEW_REQUIRED` and requires support review.
 
-Payloads are nested. Do not read `data.id` at the wrong level:
+The reconciler polls pending attempts with backoff and checks active Appmax subscriptions daily. Refund or chargeback confirmation reverses credit benefits idempotently or cancels monthly entitlement.
 
-- `transparent.*` → `data.transparent`
-- `checkout.*` → `data.checkout`
-- `subscription.*` → `data.subscription` (+ `data.customer`, `data.payment`, related `data.checkout`)
+## Go-live gates
 
-Correlation order: `metadata.purchaseId` → `CreditPurchase.externalPaymentId` → `CreditPurchase.externalId` → `metadata.organizationId` (org must exist) → `externalId` `org:<id>:…` → persisted `abacateSubscriptionId` / `abacateCustomerId`.
+1. Publish and install the private Appmax app; store merchant credentials and `external_id` in Render.
+2. Configure the Appmax monthly product ID.
+3. Apply the Prisma migration.
+4. Register the public Appmax health-check and webhook URLs.
+5. Validate sandbox success card `4000000000000010` and failure card `4000000000000028`.
+6. Validate order approval, refusal, refund, monthly subscription creation, renewal, failure and cancellation.
+7. Confirm CSP/network behavior of Appmax JS and disable session replay on payment fields.
+8. Audit production for remaining active/past-due Stripe rows before deleting historical columns or disabling an external legacy webhook.
 
-HMAC (`X-Webhook-Signature`) and webhook secret are required. Unknown events return 200 after auth and do not change entitlement.
-
-`ABACATE_WEBHOOK_HMAC_KEY` is optional. Empty or whitespace values must fall back to the Abacate public HMAC key — never treat `""` as a custom secret.
-
-Idempotency: `BillingWebhookEvent.status` `PROCESSING | PROCESSED | FAILED`. Duplicate `PROCESSED` is a no-op. `FAILED` can be retried.
-
-## Cancel / portal
-
-- Legacy Stripe orgs: Billing Portal (`POST /billing/portal`) when `legacyStripeSubscription` / `canOpenPortal`.
-- AbacatePay PIX monthly (no subscription id): `POST /billing/cancel` cancels locally (immediate).
-- AbacatePay card subscription: `POST /billing/cancel` calls Abacate API (`cancelPolicy: NOW`). Access is lost immediately.
-
-## Data migration notes
-
-`CreditPurchase.paymentMethod` backfill:
-
-- historical `STRIPE` rows → `CARD`
-- historical `ABACATE` rows → `PIX` (this product had no Abacate card credits before this change)
-
-Do not invent Stripe→Abacate card migrations. That requires a new customer authorization.
-
-## Removing Stripe (when zero remaining subscriptions)
-
-Do this only after production data shows **no** `Organization` with a live Stripe subscription (`stripeSubscriptionId` set and `planStatus` in `ACTIVE` / `PAST_DUE`).
-
-1. Confirm in production SQL that leftover Stripe rows are canceled/inactive (or already migrated by the customer to AbacatePay).
-2. Disable the Stripe webhook endpoint in the Stripe dashboard.
-3. Stop sending traffic to `/billing/webhook/stripe` (keep the route returning 4xx/410 for a while if you want a hard fail, then delete).
-4. Remove `StripePaymentProvider` portal + webhook code, Stripe env vars, and Render Stripe secrets.
-5. Drop unused Stripe columns (`stripeCustomerId`, `stripeSubscriptionId`, related indexes) in a dedicated Prisma migration after a freeze window.
-6. Remove `PaymentProvider.STRIPE` from the enum only after no rows still store `STRIPE`.
-7. Keep historical `CreditPurchase` / webhook event rows; do not rewrite payment history.
-
-Until that count is zero, keep the Stripe webhook, portal, and sync path.
-
-## Staging checklist
-
-- [ ] Credits PIX: QR → balance increments once
-- [ ] Credits card: AbacatePay hosted checkout → webhook completes once; replay does not double-credit
-- [ ] Monthly PIX: QR → ACTIVE STARTER_MONTHLY with period end ~30d
-- [ ] Monthly card: AbacatePay subscription → ACTIVE; renew keeps ACTIVE; payment_failed → PAST_DUE; cancel → FREE
-- [ ] Nested v2 payloads (`data.checkout` / `data.subscription` / `data.customer`)
-- [ ] Bad HMAC / wrong secret rejected
-- [ ] Processing failure leaves FAILED and allows retry
-- [ ] Stripe ACTIVE org cannot start AbacatePay plan; canceled/inactive Stripe can
-- [ ] Credit PIX/card allowed while on Stripe plan
-- [ ] Stripe portal still works for legacy orgs
-- [ ] EUR/USD DTO rejected; prospecting country only `BR`
-- [ ] Success page does not claim payment before `/billing/status`
-
-## Out of scope
-
-Coupons, change-plan, Connect/payouts, NF-e, boleto, auto-renew PIX subscription, automatic Stripe→Abacate card migration, AI credit billing.
+Full official-doc research and source links: [appmax-card-integration-research.md](./appmax-card-integration-research.md).

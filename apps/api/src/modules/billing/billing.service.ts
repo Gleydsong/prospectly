@@ -1,13 +1,14 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { OrgPlan, PaymentProvider, PlanStatus, BillingWebhookEventStatus, type Organization, type Role } from '@prisma/client';
+import {
+  OrgPlan,
+  PaymentProvider,
+  PlanStatus,
+  BillingWebhookEventStatus,
+  type Organization,
+  type Role,
+} from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
@@ -16,10 +17,6 @@ import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
 import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
 import { EntitlementService } from './entitlement.service';
-import {
-  MonthlyCheckoutAttemptService,
-  type MonthlyCheckoutClaim,
-} from './monthly-checkout-attempt.service';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -28,7 +25,8 @@ import type {
   PaymentMethod,
 } from './domain/payment-provider';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
+import { AppmaxPaymentService } from './appmax-payment.service';
+import type { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
 
 export interface SearchUsageSnapshot {
   used: number;
@@ -46,11 +44,10 @@ export class BillingService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly activation: BillingActivationService,
-    private readonly stripeProvider: StripePaymentProvider,
     private readonly abacateProvider: AbacatePaymentProvider,
+    private readonly appmaxPayments: AppmaxPaymentService,
     private readonly creditPurchases: CreditPurchaseService,
     private readonly entitlements: EntitlementService,
-    private readonly monthlyCheckoutAttempts: MonthlyCheckoutAttemptService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
@@ -66,22 +63,31 @@ export class BillingService {
       planCurrency: org.planCurrency,
       paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
-      legacyStripeSubscription: canManage
-        ? provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId)
-        : false,
-      canOpenPortal: canManage
-        ? provider === PaymentProvider.STRIPE && Boolean(org.stripeCustomerId)
-        : false,
       canCancelSubscription: canManage
         ? org.plan === OrgPlan.STARTER_MONTHLY &&
           unlimited &&
-          provider === PaymentProvider.ABACATE
+          (provider === PaymentProvider.ABACATE || provider === PaymentProvider.APPMAX)
         : false,
       canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
-      monthlyCardEnabled: this.hasConfiguredProduct('abacate.productMonthlyBrl'),
+      monthlyCardEnabled:
+        this.isAppmaxCardEnabled() && this.hasConfiguredProduct('appmax.monthlyProductId'),
+      cardEnabled: this.isAppmaxCardEnabled(),
     };
+  }
+
+  private isAppmaxCardEnabled(): boolean {
+    return (
+      this.config.get<boolean>('appmax.enabled') === true &&
+      [
+        'appmax.clientId',
+        'appmax.clientSecret',
+        'appmax.externalId',
+        'appmax.appId',
+        'appmax.siteId',
+      ].every((key) => this.hasConfiguredProduct(key))
+    );
   }
 
   private hasConfiguredProduct(configKey: string): boolean {
@@ -89,9 +95,7 @@ export class BillingService {
     return typeof value === 'string' && value.trim().length > 0;
   }
 
-  async getSearchUsage(
-    organization: Organization | string,
-  ): Promise<SearchUsageSnapshot> {
+  async getSearchUsage(organization: Organization | string): Promise<SearchUsageSnapshot> {
     const org =
       typeof organization === 'string' ? await this.requireOrg(organization) : organization;
     const used = await this.countBillableRuns(org.id);
@@ -269,51 +273,9 @@ export class BillingService {
     } as const;
 
     if (paymentMethod === 'card') {
-      return this.createIdempotentMonthlyCardCheckout(organizationId, checkoutInput);
+      throw new BadRequestException('Use /billing/card/checkout for Appmax card payments');
     }
     return this.abacateProvider.createCheckout(checkoutInput);
-  }
-
-  private async createIdempotentMonthlyCardCheckout(
-    organizationId: string,
-    input: Parameters<AbacatePaymentProvider['createCheckout']>[0],
-  ): Promise<CheckoutResult> {
-    const begin = await this.monthlyCheckoutAttempts.beginCard(organizationId);
-    if (begin.state === 'ready') return begin.checkout;
-
-    let claim: MonthlyCheckoutClaim = begin.claim;
-    try {
-      if (claim.recoverProviderState) {
-        const recovered = await this.abacateProvider.recoverMonthlyCardCheckout(
-          claim.externalId,
-        );
-        if (recovered) {
-          await this.monthlyCheckoutAttempts.markReady(organizationId, claim, recovered);
-          return recovered;
-        }
-        claim = await this.monthlyCheckoutAttempts.rotateExternalId(
-          organizationId,
-          claim,
-        );
-      }
-
-      const checkout = await this.abacateProvider.createCheckout({
-        ...input,
-        externalId: claim.externalId,
-      });
-      if (checkout.mode !== 'redirect') {
-        throw new ServiceUnavailableException('AbacatePay card checkout did not return a redirect');
-      }
-      await this.monthlyCheckoutAttempts.markReady(organizationId, claim, checkout);
-      return checkout;
-    } catch (error) {
-      try {
-        await this.monthlyCheckoutAttempts.markFailed(organizationId, claim, error);
-      } catch {
-        this.logger.error(`Failed to persist monthly checkout failure for ${organizationId}`);
-      }
-      throw error;
-    }
   }
 
   async createCreditCheckoutSession(
@@ -324,6 +286,9 @@ export class BillingService {
     await this.requireOrg(organizationId);
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
+    if (paymentMethod === 'card') {
+      throw new BadRequestException('Use /billing/card/checkout for Appmax card payments');
+    }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
     const purchase = await this.creditPurchases.createPending({
@@ -355,26 +320,45 @@ export class BillingService {
     }
   }
 
-  async createPortalSession(organizationId: string): Promise<{ url: string }> {
-    const org = await this.requireOrg(organizationId);
-    if (org.paymentProvider !== PaymentProvider.STRIPE) {
-      throw new BadRequestException(
-        'Customer portal is only available for legacy Stripe subscriptions.',
-      );
-    }
-    if (!org.stripeCustomerId) {
-      throw new BadRequestException('No Stripe customer for this organization');
-    }
-
-    const returnUrl =
-      this.config.get<string>('stripe.portalReturnUrl') ??
-      `${this.config.get<string>('frontendUrl')}/credits`;
-
-    return this.stripeProvider.createPortal({
-      organizationId,
-      externalCustomerId: org.stripeCustomerId,
-      returnUrl,
+  createAppmaxCardCheckout(
+    organizationId: string,
+    authenticatedEmail: string,
+    dto: CreateAppmaxCardCheckoutDto,
+  ) {
+    return this.requireOrg(organizationId).then((org) => {
+      if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
+        throw new BadRequestException('Organization already has permanent unlimited access');
+      }
+      if (
+        dto.purpose === 'monthly' &&
+        org.paymentProvider === PaymentProvider.STRIPE &&
+        (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+      ) {
+        throw new ForbiddenException(
+          'A historical Stripe subscription is still active. Contact support before starting Appmax.',
+        );
+      }
+      if (
+        dto.purpose === 'monthly' &&
+        org.paymentProvider === PaymentProvider.APPMAX &&
+        org.planStatus === PlanStatus.ACTIVE
+      ) {
+        throw new BadRequestException('Organization already has an active Appmax subscription');
+      }
+      return this.appmaxPayments.createCardCheckout({
+        ...dto,
+        organizationId,
+        authenticatedEmail,
+      });
     });
+  }
+
+  getAppmaxBrowserConfig() {
+    return this.appmaxPayments.getBrowserConfig();
+  }
+
+  getAppmaxHealthCheck() {
+    return this.appmaxPayments.getHealthCheck();
   }
 
   async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
@@ -399,37 +383,15 @@ export class BillingService {
       return { canceled: true };
     }
 
-    if (!org.stripeSubscriptionId) {
-      throw new BadRequestException('No Stripe subscription for this organization');
+    if (org.paymentProvider === PaymentProvider.APPMAX && org.appmaxSubscriptionId) {
+      await this.appmaxPayments.cancelSubscription(organizationId, org.appmaxSubscriptionId);
+      return { canceled: true };
     }
-
-    throw new BadRequestException(
-      'Cancel Stripe subscriptions via the customer portal',
-    );
+    throw new BadRequestException('No cancellable subscription for this organization');
   }
 
-  async handleStripeWebhook(
-    rawBody: Buffer,
-    headers: Record<string, string | string[] | undefined>,
-  ): Promise<{ received: true }> {
-    const parsed = await this.stripeProvider.verifyAndParseWebhook(rawBody, headers);
-    const claimed = await this.claimWebhookEvent('STRIPE', parsed.eventId, parsed.type);
-    if (!claimed) {
-      return { received: true };
-    }
-    try {
-      await this.stripeProvider.applyWebhookEvent(parsed.payload, parsed.type);
-      await this.markWebhookProcessed('STRIPE', parsed.eventId);
-    } catch (error) {
-      await this.markWebhookFailed('STRIPE', parsed.eventId, error);
-      throw error;
-    }
-    return { received: true };
-  }
-
-  /** @deprecated Prefer handleStripeWebhook — alias kept one release. */
-  async handleWebhook(rawBody: Buffer, signature: string): Promise<{ received: true }> {
-    return this.handleStripeWebhook(rawBody, { 'stripe-signature': signature });
+  handleAppmaxWebhook(rawBody: Buffer): Promise<{ received: true }> {
+    return this.appmaxPayments.acceptWebhook(rawBody);
   }
 
   async handleAbacateWebhook(
@@ -456,17 +418,17 @@ export class BillingService {
     if (org.paymentProvider !== PaymentProvider.STRIPE) return;
     if (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE) {
       throw new ForbiddenException(
-        'Organization already has an active Stripe subscription. Cancel it via the customer portal before starting an AbacatePay plan.',
+        'A historical Stripe subscription is still active. Contact support before starting another plan.',
       );
     }
   }
 
-  private prismaProvider(provider: 'STRIPE' | 'ABACATE'): PaymentProvider {
-    return provider === 'ABACATE' ? PaymentProvider.ABACATE : PaymentProvider.STRIPE;
+  private prismaProvider(_provider: 'ABACATE'): PaymentProvider {
+    return PaymentProvider.ABACATE;
   }
 
   private async claimWebhookEvent(
-    provider: 'STRIPE' | 'ABACATE',
+    provider: 'ABACATE',
     eventId: string,
     type: string,
   ): Promise<boolean> {
@@ -546,10 +508,7 @@ export class BillingService {
     return true;
   }
 
-  private async markWebhookProcessed(
-    provider: 'STRIPE' | 'ABACATE',
-    eventId: string,
-  ): Promise<void> {
+  private async markWebhookProcessed(provider: 'ABACATE', eventId: string): Promise<void> {
     await this.prisma.billingWebhookEvent.update({
       where: {
         provider_eventId: { provider: this.prismaProvider(provider), eventId },
@@ -563,7 +522,7 @@ export class BillingService {
   }
 
   private async markWebhookFailed(
-    provider: 'STRIPE' | 'ABACATE',
+    provider: 'ABACATE',
     eventId: string,
     error: unknown,
   ): Promise<void> {

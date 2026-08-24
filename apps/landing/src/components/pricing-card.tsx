@@ -18,13 +18,13 @@ type Offer = {
 
 const offersByLocale: Record<Locale, Offer[]> = {
   pt: [
-    { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 9,99', cta: 'Comprar créditos' },
-    { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 19,99', cta: 'Comprar créditos' },
+    { id: 'credits-2000', title: '2.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 14,99', cta: 'Comprar créditos' },
+    { id: 'credits-5000', title: '5.000 créditos', description: 'Créditos acumulativos, sem mensalidade e sem expiração.', price: 'R$ 23,99', cta: 'Comprar créditos' },
     { id: 'unlimited', title: 'Ilimitado', description: 'Buscas e Opportunity Finder sem débito de créditos.', price: 'R$ 49,99', suffix: '/ mês', cta: 'Assinar ilimitado', featured: true },
   ],
   en: [
-    { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 9.99', cta: 'Buy credits' },
-    { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 19.99', cta: 'Buy credits' },
+    { id: 'credits-2000', title: '2,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 14.99', cta: 'Buy credits' },
+    { id: 'credits-5000', title: '5,000 credits', description: 'Accumulated credits, with no monthly fee and no expiration.', price: 'R$ 23.99', cta: 'Buy credits' },
     { id: 'unlimited', title: 'Unlimited', description: 'Searches and Opportunity Finder with no credit debit.', price: 'R$ 49.99', suffix: '/ month', cta: 'Subscribe unlimited', featured: true },
   ],
 };

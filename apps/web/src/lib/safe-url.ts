@@ -1,4 +1,3 @@
-const STRIPE_HOST = /^(?:[a-z0-9-]+\.)*stripe\.com$/i;
 const ABACATE_HOST = /^(?:[a-z0-9-]+\.)*abacatepay\.com$/i;
 
 function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string): void {
@@ -14,23 +13,14 @@ function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string
   window.location.assign(parsed.href);
 }
 
-/** Only allow https redirects to Stripe-owned hosts. */
-export function assignStripeRedirect(url: string): void {
-  assignHttpsHostRedirect(url, STRIPE_HOST, 'Stripe');
-}
-
 /** Only allow https redirects to AbacatePay-owned hosts. */
 export function assignAbacateRedirect(url: string): void {
   assignHttpsHostRedirect(url, ABACATE_HOST, 'AbacatePay');
 }
 
 /** Route checkout redirect by provider. */
-export function assignCheckoutRedirect(url: string, provider: 'STRIPE' | 'ABACATE'): void {
-  if (provider === 'ABACATE') {
-    assignAbacateRedirect(url);
-    return;
-  }
-  assignStripeRedirect(url);
+export function assignCheckoutRedirect(url: string, _provider: 'ABACATE'): void {
+  assignAbacateRedirect(url);
 }
 
 /** Only allow same-origin relative paths (blocks open redirects). */

@@ -55,24 +55,25 @@ export const configuration = () => ({
   waitlist: {
     notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
   },
-  stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY ?? '',
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? '',
-    portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL,
+  appmax: {
+    enabled: process.env.APPMAX_ENABLED === 'true',
+    clientId: process.env.APPMAX_CLIENT_ID ?? '',
+    clientSecret: process.env.APPMAX_CLIENT_SECRET ?? '',
+    externalId: process.env.APPMAX_EXTERNAL_ID ?? '',
+    appId: process.env.APPMAX_APP_ID ?? '',
+    siteId: process.env.APPMAX_SITE_ID ?? '',
+    monthlyProductId: process.env.APPMAX_MONTHLY_PRODUCT_ID ?? '',
+    authBaseUrl: process.env.APPMAX_AUTH_BASE_URL ?? 'https://auth.sandboxappmax.com.br',
+    apiBaseUrl: process.env.APPMAX_API_BASE_URL ?? 'https://api.sandboxappmax.com.br',
+    httpTimeoutMs: parseInt(process.env.APPMAX_HTTP_TIMEOUT_MS ?? '12000', 10),
+    reconcileIntervalMs: parseInt(process.env.APPMAX_RECONCILE_INTERVAL_MS ?? '30000', 10),
   },
   abacate: {
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
     webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY?.trim() ?? '',
-    productMonthlyBrl: process.env.ABACATE_PRODUCT_MONTHLY_BRL ?? '',
-    productCredits2000Brl: process.env.ABACATE_PRODUCT_CREDITS_2000_BRL ?? '',
-    productCredits5000Brl: process.env.ABACATE_PRODUCT_CREDITS_5000_BRL ?? '',
     lifetimeAmountCentavos: parseInt(
       process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900',
-      10,
-    ),
-    monthlyAmountCentavos: parseInt(
-      process.env.ABACATE_MONTHLY_AMOUNT_CENTAVOS ?? '4999',
       10,
     ),
     successUrl: process.env.ABACATE_SUCCESS_URL,

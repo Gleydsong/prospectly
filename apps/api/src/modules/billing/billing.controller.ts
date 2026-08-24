@@ -19,6 +19,7 @@ import { RequireEmailVerified } from '../../common/decorators/require-email-veri
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
 import { CreateCheckoutDto, CreateCreditCheckoutDto } from './dto/create-checkout.dto';
+import { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
 
 
 @ApiTags('billing')
@@ -68,9 +69,31 @@ export class BillingController {
   @ApiBearerAuth()
   @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
-  @Post('portal')
-  createPortal(@CurrentOrg() organizationId: string) {
-    return this.billing.createPortalSession(organizationId);
+  @Post('card/checkout')
+  createCardCheckout(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateAppmaxCardCheckoutDto,
+  ) {
+    return this.billing.createAppmaxCardCheckout(organizationId, user.email, dto);
+  }
+
+  @ApiBearerAuth()
+  @Get('card/config')
+  getCardConfig() {
+    return this.billing.getAppmaxBrowserConfig();
+  }
+
+  @Public()
+  @Get('appmax/health')
+  getAppmaxHealth() {
+    return this.billing.getAppmaxHealthCheck();
+  }
+
+  @Public()
+  @Post('appmax/health')
+  postAppmaxHealth() {
+    return this.billing.getAppmaxHealthCheck();
   }
 
   @ApiBearerAuth()
@@ -79,19 +102,6 @@ export class BillingController {
   @Post('cancel')
   cancelSubscription(@CurrentOrg() organizationId: string) {
     return this.billing.cancelSubscription(organizationId);
-  }
-
-  @Public()
-  @Post('webhook/stripe')
-  handleStripeWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Headers() headers: Record<string, string | string[] | undefined>,
-  ) {
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      throw new BadRequestException('Raw body missing for Stripe webhook');
-    }
-    return this.billing.handleStripeWebhook(rawBody, headers);
   }
 
   @Public()
@@ -108,20 +118,15 @@ export class BillingController {
     return this.billing.handleAbacateWebhook(rawBody, headers, query);
   }
 
-  /** @deprecated Alias → Stripe webhook (one release). Prefer `/billing/webhook/stripe`. */
   @Public()
-  @Post('webhook')
-  handleWebhookLegacy(
+  @Post('webhook/appmax')
+  handleAppmaxWebhook(
     @Req() req: RawBodyRequest<Request>,
-    @Headers('stripe-signature') signature: string | undefined,
   ) {
-    if (!signature) {
-      throw new BadRequestException('Missing stripe-signature header');
-    }
     const rawBody = req.rawBody;
     if (!rawBody) {
-      throw new BadRequestException('Raw body missing for Stripe webhook');
+      throw new BadRequestException('Raw body missing for Appmax webhook');
     }
-    return this.billing.handleWebhook(rawBody, signature);
+    return this.billing.handleAppmaxWebhook(rawBody);
   }
 }

@@ -3,7 +3,7 @@ export type CheckoutIntent = {
   offer?: 'credits-2000' | 'credits-5000';
   plan?: 'monthly';
   baselineCreditBalance?: number;
-  provider: 'STRIPE' | 'ABACATE';
+  provider: 'ABACATE' | 'APPMAX';
   externalCheckoutId?: string;
 };
 
@@ -19,7 +19,7 @@ export function readCheckoutIntent(): CheckoutIntent | null {
   try {
     const parsed = JSON.parse(raw) as CheckoutIntent;
     if (parsed.purpose !== 'credits' && parsed.purpose !== 'plan') return null;
-    if (parsed.provider !== 'ABACATE' && parsed.provider !== 'STRIPE') return null;
+    if (parsed.provider !== 'ABACATE' && parsed.provider !== 'APPMAX') return null;
     return parsed;
   } catch {
     return null;

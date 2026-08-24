@@ -6,14 +6,14 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 
 ## What gets created
 
-| Resource | Name | Role |
-|----------|------|------|
-| Postgres 16 | `prospectly-db` | Primary database (`basic-256mb`) |
-| Key Value | `prospectly-redis` | BullMQ + readiness (`noeviction`, private) |
-| Web (Docker) | `prospectly-api` | Nest API + queue producers (HTTP) |
-| Worker (proposed) | `prospectly-worker` | BullMQ processors — see [workers.md](./workers.md) (approval required) |
-| Static | `prospectly-web` | Vite SPA |
-| Web (Node) | `prospectly-landing` | Next.js marketing site (substitui o antigo `prospectly-mvp`) |
+| Resource          | Name                 | Role                                                                   |
+| ----------------- | -------------------- | ---------------------------------------------------------------------- |
+| Postgres 16       | `prospectly-db`      | Primary database (`basic-256mb`)                                       |
+| Key Value         | `prospectly-redis`   | BullMQ + readiness (`noeviction`, private)                             |
+| Web (Docker)      | `prospectly-api`     | Nest API + queue producers (HTTP)                                      |
+| Worker (proposed) | `prospectly-worker`  | BullMQ processors — see [workers.md](./workers.md) (approval required) |
+| Static            | `prospectly-web`     | Vite SPA                                                               |
+| Web (Node)        | `prospectly-landing` | Next.js marketing site (substitui o antigo `prospectly-mvp`)           |
 
 **Build tip:** never use `corepack enable` on Render Node builds — the image FS is read-only (`EROFS` on `/usr/bin/pnpm`). Use plain `pnpm` (preinstalled) + `--config.production=false` so Vite/Next get TypeScript from devDependencies. Root `.npmrc` also sets `production=false` so the static `prospectly-web` install keeps working even if the Dashboard build command omits the flag.
 
@@ -23,15 +23,15 @@ The Vite app uses React Router. Keep the Static Site rewrite declared in the Blu
 
 Serviço ativo criado via plugin (free / frankfurt):
 
-| Campo | Valor |
-|-------|-------|
-| Nome | `prospectly` |
-| URL Render | https://prospectly-d34m.onrender.com |
-| Domínio | https://prospectlyonboard.com (Namecheap) |
-| Dashboard | https://dashboard.render.com/web/srv-d9ql5njm8hqs738m8bu0 |
-| Build | `pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build` |
-| Start | `pnpm --filter @prospectly/landing start` |
-| Env | `NEXT_PUBLIC_LANDING_URL=https://prospectlyonboard.com` |
+| Campo      | Valor                                                                                                                                     |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Nome       | `prospectly`                                                                                                                              |
+| URL Render | https://prospectly-d34m.onrender.com                                                                                                      |
+| Domínio    | https://prospectlyonboard.com (Namecheap)                                                                                                 |
+| Dashboard  | https://dashboard.render.com/web/srv-d9ql5njm8hqs738m8bu0                                                                                 |
+| Build      | `pnpm install --frozen-lockfile --filter @prospectly/landing... --config.production=false && pnpm --filter @prospectly/landing run build` |
+| Start      | `pnpm --filter @prospectly/landing start`                                                                                                 |
+| Env        | `NEXT_PUBLIC_LANDING_URL=https://prospectlyonboard.com`                                                                                   |
 
 Serviços legado a apagar no Dashboard (duplicados / quebrados): `prospectly-mvp` (suspenso), `prospectly-landing` (corepack EROFS), `prospectly-lp`, `prospectly-site`.
 
@@ -48,10 +48,10 @@ Plugin Render **não** cria custom domains — fazer no Dashboard + DNS:
    - Remover `AAAA` (Render não usa IPv6), A/`CNAME`/Redirect antigos de `@` e `www`.
    - Adicionar:
 
-| Type | Host | Value | TTL |
-|------|------|-------|-----|
-| A | `@` | `216.24.57.1` | 1 min (depois Automatic) |
-| CNAME | `www` | `prospectly-d34m.onrender.com` | 1 min |
+| Type  | Host  | Value                          | TTL                      |
+| ----- | ----- | ------------------------------ | ------------------------ |
+| A     | `@`   | `216.24.57.1`                  | 1 min (depois Automatic) |
+| CNAME | `www` | `prospectly-d34m.onrender.com` | 1 min                    |
 
 3. Voltar ao Render e esperar verificação + HTTPS automático.
 4. Docs oficiais: [Namecheap DNS](https://render.com/docs/configure-namecheap-dns).
@@ -62,25 +62,26 @@ API health check: `GET /health/ready` (Postgres + Redis).
 
 1. Push this repo to GitHub (Blueprint sync requires a connected Git host).
 2. In [Render Dashboard](https://dashboard.render.com/) → **New** → **Blueprint** → select the repo → apply `render.yaml`.
-3. When prompted, fill every `sync: false` secret (Stripe, Abacate, SMTP, public URLs, etc.).
+3. When prompted, fill every `sync: false` secret (Appmax, Abacate, SMTP, public URLs, etc.). Keep `APPMAX_ENABLED=false` during the first migration deploy.
 4. After services have public URLs, set cross-links:
 
-| Variable | Service | Example |
-|----------|---------|---------|
-| `FRONTEND_URL` | api | `https://prospectly-web.onrender.com` |
-| `CORS_ORIGINS` | api | `https://prospectly-web.onrender.com,https://prospectly-landing.onrender.com` |
-| `VITE_API_URL` | web (rebuild) | `https://prospectly-api.onrender.com/api/v1` |
-| `VITE_LANDING_URL` | web (rebuild) | `https://prospectly-landing.onrender.com` |
-| `NEXT_PUBLIC_APP_URL` | landing (rebuild) | same as web |
-| `NEXT_PUBLIC_LANDING_URL` | landing | its own URL |
-| `NEXT_PUBLIC_API_URL` | landing | same as `VITE_API_URL` |
-| `STRIPE_*_URL` / `ABACATE_*_URL` | api | billing success/cancel on web |
+| Variable                  | Service           | Example                                                                       |
+| ------------------------- | ----------------- | ----------------------------------------------------------------------------- |
+| `FRONTEND_URL`            | api               | `https://prospectly-web.onrender.com`                                         |
+| `CORS_ORIGINS`            | api               | `https://prospectly-web.onrender.com,https://prospectly-landing.onrender.com` |
+| `VITE_API_URL`            | web (rebuild)     | `https://prospectly-api.onrender.com/api/v1`                                  |
+| `VITE_LANDING_URL`        | web (rebuild)     | `https://prospectly-landing.onrender.com`                                     |
+| `NEXT_PUBLIC_APP_URL`     | landing (rebuild) | same as web                                                                   |
+| `NEXT_PUBLIC_LANDING_URL` | landing           | its own URL                                                                   |
+| `NEXT_PUBLIC_API_URL`     | landing           | same as `VITE_API_URL`                                                        |
+| `ABACATE_*_URL`           | api               | billing success/cancel on web                                                 |
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
-7. Point Stripe webhook to `https://<api>/api/v1/billing/webhook/stripe`.
+7. Configure Appmax health URL as `https://<api>/api/v1/billing/appmax/health` and webhook as `https://<api>/api/v1/billing/webhook/appmax`.
 8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release).
 9. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
+10. After the Appmax private app, merchant credentials, monthly product and sandbox smokes are ready, set `APPMAX_ENABLED=true` and redeploy API + web.
 
 ## Local Dockerfiles (optional)
 
@@ -106,8 +107,8 @@ API health check: `GET /health/ready` (Postgres + Redis).
 - [ ] F5 restores session via cookie refresh; logout clears cookie
 - [ ] Unverified email: banner shown; checkout/invite return 403 `EMAIL_NOT_VERIFIED`
 - [ ] Landing CTAs open app with correct plan/currency query
-- [ ] Stripe EUR checkout (test then live)
-- [ ] Abacate BRL lifetime PIX + monthly CARD (see `docs/billing/dual-gateways.md`)
+- [ ] Appmax BRL card checkout: approved, refused, timeout/reconciliation and monthly cancellation
+- [ ] Abacate BRL PIX: both credit packs and monthly unlimited (see `docs/billing/dual-gateways.md`)
 - [ ] Verification + forgot-password e-mail once SMTP is wired
 - [ ] Seed never run in production (`prisma/seed.ts` throws)
 

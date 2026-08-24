@@ -8,9 +8,8 @@ import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
-import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
+import { AppmaxPaymentService } from './appmax-payment.service';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -42,18 +41,9 @@ describe('BillingService', () => {
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
 
-  const stripeProvider = {
-    createCheckout: jest.fn(),
-    createCreditCheckout: jest.fn(),
-    createPortal: jest.fn(),
-    verifyAndParseWebhook: jest.fn(),
-    applyWebhookEvent: jest.fn(),
-  };
-
   const abacateProvider = {
     createCheckout: jest.fn(),
     createCreditCheckout: jest.fn(),
-    recoverMonthlyCardCheckout: jest.fn(),
     cancelSubscription: jest.fn(),
     verifyAndParseWebhook: jest.fn(),
     applyWebhookEvent: jest.fn(),
@@ -68,61 +58,45 @@ describe('BillingService', () => {
     syncMonthlyStatus: jest.fn().mockResolvedValue(undefined),
   };
 
+  const appmaxPayments = {
+    createCardCheckout: jest.fn(),
+    getBrowserConfig: jest.fn(),
+    getHealthCheck: jest.fn(),
+    acceptWebhook: jest.fn(),
+    cancelSubscription: jest.fn(),
+  };
+
   const entitlements = {
     canExportCsv: jest.fn().mockResolvedValue(false),
   };
 
-  const monthlyCheckoutAttempts = {
-    beginCard: jest.fn(),
-    rotateExternalId: jest.fn(),
-    markReady: jest.fn(),
-    markFailed: jest.fn(),
-  };
-
-  const configGet = jest.fn((key: string) => {
-    const map: Record<string, string> = {
-      'stripe.successUrl': 'https://app.test/success',
-      'stripe.cancelUrl': 'https://app.test/cancel',
-      'stripe.portalReturnUrl': 'https://app.test/settings',
+  const readConfig = (key: string) => {
+    const map: Record<string, string | boolean> = {
+      'appmax.enabled': false,
       'abacate.successUrl': 'https://app.test/success',
       'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
     };
     return map[key];
-  });
+  };
+  const configGet = jest.fn(readConfig);
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    configGet.mockImplementation(readConfig);
     prisma.opportunityRun.count.mockResolvedValue(0);
     prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
     prisma.billingWebhookEvent.create.mockResolvedValue({});
-    monthlyCheckoutAttempts.beginCard.mockResolvedValue({
-      state: 'acquired',
-      claim: {
-        id: 'attempt_1',
-        externalId: 'org:org1:monthly-card:stable',
-        recoverProviderState: false,
-      },
-    });
-    monthlyCheckoutAttempts.rotateExternalId.mockImplementation(async (_org, claim) => ({
-      ...claim,
-      externalId: 'org:org1:monthly-card:rotated',
-      recoverProviderState: false,
-    }));
-    monthlyCheckoutAttempts.markReady.mockResolvedValue(undefined);
-    monthlyCheckoutAttempts.markFailed.mockResolvedValue(undefined);
-    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: configGet } },
         { provide: BillingActivationService, useValue: activation },
-        { provide: StripePaymentProvider, useValue: stripeProvider },
+        { provide: AppmaxPaymentService, useValue: appmaxPayments },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
-        { provide: MonthlyCheckoutAttemptService, useValue: monthlyCheckoutAttempts },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -186,15 +160,14 @@ describe('BillingService', () => {
     );
   });
 
-  it('redacts billing admin flags for VIEWER', async () => {
+  it('only lets billing administrators cancel an Appmax subscription', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
       planStatus: PlanStatus.ACTIVE,
       planCurrency: 'BRL',
-      paymentProvider: PaymentProvider.STRIPE,
-      stripeCustomerId: 'cus_1',
-      stripeSubscriptionId: 'sub_1',
+      paymentProvider: PaymentProvider.APPMAX,
+      appmaxSubscriptionId: 'sub_1',
       currentPeriodEnd: null,
       deletedAt: null,
       creditBalance: 10,
@@ -202,43 +175,27 @@ describe('BillingService', () => {
     prisma.search.count.mockResolvedValue(1);
 
     await expect(service.getOrganizationBilling('org1', 'VIEWER')).resolves.toEqual(
-      expect.objectContaining({
-        creditBalance: 10,
-        legacyStripeSubscription: false,
-        canOpenPortal: false,
-        canCancelSubscription: false,
-      }),
+      expect.objectContaining({ canCancelSubscription: false }),
     );
-  });
-
-  it('keeps billing admin flags for OWNER', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      plan: OrgPlan.STARTER_MONTHLY,
-      planStatus: PlanStatus.ACTIVE,
-      planCurrency: 'BRL',
-      paymentProvider: PaymentProvider.STRIPE,
-      stripeCustomerId: 'cus_1',
-      stripeSubscriptionId: 'sub_1',
-      currentPeriodEnd: null,
-      deletedAt: null,
-      creditBalance: 10,
-    });
-    prisma.search.count.mockResolvedValue(1);
-
     await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
-      expect.objectContaining({
-        legacyStripeSubscription: true,
-        canOpenPortal: true,
-        canCancelSubscription: false,
-        monthlyCardEnabled: false,
-      }),
+      expect.objectContaining({ canCancelSubscription: true }),
     );
   });
 
   it('exposes monthlyCardEnabled when the monthly product id is configured', async () => {
     configGet.mockImplementation((key: string) => {
-      if (key === 'abacate.productMonthlyBrl') return 'prod_monthly';
+      if (key === 'appmax.enabled') return true;
+      if (
+        [
+          'appmax.clientId',
+          'appmax.clientSecret',
+          'appmax.externalId',
+          'appmax.appId',
+          'appmax.siteId',
+        ].includes(key)
+      )
+        return 'configured';
+      if (key === 'appmax.monthlyProductId') return '55';
       return undefined;
     });
     prisma.organization.findFirst.mockResolvedValue({
@@ -253,152 +210,7 @@ describe('BillingService', () => {
     prisma.search.count.mockResolvedValue(0);
 
     await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
-      expect.objectContaining({ monthlyCardEnabled: true }),
-    );
-  });
-
-  it('routes card monthly checkout to AbacatePay redirect', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      name: 'Acme',
-      stripeCustomerId: 'cus_1',
-      paymentProvider: null,
-      deletedAt: null,
-    });
-    abacateProvider.createCheckout.mockResolvedValue({
-      mode: 'redirect',
-      url: 'https://app.abacatepay.com/pay/bill_1',
-      provider: 'ABACATE',
-      externalCheckoutId: 'bill_1',
-    });
-
-    const result = await service.createCheckoutSession(
-      'org1',
-      'a@b.com',
-      'monthly',
-      'BRL',
-      'card',
-    );
-    expect(result).toEqual(
-      expect.objectContaining({ mode: 'redirect', url: 'https://app.abacatepay.com/pay/bill_1' }),
-    );
-    expect(abacateProvider.createCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        paymentMethod: 'card',
-        externalId: 'org:org1:monthly-card:stable',
-      }),
-    );
-    expect(monthlyCheckoutAttempts.markReady).toHaveBeenCalledWith(
-      'org1',
-      expect.objectContaining({ id: 'attempt_1' }),
-      expect.objectContaining({ externalCheckoutId: 'bill_1' }),
-    );
-    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
-  });
-
-  it('returns the persisted monthly card checkout on a duplicate request', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      name: 'Acme',
-      paymentProvider: null,
-      deletedAt: null,
-    });
-    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
-      state: 'ready',
-      checkout: {
-        mode: 'redirect',
-        provider: 'ABACATE',
-        url: 'https://app.abacatepay.com/pay/bill_existing',
-        externalCheckoutId: 'bill_existing',
-      },
-    });
-
-    await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
-    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_existing' }));
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
-  });
-
-  it('recovers provider state after a failed or stale monthly card attempt', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      name: 'Acme',
-      paymentProvider: null,
-      deletedAt: null,
-    });
-    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
-      state: 'acquired',
-      claim: {
-        id: 'attempt_1',
-        externalId: 'stable',
-        recoverProviderState: true,
-      },
-    });
-    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValueOnce({
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_recovered',
-      externalCheckoutId: 'bill_recovered',
-    });
-
-    await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
-    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_recovered' }));
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
-    expect(monthlyCheckoutAttempts.markReady).toHaveBeenCalled();
-  });
-
-  it('rotates the external id only after provider recovery finds no reusable checkout', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      name: 'Acme',
-      paymentProvider: null,
-      deletedAt: null,
-    });
-    monthlyCheckoutAttempts.beginCard.mockResolvedValueOnce({
-      state: 'acquired',
-      claim: {
-        id: 'attempt_1',
-        externalId: 'stable',
-        recoverProviderState: true,
-      },
-    });
-    abacateProvider.recoverMonthlyCardCheckout.mockResolvedValueOnce(null);
-    abacateProvider.createCheckout.mockResolvedValueOnce({
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_new',
-      externalCheckoutId: 'bill_new',
-    });
-
-    await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
-    ).resolves.toEqual(expect.objectContaining({ externalCheckoutId: 'bill_new' }));
-    expect(monthlyCheckoutAttempts.rotateExternalId).toHaveBeenCalledWith(
-      'org1',
-      expect.objectContaining({ externalId: 'stable' }),
-    );
-    expect(abacateProvider.createCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({ externalId: 'org:org1:monthly-card:rotated' }),
-    );
-  });
-
-  it('marks the monthly card attempt failed when the gateway rejects creation', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      name: 'Acme',
-      paymentProvider: null,
-      deletedAt: null,
-    });
-    abacateProvider.createCheckout.mockRejectedValueOnce(new Error('gateway unavailable'));
-
-    await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
-    ).rejects.toThrow('gateway unavailable');
-    expect(monthlyCheckoutAttempts.markFailed).toHaveBeenCalledWith(
-      'org1',
-      expect.objectContaining({ id: 'attempt_1' }),
-      expect.any(Error),
+      expect.objectContaining({ cardEnabled: true, monthlyCardEnabled: true }),
     );
   });
 
@@ -431,7 +243,7 @@ describe('BillingService', () => {
     prisma.search.count.mockResolvedValue(1);
 
     await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
-      expect.objectContaining({ canCancelSubscription: true, canOpenPortal: false }),
+      expect.objectContaining({ canCancelSubscription: true }),
     );
   });
 
@@ -444,13 +256,11 @@ describe('BillingService', () => {
       creditBalance: 0,
       deletedAt: null,
     };
-    prisma.organization.findFirst
-      .mockResolvedValueOnce(expired)
-      .mockResolvedValueOnce({
-        ...expired,
-        plan: OrgPlan.FREE,
-        planStatus: PlanStatus.CANCELED,
-      });
+    prisma.organization.findFirst.mockResolvedValueOnce(expired).mockResolvedValueOnce({
+      ...expired,
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.CANCELED,
+    });
     prisma.search.count.mockResolvedValue(3);
 
     await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
@@ -484,172 +294,86 @@ describe('BillingService', () => {
       service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
-    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('allows a canceled Stripe org to start an AbacatePay plan', async () => {
+  it('delegates a credit-card checkout to Appmax with authenticated tenant context', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
-      name: 'Acme',
-      paymentProvider: PaymentProvider.STRIPE,
-      planStatus: PlanStatus.CANCELED,
-      stripeCustomerId: 'cus_1',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
       deletedAt: null,
     });
-    abacateProvider.createCheckout.mockResolvedValue({
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_new',
+    const dto = {
+      checkoutKey: 'f191b5ef-31b8-4c79-96c7-b233b522eb27',
+      purpose: 'credits' as const,
+      offer: 'credits-2000' as const,
+      firstName: 'Ana',
+      lastName: 'Silva',
+      email: 'ana@example.com',
+      phone: '11999999999',
+      ip: '203.0.113.10',
+      cardToken: 'tokenized-card',
+      documentNumber: '12345678909',
+      holderName: 'ANA SILVA',
+    };
+    appmaxPayments.createCardCheckout.mockResolvedValue({
+      mode: 'pending',
+      provider: 'APPMAX',
+      externalCheckoutId: 'order-1',
     });
-    await expect(
-      service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
-    ).resolves.toEqual(expect.objectContaining({ provider: 'ABACATE' }));
-    expect(stripeProvider.createCheckout).not.toHaveBeenCalled();
+
+    await expect(service.createAppmaxCardCheckout('org1', 'ana@example.com', dto)).resolves.toEqual(
+      expect.objectContaining({ provider: 'APPMAX' }),
+    );
+    expect(appmaxPayments.createCardCheckout).toHaveBeenCalledWith({
+      ...dto,
+      organizationId: 'org1',
+      authenticatedEmail: 'ana@example.com',
+    });
   });
 
-  it('allows AbacatePay credit checkout while a Stripe plan is active', async () => {
+  it('blocks a second monthly checkout while a historical Stripe subscription is active', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.STRIPE,
       planStatus: PlanStatus.ACTIVE,
       deletedAt: null,
     });
-    creditPurchases.createPending.mockResolvedValue({ id: 'purchase_1' });
-    abacateProvider.createCreditCheckout.mockResolvedValue({
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_credits',
-    });
-    await expect(
-      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
-    ).resolves.toEqual(expect.objectContaining({ provider: 'ABACATE' }));
-    expect(stripeProvider.createCreditCheckout).not.toHaveBeenCalled();
-    expect(creditPurchases.createPending).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: PaymentProvider.ABACATE, paymentMethod: 'card' }),
-    );
-  });
-
-  it('keeps the Stripe portal for legacy organizations', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      paymentProvider: PaymentProvider.STRIPE,
-      stripeCustomerId: 'cus_1',
-      deletedAt: null,
-    });
-    stripeProvider.createPortal.mockResolvedValue({ url: 'https://billing.stripe.com/p/session' });
-    await expect(service.createPortalSession('org1')).resolves.toEqual({
-      url: 'https://billing.stripe.com/p/session',
-    });
-  });
-
-  it('rejects invalid Stripe webhook signature', async () => {
-    stripeProvider.verifyAndParseWebhook.mockRejectedValue(new BadRequestException('bad sig'));
-    await expect(
-      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('activates via Stripe webhook once (idempotent)', async () => {
-    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
-      eventId: 'evt_1',
-      type: 'checkout.session.completed',
-      payload: { id: 'evt_1' },
-    });
-    stripeProvider.applyWebhookEvent.mockResolvedValue({
-      handled: true,
-      eventId: 'evt_1',
-      type: 'checkout.session.completed',
-    });
-
-    await service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' });
-    expect(prisma.billingWebhookEvent.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        eventId: 'evt_1',
-        type: 'checkout.session.completed',
-        status: 'PROCESSING',
-      }),
-    });
-    expect(stripeProvider.applyWebhookEvent).toHaveBeenCalled();
-    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'PROCESSED' }),
-      }),
-    );
-  });
-
-  it('ignores duplicate webhook events', async () => {
-    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
-      eventId: 'evt_dup',
-      type: 'checkout.session.completed',
-      payload: { id: 'evt_dup' },
-    });
-    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
-      status: 'PROCESSED',
-      updatedAt: new Date(),
-      attempts: 1,
-    });
+    const dto = {
+      checkoutKey: 'f191b5ef-31b8-4c79-96c7-b233b522eb27',
+      purpose: 'monthly' as const,
+      firstName: 'Ana',
+      lastName: 'Silva',
+      email: 'ana@example.com',
+      phone: '11999999999',
+      ip: '203.0.113.10',
+      cardToken: 'tokenized-card',
+      documentNumber: '12345678909',
+      holderName: 'ANA SILVA',
+    };
 
     await expect(
-      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
-    ).resolves.toEqual({ received: true });
-    expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
+      service.createAppmaxCardCheckout('org1', 'ana@example.com', dto),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(appmaxPayments.createCardCheckout).not.toHaveBeenCalled();
   });
 
-  it('reclaims only one stale PROCESSING webhook when retries overlap', async () => {
-    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
-      eventId: 'evt_stale',
-      type: 'checkout.session.completed',
-      payload: { id: 'evt_stale' },
-    });
-    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
-      status: 'PROCESSING',
-      updatedAt: new Date(Date.now() - 3 * 60 * 1000),
-      attempts: 1,
-    });
-    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 0 });
+  it('delegates Appmax webhooks without interpreting their unsigned payload', async () => {
+    const body = Buffer.from('{"event":"order_approved","data":{"order_id":123}}');
+    appmaxPayments.acceptWebhook.mockResolvedValue({ received: true });
 
-    await expect(
-      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
-    ).resolves.toEqual({ received: true });
-    expect(prisma.billingWebhookEvent.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          eventId: 'evt_stale',
-          OR: expect.arrayContaining([
-            expect.objectContaining({ status: 'FAILED' }),
-            expect.objectContaining({
-              status: 'PROCESSING',
-              updatedAt: expect.objectContaining({ lt: expect.any(Date) }),
-            }),
-          ]),
-        }),
-      }),
-    );
-    expect(stripeProvider.applyWebhookEvent).not.toHaveBeenCalled();
-  });
-
-  it('marks webhook FAILED when apply fails so retries can succeed', async () => {
-    stripeProvider.verifyAndParseWebhook.mockResolvedValue({
-      eventId: 'evt_fail',
-      type: 'checkout.session.completed',
-      payload: { id: 'evt_fail' },
-    });
-    prisma.billingWebhookEvent.create.mockResolvedValue({});
-    stripeProvider.applyWebhookEvent.mockRejectedValue(new Error('db down'));
-
-    await expect(
-      service.handleStripeWebhook(Buffer.from('{}'), { 'stripe-signature': 'sig' }),
-    ).rejects.toThrow('db down');
-    expect(prisma.billingWebhookEvent.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: 'FAILED', lastError: 'db down' }),
-      }),
-    );
+    await expect(service.handleAppmaxWebhook(body)).resolves.toEqual({ received: true });
+    expect(appmaxPayments.acceptWebhook).toHaveBeenCalledWith(body);
   });
 
   it('allows a free organization to search when purchased credits remain', async () => {
     prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 14, deletedAt: null,
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 14,
+      deletedAt: null,
     });
     prisma.search.count.mockResolvedValue(3);
     await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
@@ -657,7 +381,11 @@ describe('BillingService', () => {
 
   it('blocks Maps search when remaining credits are below 14', async () => {
     prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 13, deletedAt: null,
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 13,
+      deletedAt: null,
     });
     prisma.search.count.mockResolvedValue(3);
     await expect(service.assertCanCreateSearch('org1')).rejects.toBeInstanceOf(ForbiddenException);
@@ -665,10 +393,16 @@ describe('BillingService', () => {
 
   it('blocks Opportunity Finder when remaining credits are below 16', async () => {
     prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1', plan: OrgPlan.FREE, planStatus: PlanStatus.INACTIVE, creditBalance: 15, deletedAt: null,
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 15,
+      deletedAt: null,
     });
     prisma.search.count.mockResolvedValue(3);
-    await expect(service.assertCanCreateSearch('org1', 16)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.assertCanCreateSearch('org1', 16)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('skips credit consume while still within free search quota', async () => {
@@ -775,7 +509,9 @@ describe('BillingService', () => {
     prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 2 });
     prisma.creditLedgerEntry.create.mockResolvedValue({});
 
-    await expect(service.consumeCreditForExplain('org1', 'cand-1', 'run-1')).resolves.toBeUndefined();
+    await expect(
+      service.consumeCreditForExplain('org1', 'cand-1', 'run-1'),
+    ).resolves.toBeUndefined();
 
     expect(prisma.search.count).not.toHaveBeenCalled();
     expect(prisma.organization.updateMany).toHaveBeenCalledWith({
@@ -804,7 +540,9 @@ describe('BillingService', () => {
     prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 4 });
     prisma.creditLedgerEntry.create.mockResolvedValue({});
 
-    await expect(service.consumeCreditForSaveLead('org1', 'cand-2', 'run-1')).resolves.toBeUndefined();
+    await expect(
+      service.consumeCreditForSaveLead('org1', 'cand-2', 'run-1'),
+    ).resolves.toBeUndefined();
 
     expect(prisma.organization.updateMany).toHaveBeenCalledWith({
       where: { id: 'org1', creditBalance: { gte: 1 } },
@@ -819,7 +557,9 @@ describe('BillingService', () => {
     prisma.organization.update.mockResolvedValue({ creditBalance: 30 });
     prisma.creditLedgerEntry.create.mockResolvedValue({});
 
-    await expect(service.refundOpportunityRunCredit('org1', 'run-9', 'NO_COMPANIES_FOUND')).resolves.toBeUndefined();
+    await expect(
+      service.refundOpportunityRunCredit('org1', 'run-9', 'NO_COMPANIES_FOUND'),
+    ).resolves.toBeUndefined();
 
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },

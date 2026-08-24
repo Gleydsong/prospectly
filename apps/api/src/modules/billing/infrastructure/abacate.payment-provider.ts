@@ -11,6 +11,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BillingActivationService } from '../billing-activation.service';
+import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from '../billing.constants';
 import { CreditPurchaseService } from '../credit-purchase.service';
 import { CREDIT_PACKAGES } from '../credit-purchase.constants';
 import type {
@@ -49,11 +50,6 @@ function equalSecrets(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
-const CREDIT_PRODUCT_KEYS = {
-  'credits-2000': 'abacate.productCredits2000Brl',
-  'credits-5000': 'abacate.productCredits5000Brl',
-} as const;
-
 @Injectable()
 export class AbacatePaymentProvider implements PaymentProviderAdapter {
   readonly id = 'ABACATE' as const;
@@ -77,33 +73,16 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       );
     }
     if (input.paymentMethod === 'card') {
-      return this.createMonthlyCard(input);
+      throw new BadRequestException('Card payments are handled by Appmax');
     }
     return this.createMonthlyPix(input);
   }
 
   async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
     if (input.paymentMethod === 'card') {
-      return this.createCreditCardCheckout(input);
+      throw new BadRequestException('Card payments are handled by Appmax');
     }
     return this.createCreditPixCheckout(input);
-  }
-
-  async recoverMonthlyCardCheckout(
-    externalId: string,
-  ): Promise<Extract<CheckoutResult, { mode: 'redirect' }> | null> {
-    const checkout = await this.client.findSubscriptionCheckoutByExternalId(externalId);
-    if (!checkout) return null;
-    if (['EXPIRED', 'CANCELLED', 'REFUNDED'].includes(checkout.status ?? '')) {
-      return null;
-    }
-    return {
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: checkout.url,
-      externalCheckoutId: checkout.id,
-      externalCustomerId: checkout.customerId ?? undefined,
-    };
   }
 
   async cancelSubscription(input: {
@@ -217,10 +196,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   }
 
   private async createMonthlyPix(input: CheckoutRequest): Promise<CheckoutResult> {
-    const amountCentavos = this.config.get<number>('abacate.monthlyAmountCentavos');
-    if (!amountCentavos || amountCentavos < 1) {
-      throw new ServiceUnavailableException('ABACATE_MONTHLY_AMOUNT_CENTAVOS is not configured');
-    }
+    const amountCentavos = MONTHLY_PLAN_AMOUNT_CENTAVOS;
 
     const charge = await this.client.createTransparentPix({
       amountCentavos,
@@ -242,30 +218,6 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       externalPaymentId: charge.id,
       amountCentavos: charge.amount ?? amountCentavos,
       expiresAt: charge.expiresAt ?? undefined,
-    };
-  }
-
-  private async createMonthlyCard(input: CheckoutRequest): Promise<CheckoutResult> {
-    const productId = this.requireProductId('abacate.productMonthlyBrl', 'ABACATE_PRODUCT_MONTHLY_BRL');
-    const checkout = await this.client.createSubscriptionCheckout({
-      productId,
-      returnUrl: input.cancelUrl,
-      completionUrl: input.successUrl,
-      externalId: input.externalId ?? `org:${input.organizationId}:monthly:${randomUUID()}`,
-      metadata: {
-        organizationId: input.organizationId,
-        purpose: 'plan',
-        interval: 'monthly',
-        currency: 'BRL',
-      },
-      customerId: input.existingCustomerId,
-    });
-    return {
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: checkout.url,
-      externalCheckoutId: checkout.id,
-      externalCustomerId: checkout.customerId ?? undefined,
     };
   }
 
@@ -294,46 +246,6 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       amountCentavos: charge.amount ?? pack.amountCentavos,
       expiresAt: charge.expiresAt ?? undefined,
     };
-  }
-
-  private async createCreditCardCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
-    const productId = this.requireProductId(
-      CREDIT_PRODUCT_KEYS[input.offer],
-      input.offer === 'credits-2000'
-        ? 'ABACATE_PRODUCT_CREDITS_2000_BRL'
-        : 'ABACATE_PRODUCT_CREDITS_5000_BRL',
-    );
-    const pack = CREDIT_PACKAGES[input.offer];
-    const checkout = await this.client.createOneTimeCheckout({
-      productId,
-      returnUrl: input.cancelUrl,
-      completionUrl: input.successUrl,
-      externalId: input.externalId,
-      metadata: {
-        organizationId: input.organizationId,
-        purpose: 'credits',
-        purchaseId: input.purchaseId,
-        offer: input.offer,
-        credits: String(pack.credits),
-        currency: 'BRL',
-      },
-    });
-    await this.creditPurchases.attachPayment(input.purchaseId, checkout.id);
-    return {
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: checkout.url,
-      externalCheckoutId: checkout.id,
-      externalCustomerId: checkout.customerId ?? undefined,
-    };
-  }
-
-  private requireProductId(configKey: string, envName: string): string {
-    const productId = this.config.get<string>(configKey)?.trim();
-    if (!productId) {
-      throw new ServiceUnavailableException(`${envName} is not configured`);
-    }
-    return productId;
   }
 
   private async onTransparentCompleted(normalized: NormalizedAbacateWebhook): Promise<void> {

@@ -6,9 +6,10 @@ import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
 import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
+import { AppmaxPaymentService } from './appmax-payment.service';
+import { AppmaxClient } from './infrastructure/appmax.client';
 import { AbacateClient } from './infrastructure/abacate.client';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { StripePaymentProvider } from './infrastructure/stripe.payment-provider';
 
 @Module({
   controllers: [BillingController],
@@ -18,7 +19,8 @@ import { StripePaymentProvider } from './infrastructure/stripe.payment-provider'
     BillingActivationService,
     EntitlementService,
     MonthlyCheckoutAttemptService,
-    StripePaymentProvider,
+    AppmaxClient,
+    AppmaxPaymentService,
     AbacateClient,
     AbacatePaymentProvider,
   ],

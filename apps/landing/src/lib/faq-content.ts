@@ -109,7 +109,7 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Posso testar sem pagar?',
     answer:
-      'Sim. O Free inclui 3 execuções grátis (Pesquisa Maps e Opportunity Finder somadas) e 400 créditos de bónus. Depois compra pacotes (R$ 9,99 / R$ 19,99) ou assina o ilimitado (R$ 49,99/mês).',
+      'Sim. O Free inclui 3 execuções grátis (Pesquisa Maps e Opportunity Finder somadas) e 400 créditos de bónus. Depois compra pacotes (R$ 14,99 / R$ 23,99) ou assina o ilimitado (R$ 49,99/mês).',
   },
   {
     id: 'plans',
@@ -123,7 +123,7 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'Checkout apenas em BRL (Brasil). PIX e cartão via AbacatePay. Exemplos: 2.000 créditos por R$ 9,99; 5.000 por R$ 19,99; ilimitado por R$ 49,99/mês.',
+      'Checkout apenas em BRL (Brasil). PIX via AbacatePay e cartão via Appmax. Exemplos: 2.000 créditos por R$ 14,99; 5.000 por R$ 23,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
@@ -252,7 +252,7 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Can I try it without paying?',
     answer:
-      'Yes. Free includes 3 complimentary runs (Maps search and Opportunity Finder combined) plus 400 bonus credits. Then buy packs (R$ 9.99 / R$ 19.99) or subscribe to unlimited (R$ 49.99/month).',
+      'Yes. Free includes 3 complimentary runs (Maps search and Opportunity Finder combined) plus 400 bonus credits. Then buy packs (R$ 14.99 / R$ 23.99) or subscribe to unlimited (R$ 49.99/month).',
   },
   {
     id: 'plans',
@@ -266,7 +266,7 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'Checkout is BRL only (Brazil). PIX and card via AbacatePay. Examples: 2,000 credits for R$ 9.99; 5,000 for R$ 19.99; unlimited for R$ 49.99/month.',
+      'Checkout is BRL only (Brazil). PIX uses AbacatePay and cards use Appmax. Examples: 2,000 credits for R$ 14.99; 5,000 for R$ 23.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',

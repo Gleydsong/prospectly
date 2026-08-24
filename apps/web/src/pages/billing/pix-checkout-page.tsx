@@ -13,8 +13,8 @@ import { sanitizePixQrSrc } from '@/lib/safe-url';
 type PixPayload = Extract<CheckoutResult, { mode: 'pix' }> & PixCheckoutMeta;
 
 const CREDITS_BY_AMOUNT: Record<number, number> = {
-  999: 2000,
-  1999: 5000,
+  1499: 2000,
+  2399: 5000,
 };
 
 function formatBrl(centavos: number): string {

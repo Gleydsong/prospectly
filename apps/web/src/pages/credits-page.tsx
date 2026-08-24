@@ -11,17 +11,16 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   cancelBillingSubscription,
-  createBillingPortal,
   createCheckoutSession,
   createCreditCheckout,
   getBillingStatus,
 } from '@/features/auth/api';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
+import { AppmaxCardModal } from '@/features/billing/appmax-card-modal';
 import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import type { PaymentMethod } from '@/features/billing/types';
 import { getApiErrorMessage } from '@/lib/api';
-import { assignStripeRedirect } from '@/lib/safe-url';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -56,6 +55,7 @@ export function CreditsPage() {
   });
   const [pendingOffer, setPendingOffer] = useState<CreditOfferId | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cardOffer, setCardOffer] = useState<CreditOfferId | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(() => {
     const value = searchParams.get('method');
     return value === 'pix' || value === 'card' ? value : null;
@@ -90,12 +90,6 @@ export function CreditsPage() {
     onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
   });
 
-  const portal = useMutation({
-    mutationFn: createBillingPortal,
-    onSuccess: (data) => assignStripeRedirect(data.url),
-    onError: (error) => setBillingError(checkoutErrorMessage(error, t('settings.billingError'), t('settings.billingEmailHint'))),
-  });
-
   const cancelSub = useMutation({
     mutationFn: cancelBillingSubscription,
     onSuccess: async () => {
@@ -119,6 +113,14 @@ export function CreditsPage() {
     setPaymentMethod(method);
     setBillingError(null);
     setPendingOffer(null);
+    if (method === 'card') {
+      if (!billing.data?.cardEnabled) {
+        setBillingError(t('settings.payWithCardUnavailableHint'));
+        return;
+      }
+      setCardOffer(offer);
+      return;
+    }
     if (offer === 'unlimited') {
       planCheckout.mutate(method);
       return;
@@ -339,17 +341,6 @@ export function CreditsPage() {
 
           {manage ? (
           <div className="flex flex-wrap items-center gap-2">
-            {billing.data?.canOpenPortal ? (
-              <Button
-                type="button"
-                variant="secondary"
-                loading={portal.isPending}
-                disabled={!emailVerified}
-                onClick={() => portal.mutate()}
-              >
-                {t('settings.stripePortal')}
-              </Button>
-            ) : null}
             {billing.data?.canCancelSubscription ? (
               <Button
                 type="button"
@@ -385,6 +376,15 @@ export function CreditsPage() {
           </Button>
         </div>
       </Modal>
+      {user ? (
+        <AppmaxCardModal
+          open={Boolean(cardOffer)}
+          offer={cardOffer}
+          user={user}
+          baselineCreditBalance={billing.data?.creditBalance ?? 0}
+          onClose={() => setCardOffer(null)}
+        />
+      ) : null}
     </div>
   );
 }

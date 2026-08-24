@@ -8,6 +8,7 @@ export const CREDIT_COSTS = {
 
 export const TERMS_VERSION = '2026-07-25';
 export const FREE_SEARCH_LIMIT = 3;
+export const MONTHLY_PLAN_AMOUNT_CENTAVOS = 4_999;
 /** Credits debited per Maps search after the free quota is exhausted. */
 export const CREDITS_PER_SEARCH = CREDIT_COSTS.mapsSearch;
 /** Starting creditBalance for every newly provisioned organization. */

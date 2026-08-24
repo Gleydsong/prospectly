@@ -94,12 +94,26 @@ export class CreditPurchaseService {
     });
   }
 
+  async completeById(purchaseId: string, externalPaymentId: string): Promise<void> {
+    const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
+    if (!purchase || purchase.status !== CreditPurchaseStatus.PENDING) return;
+    await this.completePurchase(purchase.id, externalPaymentId);
+  }
+
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
     const purchase = await this.findMatching(data);
     if (!purchase || purchase.status === CreditPurchaseStatus.REFUNDED) return;
 
+    await this.refundPurchase(purchase.id);
+  }
+
+  async refundById(purchaseId: string): Promise<void> {
+    await this.refundPurchase(purchaseId);
+  }
+
+  private async refundPurchase(purchaseId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const current = await tx.creditPurchase.findUnique({ where: { id: purchase.id } });
+      const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (!current || current.status === CreditPurchaseStatus.REFUNDED) return;
 
       const claimed = await tx.creditPurchase.updateMany({
@@ -121,6 +135,26 @@ export class CreditPurchaseService {
           });
         }
       }
+    });
+  }
+
+  private async completePurchase(purchaseId: string, externalPaymentId?: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
+      if (!current || current.status !== CreditPurchaseStatus.PENDING) return;
+      const claimed = await tx.creditPurchase.updateMany({
+        where: { id: current.id, status: CreditPurchaseStatus.PENDING },
+        data: {
+          status: CreditPurchaseStatus.COMPLETED,
+          completedAt: new Date(),
+          ...(externalPaymentId ? { externalPaymentId } : {}),
+        },
+      });
+      if (claimed.count !== 1) return;
+      await tx.organization.update({
+        where: { id: current.organizationId },
+        data: { creditBalance: { increment: current.credits } },
+      });
     });
   }
 

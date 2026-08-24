@@ -1,4 +1,4 @@
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -118,46 +118,7 @@ describe('AbacatePaymentProvider', () => {
     expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
   });
 
-  it('creates monthly card via subscriptions/create', async () => {
-    client.createSubscriptionCheckout.mockResolvedValue({
-      id: 'bill_sub',
-      url: 'https://app.abacatepay.com/pay/bill_sub',
-      customerId: 'cust_1',
-    });
-    const result = await provider.createCheckout({
-      organizationId: 'org1',
-      customerEmail: 'a@b.com',
-      interval: 'monthly',
-      currency: 'BRL',
-      paymentMethod: 'card',
-      externalId: 'org:org1:monthly-card:stable',
-      successUrl: 'https://app/success',
-      cancelUrl: 'https://app/cancel',
-    });
-    expect(result).toEqual(
-      expect.objectContaining({
-        mode: 'redirect',
-        provider: 'ABACATE',
-        url: 'https://app.abacatepay.com/pay/bill_sub',
-        externalCheckoutId: 'bill_sub',
-      }),
-    );
-    expect(client.createSubscriptionCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        productId: 'prod_monthly',
-        externalId: 'org:org1:monthly-card:stable',
-      }),
-    );
-    expect(client.createTransparentPix).not.toHaveBeenCalled();
-  });
-
-  it('fails monthly card checkout when the monthly product id is missing', async () => {
-    configGet.mockImplementation((key: string) => {
-      if (key === 'abacate.productMonthlyBrl') return '';
-      if (key === 'abacate.webhookSecret') return 'whsec_test';
-      if (key === 'abacate.monthlyAmountCentavos') return 4999;
-      return undefined;
-    });
+  it('rejects monthly card because AbacatePay is PIX-only', async () => {
     await expect(
       provider.createCheckout({
         organizationId: 'org1',
@@ -168,38 +129,8 @@ describe('AbacatePaymentProvider', () => {
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
-  });
-
-  it('recovers a pending monthly card checkout instead of creating another', async () => {
-    client.findSubscriptionCheckoutByExternalId.mockResolvedValue({
-      id: 'bill_existing',
-      url: 'https://app.abacatepay.com/pay/bill_existing',
-      externalId: 'stable',
-      status: 'PENDING',
-      customerId: 'cust_1',
-    });
-
-    await expect(provider.recoverMonthlyCardCheckout('stable')).resolves.toEqual({
-      mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_existing',
-      externalCheckoutId: 'bill_existing',
-      externalCustomerId: 'cust_1',
-    });
-    expect(client.createSubscriptionCheckout).not.toHaveBeenCalled();
-  });
-
-  it('does not recover an expired monthly card checkout', async () => {
-    client.findSubscriptionCheckoutByExternalId.mockResolvedValue({
-      id: 'bill_expired',
-      url: 'https://app.abacatepay.com/pay/bill_expired',
-      externalId: 'stable',
-      status: 'EXPIRED',
-    });
-
-    await expect(provider.recoverMonthlyCardCheckout('stable')).resolves.toBeNull();
   });
 
   it('rejects lifetime checkout', async () => {
@@ -219,7 +150,7 @@ describe('AbacatePaymentProvider', () => {
   it('creates a PIX checkout with the selected credit offer metadata', async () => {
     client.createTransparentPix.mockResolvedValue({
       id: 'pix_credits_1',
-      amount: 999,
+      amount: 1499,
       brCode: '000201',
       brCodeBase64: 'data:image/png;base64,abc',
     });
@@ -232,10 +163,10 @@ describe('AbacatePaymentProvider', () => {
       successUrl: 'https://app/success',
       cancelUrl: 'https://app/cancel',
     });
-    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 999 }));
+    expect(result).toEqual(expect.objectContaining({ mode: 'pix', amountCentavos: 1499 }));
     expect(client.createTransparentPix).toHaveBeenCalledWith(
       expect.objectContaining({
-        amountCentavos: 999,
+        amountCentavos: 1499,
         metadata: expect.objectContaining({
           purchaseId: 'purchase_1',
           offer: 'credits-2000',
@@ -246,38 +177,7 @@ describe('AbacatePaymentProvider', () => {
     expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');
   });
 
-  it('creates credit card checkout with the mapped product', async () => {
-    client.createOneTimeCheckout.mockResolvedValue({
-      id: 'bill_credits',
-      url: 'https://app.abacatepay.com/pay/bill_credits',
-    });
-    const result = await provider.createCreditCheckout({
-      organizationId: 'org1',
-      offer: 'credits-5000',
-      paymentMethod: 'card',
-      purchaseId: 'purchase_2',
-      externalId: 'org:org1:credits:purchase_2',
-      successUrl: 'https://app/success',
-      cancelUrl: 'https://app/cancel',
-    });
-    expect(result).toEqual(
-      expect.objectContaining({ mode: 'redirect', provider: 'ABACATE', externalCheckoutId: 'bill_credits' }),
-    );
-    expect(client.createOneTimeCheckout).toHaveBeenCalledWith(
-      expect.objectContaining({
-        productId: 'prod_credits_5000',
-        externalId: 'org:org1:credits:purchase_2',
-      }),
-    );
-    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_2', 'bill_credits');
-  });
-
-  it('fails credit card checkout when product id is missing', async () => {
-    configGet.mockImplementation((key: string) => {
-      if (key === 'abacate.productCredits2000Brl') return '';
-      if (key === 'abacate.webhookSecret') return 'whsec_test';
-      return undefined;
-    });
+  it('rejects credit card checkout because Appmax owns cards', async () => {
     await expect(
       provider.createCreditCheckout({
         organizationId: 'org1',
@@ -288,7 +188,8 @@ describe('AbacatePaymentProvider', () => {
         successUrl: 'https://app/success',
         cancelUrl: 'https://app/cancel',
       }),
-    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(client.createOneTimeCheckout).not.toHaveBeenCalled();
   });
 
   it('completes PIX credits from nested transparent.completed', async () => {

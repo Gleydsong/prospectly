@@ -72,6 +72,12 @@ export function LoginPage() {
     setAuth(response);
     await setAppLocale(response.user.locale ?? 'pt');
 
+    if (paymentMethod === 'card' && (plan || offer)) {
+      const selected = offer ?? (plan ? 'unlimited' : null);
+      navigate(`/credits?offer=${selected ?? 'unlimited'}&method=card`, { replace: true });
+      return;
+    }
+
     if (plan) {
       try {
         const checkout = await createCheckoutSession({

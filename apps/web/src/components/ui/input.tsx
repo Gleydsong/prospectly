@@ -6,6 +6,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   leadingIcon?: ReactNode;
+  'appmax-form-element'?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(

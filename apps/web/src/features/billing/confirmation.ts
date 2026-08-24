@@ -7,15 +7,15 @@ export const CREDITS_BY_OFFER: Record<'credits-2000' | 'credits-5000', number> =
 };
 
 export const CREDITS_BY_AMOUNT: Record<number, number> = {
-  999: 2000,
-  1999: 5000,
+  1499: 2000,
+  2399: 5000,
 };
 
 export function isPlanConfirmed(status: Pick<BillingStatus, 'plan' | 'planStatus' | 'paymentProvider'>): boolean {
   return (
     status.plan === 'STARTER_MONTHLY' &&
     status.planStatus === 'ACTIVE' &&
-    status.paymentProvider === 'ABACATE'
+    (status.paymentProvider === 'ABACATE' || status.paymentProvider === 'APPMAX')
   );
 }
 

@@ -5,7 +5,7 @@ describe('resolvePaymentProviderId', () => {
     expect(resolvePaymentProviderId('pix')).toBe('ABACATE');
   });
 
-  it('routes card to ABACATE', () => {
-    expect(resolvePaymentProviderId('card')).toBe('ABACATE');
+  it('routes card to APPMAX', () => {
+    expect(resolvePaymentProviderId('card')).toBe('APPMAX');
   });
 });

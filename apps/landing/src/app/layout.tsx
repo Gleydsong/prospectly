@@ -59,13 +59,13 @@ const jsonLd = {
       offers: [
         {
           '@type': 'Offer',
-          price: 9.99,
+          price: 14.99,
           priceCurrency: 'BRL',
           name: '2.000 créditos',
         },
         {
           '@type': 'Offer',
-          price: 19.99,
+          price: 23.99,
           priceCurrency: 'BRL',
           name: '5.000 créditos',
         },

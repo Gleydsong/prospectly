@@ -108,15 +108,17 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   }
 
   for (const key of [
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET',
-    'STRIPE_PORTAL_RETURN_URL',
+    'APPMAX_CLIENT_ID',
+    'APPMAX_CLIENT_SECRET',
+    'APPMAX_EXTERNAL_ID',
+    'APPMAX_APP_ID',
+    'APPMAX_SITE_ID',
+    'APPMAX_MONTHLY_PRODUCT_ID',
+    'APPMAX_AUTH_BASE_URL',
+    'APPMAX_API_BASE_URL',
     'ABACATE_API_KEY',
     'ABACATE_WEBHOOK_SECRET',
     'ABACATE_WEBHOOK_HMAC_KEY',
-    'ABACATE_PRODUCT_MONTHLY_BRL',
-    'ABACATE_PRODUCT_CREDITS_2000_BRL',
-    'ABACATE_PRODUCT_CREDITS_5000_BRL',
     'ABACATE_SUCCESS_URL',
     'ABACATE_CANCEL_URL',
     'ABACATE_API_BASE_URL',
@@ -129,26 +131,14 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  for (const key of [
-    'ABACATE_PRODUCT_MONTHLY_BRL',
-    'ABACATE_PRODUCT_CREDITS_2000_BRL',
-    'ABACATE_PRODUCT_CREDITS_5000_BRL',
-  ] as const) {
-    const value = config[key];
-    if (value === undefined || value === '') continue;
-    if (typeof value !== 'string' || value.trim().length === 0) {
-      throw new Error(`${key} must be a non-empty string`);
-    }
+  if (config.APPMAX_ENABLED !== undefined && !['true', 'false'].includes(String(config.APPMAX_ENABLED))) {
+    throw new Error('APPMAX_ENABLED must be true or false');
   }
 
   if (isProdLike) {
     const requiredAbacate = [
       'ABACATE_API_KEY',
       'ABACATE_WEBHOOK_SECRET',
-      'ABACATE_PRODUCT_CREDITS_2000_BRL',
-      'ABACATE_PRODUCT_CREDITS_5000_BRL',
-      'ABACATE_SUCCESS_URL',
-      'ABACATE_CANCEL_URL',
     ] as const;
     const missingAbacate = requiredAbacate.filter((key) => {
       const value = config[key];
@@ -157,6 +147,26 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     if (missingAbacate.length > 0) {
       throw new Error(
         `Missing AbacatePay checkout configuration in ${nodeEnv}: ${missingAbacate.join(', ')}`,
+      );
+    }
+  }
+
+  if (String(config.APPMAX_ENABLED) === 'true') {
+    const requiredAppmax = [
+      'APPMAX_CLIENT_ID',
+      'APPMAX_CLIENT_SECRET',
+      'APPMAX_EXTERNAL_ID',
+      'APPMAX_APP_ID',
+      'APPMAX_SITE_ID',
+      'APPMAX_MONTHLY_PRODUCT_ID',
+    ] as const;
+    const missingAppmax = requiredAppmax.filter((key) => {
+      const value = config[key];
+      return typeof value !== 'string' || value.trim().length === 0;
+    });
+    if (missingAppmax.length > 0) {
+      throw new Error(
+        `Missing Appmax card configuration: ${missingAppmax.join(', ')}`,
       );
     }
   }
@@ -184,6 +194,15 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     const parsed = typeof httpTimeout === 'number' ? httpTimeout : Number(httpTimeout);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_HTTP_TIMEOUT_MS must be a positive integer');
+    }
+  }
+
+  for (const key of ['APPMAX_HTTP_TIMEOUT_MS', 'APPMAX_RECONCILE_INTERVAL_MS'] as const) {
+    const value = config[key];
+    if (value === undefined) continue;
+    const parsed = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error(`${key} must be a positive integer`);
     }
   }
 

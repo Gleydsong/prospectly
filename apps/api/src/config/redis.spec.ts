@@ -5,6 +5,12 @@ const baseConfig = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/prospectly',
   JWT_ACCESS_SECRET: 'a-very-long-access-secret-32chars!',
   JWT_REFRESH_SECRET: 'a-very-long-refresh-secret-32chars',
+  APPMAX_CLIENT_ID: 'merchant_client',
+  APPMAX_CLIENT_SECRET: 'merchant_secret',
+  APPMAX_EXTERNAL_ID: 'installation_external_id',
+  APPMAX_APP_ID: 'app-1',
+  APPMAX_SITE_ID: 'site-1',
+  APPMAX_MONTHLY_PRODUCT_ID: '55',
 };
 
 describe('Redis configuration', () => {
@@ -38,9 +44,6 @@ describe('Redis configuration', () => {
         DATABASE_APP_URL: 'postgresql://prospectly_app:secret@localhost:5432/prospectly',
         ABACATE_API_KEY: 'ak_test',
         ABACATE_WEBHOOK_SECRET: 'whsec_test',
-        ABACATE_PRODUCT_MONTHLY_BRL: 'prod_monthly',
-        ABACATE_PRODUCT_CREDITS_2000_BRL: 'prod_credits_2000',
-        ABACATE_PRODUCT_CREDITS_5000_BRL: 'prod_credits_5000',
         ABACATE_SUCCESS_URL: 'https://app.example/billing/success',
         ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
       }),
@@ -59,15 +62,13 @@ describe('Redis configuration', () => {
         REFRESH_COOKIE_SAME_SITE: 'none',
         ABACATE_API_KEY: 'ak_test',
         ABACATE_WEBHOOK_SECRET: 'whsec_test',
-        ABACATE_PRODUCT_CREDITS_2000_BRL: 'prod_credits_2000',
-        ABACATE_PRODUCT_CREDITS_5000_BRL: 'prod_credits_5000',
         ABACATE_SUCCESS_URL: 'https://app.example/billing/success',
         ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
       }),
     ).not.toThrow();
   });
 
-  it('allows production without the monthly AbacatePay product id', () => {
+  it('allows production without AbacatePay catalog product ids', () => {
     expect(() =>
       validateEnv({
         ...baseConfig,
@@ -75,11 +76,17 @@ describe('Redis configuration', () => {
         DATABASE_APP_URL: 'postgresql://prospectly_app:secret@localhost:5432/prospectly',
         ABACATE_API_KEY: 'ak_test',
         ABACATE_WEBHOOK_SECRET: 'whsec_test',
-        ABACATE_PRODUCT_CREDITS_2000_BRL: 'prod_credits_2000',
-        ABACATE_PRODUCT_CREDITS_5000_BRL: 'prod_credits_5000',
         ABACATE_SUCCESS_URL: 'https://app.example/billing/success',
         ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
       }),
     ).not.toThrow();
+  });
+
+  it('keeps Appmax optional until the rollout flag is enabled', () => {
+    const { APPMAX_CLIENT_ID: _clientId, APPMAX_CLIENT_SECRET: _secret, ...withoutCredentials } = baseConfig;
+    expect(() => validateEnv({ ...withoutCredentials, APPMAX_ENABLED: 'false' })).not.toThrow();
+    expect(() => validateEnv({ ...withoutCredentials, APPMAX_ENABLED: 'true' })).toThrow(
+      'Missing Appmax card configuration',
+    );
   });
 });
