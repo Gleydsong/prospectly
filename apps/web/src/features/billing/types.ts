@@ -14,12 +14,6 @@ export type CheckoutResult =
       externalPaymentId: string;
       amountCentavos: number;
       expiresAt?: string;
-    }
-  | {
-      mode: 'pending';
-      provider: 'APPMAX';
-      externalOrderId: string;
-      status: string;
     };
 
 export type SearchUsage = {
@@ -32,19 +26,15 @@ export type SearchUsage = {
 
 export type CreditOffer = 'credits-2000' | 'credits-5000';
 
-export type PaymentMethod = 'pix' | 'card';
-
 export type BillingStatus = {
   searchUsage: SearchUsage;
   plan: string;
   planStatus: string;
   planCurrency: string | null;
-  paymentProvider: 'STRIPE' | 'ABACATE' | 'APPMAX' | null;
+  paymentProvider: 'STRIPE' | 'ABACATE' | null;
   currentPeriodEnd: string | null;
   canCancelSubscription: boolean;
   canExportCsv: boolean;
   freeSearchLimit: number;
   creditBalance: number;
-  monthlyCardEnabled: boolean;
-  cardEnabled: boolean;
 };

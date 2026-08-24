@@ -11,11 +11,13 @@ export const CREDITS_BY_AMOUNT: Record<number, number> = {
   2399: 5000,
 };
 
-export function isPlanConfirmed(status: Pick<BillingStatus, 'plan' | 'planStatus' | 'paymentProvider'>): boolean {
+export function isPlanConfirmed(
+  status: Pick<BillingStatus, 'plan' | 'planStatus' | 'paymentProvider'>,
+): boolean {
   return (
     status.plan === 'STARTER_MONTHLY' &&
     status.planStatus === 'ACTIVE' &&
-    (status.paymentProvider === 'ABACATE' || status.paymentProvider === 'APPMAX')
+    status.paymentProvider === 'ABACATE'
   );
 }
 
@@ -31,10 +33,7 @@ export function isCreditsConfirmed(
   return status.creditBalance >= intent.baselineCreditBalance + expected;
 }
 
-export function isCheckoutConfirmed(
-  intent: CheckoutIntent,
-  status: BillingStatus,
-): boolean {
+export function isCheckoutConfirmed(intent: CheckoutIntent, status: BillingStatus): boolean {
   if (intent.purpose === 'plan') return isPlanConfirmed(status);
   return isCreditsConfirmed(intent, status);
 }

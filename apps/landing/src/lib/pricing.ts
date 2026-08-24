@@ -19,9 +19,9 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   BRL: 'BRL (Brasil)',
 };
 
-export function appRegisterUrl(plan: BillingInterval, method: 'pix' | 'card' = 'pix'): string {
+export function appRegisterUrl(plan: BillingInterval): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:5173';
-  const params = new URLSearchParams({ plan, method, acceptTerms: '1' });
+  const params = new URLSearchParams({ plan, acceptTerms: '1' });
   return `${base}/register?${params.toString()}`;
 }
 

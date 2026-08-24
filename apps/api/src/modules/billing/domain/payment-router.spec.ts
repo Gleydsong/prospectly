@@ -5,7 +5,9 @@ describe('resolvePaymentProviderId', () => {
     expect(resolvePaymentProviderId('pix')).toBe('ABACATE');
   });
 
-  it('routes card to APPMAX', () => {
-    expect(resolvePaymentProviderId('card')).toBe('APPMAX');
+  it('rejects card while no provider is configured', () => {
+    expect(() => resolvePaymentProviderId('card')).toThrow(
+      'Card payment provider is not configured',
+    );
   });
 });

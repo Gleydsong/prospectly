@@ -3,7 +3,7 @@
 # Docs: docs/deploy/render.md
 #
 # After first sync: fill sync:false secrets in the Dashboard, then set public URLs
-# (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Appmax/Abacate webhooks).
+# (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Abacate webhook).
 
 previews:
   generation: manual
@@ -17,7 +17,7 @@ projects:
           - name: prospectly-db
             plan: basic-256mb
             region: frankfurt
-            postgresMajorVersion: "16"
+            postgresMajorVersion: '16'
             diskSizeGB: 5
 
         services:
@@ -73,28 +73,6 @@ projects:
                 sync: false
               - key: CORS_ORIGINS
                 sync: false
-              - key: APPMAX_CLIENT_ID
-                sync: false
-              - key: APPMAX_ENABLED
-                sync: false
-              - key: APPMAX_CLIENT_SECRET
-                sync: false
-              - key: APPMAX_EXTERNAL_ID
-                sync: false
-              - key: APPMAX_APP_ID
-                sync: false
-              - key: APPMAX_SITE_ID
-                sync: false
-              - key: APPMAX_MONTHLY_PRODUCT_ID
-                sync: false
-              - key: APPMAX_AUTH_BASE_URL
-                value: https://auth.appmax.com.br
-              - key: APPMAX_API_BASE_URL
-                value: https://api.appmax.com.br
-              - key: APPMAX_HTTP_TIMEOUT_MS
-                value: "12000"
-              - key: APPMAX_RECONCILE_INTERVAL_MS
-                value: "30000"
               - key: ABACATE_API_KEY
                 sync: false
               - key: ABACATE_WEBHOOK_SECRET
@@ -108,13 +86,13 @@ projects:
               - key: ABACATE_API_BASE_URL
                 value: https://api.abacatepay.com/v2
               - key: ABACATE_HTTP_TIMEOUT_MS
-                value: "15000"
+                value: '15000'
               - key: OSM_USER_AGENT
                 value: Prospectly/1.0 (https://prospectly.dev)
               - key: SMTP_HOST
                 sync: false
               - key: SMTP_PORT
-                value: "587"
+                value: '587'
               - key: SMTP_USER
                 sync: false
               - key: SMTP_PASSWORD
@@ -167,16 +145,16 @@ projects:
                 value: strict-origin-when-cross-origin
               - path: /*
                 name: Permissions-Policy
-                value: "camera=(), microphone=(), geolocation=()"
+                value: 'camera=(), microphone=(), geolocation=()'
               - path: /*
                 name: Cross-Origin-Opener-Policy
                 value: same-origin-allow-popups
               - path: /*
                 name: Strict-Transport-Security
-                value: "max-age=31536000; includeSubDomains"
+                value: 'max-age=31536000; includeSubDomains'
               - path: /*
                 name: Content-Security-Policy
-                value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://accounts.google.com https://scripts.appmax.com.br; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src https://accounts.google.com"
+                value: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src https://accounts.google.com"
             envVars:
               - key: VITE_API_URL
                 sync: false
@@ -207,7 +185,7 @@ projects:
               - key: NODE_ENV
                 value: production
               - key: NODE_VERSION
-                value: "22.14.0"
+                value: '22.14.0'
               - key: NEXT_PUBLIC_APP_URL
                 sync: false
               - key: NEXT_PUBLIC_LANDING_URL

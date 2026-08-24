@@ -3,7 +3,13 @@ import { parseRedisConnection } from './redis';
 
 const REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
 
-const WEAK_JWT_PATTERNS = [/change-me/i, /changeme/i, /secret-min-32/i, /your[_-]?secret/i, /example/i];
+const WEAK_JWT_PATTERNS = [
+  /change-me/i,
+  /changeme/i,
+  /secret-min-32/i,
+  /your[_-]?secret/i,
+  /example/i,
+];
 
 function assertStrongJwtSecret(key: string, value: string, nodeEnv: string): void {
   if (value.length < 32) {
@@ -31,13 +37,15 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   }
 
   const nodeEnv =
-    typeof config.NODE_ENV === 'string' ? config.NODE_ENV : process.env.NODE_ENV ?? 'development';
+    typeof config.NODE_ENV === 'string' ? config.NODE_ENV : (process.env.NODE_ENV ?? 'development');
 
   const isProdLike = nodeEnv === 'production' || nodeEnv === 'staging';
   if (isProdLike) {
     const appUrl = config.DATABASE_APP_URL;
     if (typeof appUrl !== 'string' || appUrl.length === 0) {
-      throw new Error('DATABASE_APP_URL is required in production (runtime role without BYPASSRLS)');
+      throw new Error(
+        'DATABASE_APP_URL is required in production (runtime role without BYPASSRLS)',
+      );
     }
   }
 
@@ -84,7 +92,14 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     throw new Error('OSM_USER_AGENT must not be empty');
   }
 
-  for (const key of ['OSM_TIMEOUT_MS', 'OSM_RESULT_LIMIT', 'CSV_MAX_FILE_SIZE_BYTES', 'CSV_MAX_ROWS', 'GOOGLE_PLACES_TIMEOUT_MS', 'GOOGLE_PLACES_RESULT_LIMIT'] as const) {
+  for (const key of [
+    'OSM_TIMEOUT_MS',
+    'OSM_RESULT_LIMIT',
+    'CSV_MAX_FILE_SIZE_BYTES',
+    'CSV_MAX_ROWS',
+    'GOOGLE_PLACES_TIMEOUT_MS',
+    'GOOGLE_PLACES_RESULT_LIMIT',
+  ] as const) {
     const value = config[key];
     if (value === undefined) continue;
 
@@ -108,14 +123,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   }
 
   for (const key of [
-    'APPMAX_CLIENT_ID',
-    'APPMAX_CLIENT_SECRET',
-    'APPMAX_EXTERNAL_ID',
-    'APPMAX_APP_ID',
-    'APPMAX_SITE_ID',
-    'APPMAX_MONTHLY_PRODUCT_ID',
-    'APPMAX_AUTH_BASE_URL',
-    'APPMAX_API_BASE_URL',
     'ABACATE_API_KEY',
     'ABACATE_WEBHOOK_SECRET',
     'ABACATE_WEBHOOK_HMAC_KEY',
@@ -131,15 +138,8 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  if (config.APPMAX_ENABLED !== undefined && !['true', 'false'].includes(String(config.APPMAX_ENABLED))) {
-    throw new Error('APPMAX_ENABLED must be true or false');
-  }
-
   if (isProdLike) {
-    const requiredAbacate = [
-      'ABACATE_API_KEY',
-      'ABACATE_WEBHOOK_SECRET',
-    ] as const;
+    const requiredAbacate = ['ABACATE_API_KEY', 'ABACATE_WEBHOOK_SECRET'] as const;
     const missingAbacate = requiredAbacate.filter((key) => {
       const value = config[key];
       return typeof value !== 'string' || value.trim().length === 0;
@@ -151,30 +151,9 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  if (String(config.APPMAX_ENABLED) === 'true') {
-    const requiredAppmax = [
-      'APPMAX_CLIENT_ID',
-      'APPMAX_CLIENT_SECRET',
-      'APPMAX_EXTERNAL_ID',
-      'APPMAX_APP_ID',
-      'APPMAX_SITE_ID',
-      'APPMAX_MONTHLY_PRODUCT_ID',
-    ] as const;
-    const missingAppmax = requiredAppmax.filter((key) => {
-      const value = config[key];
-      return typeof value !== 'string' || value.trim().length === 0;
-    });
-    if (missingAppmax.length > 0) {
-      throw new Error(
-        `Missing Appmax card configuration: ${missingAppmax.join(', ')}`,
-      );
-    }
-  }
-
   const lifetimeAmount = config.ABACATE_LIFETIME_AMOUNT_CENTAVOS;
   if (lifetimeAmount !== undefined) {
-    const parsed =
-      typeof lifetimeAmount === 'number' ? lifetimeAmount : Number(lifetimeAmount);
+    const parsed = typeof lifetimeAmount === 'number' ? lifetimeAmount : Number(lifetimeAmount);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_LIFETIME_AMOUNT_CENTAVOS must be a positive integer');
     }
@@ -182,8 +161,7 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   const monthlyAmount = config.ABACATE_MONTHLY_AMOUNT_CENTAVOS;
   if (monthlyAmount !== undefined) {
-    const parsed =
-      typeof monthlyAmount === 'number' ? monthlyAmount : Number(monthlyAmount);
+    const parsed = typeof monthlyAmount === 'number' ? monthlyAmount : Number(monthlyAmount);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_MONTHLY_AMOUNT_CENTAVOS must be a positive integer');
     }
@@ -194,15 +172,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     const parsed = typeof httpTimeout === 'number' ? httpTimeout : Number(httpTimeout);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_HTTP_TIMEOUT_MS must be a positive integer');
-    }
-  }
-
-  for (const key of ['APPMAX_HTTP_TIMEOUT_MS', 'APPMAX_RECONCILE_INTERVAL_MS'] as const) {
-    const value = config[key];
-    if (value === undefined) continue;
-    const parsed = typeof value === 'number' ? value : Number(value);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new Error(`${key} must be a positive integer`);
     }
   }
 

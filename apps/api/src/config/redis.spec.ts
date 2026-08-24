@@ -5,12 +5,6 @@ const baseConfig = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/prospectly',
   JWT_ACCESS_SECRET: 'a-very-long-access-secret-32chars!',
   JWT_REFRESH_SECRET: 'a-very-long-refresh-secret-32chars',
-  APPMAX_CLIENT_ID: 'merchant_client',
-  APPMAX_CLIENT_SECRET: 'merchant_secret',
-  APPMAX_EXTERNAL_ID: 'installation_external_id',
-  APPMAX_APP_ID: 'app-1',
-  APPMAX_SITE_ID: 'site-1',
-  APPMAX_MONTHLY_PRODUCT_ID: '55',
 };
 
 describe('Redis configuration', () => {
@@ -34,9 +28,9 @@ describe('Redis configuration', () => {
   });
 
   it('requires DATABASE_APP_URL in production', () => {
-    expect(() =>
-      validateEnv({ ...baseConfig, NODE_ENV: 'production' }),
-    ).toThrow('DATABASE_APP_URL');
+    expect(() => validateEnv({ ...baseConfig, NODE_ENV: 'production' })).toThrow(
+      'DATABASE_APP_URL',
+    );
     expect(() =>
       validateEnv({
         ...baseConfig,
@@ -51,9 +45,9 @@ describe('Redis configuration', () => {
   });
 
   it('rejects SameSite=None outside production-like environments', () => {
-    expect(() =>
-      validateEnv({ ...baseConfig, REFRESH_COOKIE_SAME_SITE: 'none' }),
-    ).toThrow('REFRESH_COOKIE_SAME_SITE=none');
+    expect(() => validateEnv({ ...baseConfig, REFRESH_COOKIE_SAME_SITE: 'none' })).toThrow(
+      'REFRESH_COOKIE_SAME_SITE=none',
+    );
     expect(() =>
       validateEnv({
         ...baseConfig,
@@ -80,13 +74,5 @@ describe('Redis configuration', () => {
         ABACATE_CANCEL_URL: 'https://app.example/billing/cancel',
       }),
     ).not.toThrow();
-  });
-
-  it('keeps Appmax optional until the rollout flag is enabled', () => {
-    const { APPMAX_CLIENT_ID: _clientId, APPMAX_CLIENT_SECRET: _secret, ...withoutCredentials } = baseConfig;
-    expect(() => validateEnv({ ...withoutCredentials, APPMAX_ENABLED: 'false' })).not.toThrow();
-    expect(() => validateEnv({ ...withoutCredentials, APPMAX_ENABLED: 'true' })).toThrow(
-      'Missing Appmax card configuration',
-    );
   });
 });

@@ -4,8 +4,6 @@ import {
   Controller,
   Get,
   Headers,
-  HttpCode,
-  HttpStatus,
   Post,
   Query,
   Req,
@@ -24,8 +22,6 @@ import { RequireEmailVerified } from '../../common/decorators/require-email-veri
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
 import { CreateCheckoutDto, CreateCreditCheckoutDto } from './dto/create-checkout.dto';
-import { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
-import { AppmaxInstallationHealthDto } from './dto/appmax-installation-health.dto';
 
 @ApiTags('billing')
 @Controller({ path: 'billing', version: '1' })
@@ -67,37 +63,6 @@ export class BillingController {
   @ApiBearerAuth()
   @RequireEmailVerified()
   @Roles('OWNER', 'ADMIN')
-  @Post('card/checkout')
-  createCardCheckout(
-    @CurrentOrg() organizationId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateAppmaxCardCheckoutDto,
-  ) {
-    return this.billing.createAppmaxCardCheckout(organizationId, user.email, dto);
-  }
-
-  @ApiBearerAuth()
-  @Get('card/config')
-  getCardConfig() {
-    return this.billing.getAppmaxBrowserConfig();
-  }
-
-  @Public()
-  @Get('appmax/health')
-  getAppmaxHealth() {
-    return this.billing.getAppmaxHealthStatus();
-  }
-
-  @Public()
-  @Post('appmax/health')
-  @HttpCode(HttpStatus.OK)
-  postAppmaxHealth(@Body() dto: AppmaxInstallationHealthDto) {
-    return this.billing.handleAppmaxInstallationHealth(dto);
-  }
-
-  @ApiBearerAuth()
-  @RequireEmailVerified()
-  @Roles('OWNER', 'ADMIN')
   @Post('cancel')
   cancelSubscription(@CurrentOrg() organizationId: string) {
     return this.billing.cancelSubscription(organizationId);
@@ -115,16 +80,5 @@ export class BillingController {
       throw new BadRequestException('Raw body missing for Abacate webhook');
     }
     return this.billing.handleAbacateWebhook(rawBody, headers, query);
-  }
-
-  @Public()
-  @Post('webhook/appmax')
-  @HttpCode(HttpStatus.OK)
-  handleAppmaxWebhook(@Req() req: RawBodyRequest<Request>) {
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      throw new BadRequestException('Raw body missing for Appmax webhook');
-    }
-    return this.billing.handleAppmaxWebhook(rawBody);
   }
 }

@@ -62,7 +62,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 
 1. Push this repo to GitHub (Blueprint sync requires a connected Git host).
 2. In [Render Dashboard](https://dashboard.render.com/) → **New** → **Blueprint** → select the repo → apply `render.yaml`.
-3. When prompted, fill every `sync: false` secret (Appmax, Abacate, SMTP, public URLs, etc.). Keep `APPMAX_ENABLED=false` during the first migration deploy.
+3. When prompted, fill every `sync: false` secret (AbacatePay, SMTP, public URLs, etc.).
 4. After services have public URLs, set cross-links:
 
 | Variable                  | Service           | Example                                                                       |
@@ -78,10 +78,8 @@ API health check: `GET /health/ready` (Postgres + Redis).
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
-7. Configure Appmax health URL as `https://<api>/api/v1/billing/appmax/health` and webhook as `https://<api>/api/v1/billing/webhook/appmax`.
-8. Point Abacate webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release).
-9. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
-10. After the Appmax private app, merchant credentials, monthly product and sandbox smokes are ready, set `APPMAX_ENABLED=true` and redeploy API + web.
+7. Point the AbacatePay webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release).
+8. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
 
 ## Local Dockerfiles (optional)
 
@@ -107,8 +105,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 - [ ] F5 restores session via cookie refresh; logout clears cookie
 - [ ] Unverified email: banner shown; checkout/invite return 403 `EMAIL_NOT_VERIFIED`
 - [ ] Landing CTAs open app with correct plan/currency query
-- [ ] Appmax BRL card checkout: approved, refused, timeout/reconciliation and monthly cancellation
-- [ ] Abacate BRL PIX: both credit packs and monthly unlimited (see `docs/billing/dual-gateways.md`)
+- [ ] AbacatePay BRL PIX: both credit packs and monthly unlimited (see `docs/billing/payments.md`)
 - [ ] Verification + forgot-password e-mail once SMTP is wired
 - [ ] Seed never run in production (`prisma/seed.ts` throws)
 

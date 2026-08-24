@@ -30,7 +30,6 @@ export const TENANT_MODELS = new Set([
   'UsageLedger',
   'CreditPurchase',
   'MonthlyCheckoutAttempt',
-  'AppmaxCheckoutAttempt',
   'CreditLedgerEntry',
   'OpportunityRun',
   'AiRun',
@@ -57,7 +56,6 @@ export const GLOBAL_MODELS = new Set([
   'User',
   'WaitlistEntry',
   'BillingWebhookEvent',
-  'AppmaxInstallation',
   'RefreshToken',
 ]);
 
@@ -68,7 +66,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function whereHasOrganizationId(where: unknown): boolean {
   if (!isRecord(where)) return false;
   if (typeof where.organizationId === 'string' && where.organizationId.length > 0) return true;
-  if (isRecord(where.organizationId) && typeof where.organizationId.equals === 'string') return true;
+  if (isRecord(where.organizationId) && typeof where.organizationId.equals === 'string')
+    return true;
   for (const key of ['AND', 'OR', 'NOT'] as const) {
     const part = where[key];
     if (Array.isArray(part) && part.some(whereHasOrganizationId)) return true;
@@ -93,7 +92,9 @@ export function whereHasOrganizationId(where: unknown): boolean {
 
 function dataHasOrganizationId(data: unknown): boolean {
   if (Array.isArray(data)) return data.every(dataHasOrganizationId);
-  return isRecord(data) && typeof data.organizationId === 'string' && data.organizationId.length > 0;
+  return (
+    isRecord(data) && typeof data.organizationId === 'string' && data.organizationId.length > 0
+  );
 }
 
 function whereOrgValue(where: unknown): string | null {
@@ -145,7 +146,10 @@ export function assertTenantOperation(model: string, operation: string, args: un
       throw new TenantScopeError(`${model}.upsert organizationId does not match tenant context`);
     }
     if (!whereHasOrganizationId(payload.where)) {
-      payload.where = { ...(isRecord(payload.where) ? payload.where : {}), organizationId: ctx.organizationId };
+      payload.where = {
+        ...(isRecord(payload.where) ? payload.where : {}),
+        organizationId: ctx.organizationId,
+      };
     }
     return;
   }
@@ -163,10 +167,15 @@ export function assertTenantOperation(model: string, operation: string, args: un
 
   const stated = whereOrgValue(payload.where);
   if (stated && stated !== ctx.organizationId) {
-    throw new TenantScopeError(`${model}.${operation} organizationId does not match tenant context`);
+    throw new TenantScopeError(
+      `${model}.${operation} organizationId does not match tenant context`,
+    );
   }
 
   if (!whereHasOrganizationId(payload.where)) {
-    payload.where = { ...(isRecord(payload.where) ? payload.where : {}), organizationId: ctx.organizationId };
+    payload.where = {
+      ...(isRecord(payload.where) ? payload.where : {}),
+      organizationId: ctx.organizationId,
+    };
   }
 }

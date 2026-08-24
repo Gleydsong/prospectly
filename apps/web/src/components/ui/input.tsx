@@ -6,7 +6,6 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   leadingIcon?: ReactNode;
-  'appmax-form-element'?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -15,7 +14,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]"
+          >
             {label}
           </label>
         ) : null}

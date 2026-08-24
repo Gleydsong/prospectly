@@ -136,7 +136,6 @@
       "OpenStreetMap Overpass",
       "Google Places",
       "Google OAuth",
-      "Appmax",
       "AbacatePay",
       "SMTP",
       "sites públicos para análise"
@@ -357,8 +356,8 @@
       "kind": "backend-module",
       "layer": "commerce",
       "status": "implemented",
-      "responsibility": "Status do plano, PIX Abacate, cartão Appmax, cancelamento e reconciliação autenticada de pagamentos.",
-      "evidence": ["apps/api/src/modules/billing", "docs/billing/dual-gateways.md"]
+      "responsibility": "Status do plano, checkout PIX AbacatePay, cancelamento e confirmação autenticada de pagamentos.",
+      "evidence": ["apps/api/src/modules/billing", "docs/billing/payments.md"]
     },
     {
       "id": "module-leads",
@@ -534,11 +533,11 @@
     },
     {
       "id": "external-payments",
-      "name": "Appmax + AbacatePay",
+      "name": "AbacatePay",
       "kind": "external-service-group",
       "layer": "integration",
       "status": "implemented",
-      "responsibility": "Cartão via Appmax, PIX via AbacatePay, cancelamento e eventos webhook.",
+      "responsibility": "PIX via AbacatePay, cancelamento e eventos webhook autenticados.",
       "evidence": [
         "apps/api/src/modules/billing/infrastructure",
         "apps/api/src/modules/billing/billing.controller.ts"
@@ -751,11 +750,8 @@
         "operations": [
           "GET /billing/status",
           "POST /billing/checkout",
-          "POST /billing/card/checkout",
-          "GET /billing/card/config",
           "POST /billing/cancel",
-          "POST /billing/webhook/abacate",
-          "POST /billing/webhook/appmax"
+          "POST /billing/webhook/abacate"
         ]
       },
       {
@@ -948,9 +944,8 @@
       "name": "Checkout e ativação",
       "steps": [
         "Landing envia plan/currency para /register ou Web inicia checkout",
-        "PaymentRouter escolhe Abacate para PIX e Appmax para cartão, ambos em BRL",
-        "O navegador tokeniza o cartão com Appmax JS; PAN/CVV não passam pela API",
-        "Webhooks apenas sinalizam; a API autenticada do gateway confirma o estado",
+        "A interface oferece somente PIX em BRL pela AbacatePay",
+        "O webhook é verificado antes de conceder créditos ou ativar o plano",
         "BillingActivationService atualiza plano/status da organização"
       ],
       "evidence": [
@@ -1189,7 +1184,7 @@
     },
     {
       "decision": "Billing roteado por método de pagamento",
-      "why": "AbacatePay atende PIX e Appmax atende cartão; confirmações autenticadas e reconciliação protegem os benefícios concedidos."
+      "why": "AbacatePay atende PIX; confirmação autenticada e idempotência protegem os benefícios concedidos enquanto cartão permanece indisponível."
     }
   ],
   "knownBoundariesAndGaps": [

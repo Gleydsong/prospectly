@@ -152,7 +152,6 @@ enum PlanStatus {
 enum PaymentProvider {
   STRIPE
   ABACATE
-  APPMAX
 }
 
 enum CreditPurchaseStatus {
@@ -177,20 +176,6 @@ enum BillingCheckoutAttemptStatus {
   PROCESSING
   READY
   FAILED
-}
-
-enum AppmaxCheckoutKind {
-  MONTHLY
-  CREDITS
-}
-
-enum AppmaxCheckoutStatus {
-  PROCESSING
-  PAYMENT_PENDING
-  RECONCILING
-  COMPLETED
-  FAILED
-  REVIEW_REQUIRED
 }
 
 /// Reasons for credit balance movements. SEARCH_CONSUME (Maps), AI_CONSUME (Opportunity Finder / explain / save lead),
@@ -283,9 +268,6 @@ model Organization {
   abacateCustomerId     String?          @unique
   abacateSubscriptionId String?          @unique
   abacatePaymentId      String?          @unique
-  appmaxCustomerId      String?          @unique
-  appmaxSubscriptionId  String?          @unique
-  appmaxLastReconciledAt DateTime?
   plan                  OrgPlan          @default(FREE)
   planStatus            PlanStatus       @default(INACTIVE)
   planCurrency          String?
@@ -313,7 +295,6 @@ model Organization {
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
   monthlyCheckoutAttempts MonthlyCheckoutAttempt[]
-  appmaxCheckoutAttempts AppmaxCheckoutAttempt[]
   creditLedgerEntries CreditLedgerEntry[]
   opportunityRuns     OpportunityRun[]
   aiRuns              AiRun[]
@@ -322,7 +303,6 @@ model Organization {
   @@index([planStatus])
   @@index([stripeCustomerId])
   @@index([abacateCustomerId])
-  @@index([appmaxCustomerId])
   @@index([paymentProvider])
 }
 
@@ -1050,48 +1030,6 @@ model BillingWebhookEvent {
   @@index([status, updatedAt])
 }
 
-/// Non-secret evidence emitted by Appmax installation health checks.
-model AppmaxInstallation {
-  id               String   @id @default(uuid())
-  appId            Int
-  externalId       String   @unique
-  merchantClientId String?  @unique
-  externalKey      String?
-  createdAt        DateTime @default(now())
-
-  @@index([appId, createdAt])
-}
-
-/// Durable Appmax card state. Entitlements are released only after authenticated reconciliation.
-model AppmaxCheckoutAttempt {
-  id                     String                  @id @default(uuid())
-  organizationId         String
-  purchaseId             String?                 @unique
-  checkoutKey            String                  @unique
-  kind                    AppmaxCheckoutKind
-  offer                   String?
-  amountCentavos          Int
-  status                  AppmaxCheckoutStatus    @default(PROCESSING)
-  customerEmail           String
-  externalCustomerId      String?
-  externalOrderId         String?                 @unique
-  externalSubscriptionId  String?                 @unique
-  providerStatus          String?
-  attempts                Int                     @default(0)
-  nextReconcileAt         DateTime?
-  lastReconciledAt        DateTime?
-  lastError               String?
-  completedAt             DateTime?
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  purchase     CreditPurchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
-
-  @@index([organizationId, createdAt])
-  @@index([status, nextReconcileAt])
-}
-
 /// Durable idempotency state for recurring AbacatePay checkout creation.
 model MonthlyCheckoutAttempt {
   id                 String                       @id @default(uuid())
@@ -1133,8 +1071,6 @@ model CreditPurchase {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ledgerEntries CreditLedgerEntry[]
-  appmaxAttempt AppmaxCheckoutAttempt?
-
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
 }

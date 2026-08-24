@@ -4,14 +4,12 @@ import { billingAuthQuery } from './auth-query';
 import { isCheckoutConfirmed } from './confirmation';
 
 describe('billingAuthQuery', () => {
-  it('preserves offer and card method between login and register', () => {
-    expect(billingAuthQuery({ offer: 'credits-2000', method: 'card' })).toBe(
-      '?offer=credits-2000&method=card',
-    );
+  it('preserves a credit offer between login and register', () => {
+    expect(billingAuthQuery({ offer: 'credits-2000' })).toBe('?offer=credits-2000');
   });
 
-  it('does not drop method when a plan is present', () => {
-    expect(billingAuthQuery({ plan: 'monthly', method: 'card' })).toBe('?plan=monthly&method=card');
+  it('preserves a monthly plan between login and register', () => {
+    expect(billingAuthQuery({ plan: 'monthly' })).toBe('?plan=monthly');
   });
 });
 
@@ -36,8 +34,6 @@ describe('isCheckoutConfirmed', () => {
           canCancelSubscription: false,
           canExportCsv: false,
           freeSearchLimit: 3,
-          monthlyCardEnabled: false,
-          cardEnabled: false,
         },
       ),
     ).toBe(true);
@@ -58,30 +54,6 @@ describe('isCheckoutConfirmed', () => {
           canCancelSubscription: true,
           canExportCsv: true,
           freeSearchLimit: 3,
-          monthlyCardEnabled: false,
-          cardEnabled: false,
-        },
-      ),
-    ).toBe(true);
-  });
-
-  it('confirms an active Appmax monthly plan after reconciliation', () => {
-    expect(
-      isCheckoutConfirmed(
-        { purpose: 'plan', plan: 'monthly', provider: 'APPMAX' },
-        {
-          plan: 'STARTER_MONTHLY',
-          planStatus: 'ACTIVE',
-          paymentProvider: 'APPMAX',
-          creditBalance: 400,
-          searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
-          planCurrency: 'BRL',
-          currentPeriodEnd: '2026-09-24T00:00:00.000Z',
-          canCancelSubscription: true,
-          canExportCsv: true,
-          freeSearchLimit: 3,
-          monthlyCardEnabled: true,
-          cardEnabled: true,
         },
       ),
     ).toBe(true);

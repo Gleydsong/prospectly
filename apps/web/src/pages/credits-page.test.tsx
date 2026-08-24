@@ -46,8 +46,6 @@ describe('CreditsPage', () => {
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
-      monthlyCardEnabled: false,
-      cardEnabled: true,
     });
     useAuthStore.setState({
       user: {
@@ -65,7 +63,7 @@ describe('CreditsPage', () => {
     });
   });
 
-  it('opens the Appmax card form without sending card data to AbacatePay', async () => {
+  it('starts a PIX credit checkout directly', async () => {
     const user = userEvent.setup();
     createCreditCheckout.mockResolvedValue({
       mode: 'redirect',
@@ -74,15 +72,15 @@ describe('CreditsPage', () => {
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
-    await user.click(screen.getByRole('button', { name: /Cartão via Appmax/ }));
-    expect(await screen.findByRole('dialog', { name: 'Pagamento seguro com cartão' })).toBeInTheDocument();
-    expect(createCreditCheckout).not.toHaveBeenCalled();
+    expect(createCreditCheckout).toHaveBeenCalledWith({ offer: 'credits-2000' });
   });
 
   it('shows an accessible cancel confirmation and hides Stripe portal for Abacate orgs', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
-    expect(screen.queryByRole('button', { name: 'Portal legado do cartão (Stripe)' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Portal legado do cartão (Stripe)' }),
+    ).not.toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Cancelar assinatura' }));
     expect(await screen.findByRole('dialog', { name: 'Cancelar assinatura?' })).toBeInTheDocument();
     expect(screen.getByText(/O cancelamento é imediato/)).toBeInTheDocument();
@@ -100,21 +98,10 @@ describe('CreditsPage', () => {
       canCancelSubscription: false,
       canExportCsv: true,
       freeSearchLimit: 3,
-      monthlyCardEnabled: false,
-      cardEnabled: true,
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     expect(await screen.findByText('Créditos disponíveis')).toBeInTheDocument();
     expect(screen.queryByText(/Stripe/)).not.toBeInTheDocument();
-  });
-
-  it('keeps unlimited card disabled until the monthly product exists', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
-    await user.click(await screen.findByRole('button', { name: 'Assinar ilimitado' }));
-    const card = screen.getByRole('button', { name: /Cartão via Appmax/ });
-    expect(card).toBeDisabled();
-    expect(screen.getByText(/checkout Appmax ainda não está configurado/)).toBeInTheDocument();
   });
 
   it('surfaces the API checkout error instead of a generic billing message', async () => {
@@ -131,7 +118,6 @@ describe('CreditsPage', () => {
 
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
-    await user.click(screen.getByRole('button', { name: /^PIX/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('AbacatePay is not configured');
   });
 

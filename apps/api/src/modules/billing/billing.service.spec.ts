@@ -9,7 +9,6 @@ import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { AppmaxPaymentService } from './appmax-payment.service';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -58,22 +57,12 @@ describe('BillingService', () => {
     syncMonthlyStatus: jest.fn().mockResolvedValue(undefined),
   };
 
-  const appmaxPayments = {
-    createCardCheckout: jest.fn(),
-    getBrowserConfig: jest.fn(),
-    getHealthStatus: jest.fn(),
-    createInstallationHealthCheck: jest.fn(),
-    acceptWebhook: jest.fn(),
-    cancelSubscription: jest.fn(),
-  };
-
   const entitlements = {
     canExportCsv: jest.fn().mockResolvedValue(false),
   };
 
   const readConfig = (key: string) => {
     const map: Record<string, string | boolean> = {
-      'appmax.enabled': false,
       'abacate.successUrl': 'https://app.test/success',
       'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
@@ -94,7 +83,6 @@ describe('BillingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: configGet } },
         { provide: BillingActivationService, useValue: activation },
-        { provide: AppmaxPaymentService, useValue: appmaxPayments },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
@@ -161,14 +149,14 @@ describe('BillingService', () => {
     );
   });
 
-  it('only lets billing administrators cancel an Appmax subscription', async () => {
+  it('only lets billing administrators cancel an Abacate subscription', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
       planStatus: PlanStatus.ACTIVE,
       planCurrency: 'BRL',
-      paymentProvider: PaymentProvider.APPMAX,
-      appmaxSubscriptionId: 'sub_1',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'sub_1',
       currentPeriodEnd: null,
       deletedAt: null,
       creditBalance: 10,
@@ -180,38 +168,6 @@ describe('BillingService', () => {
     );
     await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
       expect.objectContaining({ canCancelSubscription: true }),
-    );
-  });
-
-  it('exposes monthlyCardEnabled when the monthly product id is configured', async () => {
-    configGet.mockImplementation((key: string) => {
-      if (key === 'appmax.enabled') return true;
-      if (
-        [
-          'appmax.clientId',
-          'appmax.clientSecret',
-          'appmax.externalId',
-          'appmax.appId',
-          'appmax.siteId',
-        ].includes(key)
-      )
-        return 'configured';
-      if (key === 'appmax.monthlyProductId') return '55';
-      return undefined;
-    });
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      plan: OrgPlan.FREE,
-      planStatus: PlanStatus.INACTIVE,
-      planCurrency: null,
-      paymentProvider: null,
-      currentPeriodEnd: null,
-      deletedAt: null,
-    });
-    prisma.search.count.mockResolvedValue(0);
-
-    await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
-      expect.objectContaining({ cardEnabled: true, monthlyCardEnabled: true }),
     );
   });
 
@@ -297,7 +253,7 @@ describe('BillingService', () => {
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('delegates a credit-card checkout to Appmax with authenticated tenant context', async () => {
+  it('rejects card checkout while no card provider is configured', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.FREE,
@@ -305,67 +261,10 @@ describe('BillingService', () => {
       planStatus: PlanStatus.INACTIVE,
       deletedAt: null,
     });
-    const dto = {
-      checkoutKey: 'f191b5ef-31b8-4c79-96c7-b233b522eb27',
-      purpose: 'credits' as const,
-      offer: 'credits-2000' as const,
-      firstName: 'Ana',
-      lastName: 'Silva',
-      email: 'ana@example.com',
-      phone: '11999999999',
-      ip: '203.0.113.10',
-      cardToken: 'tokenized-card',
-      documentNumber: '12345678909',
-      holderName: 'ANA SILVA',
-    };
-    appmaxPayments.createCardCheckout.mockResolvedValue({
-      mode: 'pending',
-      provider: 'APPMAX',
-      externalCheckoutId: 'order-1',
-    });
-
-    await expect(service.createAppmaxCardCheckout('org1', 'ana@example.com', dto)).resolves.toEqual(
-      expect.objectContaining({ provider: 'APPMAX' }),
-    );
-    expect(appmaxPayments.createCardCheckout).toHaveBeenCalledWith({
-      ...dto,
-      organizationId: 'org1',
-      authenticatedEmail: 'ana@example.com',
-    });
-  });
-
-  it('blocks a second monthly checkout while a historical Stripe subscription is active', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      paymentProvider: PaymentProvider.STRIPE,
-      planStatus: PlanStatus.ACTIVE,
-      deletedAt: null,
-    });
-    const dto = {
-      checkoutKey: 'f191b5ef-31b8-4c79-96c7-b233b522eb27',
-      purpose: 'monthly' as const,
-      firstName: 'Ana',
-      lastName: 'Silva',
-      email: 'ana@example.com',
-      phone: '11999999999',
-      ip: '203.0.113.10',
-      cardToken: 'tokenized-card',
-      documentNumber: '12345678909',
-      holderName: 'ANA SILVA',
-    };
-
     await expect(
-      service.createAppmaxCardCheckout('org1', 'ana@example.com', dto),
-    ).rejects.toBeInstanceOf(ForbiddenException);
-    expect(appmaxPayments.createCardCheckout).not.toHaveBeenCalled();
-  });
-
-  it('delegates Appmax webhooks without interpreting their unsigned payload', async () => {
-    const body = Buffer.from('{"event":"order_approved","data":{"order_id":123}}');
-    appmaxPayments.acceptWebhook.mockResolvedValue({ received: true });
-
-    await expect(service.handleAppmaxWebhook(body)).resolves.toEqual({ received: true });
-    expect(appmaxPayments.acceptWebhook).toHaveBeenCalledWith(body);
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'card'),
+    ).rejects.toThrow('Card payments are temporarily unavailable');
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
   it('allows a free organization to search when purchased credits remain', async () => {

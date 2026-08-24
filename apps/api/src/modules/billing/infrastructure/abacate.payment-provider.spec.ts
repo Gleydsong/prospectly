@@ -72,10 +72,12 @@ describe('AbacatePaymentProvider', () => {
       };
       return map[key];
     });
-    prisma.organization.findFirst.mockImplementation(async ({ where }: { where: Record<string, unknown> }) => {
-      if (typeof where.id === 'string') return { id: where.id };
-      return null;
-    });
+    prisma.organization.findFirst.mockImplementation(
+      async ({ where }: { where: Record<string, unknown> }) => {
+        if (typeof where.id === 'string') return { id: where.id };
+        return null;
+      },
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AbacatePaymentProvider,
@@ -177,7 +179,7 @@ describe('AbacatePaymentProvider', () => {
     expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase_1', 'pix_credits_1');
   });
 
-  it('rejects credit card checkout because Appmax owns cards', async () => {
+  it('rejects credit card checkout while no card provider is configured', async () => {
     await expect(
       provider.createCreditCheckout({
         organizationId: 'org1',

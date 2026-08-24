@@ -73,14 +73,14 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       );
     }
     if (input.paymentMethod === 'card') {
-      throw new BadRequestException('Card payments are handled by Appmax');
+      throw new BadRequestException('Card payments are temporarily unavailable');
     }
     return this.createMonthlyPix(input);
   }
 
   async createCreditCheckout(input: CreditCheckoutRequest): Promise<CheckoutResult> {
     if (input.paymentMethod === 'card') {
-      throw new BadRequestException('Card payments are handled by Appmax');
+      throw new BadRequestException('Card payments are temporarily unavailable');
     }
     return this.createCreditPixCheckout(input);
   }
@@ -225,7 +225,8 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
     const pack = CREDIT_PACKAGES[input.offer];
     const charge = await this.client.createTransparentPix({
       amountCentavos: pack.amountCentavos,
-      description: input.offer === 'credits-2000' ? 'Prospectly 2.000 créditos' : 'Prospectly 5.000 créditos',
+      description:
+        input.offer === 'credits-2000' ? 'Prospectly 2.000 créditos' : 'Prospectly 5.000 créditos',
       externalId: input.externalId,
       metadata: {
         organizationId: input.organizationId,
@@ -434,7 +435,9 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       if (org) return org.id;
     }
 
-    const fromExternal = extractOrgIdFromExternalId(toChargeLookup(normalized).externalId as string | undefined);
+    const fromExternal = extractOrgIdFromExternalId(
+      toChargeLookup(normalized).externalId as string | undefined,
+    );
     if (fromExternal) {
       const org = await this.prisma.organization.findFirst({
         where: { id: fromExternal, deletedAt: null },

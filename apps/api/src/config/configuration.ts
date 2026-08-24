@@ -14,7 +14,8 @@ export const configuration = () => ({
     sameSite: process.env.REFRESH_COOKIE_SAME_SITE,
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
-  corsOrigins: process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001',
+  corsOrigins:
+    process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001',
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID ?? '',
   },
@@ -55,27 +56,11 @@ export const configuration = () => ({
   waitlist: {
     notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
   },
-  appmax: {
-    enabled: process.env.APPMAX_ENABLED === 'true',
-    clientId: process.env.APPMAX_CLIENT_ID ?? '',
-    clientSecret: process.env.APPMAX_CLIENT_SECRET ?? '',
-    externalId: process.env.APPMAX_EXTERNAL_ID ?? '',
-    appId: process.env.APPMAX_APP_ID ?? '',
-    siteId: process.env.APPMAX_SITE_ID ?? '',
-    monthlyProductId: process.env.APPMAX_MONTHLY_PRODUCT_ID ?? '',
-    authBaseUrl: process.env.APPMAX_AUTH_BASE_URL ?? 'https://auth.sandboxappmax.com.br',
-    apiBaseUrl: process.env.APPMAX_API_BASE_URL ?? 'https://api.sandboxappmax.com.br',
-    httpTimeoutMs: parseInt(process.env.APPMAX_HTTP_TIMEOUT_MS ?? '12000', 10),
-    reconcileIntervalMs: parseInt(process.env.APPMAX_RECONCILE_INTERVAL_MS ?? '30000', 10),
-  },
   abacate: {
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
     webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY?.trim() ?? '',
-    lifetimeAmountCentavos: parseInt(
-      process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900',
-      10,
-    ),
+    lifetimeAmountCentavos: parseInt(process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900', 10),
     successUrl: process.env.ABACATE_SUCCESS_URL,
     cancelUrl: process.env.ABACATE_CANCEL_URL,
     apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
@@ -92,7 +77,10 @@ export const configuration = () => ({
   },
   opportunityAi: {
     enabled: process.env.OPPORTUNITY_AI_ENABLED !== 'false',
-    baseUrl: process.env.OPPORTUNITY_AI_BASE_URL ?? process.env.WHATSAPP_AI_BASE_URL ?? 'http://127.0.0.1:11434',
+    baseUrl:
+      process.env.OPPORTUNITY_AI_BASE_URL ??
+      process.env.WHATSAPP_AI_BASE_URL ??
+      'http://127.0.0.1:11434',
     model: process.env.OPPORTUNITY_AI_MODEL ?? process.env.WHATSAPP_AI_MODEL ?? 'qwen3:8b',
     timeoutMs: parseInt(process.env.OPPORTUNITY_AI_TIMEOUT_MS ?? '25000', 10),
     apiKey: process.env.OPPORTUNITY_AI_API_KEY ?? process.env.WHATSAPP_AI_API_KEY ?? '',

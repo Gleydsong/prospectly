@@ -3,7 +3,7 @@
 > **Status:** OPEN — checklist operacional  
 > **Data:** 2026-07-25  
 > **Branch base:** `main` (`render.yaml`, dual billing)  
-> **Relacionado:** [`docs/deploy/render.md`](../deploy/render.md), [`docs/billing/dual-gateways.md`](../billing/dual-gateways.md)
+> **Relacionado:** [`docs/deploy/render.md`](../deploy/render.md), [`docs/billing/payments.md`](../billing/payments.md)
 
 ## 1. Objetivo
 
@@ -152,7 +152,7 @@ Snapshot da máquina de desenvolvimento (nomes apenas; sem valores):
 
 - [ ] Todas as linhas **Must** da seção 4 marcadas como configuradas no ambiente de produção
 - [ ] Webhooks X1–X3 recebendo eventos de teste
-- [ ] Checklist de staging em `docs/billing/dual-gateways.md` executada
+- [ ] Checklist de staging em `docs/billing/payments.md` executada
 - [ ] `GET /health/ready` → `ready`
 - [ ] Este documento atualizado: Status → `DONE` quando fechado
 
@@ -160,5 +160,5 @@ Snapshot da máquina de desenvolvimento (nomes apenas; sem valores):
 
 - Blueprint: [`render.yaml`](../../render.yaml)
 - Runbook deploy: [`docs/deploy/render.md`](../deploy/render.md)
-- Billing: [`docs/billing/dual-gateways.md`](../billing/dual-gateways.md)
+- Billing: [`docs/billing/payments.md`](../billing/payments.md)
 - Examples: `apps/api/.env.example`, `apps/web/.env.example`, `apps/landing/.env.example`

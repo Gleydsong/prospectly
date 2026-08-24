@@ -18,9 +18,9 @@ describe('assertTenantOperation', () => {
 
   it('throws when tenant context is missing an organization id', () => {
     runWithTenant('', () => {
-      expect(() =>
-        assertTenantOperation('Lead', 'findFirst', { where: { id: 'lead-1' } }),
-      ).toThrow(TenantScopeError);
+      expect(() => assertTenantOperation('Lead', 'findFirst', { where: { id: 'lead-1' } })).toThrow(
+        TenantScopeError,
+      );
     });
   });
 
@@ -36,14 +36,6 @@ describe('assertTenantOperation', () => {
     const args = { where: { id: 'attempt-1' } };
     runWithTenant('org-1', () => {
       assertTenantOperation('MonthlyCheckoutAttempt', 'updateMany', args);
-    });
-    expect(args.where).toEqual({ id: 'attempt-1', organizationId: 'org-1' });
-  });
-
-  it('applies tenant scope to Appmax checkout attempts', () => {
-    const args = { where: { id: 'attempt-1' } };
-    runWithTenant('org-1', () => {
-      assertTenantOperation('AppmaxCheckoutAttempt', 'updateMany', args);
     });
     expect(args.where).toEqual({ id: 'attempt-1', organizationId: 'org-1' });
   });

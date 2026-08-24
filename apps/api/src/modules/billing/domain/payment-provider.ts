@@ -1,4 +1,4 @@
-export type PaymentProviderId = 'ABACATE' | 'APPMAX';
+export type PaymentProviderId = 'ABACATE';
 
 /** Brazil-only billing currency. */
 export type BillingCurrency = 'BRL';
@@ -47,12 +47,6 @@ export type CheckoutResult =
       externalPaymentId: string;
       amountCentavos: number;
       expiresAt?: string;
-    }
-  | {
-      mode: 'pending';
-      provider: 'APPMAX';
-      externalOrderId: string;
-      status: string;
     };
 
 export type ParsedWebhookEvent = {

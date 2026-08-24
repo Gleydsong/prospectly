@@ -192,13 +192,13 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('E-mail')).toHaveValue('ana@agency.dev');
   });
 
-  it('preserves card method when switching to register', async () => {
+  it('drops obsolete card method when switching to register', async () => {
     renderWithProviders(<LoginPage />, {
       initialEntries: ['/login?offer=credits-2000&method=card'],
     });
     expect(screen.getByRole('link', { name: 'Criar conta' })).toHaveAttribute(
       'href',
-      '/register?offer=credits-2000&method=card',
+      '/register?offer=credits-2000',
     );
   });
 });

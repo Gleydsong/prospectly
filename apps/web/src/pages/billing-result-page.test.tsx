@@ -23,8 +23,6 @@ const unpaidStatus = {
   canCancelSubscription: false,
   canExportCsv: false,
   freeSearchLimit: 3,
-  monthlyCardEnabled: false,
-  cardEnabled: false,
 };
 
 describe('BillingSuccessPage', () => {
@@ -48,7 +46,9 @@ describe('BillingSuccessPage', () => {
     getBillingStatus.mockResolvedValue(unpaidStatus);
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
-    expect(await screen.findByRole('heading', { name: 'Confirmando pagamento' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Confirmando pagamento' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Pagamento confirmado' })).not.toBeInTheDocument();
   });
 
@@ -70,8 +70,6 @@ describe('BillingSuccessPage', () => {
       canCancelSubscription: false,
       canExportCsv: false,
       freeSearchLimit: 3,
-      monthlyCardEnabled: false,
-      cardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
@@ -93,8 +91,6 @@ describe('BillingSuccessPage', () => {
       canCancelSubscription: true,
       canExportCsv: true,
       freeSearchLimit: 3,
-      monthlyCardEnabled: false,
-      cardEnabled: false,
     });
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
@@ -136,6 +132,8 @@ describe('BillingSuccessPage', () => {
     getBillingStatus.mockRejectedValue(new Error('status failed'));
 
     renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
-    expect(await screen.findByRole('heading', { name: 'Não foi possível consultar o status' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Não foi possível consultar o status' }),
+    ).toBeInTheDocument();
   });
 });

@@ -25,9 +25,6 @@ import type {
   PaymentMethod,
 } from './domain/payment-provider';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { AppmaxPaymentService } from './appmax-payment.service';
-import type { CreateAppmaxCardCheckoutDto } from './dto/create-appmax-card-checkout.dto';
-import type { AppmaxInstallationHealthDto } from './dto/appmax-installation-health.dto';
 
 export interface SearchUsageSnapshot {
   used: number;
@@ -46,7 +43,6 @@ export class BillingService {
     private readonly config: ConfigService,
     private readonly activation: BillingActivationService,
     private readonly abacateProvider: AbacatePaymentProvider,
-    private readonly appmaxPayments: AppmaxPaymentService,
     private readonly creditPurchases: CreditPurchaseService,
     private readonly entitlements: EntitlementService,
   ) {}
@@ -65,35 +61,12 @@ export class BillingService {
       paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
       canCancelSubscription: canManage
-        ? org.plan === OrgPlan.STARTER_MONTHLY &&
-          unlimited &&
-          (provider === PaymentProvider.ABACATE || provider === PaymentProvider.APPMAX)
+        ? org.plan === OrgPlan.STARTER_MONTHLY && unlimited && provider === PaymentProvider.ABACATE
         : false,
       canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
-      monthlyCardEnabled:
-        this.isAppmaxCardEnabled() && this.hasConfiguredProduct('appmax.monthlyProductId'),
-      cardEnabled: this.isAppmaxCardEnabled(),
     };
-  }
-
-  private isAppmaxCardEnabled(): boolean {
-    return (
-      this.config.get<boolean>('appmax.enabled') === true &&
-      [
-        'appmax.clientId',
-        'appmax.clientSecret',
-        'appmax.externalId',
-        'appmax.appId',
-        'appmax.siteId',
-      ].every((key) => this.hasConfiguredProduct(key))
-    );
-  }
-
-  private hasConfiguredProduct(configKey: string): boolean {
-    const value = this.config.get<string>(configKey);
-    return typeof value === 'string' && value.trim().length > 0;
   }
 
   async getSearchUsage(organization: Organization | string): Promise<SearchUsageSnapshot> {
@@ -274,7 +247,7 @@ export class BillingService {
     } as const;
 
     if (paymentMethod === 'card') {
-      throw new BadRequestException('Use /billing/card/checkout for Appmax card payments');
+      throw new BadRequestException('Card payments are temporarily unavailable');
     }
     return this.abacateProvider.createCheckout(checkoutInput);
   }
@@ -288,7 +261,7 @@ export class BillingService {
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
     if (paymentMethod === 'card') {
-      throw new BadRequestException('Use /billing/card/checkout for Appmax card payments');
+      throw new BadRequestException('Card payments are temporarily unavailable');
     }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
@@ -321,51 +294,6 @@ export class BillingService {
     }
   }
 
-  createAppmaxCardCheckout(
-    organizationId: string,
-    authenticatedEmail: string,
-    dto: CreateAppmaxCardCheckoutDto,
-  ) {
-    return this.requireOrg(organizationId).then((org) => {
-      if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
-        throw new BadRequestException('Organization already has permanent unlimited access');
-      }
-      if (
-        dto.purpose === 'monthly' &&
-        org.paymentProvider === PaymentProvider.STRIPE &&
-        (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
-      ) {
-        throw new ForbiddenException(
-          'A historical Stripe subscription is still active. Contact support before starting Appmax.',
-        );
-      }
-      if (
-        dto.purpose === 'monthly' &&
-        org.paymentProvider === PaymentProvider.APPMAX &&
-        org.planStatus === PlanStatus.ACTIVE
-      ) {
-        throw new BadRequestException('Organization already has an active Appmax subscription');
-      }
-      return this.appmaxPayments.createCardCheckout({
-        ...dto,
-        organizationId,
-        authenticatedEmail,
-      });
-    });
-  }
-
-  getAppmaxBrowserConfig() {
-    return this.appmaxPayments.getBrowserConfig();
-  }
-
-  getAppmaxHealthStatus() {
-    return this.appmaxPayments.getHealthStatus();
-  }
-
-  handleAppmaxInstallationHealth(dto: AppmaxInstallationHealthDto) {
-    return this.appmaxPayments.createInstallationHealthCheck(dto);
-  }
-
   async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
     const org = await this.requireOrg(organizationId);
     if (org.plan !== OrgPlan.STARTER_MONTHLY) {
@@ -388,15 +316,7 @@ export class BillingService {
       return { canceled: true };
     }
 
-    if (org.paymentProvider === PaymentProvider.APPMAX && org.appmaxSubscriptionId) {
-      await this.appmaxPayments.cancelSubscription(organizationId, org.appmaxSubscriptionId);
-      return { canceled: true };
-    }
     throw new BadRequestException('No cancellable subscription for this organization');
-  }
-
-  handleAppmaxWebhook(rawBody: Buffer): Promise<{ received: true }> {
-    return this.appmaxPayments.acceptWebhook(rawBody);
   }
 
   async handleAbacateWebhook(

@@ -34,19 +34,4 @@ describe('handleCheckoutResult', () => {
       }),
     );
   });
-
-  it('stores an Appmax pending order and opens the confirmation poll page', () => {
-    sessionStorage.clear();
-    const assign = vi.fn();
-    vi.stubGlobal('location', { assign });
-    handleCheckoutResult(
-      { mode: 'pending', provider: 'APPMAX', externalOrderId: '12345', status: 'PAYMENT_PENDING' },
-      { purpose: 'credits', offer: 'credits-5000', baselineCreditBalance: 400 },
-    );
-    expect(readCheckoutIntent()).toEqual(
-      expect.objectContaining({ provider: 'APPMAX', externalCheckoutId: '12345' }),
-    );
-    expect(assign).toHaveBeenCalledWith('/billing/success');
-    vi.unstubAllGlobals();
-  });
 });

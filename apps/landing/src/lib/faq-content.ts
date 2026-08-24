@@ -9,13 +9,7 @@ export type FaqItem = {
   answer: string;
 };
 
-export const FAQ_CATEGORY_ORDER: FaqCategory[] = [
-  'product',
-  'usage',
-  'pricing',
-  'data',
-  'privacy',
-];
+export const FAQ_CATEGORY_ORDER: FaqCategory[] = ['product', 'usage', 'pricing', 'data', 'privacy'];
 
 const categoryLabels: Record<Locale, Record<FaqCategory | 'all', string>> = {
   pt: {
@@ -123,7 +117,7 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'Checkout apenas em BRL (Brasil). PIX via AbacatePay e cartão via Appmax. Exemplos: 2.000 créditos por R$ 14,99; 5.000 por R$ 23,99; ilimitado por R$ 49,99/mês.',
+      'Checkout apenas em BRL (Brasil), via PIX pela AbacatePay. Cartão está temporariamente indisponível. Exemplos: 2.000 créditos por R$ 14,99; 5.000 por R$ 23,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
@@ -266,7 +260,7 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'Checkout is BRL only (Brazil). PIX uses AbacatePay and cards use Appmax. Examples: 2,000 credits for R$ 14.99; 5,000 for R$ 23.99; unlimited for R$ 49.99/month.',
+      'Checkout is BRL only (Brazil), using PIX through AbacatePay. Card payments are temporarily unavailable. Examples: 2,000 credits for R$ 14.99; 5,000 for R$ 23.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',

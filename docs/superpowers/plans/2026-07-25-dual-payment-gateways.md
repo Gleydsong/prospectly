@@ -52,7 +52,7 @@
 | `apps/api/prisma/migrations/..._dual_payment_providers/migration.sql` | Schema |
 | `apps/web/src/pages/billing/pix-checkout-page.tsx` (ou modal) | Tela QR PIX lifetime |
 | `apps/web/src/features/billing/*` | Hooks status/checkout |
-| `docs/billing/dual-gateways.md` | Runbook |
+| `docs/billing/payments.md` | Runbook atual |
 
 ### Modificar
 
@@ -275,7 +275,7 @@ HMAC: confirmar em https://docs.abacatepay.com/pages/webhooks/reference na Task 
 
 ### Task 6: Runbook
 
-**Files:** `docs/billing/dual-gateways.md` + link README
+**Files:** `docs/billing/payments.md` + link README
 
 - [x] Produto monthly CARD, amount lifetime, webhook (`transparent.*`, `subscription.*`)
 - [x] Testes sandbox: PIX lifetime + subscription monthly + Stripe EUR
