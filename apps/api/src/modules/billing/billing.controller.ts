@@ -4,6 +4,8 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
   Query,
   Req,
@@ -88,6 +90,7 @@ export class BillingController {
 
   @Public()
   @Post('appmax/health')
+  @HttpCode(HttpStatus.OK)
   postAppmaxHealth(@Body() dto: AppmaxInstallationHealthDto) {
     return this.billing.handleAppmaxInstallationHealth(dto);
   }
@@ -116,6 +119,7 @@ export class BillingController {
 
   @Public()
   @Post('webhook/appmax')
+  @HttpCode(HttpStatus.OK)
   handleAppmaxWebhook(@Req() req: RawBodyRequest<Request>) {
     const rawBody = req.rawBody;
     if (!rawBody) {
