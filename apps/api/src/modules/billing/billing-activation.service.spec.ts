@@ -16,10 +16,7 @@ describe('BillingActivationService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        BillingActivationService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [BillingActivationService, { provide: PrismaService, useValue: prisma }],
     }).compile();
     service = module.get(BillingActivationService);
   });
@@ -109,6 +106,65 @@ describe('BillingActivationService', () => {
       provider: PaymentProvider.STRIPE,
       stripeSubscriptionId: 'sub_attack',
     });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('does not let a stale Asaas event overwrite an active historical provider', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ABACATE,
+    });
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_old',
+      currentPeriodEnd: new Date('2026-10-01T00:00:00.000Z'),
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('does not move an Asaas paid period backwards for an out-of-order renewal', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      currentPeriodEnd: new Date('2026-11-01T00:00:00.000Z'),
+    });
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_current',
+      currentPeriodEnd: new Date('2026-10-01T00:00:00.000Z'),
+    });
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({ currentPeriodEnd: new Date('2026-11-01T00:00:00.000Z') }),
+    });
+  });
+
+  it('does not let an old Asaas subscription replace the current Asaas contract', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_current',
+      currentPeriodEnd: new Date('2026-11-01T00:00:00.000Z'),
+    });
+
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_old',
+      currentPeriodEnd: new Date('2026-12-01T00:00:00.000Z'),
+    });
+
     expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 

@@ -66,6 +66,13 @@ export const configuration = () => ({
     apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
     httpTimeoutMs: parseInt(process.env.ABACATE_HTTP_TIMEOUT_MS ?? '15000', 10),
   },
+  asaas: {
+    enabled: process.env.ASAAS_ENABLED === 'true',
+    apiKey: process.env.ASAAS_API_KEY?.trim() ?? '',
+    webhookToken: process.env.ASAAS_WEBHOOK_TOKEN?.trim() ?? '',
+    apiBaseUrl: process.env.ASAAS_API_BASE_URL ?? 'https://api-sandbox.asaas.com/v3',
+    httpTimeoutMs: parseInt(process.env.ASAAS_HTTP_TIMEOUT_MS ?? '15000', 10),
+  },
   sentryDsn: process.env.SENTRY_DSN,
   whatsappAi: {
     enabled: process.env.WHATSAPP_AI_ENABLED !== 'false',

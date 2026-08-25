@@ -152,10 +152,12 @@ enum PlanStatus {
 enum PaymentProvider {
   STRIPE
   ABACATE
+  ASAAS
 }
 
 enum CreditPurchaseStatus {
   PENDING
+  REVIEW_REQUIRED
   COMPLETED
   REFUNDED
   FAILED
@@ -167,14 +169,18 @@ enum BillingPaymentMethod {
 }
 
 enum BillingWebhookEventStatus {
+  PENDING
   PROCESSING
   PROCESSED
+  REVIEW_REQUIRED
   FAILED
 }
 
 enum BillingCheckoutAttemptStatus {
   PROCESSING
   READY
+  REVIEW_REQUIRED
+  RESOLVED
   FAILED
 }
 
@@ -184,6 +190,7 @@ enum CreditLedgerReason {
   SEARCH_CONSUME
   SIGNUP_BONUS
   PURCHASE
+  PURCHASE_REVERSAL
   REFUND
   AI_CONSUME
 }
@@ -268,6 +275,7 @@ model Organization {
   abacateCustomerId     String?          @unique
   abacateSubscriptionId String?          @unique
   abacatePaymentId      String?          @unique
+  asaasSubscriptionId  String?          @unique
   plan                  OrgPlan          @default(FREE)
   planStatus            PlanStatus       @default(INACTIVE)
   planCurrency          String?
@@ -295,6 +303,7 @@ model Organization {
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
   monthlyCheckoutAttempts MonthlyCheckoutAttempt[]
+  billingProfile          BillingProfile?
   creditLedgerEntries CreditLedgerEntry[]
   opportunityRuns     OpportunityRun[]
   aiRuns              AiRun[]
@@ -303,6 +312,7 @@ model Organization {
   @@index([planStatus])
   @@index([stripeCustomerId])
   @@index([abacateCustomerId])
+  @@index([asaasSubscriptionId])
   @@index([paymentProvider])
 }
 
@@ -1017,6 +1027,7 @@ model BillingWebhookEvent {
   provider    PaymentProvider
   eventId     String
   type        String
+  payload     Json?
   status      BillingWebhookEventStatus  @default(PROCESSING)
   attempts    Int                        @default(1)
   lastError   String?
@@ -1030,12 +1041,32 @@ model BillingWebhookEvent {
   @@index([status, updatedAt])
 }
 
+/// Minimal organization-owned payer data. Card details never enter Prospectly.
+model BillingProfile {
+  id              String   @id @default(uuid())
+  organizationId  String   @unique
+  name            String
+  cpfCnpj         String
+  phone           String
+  email           String
+  asaasCustomerId String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([asaasCustomerId])
+}
+
 /// Durable idempotency state for recurring AbacatePay checkout creation.
 model MonthlyCheckoutAttempt {
   id                 String                       @id @default(uuid())
   organizationId     String
   provider           PaymentProvider              @default(ABACATE)
   paymentMethod      BillingPaymentMethod
+  product            String                       @default("MONTHLY_ACCESS")
+  amountCentavos     Int                          @default(4999)
+  currency           String                       @default("BRL")
   status             BillingCheckoutAttemptStatus @default(PROCESSING)
   externalId         String                       @unique
   externalCheckoutId String?                      @unique
@@ -1043,13 +1074,15 @@ model MonthlyCheckoutAttempt {
   checkoutUrl        String?
   attempts           Int                          @default(1)
   lastError          String?
+  lastReconciledAt   DateTime?
   createdAt          DateTime                     @default(now())
   updatedAt          DateTime                     @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@unique([organizationId, provider, paymentMethod])
+  @@index([organizationId, provider, paymentMethod])
   @@index([status, updatedAt])
+  @@index([provider, status, lastReconciledAt])
 }
 
 model CreditPurchase {
@@ -1064,6 +1097,8 @@ model CreditPurchase {
   status            CreditPurchaseStatus @default(PENDING)
   externalId        String               @unique
   externalPaymentId String?              @unique
+  checkoutUrl       String?
+  lastReconciledAt  DateTime?
   completedAt       DateTime?
   refundedAt        DateTime?
   createdAt         DateTime              @default(now())
@@ -1073,6 +1108,7 @@ model CreditPurchase {
   ledgerEntries CreditLedgerEntry[]
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
+  @@index([provider, status, lastReconciledAt])
 }
 
 /// Append-only ledger of credit balance changes (audit of consumo / future purchase+AI).

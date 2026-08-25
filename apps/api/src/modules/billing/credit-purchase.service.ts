@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { BillingPaymentMethod, CreditPurchaseStatus, PaymentProvider } from '@prisma/client';
+import {
+  BillingPaymentMethod,
+  CreditPurchaseStatus,
+  PaymentProvider,
+  Prisma,
+} from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
@@ -34,10 +39,47 @@ export class CreditPurchaseService {
     });
   }
 
-  async attachPayment(purchaseId: string, externalPaymentId: string): Promise<void> {
+  async beginAsaasPackage(input: {
+    organizationId: string;
+    offer: CreditOffer;
+    externalId: string;
+  }) {
+    const active = await this.findActiveAsaasPackage(input.organizationId);
+    if (active) return { purchase: active, created: false };
+    try {
+      const purchase = await this.createPending({
+        ...input,
+        provider: PaymentProvider.ASAAS,
+        paymentMethod: 'card',
+      });
+      return { purchase, created: true };
+    } catch (error) {
+      if (!this.isUniqueConstraintViolation(error)) throw error;
+      const concurrent = await this.findActiveAsaasPackage(input.organizationId);
+      if (!concurrent) throw error;
+      return { purchase: concurrent, created: false };
+    }
+  }
+
+  async attachPayment(
+    purchaseId: string,
+    externalPaymentId: string,
+    checkoutUrl?: string,
+  ): Promise<void> {
     await this.prisma.creditPurchase.update({
       where: { id: purchaseId },
-      data: { externalPaymentId },
+      data: { externalPaymentId, ...(checkoutUrl ? { checkoutUrl } : {}) },
+    });
+  }
+
+  private findActiveAsaasPackage(organizationId: string) {
+    return this.prisma.creditPurchase.findFirst({
+      where: {
+        organizationId,
+        provider: PaymentProvider.ASAAS,
+        status: { in: [CreditPurchaseStatus.PENDING, CreditPurchaseStatus.REVIEW_REQUIRED] },
+      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -47,7 +89,9 @@ export class CreditPurchaseService {
     const externalId = typeof data.externalId === 'string' ? data.externalId : undefined;
 
     if (metadata.purchaseId) {
-      const byId = await this.prisma.creditPurchase.findUnique({ where: { id: metadata.purchaseId } });
+      const byId = await this.prisma.creditPurchase.findUnique({
+        where: { id: metadata.purchaseId },
+      });
       if (byId) return byId;
     }
     if (paymentId) {
@@ -70,33 +114,22 @@ export class CreditPurchaseService {
       this.logger.warn('Credit payment completed without a matching purchase');
       return;
     }
-    if (purchase.status !== CreditPurchaseStatus.PENDING) return;
-
-    await this.prisma.$transaction(async (tx) => {
-      const current = await tx.creditPurchase.findUnique({ where: { id: purchase.id } });
-      if (!current || current.status !== CreditPurchaseStatus.PENDING) return;
-
-      // Atomic claim: concurrent stale webhook reclaimers must not both increment.
-      const claimed = await tx.creditPurchase.updateMany({
-        where: { id: current.id, status: CreditPurchaseStatus.PENDING },
-        data: {
-          status: CreditPurchaseStatus.COMPLETED,
-          completedAt: new Date(),
-          ...(paymentId ? { externalPaymentId: paymentId } : {}),
-        },
-      });
-      if (claimed.count !== 1) return;
-
-      await tx.organization.update({
-        where: { id: current.organizationId },
-        data: { creditBalance: { increment: current.credits } },
-      });
-    });
+    if (
+      purchase.status !== CreditPurchaseStatus.PENDING &&
+      purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED
+    )
+      return;
+    await this.completePurchase(purchase.id, paymentId);
   }
 
   async completeById(purchaseId: string, externalPaymentId: string): Promise<void> {
     const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
-    if (!purchase || purchase.status !== CreditPurchaseStatus.PENDING) return;
+    if (
+      !purchase ||
+      (purchase.status !== CreditPurchaseStatus.PENDING &&
+        purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
+    )
+      return;
     await this.completePurchase(purchase.id, externalPaymentId);
   }
 
@@ -123,17 +156,22 @@ export class CreditPurchaseService {
       if (claimed.count !== 1) return;
 
       if (current.status === CreditPurchaseStatus.COMPLETED) {
-        const organization = await tx.organization.findUnique({
+        const organization = await tx.organization.update({
           where: { id: current.organizationId },
+          data: { creditBalance: { decrement: current.credits } },
           select: { creditBalance: true },
         });
-        const debit = Math.min(current.credits, organization?.creditBalance ?? 0);
-        if (debit > 0) {
-          await tx.organization.update({
-            where: { id: current.organizationId },
-            data: { creditBalance: { decrement: debit } },
-          });
-        }
+        await tx.creditLedgerEntry.create({
+          data: {
+            organizationId: current.organizationId,
+            purchaseId: current.id,
+            reason: 'PURCHASE_REVERSAL',
+            delta: -current.credits,
+            balanceAfter: organization.creditBalance,
+            idempotencyKey: `purchase-reversal:${current.id}`,
+            metadata: { cause: 'PAYMENT_REVERSED' },
+          },
+        });
       }
     });
   }
@@ -141,9 +179,14 @@ export class CreditPurchaseService {
   private async completePurchase(purchaseId: string, externalPaymentId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
-      if (!current || current.status !== CreditPurchaseStatus.PENDING) return;
+      if (
+        !current ||
+        (current.status !== CreditPurchaseStatus.PENDING &&
+          current.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
+      )
+        return;
       const claimed = await tx.creditPurchase.updateMany({
-        where: { id: current.id, status: CreditPurchaseStatus.PENDING },
+        where: { id: current.id, status: current.status },
         data: {
           status: CreditPurchaseStatus.COMPLETED,
           completedAt: new Date(),
@@ -151,9 +194,21 @@ export class CreditPurchaseService {
         },
       });
       if (claimed.count !== 1) return;
-      await tx.organization.update({
+      const organization = await tx.organization.update({
         where: { id: current.organizationId },
         data: { creditBalance: { increment: current.credits } },
+        select: { creditBalance: true },
+      });
+      await tx.creditLedgerEntry.create({
+        data: {
+          organizationId: current.organizationId,
+          purchaseId: current.id,
+          reason: 'PURCHASE',
+          delta: current.credits,
+          balanceAfter: organization.creditBalance,
+          idempotencyKey: `purchase:${current.id}`,
+          metadata: { provider: current.provider, paymentMethod: current.paymentMethod },
+        },
       });
     });
   }
@@ -166,5 +221,9 @@ export class CreditPurchaseService {
         (entry): entry is [string, string] => typeof entry[1] === 'string',
       ),
     );
+  }
+
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
   }
 }

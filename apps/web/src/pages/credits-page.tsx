@@ -17,6 +17,7 @@ import {
 } from '@/features/auth/api';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
+import { BillingProfileForm } from '@/features/billing/billing-profile-form';
 import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -52,10 +53,14 @@ export function CreditsPage() {
   const billing = useQuery({
     queryKey: BILLING_STATUS_QUERY_KEY,
     queryFn: getBillingStatus,
+    refetchInterval: (query) => (query.state.data?.checkoutReviewRequired === true ? 5_000 : false),
   });
 
   const creditCheckout = useMutation({
-    mutationFn: (input: { offer: 'credits-2000' | 'credits-5000' }) => createCreditCheckout(input),
+    mutationFn: (input: {
+      offer: 'credits-2000' | 'credits-5000';
+      paymentMethod: 'pix' | 'card';
+    }) => createCreditCheckout(input),
     onSuccess: (data, variables) =>
       handleCheckoutResult(data, {
         purpose: 'credits',
@@ -69,7 +74,8 @@ export function CreditsPage() {
   });
 
   const planCheckout = useMutation({
-    mutationFn: () => createCheckoutSession({ interval: 'monthly', currency: 'BRL' }),
+    mutationFn: (paymentMethod: 'pix' | 'card') =>
+      createCheckoutSession({ interval: 'monthly', currency: 'BRL', paymentMethod }),
     onSuccess: (data) =>
       handleCheckoutResult(data, {
         purpose: 'plan',
@@ -96,14 +102,15 @@ export function CreditsPage() {
   });
 
   const checkoutPending = creditCheckout.isPending || planCheckout.isPending;
-  const startCheckout = (offer: CreditOfferId) => {
+  const checkoutBlocked = billing.data?.checkoutReviewRequired === true;
+  const startCheckout = (offer: CreditOfferId, paymentMethod: 'pix' | 'card') => {
     setCreditOffer(offer);
     setBillingError(null);
     if (offer === 'unlimited') {
-      planCheckout.mutate();
+      planCheckout.mutate(paymentMethod);
       return;
     }
-    creditCheckout.mutate({ offer });
+    creditCheckout.mutate({ offer, paymentMethod });
   };
 
   const offers = [
@@ -168,6 +175,15 @@ export function CreditsPage() {
               role="alert"
             >
               {billingError}
+            </p>
+          ) : null}
+
+          {checkoutBlocked ? (
+            <p
+              className="rounded-control border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+              role="status"
+            >
+              {t('settings.checkoutReviewRequired')}
             </p>
           ) : null}
 
@@ -238,15 +254,31 @@ export function CreditsPage() {
                       ) : null}
                     </ul>
 
-                    <Button
-                      type="button"
-                      className="mt-5 w-full"
-                      disabled={!emailVerified || checkoutPending}
-                      loading={pending}
-                      onClick={() => startCheckout(offer.id)}
-                    >
-                      {offer.cta}
-                    </Button>
+                    <div className="mt-5 grid gap-2">
+                      <Button
+                        type="button"
+                        className="w-full"
+                        disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                        loading={pending}
+                        onClick={() => startCheckout(offer.id, 'pix')}
+                      >
+                        {offer.id === 'unlimited'
+                          ? t('settings.payPixThirtyDays')
+                          : t('settings.payPix')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                        loading={pending}
+                        onClick={() => startCheckout(offer.id, 'card')}
+                      >
+                        {offer.id === 'unlimited'
+                          ? t('settings.payRecurringCredit')
+                          : t('settings.payCreditOrDebit')}
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -260,6 +292,8 @@ export function CreditsPage() {
               {t('settings.billingEmailHint')}
             </p>
           ) : null}
+
+          {manage ? <BillingProfileForm /> : null}
 
           {manage ? (
             <div className="flex flex-wrap items-center gap-2">

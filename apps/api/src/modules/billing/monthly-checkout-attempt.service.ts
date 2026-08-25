@@ -17,12 +17,10 @@ const READY_RECHECK_MS = 30 * 60 * 1000;
 export type MonthlyCheckoutClaim = {
   id: string;
   externalId: string;
-  recoverProviderState: boolean;
 };
 
 export type MonthlyCheckoutBeginResult =
-  | { state: 'ready'; checkout: CheckoutResult }
-  | { state: 'acquired'; claim: MonthlyCheckoutClaim };
+  { state: 'ready'; checkout: CheckoutResult } | { state: 'acquired'; claim: MonthlyCheckoutClaim };
 
 @Injectable()
 export class MonthlyCheckoutAttemptService {
@@ -36,11 +34,14 @@ export class MonthlyCheckoutAttemptService {
         claim: {
           id: attempt.id,
           externalId: attempt.externalId,
-          recoverProviderState: false,
         },
       };
     }
     const now = Date.now();
+
+    if (attempt.status === BillingCheckoutAttemptStatus.REVIEW_REQUIRED) {
+      throw new ConflictException('Estamos confirmando seu checkout');
+    }
 
     if (
       attempt.status === BillingCheckoutAttemptStatus.READY &&
@@ -57,60 +58,21 @@ export class MonthlyCheckoutAttemptService {
       throw new ConflictException('Monthly checkout is already being created. Try again shortly.');
     }
 
-    const staleBefore = new Date(now - PROCESSING_LEASE_MS);
-    const readyBefore = new Date(now - READY_RECHECK_MS);
-    const claimed = await this.prisma.monthlyCheckoutAttempt.updateMany({
-      where: {
-        organizationId,
-        id: attempt.id,
-        OR: [
-          { status: BillingCheckoutAttemptStatus.FAILED },
-          {
-            status: BillingCheckoutAttemptStatus.PROCESSING,
-            updatedAt: { lt: staleBefore },
-          },
-          {
-            status: BillingCheckoutAttemptStatus.READY,
-            OR: [{ updatedAt: { lt: readyBefore } }, { checkoutUrl: null }],
-          },
-        ],
-      },
-      data: {
-        status: BillingCheckoutAttemptStatus.PROCESSING,
-        attempts: { increment: 1 },
-        lastError: null,
-      },
-    });
-
-    if (claimed.count !== 1) {
-      throw new ConflictException('Monthly checkout is already being created. Try again shortly.');
+    if (
+      attempt.status === BillingCheckoutAttemptStatus.PROCESSING ||
+      attempt.status === BillingCheckoutAttemptStatus.READY
+    ) {
+      await this.prisma.monthlyCheckoutAttempt.updateMany({
+        where: { id: attempt.id, organizationId, status: attempt.status },
+        data: {
+          status: BillingCheckoutAttemptStatus.REVIEW_REQUIRED,
+          lastError: 'Checkout response requires authoritative reconciliation',
+        },
+      });
+      throw new ConflictException('Estamos confirmando seu checkout');
     }
 
-    return {
-      state: 'acquired',
-      claim: {
-        id: attempt.id,
-        externalId: attempt.externalId,
-        recoverProviderState: true,
-      },
-    };
-  }
-
-  async rotateExternalId(
-    organizationId: string,
-    claim: MonthlyCheckoutClaim,
-  ): Promise<MonthlyCheckoutClaim> {
-    const externalId = this.newExternalId(organizationId);
-    await this.prisma.monthlyCheckoutAttempt.update({
-      where: { id: claim.id, organizationId },
-      data: {
-        externalId,
-        externalCheckoutId: null,
-        externalCustomerId: null,
-        checkoutUrl: null,
-      },
-    });
-    return { ...claim, externalId, recoverProviderState: false };
+    throw new ConflictException('Monthly checkout is already being created. Try again shortly.');
   }
 
   async markReady(
@@ -156,6 +118,57 @@ export class MonthlyCheckoutAttemptService {
     });
   }
 
+  async markReviewRequired(
+    organizationId: string,
+    claim: MonthlyCheckoutClaim,
+    error: unknown,
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message.slice(0, 500) : 'Checkout inconclusivo';
+    await this.prisma.monthlyCheckoutAttempt.updateMany({
+      where: {
+        id: claim.id,
+        organizationId,
+        status: BillingCheckoutAttemptStatus.PROCESSING,
+      },
+      data: {
+        status: BillingCheckoutAttemptStatus.REVIEW_REQUIRED,
+        lastError: message,
+      },
+    });
+  }
+
+  async markResolved(externalId: string, externalCustomerId?: string): Promise<void> {
+    await this.prisma.monthlyCheckoutAttempt.updateMany({
+      where: {
+        externalId,
+        status: {
+          in: [
+            BillingCheckoutAttemptStatus.PROCESSING,
+            BillingCheckoutAttemptStatus.READY,
+            BillingCheckoutAttemptStatus.REVIEW_REQUIRED,
+          ],
+        },
+      },
+      data: {
+        status: BillingCheckoutAttemptStatus.RESOLVED,
+        ...(externalCustomerId ? { externalCustomerId } : {}),
+        lastError: null,
+      },
+    });
+  }
+
+  async markPaymentFailed(externalId: string, reason: string): Promise<void> {
+    await this.prisma.monthlyCheckoutAttempt.updateMany({
+      where: {
+        externalId,
+        status: {
+          in: [BillingCheckoutAttemptStatus.READY, BillingCheckoutAttemptStatus.REVIEW_REQUIRED],
+        },
+      },
+      data: { status: BillingCheckoutAttemptStatus.FAILED, lastError: reason.slice(0, 500) },
+    });
+  }
+
   private async createOrFind(
     organizationId: string,
   ): Promise<{ attempt: MonthlyCheckoutAttempt; created: boolean }> {
@@ -163,25 +176,36 @@ export class MonthlyCheckoutAttemptService {
       const attempt = await this.prisma.monthlyCheckoutAttempt.create({
         data: {
           organizationId,
-          provider: PaymentProvider.ABACATE,
+          provider: PaymentProvider.ASAAS,
           paymentMethod: BillingPaymentMethod.CARD,
+          product: 'MONTHLY_ACCESS',
+          amountCentavos: 4999,
+          currency: 'BRL',
           externalId: this.newExternalId(organizationId),
         },
       });
       return { attempt, created: true };
     } catch (error) {
       if (!this.isUniqueConstraintViolation(error)) throw error;
-      const existing = await this.prisma.monthlyCheckoutAttempt.findUnique({
+      const existing = await this.prisma.monthlyCheckoutAttempt.findFirst({
         where: {
-          organizationId_provider_paymentMethod: {
-            organizationId,
-            provider: PaymentProvider.ABACATE,
-            paymentMethod: BillingPaymentMethod.CARD,
+          organizationId,
+          provider: PaymentProvider.ASAAS,
+          paymentMethod: BillingPaymentMethod.CARD,
+          status: {
+            in: [
+              BillingCheckoutAttemptStatus.PROCESSING,
+              BillingCheckoutAttemptStatus.READY,
+              BillingCheckoutAttemptStatus.REVIEW_REQUIRED,
+            ],
           },
         },
+        orderBy: { createdAt: 'desc' },
       });
       if (!existing) {
-        throw new ConflictException('Monthly checkout is already being created. Try again shortly.');
+        throw new ConflictException(
+          'Monthly checkout is already being created. Try again shortly.',
+        );
       }
       return { attempt: existing, created: false };
     }
@@ -193,14 +217,10 @@ export class MonthlyCheckoutAttemptService {
     }
     return {
       mode: 'redirect',
-      provider: 'ABACATE',
+      provider: 'ASAAS',
       url: attempt.checkoutUrl,
-      ...(attempt.externalCheckoutId
-        ? { externalCheckoutId: attempt.externalCheckoutId }
-        : {}),
-      ...(attempt.externalCustomerId
-        ? { externalCustomerId: attempt.externalCustomerId }
-        : {}),
+      ...(attempt.externalCheckoutId ? { externalCheckoutId: attempt.externalCheckoutId } : {}),
+      ...(attempt.externalCustomerId ? { externalCustomerId: attempt.externalCustomerId } : {}),
     };
   }
 

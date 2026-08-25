@@ -87,6 +87,16 @@ projects:
                 value: https://api.abacatepay.com/v2
               - key: ABACATE_HTTP_TIMEOUT_MS
                 value: '15000'
+              - key: ASAAS_ENABLED
+                value: 'false'
+              - key: ASAAS_API_KEY
+                sync: false
+              - key: ASAAS_WEBHOOK_TOKEN
+                sync: false
+              - key: ASAAS_API_BASE_URL
+                value: https://api-sandbox.asaas.com/v3
+              - key: ASAAS_HTTP_TIMEOUT_MS
+                value: '15000'
               - key: OSM_USER_AGENT
                 value: Prospectly/1.0 (https://prospectly.dev)
               - key: SMTP_HOST

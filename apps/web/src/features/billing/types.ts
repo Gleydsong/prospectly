@@ -2,7 +2,7 @@ export type CheckoutResult =
   | {
       mode: 'redirect';
       url: string;
-      provider: 'ABACATE';
+      provider: 'ABACATE' | 'ASAAS';
       externalCustomerId?: string;
       externalCheckoutId?: string;
     }
@@ -31,10 +31,11 @@ export type BillingStatus = {
   plan: string;
   planStatus: string;
   planCurrency: string | null;
-  paymentProvider: 'STRIPE' | 'ABACATE' | null;
+  paymentProvider: 'STRIPE' | 'ABACATE' | 'ASAAS' | null;
   currentPeriodEnd: string | null;
   canCancelSubscription: boolean;
   canExportCsv: boolean;
   freeSearchLimit: number;
   creditBalance: number;
+  checkoutReviewRequired?: boolean;
 };

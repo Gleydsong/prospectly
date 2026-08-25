@@ -78,17 +78,17 @@ pnpm dev
 
 ## Comandos
 
-| Comando                               | Descrição                                 |
-| ------------------------------------- | ----------------------------------------- |
-| `pnpm dev`                            | Inicia web + api HTTP + worker BullMQ     |
-| `pnpm build`                          | Build de todos os pacotes                 |
-| `pnpm lint`                           | Lint em todos os pacotes                  |
-| `pnpm test`                           | Testes em todos os pacotes                |
-| `pnpm typecheck`                      | Verificação de tipos                      |
-| `pnpm db:migrate`                     | Prisma migrate dev                        |
-| `pnpm db:seed`                        | Seed do banco                             |
-| `docker compose up -d`                | Sobe PostgreSQL + Redis                   |
-| `docker compose --profile ai up -d`   | Sobe Postgres + Redis + Ollama (IA)       |
+| Comando                               | Descrição                                                 |
+| ------------------------------------- | --------------------------------------------------------- |
+| `pnpm dev`                            | Inicia web + api HTTP + worker BullMQ                     |
+| `pnpm build`                          | Build de todos os pacotes                                 |
+| `pnpm lint`                           | Lint em todos os pacotes                                  |
+| `pnpm test`                           | Testes em todos os pacotes                                |
+| `pnpm typecheck`                      | Verificação de tipos                                      |
+| `pnpm db:migrate`                     | Prisma migrate dev                                        |
+| `pnpm db:seed`                        | Seed do banco                                             |
+| `docker compose up -d`                | Sobe PostgreSQL + Redis                                   |
+| `docker compose --profile ai up -d`   | Sobe Postgres + Redis + Ollama (IA)                       |
 | `docker compose --profile full up -d` | Sobe stack completa (db, redis, ollama, api, web, worker) |
 
 ### Conversion Studio — IA no site do lead
@@ -219,7 +219,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 ### Operação e rollout
 
 - Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
-- Billing (AbacatePay PIX; cartão temporariamente indisponível; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
+- Billing (AbacatePay PIX; Asaas hospedado sob feature flag; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
 - Estado operacional do billing, rollback Appmax ou continuação Asaas: [`docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md`](docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md).
 - `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
   obrigatória retorna `503`.

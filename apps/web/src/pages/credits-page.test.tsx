@@ -29,6 +29,10 @@ vi.mock('@/features/billing/handle-checkout', () => ({
   handleCheckoutResult: (...args: unknown[]) => handleCheckoutResult(...args),
 }));
 
+vi.mock('@/features/billing/billing-profile-form', () => ({
+  BillingProfileForm: () => <div>Perfil de cobrança</div>,
+}));
+
 describe('CreditsPage', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('pt');
@@ -71,8 +75,52 @@ describe('CreditsPage', () => {
       url: 'https://app.abacatepay.com/pay/bill_1',
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
-    await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
-    expect(createCreditCheckout).toHaveBeenCalledWith({ offer: 'credits-2000' });
+    await user.click((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]!);
+    expect(createCreditCheckout).toHaveBeenCalledWith({
+      offer: 'credits-2000',
+      paymentMethod: 'pix',
+    });
+  });
+
+  it('offers the Asaas hosted card method for credit packages', async () => {
+    const user = userEvent.setup();
+    createCreditCheckout.mockResolvedValue({
+      mode: 'redirect',
+      provider: 'ASAAS',
+      url: 'https://sandbox.asaas.com/i/pay_1',
+    });
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Cartão de crédito ou débito' }))[0]!,
+    );
+    expect(createCreditCheckout).toHaveBeenCalledWith({
+      offer: 'credits-2000',
+      paymentMethod: 'card',
+    });
+  });
+
+  it('keeps checkout controls blocked after reload while provider confirmation is pending', async () => {
+    getBillingStatus.mockResolvedValue({
+      plan: 'FREE',
+      planStatus: 'INACTIVE',
+      paymentProvider: null,
+      creditBalance: 400,
+      searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
+      planCurrency: null,
+      currentPeriodEnd: null,
+      canCancelSubscription: false,
+      canExportCsv: false,
+      freeSearchLimit: 3,
+      checkoutReviewRequired: true,
+    });
+
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+
+    expect(await screen.findByText(/Estamos confirmando seu checkout/)).toBeInTheDocument();
+    expect((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]).toBeDisabled();
+    expect(
+      (await screen.findAllByRole('button', { name: 'Cartão de crédito ou débito' }))[0],
+    ).toBeDisabled();
   });
 
   it('shows an accessible cancel confirmation and hides Stripe portal for Abacate orgs', async () => {
@@ -117,7 +165,7 @@ describe('CreditsPage', () => {
     createCreditCheckout.mockRejectedValue(error);
 
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
-    await user.click((await screen.findAllByRole('button', { name: 'Comprar créditos' }))[0]!);
+    await user.click((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]!);
     expect(await screen.findByRole('alert')).toHaveTextContent('AbacatePay is not configured');
   });
 
