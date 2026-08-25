@@ -220,6 +220,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 
 - Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
 - Billing (AbacatePay PIX; cartão temporariamente indisponível; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
+- Estado operacional do billing, rollback Appmax ou continuação Asaas: [`docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md`](docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md).
 - `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
   obrigatória retorna `503`.
 - A migration de hardening canonicaliza domínio, e-mail e telefone legados e
