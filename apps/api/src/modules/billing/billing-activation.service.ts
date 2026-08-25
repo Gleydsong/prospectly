@@ -117,6 +117,7 @@ export class BillingActivationService {
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
     abacateCustomerId?: string | null;
+    /** Pass null to clear a stale card subscription id (e.g. PIX month after card). */
     abacateSubscriptionId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
@@ -147,7 +148,8 @@ export class BillingActivationService {
           ? { stripeSubscriptionId: input.stripeSubscriptionId }
           : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId
+        // undefined = leave unchanged; null/string = write (truthy spread cannot clear).
+        ...(input.abacateSubscriptionId !== undefined
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
         ...(input.currentPeriodEnd !== undefined
