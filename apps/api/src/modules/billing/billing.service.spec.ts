@@ -30,6 +30,8 @@ describe('BillingService', () => {
     creditLedgerEntry: {
       findUnique: jest.fn(),
       create: jest.fn(),
+      delete: jest.fn(),
+      update: jest.fn(),
     },
     billingWebhookEvent: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -452,9 +454,10 @@ describe('BillingService', () => {
 
   it('refunds the consumed Opportunity Finder amount on failure', async () => {
     prisma.creditLedgerEntry.findUnique
-      .mockResolvedValueOnce({ delta: -16 })
+      .mockResolvedValueOnce({ id: 'consume-1', delta: -16, createdAt: new Date('2026-01-01T00:00:00Z') })
       .mockResolvedValueOnce(null);
     prisma.organization.update.mockResolvedValue({ creditBalance: 30 });
+    prisma.creditLedgerEntry.delete.mockResolvedValue({});
     prisma.creditLedgerEntry.create.mockResolvedValue({});
 
     await expect(
@@ -466,6 +469,7 @@ describe('BillingService', () => {
       data: { creditBalance: { increment: 16 } },
       select: { creditBalance: true },
     });
+    expect(prisma.creditLedgerEntry.delete).toHaveBeenCalledWith({ where: { id: 'consume-1' } });
     expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         reason: 'REFUND',
@@ -475,5 +479,74 @@ describe('BillingService', () => {
         metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'NO_COMPANIES_FOUND' },
       }),
     });
+  });
+
+  it('re-charges explain after a prior consume was refunded', async () => {
+    const consumedAt = new Date('2026-01-01T00:00:00Z');
+    const refundedAt = new Date('2026-01-01T00:01:00Z');
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 10,
+      deletedAt: null,
+    });
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ id: 'consume-1', createdAt: consumedAt })
+      .mockResolvedValueOnce({ id: 'refund-1', createdAt: refundedAt });
+    prisma.creditLedgerEntry.delete.mockResolvedValue({});
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 2 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForExplain('org1', 'cand-1', 'run-1')).resolves.toBeUndefined();
+
+    expect(prisma.creditLedgerEntry.delete).toHaveBeenCalledWith({ where: { id: 'consume-1' } });
+    expect(prisma.organization.updateMany).toHaveBeenCalledWith({
+      where: { id: 'org1', creditBalance: { gte: 8 } },
+      data: { creditBalance: { decrement: 8 } },
+    });
+    expect(prisma.creditLedgerEntry.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        idempotencyKey: 'explain-consume:cand-1',
+        delta: -8,
+      }),
+    });
+  });
+
+  it('re-charges save-lead after a prior consume was refunded', async () => {
+    const consumedAt = new Date('2026-01-01T00:00:00Z');
+    const refundedAt = new Date('2026-01-01T00:01:00Z');
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 3,
+      deletedAt: null,
+    });
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ id: 'consume-2', createdAt: consumedAt })
+      .mockResolvedValueOnce({ id: 'refund-2', createdAt: refundedAt });
+    prisma.creditLedgerEntry.delete.mockResolvedValue({});
+    prisma.organization.updateMany.mockResolvedValue({ count: 1 });
+    prisma.organization.findFirstOrThrow.mockResolvedValue({ creditBalance: 2 });
+    prisma.creditLedgerEntry.create.mockResolvedValue({});
+
+    await expect(service.consumeCreditForSaveLead('org1', 'cand-2', 'run-1')).resolves.toBeUndefined();
+
+    expect(prisma.creditLedgerEntry.delete).toHaveBeenCalledWith({ where: { id: 'consume-2' } });
+    expect(prisma.organization.updateMany).toHaveBeenCalled();
+  });
+
+  it('does not double-refund when the refund ledger already covers the consume', async () => {
+    const consumedAt = new Date('2026-01-01T00:00:00Z');
+    const refundedAt = new Date('2026-01-01T00:01:00Z');
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ id: 'consume-1', delta: -8, createdAt: consumedAt })
+      .mockResolvedValueOnce({ id: 'refund-1', createdAt: refundedAt });
+
+    await expect(service.refundExplainCredit('org1', 'cand-1')).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.delete).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
   });
 });
