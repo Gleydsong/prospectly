@@ -36,8 +36,12 @@ describe('sanitizeExternalUrl', () => {
 
 describe('sanitizeAvatarSrc', () => {
   it('allows https and jpeg data urls', () => {
-    expect(sanitizeAvatarSrc('https://cdn.example.com/a.jpg')).toBe('https://cdn.example.com/a.jpg');
-    expect(sanitizeAvatarSrc('data:image/jpeg;base64,abc+/=')).toBe('data:image/jpeg;base64,abc+/=');
+    expect(sanitizeAvatarSrc('https://cdn.example.com/a.jpg')).toBe(
+      'https://cdn.example.com/a.jpg',
+    );
+    expect(sanitizeAvatarSrc('data:image/jpeg;base64,abc+/=')).toBe(
+      'data:image/jpeg;base64,abc+/=',
+    );
   });
 
   it('rejects http, javascript and svg data urls', () => {
@@ -82,5 +86,13 @@ describe('assignCheckoutRedirect', () => {
     expect(() => assignCheckoutRedirect('https://evil.example/pay', 'ABACATE')).toThrow(
       'Invalid AbacatePay redirect URL',
     );
+  });
+
+  it('accepts Asaas hosted checkout urls', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    assignCheckoutRedirect('https://sandbox.asaas.com/i/pay_1', 'ASAAS');
+    expect(assign).toHaveBeenCalledWith('https://sandbox.asaas.com/i/pay_1');
+    vi.unstubAllGlobals();
   });
 });

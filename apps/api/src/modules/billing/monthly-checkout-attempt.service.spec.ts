@@ -11,7 +11,7 @@ describe('MonthlyCheckoutAttemptService', () => {
   const prisma = {
     monthlyCheckoutAttempt: {
       create: jest.fn(),
-      findUnique: jest.fn(),
+      findFirst: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
     },
@@ -40,13 +40,13 @@ describe('MonthlyCheckoutAttemptService', () => {
     expect(result).toEqual(
       expect.objectContaining({
         state: 'acquired',
-        claim: expect.objectContaining({ recoverProviderState: false }),
+        claim: expect.objectContaining({ id: 'attempt_1' }),
       }),
     );
     expect(prisma.monthlyCheckoutAttempt.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         organizationId: 'org1',
-        provider: PaymentProvider.ABACATE,
+        provider: PaymentProvider.ASAAS,
         paymentMethod: BillingPaymentMethod.CARD,
         externalId: expect.stringContaining('org:org1:monthly-card:'),
       }),
@@ -57,10 +57,10 @@ describe('MonthlyCheckoutAttemptService', () => {
     prisma.monthlyCheckoutAttempt.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }),
     );
-    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue({
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue({
       id: 'attempt_1',
       organizationId: 'org1',
-      provider: PaymentProvider.ABACATE,
+      provider: PaymentProvider.ASAAS,
       paymentMethod: BillingPaymentMethod.CARD,
       status: BillingCheckoutAttemptStatus.READY,
       externalId: 'external_1',
@@ -77,7 +77,7 @@ describe('MonthlyCheckoutAttemptService', () => {
       state: 'ready',
       checkout: {
         mode: 'redirect',
-        provider: 'ABACATE',
+        provider: 'ASAAS',
         url: 'https://app.abacatepay.com/pay/bill_1',
         externalCheckoutId: 'bill_1',
         externalCustomerId: 'cust_1',
@@ -90,7 +90,7 @@ describe('MonthlyCheckoutAttemptService', () => {
     prisma.monthlyCheckoutAttempt.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }),
     );
-    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue({
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue({
       id: 'attempt_1',
       status: BillingCheckoutAttemptStatus.PROCESSING,
       updatedAt: new Date(),
@@ -100,28 +100,18 @@ describe('MonthlyCheckoutAttemptService', () => {
     expect(prisma.monthlyCheckoutAttempt.updateMany).not.toHaveBeenCalled();
   });
 
-  it('allows only one retrier to reclaim a failed attempt', async () => {
-    prisma.monthlyCheckoutAttempt.create.mockRejectedValue(
-      new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }),
-    );
-    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue({
-      id: 'attempt_1',
-      status: BillingCheckoutAttemptStatus.FAILED,
-      externalId: 'external_1',
-      updatedAt: new Date(),
-    });
-    prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValueOnce({ count: 1 });
+  it('resolves an attempt without overwriting its financial identifiers', async () => {
+    prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValue({ count: 1 });
 
-    await expect(service.beginCard('org1')).resolves.toEqual({
-      state: 'acquired',
-      claim: {
-        id: 'attempt_1',
-        externalId: 'external_1',
-        recoverProviderState: true,
+    await service.markResolved('external_1', 'cus_1');
+
+    expect(prisma.monthlyCheckoutAttempt.updateMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({ externalId: 'external_1' }),
+      data: {
+        status: BillingCheckoutAttemptStatus.RESOLVED,
+        externalCustomerId: 'cus_1',
+        lastError: null,
       },
     });
-
-    prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValueOnce({ count: 0 });
-    await expect(service.beginCard('org1')).rejects.toMatchObject({ status: 409 });
   });
 });

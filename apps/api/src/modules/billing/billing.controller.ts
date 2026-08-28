@@ -5,6 +5,7 @@ import {
   Get,
   Headers,
   Post,
+  Put,
   Query,
   Req,
   type RawBodyRequest,
@@ -21,12 +22,47 @@ import { Public } from '../../common/decorators/public.decorator';
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { BillingService } from './billing.service';
+import { BillingProfileService } from './billing-profile.service';
+import { AsaasWebhookService } from './asaas-webhook.service';
 import { CreateCheckoutDto, CreateCreditCheckoutDto } from './dto/create-checkout.dto';
+import { UpdateBillingProfileDto } from './dto/update-billing-profile.dto';
 
 @ApiTags('billing')
 @Controller({ path: 'billing', version: '1' })
 export class BillingController {
-  constructor(private readonly billing: BillingService) {}
+  constructor(
+    private readonly billing: BillingService,
+    private readonly billingProfiles: BillingProfileService,
+    private readonly asaasWebhooks: AsaasWebhookService,
+  ) {}
+
+  @ApiBearerAuth()
+  @Roles('OWNER', 'ADMIN')
+  @Get('profile')
+  getProfile(@CurrentOrg() organizationId: string) {
+    return this.billingProfiles.getProfile(organizationId);
+  }
+
+  @Public()
+  @Post('webhook/asaas')
+  handleAsaasWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+  ) {
+    const rawBody = req.rawBody;
+    if (!rawBody) {
+      throw new BadRequestException('Raw body missing for Asaas webhook');
+    }
+    return this.asaasWebhooks.ingest(rawBody, headers);
+  }
+
+  @ApiBearerAuth()
+  @RequireEmailVerified()
+  @Roles('OWNER', 'ADMIN')
+  @Put('profile')
+  updateProfile(@CurrentOrg() organizationId: string, @Body() dto: UpdateBillingProfileDto) {
+    return this.billingProfiles.updateProfile(organizationId, dto);
+  }
 
   @ApiBearerAuth()
   @Get('status')

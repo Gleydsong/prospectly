@@ -129,12 +129,35 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     'ABACATE_SUCCESS_URL',
     'ABACATE_CANCEL_URL',
     'ABACATE_API_BASE_URL',
+    'ASAAS_ENABLED',
+    'ASAAS_API_KEY',
+    'ASAAS_WEBHOOK_TOKEN',
+    'ASAAS_API_BASE_URL',
     'GOOGLE_CLIENT_ID',
   ] as const) {
     const value = config[key];
     if (value === undefined) continue;
     if (typeof value !== 'string') {
       throw new Error(`${key} must be a string`);
+    }
+  }
+
+  if (
+    config.ASAAS_ENABLED !== undefined &&
+    config.ASAAS_ENABLED !== 'true' &&
+    config.ASAAS_ENABLED !== 'false'
+  ) {
+    throw new Error('ASAAS_ENABLED must be true or false');
+  }
+
+  if (config.ASAAS_ENABLED === 'true') {
+    const requiredAsaas = ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_TOKEN'] as const;
+    const missingAsaas = requiredAsaas.filter((key) => {
+      const value = config[key];
+      return typeof value !== 'string' || value.trim().length === 0;
+    });
+    if (missingAsaas.length > 0) {
+      throw new Error(`Missing Asaas configuration: ${missingAsaas.join(', ')}`);
     }
   }
 
@@ -172,6 +195,15 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     const parsed = typeof httpTimeout === 'number' ? httpTimeout : Number(httpTimeout);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error('ABACATE_HTTP_TIMEOUT_MS must be a positive integer');
+    }
+  }
+
+  const asaasHttpTimeout = config.ASAAS_HTTP_TIMEOUT_MS;
+  if (asaasHttpTimeout !== undefined) {
+    const parsed =
+      typeof asaasHttpTimeout === 'number' ? asaasHttpTimeout : Number(asaasHttpTimeout);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('ASAAS_HTTP_TIMEOUT_MS must be a positive integer');
     }
   }
 

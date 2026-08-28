@@ -1,4 +1,5 @@
 const ABACATE_HOST = /^(?:[a-z0-9-]+\.)*abacatepay\.com$/i;
+const ASAAS_HOST = /^(?:[a-z0-9-]+\.)*asaas\.com$/i;
 
 function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string): void {
   let parsed: URL;
@@ -19,7 +20,11 @@ export function assignAbacateRedirect(url: string): void {
 }
 
 /** Route checkout redirect by provider. */
-export function assignCheckoutRedirect(url: string, _provider: 'ABACATE'): void {
+export function assignCheckoutRedirect(url: string, provider: 'ABACATE' | 'ASAAS'): void {
+  if (provider === 'ASAAS') {
+    assignHttpsHostRedirect(url, ASAAS_HOST, 'Asaas');
+    return;
+  }
   assignAbacateRedirect(url);
 }
 

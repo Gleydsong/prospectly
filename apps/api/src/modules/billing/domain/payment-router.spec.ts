@@ -5,9 +5,7 @@ describe('resolvePaymentProviderId', () => {
     expect(resolvePaymentProviderId('pix')).toBe('ABACATE');
   });
 
-  it('rejects card while no provider is configured', () => {
-    expect(() => resolvePaymentProviderId('card')).toThrow(
-      'Card payment provider is not configured',
-    );
+  it('routes card to ASAAS', () => {
+    expect(resolvePaymentProviderId('card')).toBe('ASAAS');
   });
 });

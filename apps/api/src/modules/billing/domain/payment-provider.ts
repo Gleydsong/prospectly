@@ -1,4 +1,4 @@
-export type PaymentProviderId = 'ABACATE';
+export type PaymentProviderId = 'ABACATE' | 'ASAAS';
 
 /** Brazil-only billing currency. */
 export type BillingCurrency = 'BRL';

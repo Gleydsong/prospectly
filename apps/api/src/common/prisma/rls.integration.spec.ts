@@ -29,6 +29,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const memberBOrgB = randomUUID();
   const checkoutAttemptA = randomUUID();
   const checkoutAttemptB = randomUUID();
+  const billingProfileA = randomUUID();
+  const billingProfileB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -76,6 +78,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         VALUES
           (${checkoutAttemptA}, ${orgA}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptA}`}, NOW(), NOW()),
           (${checkoutAttemptB}, ${orgB}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptB}`}, NOW(), NOW())
+      `;
+      await tx.$executeRaw`
+        INSERT INTO "BillingProfile"
+          (id, "organizationId", name, "cpfCnpj", phone, email, "createdAt", "updatedAt")
+        VALUES
+          (${billingProfileA}, ${orgA}, 'Billing A', '11111111111', '11999999999', 'a@example.test', NOW(), NOW()),
+          (${billingProfileB}, ${orgB}, 'Billing B', '22222222222', '21999999999', 'b@example.test', NOW(), NOW())
       `;
     });
   });
@@ -133,6 +142,18 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     expect(rows).toEqual([{ id: checkoutAttemptA }]);
   });
 
+  it('isolates billing profiles by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "BillingProfile" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: billingProfileA }]);
+  });
+
   it('rejects a cross-tenant insert', async () => {
     const foreignLeadId = randomUUID();
 
@@ -160,9 +181,7 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
   it('keeps tenant GUCs on the same connection as extended client queries', async () => {
     const password = `rls-${randomUUID()}`;
-    await prisma!.$executeRawUnsafe(
-      `ALTER ROLE prospectly_app LOGIN PASSWORD '${password}'`,
-    );
+    await prisma!.$executeRawUnsafe(`ALTER ROLE prospectly_app LOGIN PASSWORD '${password}'`);
 
     const runtimeUrl = new URL(databaseUrl!);
     runtimeUrl.username = 'prospectly_app';

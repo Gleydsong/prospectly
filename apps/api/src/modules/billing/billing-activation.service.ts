@@ -118,6 +118,7 @@ export class BillingActivationService {
     stripeSubscriptionId?: string | null;
     abacateCustomerId?: string | null;
     abacateSubscriptionId?: string | null;
+    asaasSubscriptionId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
     const org = await this.prisma.organization.findUnique({
@@ -134,6 +135,35 @@ export class BillingActivationService {
       );
       return;
     }
+    if (
+      org.paymentProvider &&
+      org.paymentProvider !== input.provider &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      this.logger.warn(
+        `Ignoring stale ${input.provider} monthly activation for org ${input.organizationId}`,
+      );
+      return;
+    }
+    if (
+      input.provider === PaymentProvider.ASAAS &&
+      input.asaasSubscriptionId &&
+      org.asaasSubscriptionId &&
+      org.asaasSubscriptionId !== input.asaasSubscriptionId &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      this.logger.warn(
+        `Ignoring stale Asaas subscription activation for org ${input.organizationId}`,
+      );
+      return;
+    }
+
+    const currentPeriodEnd =
+      input.currentPeriodEnd &&
+      org.currentPeriodEnd &&
+      org.currentPeriodEnd > input.currentPeriodEnd
+        ? org.currentPeriodEnd
+        : input.currentPeriodEnd;
 
     await this.prisma.organization.update({
       where: { id: input.organizationId },
@@ -143,16 +173,13 @@ export class BillingActivationService {
         planCurrency: input.currency,
         paymentProvider: input.provider,
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
-        ...(input.stripeSubscriptionId
-          ? { stripeSubscriptionId: input.stripeSubscriptionId }
-          : {}),
+        ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
         ...(input.abacateSubscriptionId
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
-        ...(input.currentPeriodEnd !== undefined
-          ? { currentPeriodEnd: input.currentPeriodEnd }
-          : {}),
+        ...(input.asaasSubscriptionId ? { asaasSubscriptionId: input.asaasSubscriptionId } : {}),
+        ...(input.currentPeriodEnd !== undefined ? { currentPeriodEnd } : {}),
       },
     });
   }
@@ -160,10 +187,12 @@ export class BillingActivationService {
   async syncMonthlyStatus(input: {
     organizationId: string;
     status: PlanStatus;
+    provider?: PaymentProvider;
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
     abacateCustomerId?: string | null;
     abacateSubscriptionId?: string | null;
+    asaasSubscriptionId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
     const org = await this.prisma.organization.findUnique({
@@ -176,6 +205,16 @@ export class BillingActivationService {
     if (org.plan === OrgPlan.LIFETIME) {
       return;
     }
+    if (input.provider && org.paymentProvider && org.paymentProvider !== input.provider) {
+      return;
+    }
+    if (
+      input.asaasSubscriptionId &&
+      org.asaasSubscriptionId &&
+      org.asaasSubscriptionId !== input.asaasSubscriptionId
+    ) {
+      return;
+    }
 
     const canceled = input.status === PlanStatus.CANCELED || input.status === PlanStatus.INACTIVE;
 
@@ -185,13 +224,12 @@ export class BillingActivationService {
         plan: canceled ? OrgPlan.FREE : OrgPlan.STARTER_MONTHLY,
         planStatus: input.status,
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
-        ...(input.stripeSubscriptionId
-          ? { stripeSubscriptionId: input.stripeSubscriptionId }
-          : {}),
+        ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
         ...(input.abacateSubscriptionId
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
+        ...(input.asaasSubscriptionId ? { asaasSubscriptionId: input.asaasSubscriptionId } : {}),
         ...(input.currentPeriodEnd !== undefined
           ? { currentPeriodEnd: input.currentPeriodEnd }
           : canceled

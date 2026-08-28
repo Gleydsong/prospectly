@@ -8,7 +8,9 @@ import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
+import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
+import { AsaasClient, AsaasRequestError } from './infrastructure/asaas.client';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -37,6 +39,16 @@ describe('BillingService', () => {
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    billingProfile: {
+      findUnique: jest.fn(),
+    },
+    creditPurchase: {
+      update: jest.fn(),
+      findFirst: jest.fn(),
+    },
+    monthlyCheckoutAttempt: {
+      findFirst: jest.fn(),
+    },
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
 
@@ -50,7 +62,20 @@ describe('BillingService', () => {
 
   const creditPurchases = {
     createPending: jest.fn(),
+    beginAsaasPackage: jest.fn(),
     attachPayment: jest.fn(),
+  };
+
+  const asaasClient = {
+    createHostedPayment: jest.fn(),
+    createRecurringCheckout: jest.fn(),
+  };
+
+  const monthlyAttempts = {
+    beginCard: jest.fn(),
+    markReady: jest.fn(),
+    markFailed: jest.fn(),
+    markReviewRequired: jest.fn(),
   };
 
   const activation = {
@@ -66,6 +91,7 @@ describe('BillingService', () => {
       'abacate.successUrl': 'https://app.test/success',
       'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
+      'asaas.enabled': true,
     };
     return map[key];
   };
@@ -77,6 +103,8 @@ describe('BillingService', () => {
     prisma.opportunityRun.count.mockResolvedValue(0);
     prisma.billingWebhookEvent.findUnique.mockResolvedValue(null);
     prisma.billingWebhookEvent.create.mockResolvedValue({});
+    prisma.creditPurchase.findFirst.mockResolvedValue(null);
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -84,8 +112,10 @@ describe('BillingService', () => {
         { provide: ConfigService, useValue: { get: configGet } },
         { provide: BillingActivationService, useValue: activation },
         { provide: AbacatePaymentProvider, useValue: abacateProvider },
+        { provide: AsaasClient, useValue: asaasClient },
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
+        { provide: MonthlyCheckoutAttemptService, useValue: monthlyAttempts },
       ],
     }).compile();
     service = module.get(BillingService);
@@ -253,7 +283,7 @@ describe('BillingService', () => {
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
-  it('rejects card checkout while no card provider is configured', async () => {
+  it('creates a hosted Asaas card checkout for a credit package', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.FREE,
@@ -261,9 +291,146 @@ describe('BillingService', () => {
       planStatus: PlanStatus.INACTIVE,
       deletedAt: null,
     });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-1' },
+    });
+    asaasClient.createHostedPayment.mockResolvedValue({
+      id: 'pay_1',
+      url: 'https://sandbox.asaas.com/i/pay_1',
+    });
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).resolves.toEqual({
+      mode: 'redirect',
+      provider: 'ASAAS',
+      url: 'https://sandbox.asaas.com/i/pay_1',
+      externalCheckoutId: 'pay_1',
+    });
+    expect(creditPurchases.beginAsaasPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationId: 'org1', offer: 'credits-2000' }),
+    );
+    expect(creditPurchases.attachPayment).toHaveBeenCalledWith(
+      'purchase-1',
+      'pay_1',
+      'https://sandbox.asaas.com/i/pay_1',
+    );
+  });
+
+  it('reuses the persisted hosted package URL after the browser loses the response', async () => {
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: false,
+      purchase: {
+        id: 'purchase-1',
+        offer: 'credits-2000',
+        status: 'PENDING',
+        externalPaymentId: 'pay_1',
+        checkoutUrl: 'https://sandbox.asaas.com/i/pay_1',
+      },
+    });
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).resolves.toEqual({
+      mode: 'redirect',
+      provider: 'ASAAS',
+      url: 'https://sandbox.asaas.com/i/pay_1',
+      externalCheckoutId: 'pay_1',
+    });
+    expect(asaasClient.createHostedPayment).not.toHaveBeenCalled();
+  });
+
+  it('marks an ambiguous Asaas package request for review and shows the required message', async () => {
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-ambiguous' },
+    });
+    asaasClient.createHostedPayment.mockRejectedValue(new AsaasRequestError(true));
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).rejects.toMatchObject({
+      status: 503,
+      message: 'Estamos confirmando seu checkout',
+    });
+    expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-ambiguous' },
+      data: { status: 'REVIEW_REQUIRED' },
+    });
+  });
+
+  it('marks a deterministic Asaas package rejection as failed instead of uncertain', async () => {
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-rejected' },
+    });
+    asaasClient.createHostedPayment.mockRejectedValue(new AsaasRequestError(false));
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-rejected' },
+      data: { status: 'FAILED' },
+    });
+  });
+
+  it('creates a recurring hosted Asaas checkout for the monthly plan', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      asaasCustomerId: 'cus_1',
+    });
+    monthlyAttempts.beginCard.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-1', externalId: 'org:org1:monthly-card:1' },
+    });
+    asaasClient.createRecurringCheckout.mockResolvedValue({
+      id: 'checkout-1',
+      url: 'https://sandbox.asaas.com/checkoutSession/show/checkout-1',
+    });
+
     await expect(
       service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'card'),
-    ).rejects.toThrow('Card payments are temporarily unavailable');
+    ).resolves.toMatchObject({
+      mode: 'redirect',
+      provider: 'ASAAS',
+      externalCheckoutId: 'checkout-1',
+    });
+    expect(monthlyAttempts.markReady).toHaveBeenCalled();
+  });
+
+  it('blocks every Asaas checkout while any organization checkout needs review', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.creditPurchase.findFirst.mockResolvedValue({ id: 'purchase-review' });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).rejects.toMatchObject({ status: 503 });
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 

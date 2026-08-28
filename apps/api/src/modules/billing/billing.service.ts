@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import crypto from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -17,6 +23,7 @@ import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
 import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
 import { EntitlementService } from './entitlement.service';
+import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import type {
   BillingCurrency,
   BillingInterval,
@@ -25,6 +32,7 @@ import type {
   PaymentMethod,
 } from './domain/payment-provider';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
+import { AsaasClient, AsaasRequestError } from './infrastructure/asaas.client';
 
 export interface SearchUsageSnapshot {
   used: number;
@@ -43,8 +51,10 @@ export class BillingService {
     private readonly config: ConfigService,
     private readonly activation: BillingActivationService,
     private readonly abacateProvider: AbacatePaymentProvider,
+    private readonly asaasClient: AsaasClient,
     private readonly creditPurchases: CreditPurchaseService,
     private readonly entitlements: EntitlementService,
+    private readonly monthlyAttempts: MonthlyCheckoutAttemptService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
@@ -53,6 +63,7 @@ export class BillingService {
     const searchUsage = await this.getSearchUsage(org);
     const canManage = role === 'OWNER' || role === 'ADMIN';
     const unlimited = hasUnlimitedAccess(org);
+    const checkoutReviewRequired = await this.hasAsaasReviewRequired(organizationId);
     return {
       searchUsage,
       plan: org.plan,
@@ -61,11 +72,15 @@ export class BillingService {
       paymentProvider: provider,
       currentPeriodEnd: org.currentPeriodEnd,
       canCancelSubscription: canManage
-        ? org.plan === OrgPlan.STARTER_MONTHLY && unlimited && provider === PaymentProvider.ABACATE
+        ? org.plan === OrgPlan.STARTER_MONTHLY &&
+          unlimited &&
+          (provider === PaymentProvider.ABACATE ||
+            (provider === PaymentProvider.ASAAS && Boolean(org.asaasSubscriptionId)))
         : false,
       canExportCsv: await this.entitlements.canExportCsv(organizationId),
       freeSearchLimit: FREE_SEARCH_LIMIT,
       creditBalance: org.creditBalance ?? 0,
+      checkoutReviewRequired,
     };
   }
 
@@ -226,6 +241,7 @@ export class BillingService {
         'Organization already has an active lifetime plan. Further checkouts are not allowed.',
       );
     }
+    await this.assertNoAsaasReviewRequired(organizationId);
     this.assertCanStartAbacatePlanCheckout(org);
 
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
@@ -247,9 +263,73 @@ export class BillingService {
     } as const;
 
     if (paymentMethod === 'card') {
-      throw new BadRequestException('Card payments are temporarily unavailable');
+      return this.createAsaasMonthlyCheckout(org, successUrl, cancelUrl);
     }
     return this.abacateProvider.createCheckout(checkoutInput);
+  }
+
+  private async createAsaasMonthlyCheckout(
+    org: Organization,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<CheckoutResult> {
+    if (this.config.get<boolean>('asaas.enabled') !== true) {
+      throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+    }
+    if (
+      org.paymentProvider === PaymentProvider.ASAAS &&
+      org.plan === OrgPlan.STARTER_MONTHLY &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      throw new BadRequestException('Organization already has an active monthly subscription');
+    }
+    if (
+      org.paymentProvider &&
+      org.paymentProvider !== PaymentProvider.ASAAS &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      throw new ForbiddenException(
+        'A historical subscription is still active. Contact support before starting another plan.',
+      );
+    }
+    const profile = await this.prisma.billingProfile.findUnique({
+      where: { organizationId: org.id },
+    });
+    if (!profile?.asaasCustomerId) {
+      throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
+    }
+    const begin = await this.monthlyAttempts.beginCard(org.id);
+    if (begin.state === 'ready') return begin.checkout;
+    try {
+      const checkout = await this.asaasClient.createRecurringCheckout({
+        externalReference: begin.claim.externalId,
+        amountCentavos: 4999,
+        customer: {
+          name: profile.name,
+          cpfCnpj: profile.cpfCnpj,
+          phone: profile.phone,
+          email: profile.email,
+        },
+        successUrl,
+        cancelUrl,
+      });
+      const result = {
+        mode: 'redirect' as const,
+        provider: 'ASAAS' as const,
+        url: checkout.url,
+        externalCheckoutId: checkout.id,
+        externalCustomerId: profile.asaasCustomerId,
+      };
+      await this.monthlyAttempts.markReady(org.id, begin.claim, result);
+      return result;
+    } catch (error) {
+      if (error instanceof AsaasRequestError && !error.ambiguous) {
+        await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
+        throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+      }
+      await this.monthlyAttempts.markReviewRequired(org.id, begin.claim, error);
+      throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+    }
   }
 
   async createCreditCheckoutSession(
@@ -258,10 +338,11 @@ export class BillingService {
     paymentMethod: PaymentMethod,
   ): Promise<CheckoutResult> {
     await this.requireOrg(organizationId);
+    await this.assertNoAsaasReviewRequired(organizationId);
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
     if (paymentMethod === 'card') {
-      throw new BadRequestException('Card payments are temporarily unavailable');
+      return this.createAsaasCreditCheckout(organizationId, offer, pack);
     }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
@@ -294,6 +375,74 @@ export class BillingService {
     }
   }
 
+  private async createAsaasCreditCheckout(
+    organizationId: string,
+    offer: CreditOffer,
+    pack: { credits: number; amountCentavos: number },
+  ): Promise<CheckoutResult> {
+    if (this.config.get<boolean>('asaas.enabled') !== true) {
+      throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+    }
+    const profile = await this.prisma.billingProfile.findUnique({ where: { organizationId } });
+    if (!profile?.asaasCustomerId) {
+      throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
+    }
+
+    const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
+    const begin = await this.creditPurchases.beginAsaasPackage({
+      organizationId,
+      offer,
+      externalId,
+    });
+    const purchase = begin.purchase;
+    if (!begin.created) {
+      if (
+        purchase.status === 'PENDING' &&
+        purchase.offer === offer &&
+        purchase.externalPaymentId &&
+        purchase.checkoutUrl
+      ) {
+        return {
+          mode: 'redirect',
+          provider: 'ASAAS',
+          url: purchase.checkoutUrl,
+          externalCheckoutId: purchase.externalPaymentId,
+        };
+      }
+      throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+    }
+    const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
+    try {
+      const payment = await this.asaasClient.createHostedPayment({
+        customerId: profile.asaasCustomerId,
+        amountCentavos: pack.amountCentavos,
+        externalReference: externalId,
+        description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
+        successUrl: `${frontendUrl}/billing/success`,
+      });
+      await this.creditPurchases.attachPayment(purchase.id, payment.id, payment.url);
+      return {
+        mode: 'redirect',
+        provider: 'ASAAS',
+        url: payment.url,
+        externalCheckoutId: payment.id,
+      };
+    } catch (error) {
+      if (error instanceof AsaasRequestError && !error.ambiguous) {
+        await this.prisma.creditPurchase.update({
+          where: { id: purchase.id },
+          data: { status: 'FAILED' },
+        });
+        throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+      }
+      await this.prisma.creditPurchase.update({
+        where: { id: purchase.id },
+        data: { status: 'REVIEW_REQUIRED' },
+      });
+      throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+    }
+  }
+
   async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
     const org = await this.requireOrg(organizationId);
     if (org.plan !== OrgPlan.STARTER_MONTHLY) {
@@ -316,7 +465,44 @@ export class BillingService {
       return { canceled: true };
     }
 
+    if (org.paymentProvider === PaymentProvider.ASAAS && org.asaasSubscriptionId) {
+      await this.asaasClient.cancelSubscription(org.asaasSubscriptionId);
+      await this.prisma.organization.update({
+        where: { id: organizationId },
+        data: { asaasSubscriptionId: null },
+      });
+      return { canceled: true };
+    }
+
     throw new BadRequestException('No cancellable subscription for this organization');
+  }
+
+  private async assertNoAsaasReviewRequired(organizationId: string): Promise<void> {
+    if (await this.hasAsaasReviewRequired(organizationId)) {
+      throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+    }
+  }
+
+  private async hasAsaasReviewRequired(organizationId: string): Promise<boolean> {
+    const [purchase, monthlyAttempt] = await Promise.all([
+      this.prisma.creditPurchase.findFirst({
+        where: {
+          organizationId,
+          provider: PaymentProvider.ASAAS,
+          status: 'REVIEW_REQUIRED',
+        },
+        select: { id: true },
+      }),
+      this.prisma.monthlyCheckoutAttempt.findFirst({
+        where: {
+          organizationId,
+          provider: PaymentProvider.ASAAS,
+          status: 'REVIEW_REQUIRED',
+        },
+        select: { id: true },
+      }),
+    ]);
+    return Boolean(purchase || monthlyAttempt);
   }
 
   async handleAbacateWebhook(
