@@ -177,10 +177,11 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async applyPayment(type: string, payment: AsaasPayment): Promise<void> {
-    if (!payment.externalReference) throw new Error('Asaas payment without external reference');
-    const purchase = await this.prisma.creditPurchase.findUnique({
-      where: { externalId: payment.externalReference },
-    });
+    const purchase = payment.externalReference
+      ? await this.prisma.creditPurchase.findUnique({
+          where: { externalId: payment.externalReference },
+        })
+      : null;
     if (purchase) {
       const profile = await this.prisma.billingProfile.findUnique({
         where: { organizationId: purchase.organizationId },
@@ -192,7 +193,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       });
       this.assertSupportedReversal(type);
       this.assertChargebackTerminal(type, payment);
-      if (type === 'PAYMENT_CONFIRMED' && payment.status === 'CONFIRMED') {
+      if (this.isGrantEvent(type) && this.isPaidStatus(payment.status)) {
         await this.purchases.completeById(purchase.id, payment.id);
       } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
         await this.purchases.refundById(purchase.id);
@@ -202,53 +203,98 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const attempt = await this.prisma.monthlyCheckoutAttempt.findUnique({
-      where: { externalId: payment.externalReference },
-    });
-    if (!attempt) throw new Error('Asaas payment does not match a Prospectly checkout');
+    const monthly = await this.resolveMonthlyCheckout(payment);
+    if (!monthly) throw new Error('Asaas payment does not match a Prospectly checkout');
     const profile = await this.prisma.billingProfile.findUnique({
-      where: { organizationId: attempt.organizationId },
+      where: { organizationId: monthly.organizationId },
     });
-    if (attempt.product !== 'MONTHLY_ACCESS' || attempt.currency !== 'BRL') {
-      throw new Error('Asaas payment has invalid Prospectly product metadata');
-    }
     this.assertPaymentMatches(payment, {
       customerId: profile?.asaasCustomerId,
-      amountCentavos: attempt.amountCentavos,
-      externalReference: attempt.externalId,
+      amountCentavos: monthly.amountCentavos,
+      externalReference: monthly.expectedExternalReference,
       billingTypes: ['CREDIT_CARD'],
+      requireExternalReference: monthly.requireExternalReference,
     });
     this.assertSupportedReversal(type);
     this.assertChargebackTerminal(type, payment);
     if (!payment.subscription) throw new Error('Asaas recurring payment without subscription');
-    if (type === 'PAYMENT_CONFIRMED' && payment.status === 'CONFIRMED') {
+    if (this.isGrantEvent(type) && this.isPaidStatus(payment.status)) {
       await this.activation.activateMonthly({
-        organizationId: attempt.organizationId,
+        organizationId: monthly.organizationId,
         currency: 'BRL',
         provider: PaymentProvider.ASAAS,
         asaasSubscriptionId: payment.subscription,
         currentPeriodEnd: this.periodEnd(payment.dueDate),
       });
-      await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
+      if (monthly.attemptExternalId) {
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+      }
     } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
       await this.activation.syncMonthlyStatus({
-        organizationId: attempt.organizationId,
+        organizationId: monthly.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
         asaasSubscriptionId: payment.subscription,
         currentPeriodEnd: new Date(),
       });
-      await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
+      if (monthly.attemptExternalId) {
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+      }
     } else if (type.startsWith('PAYMENT_CHARGEBACK') && this.isConfirmedChargeback(payment)) {
       await this.activation.syncMonthlyStatus({
-        organizationId: attempt.organizationId,
+        organizationId: monthly.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
         asaasSubscriptionId: payment.subscription,
         currentPeriodEnd: new Date(),
       });
-      await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
+      if (monthly.attemptExternalId) {
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+      }
     }
+  }
+
+  /**
+   * First checkout payments carry Prospectly's attempt externalReference.
+   * Renewals often only carry the Asaas subscription id — resolve via org.asaasSubscriptionId.
+   */
+  private async resolveMonthlyCheckout(payment: AsaasPayment): Promise<{
+    organizationId: string;
+    amountCentavos: number;
+    expectedExternalReference: string;
+    requireExternalReference: boolean;
+    attemptExternalId?: string;
+  } | null> {
+    if (payment.externalReference) {
+      const attempt = await this.prisma.monthlyCheckoutAttempt.findUnique({
+        where: { externalId: payment.externalReference },
+      });
+      if (attempt) {
+        if (attempt.product !== 'MONTHLY_ACCESS' || attempt.currency !== 'BRL') {
+          throw new Error('Asaas payment has invalid Prospectly product metadata');
+        }
+        return {
+          organizationId: attempt.organizationId,
+          amountCentavos: attempt.amountCentavos,
+          expectedExternalReference: attempt.externalId,
+          requireExternalReference: true,
+          attemptExternalId: attempt.externalId,
+        };
+      }
+    }
+
+    if (!payment.subscription) return null;
+    const org = await this.prisma.organization.findUnique({
+      where: { asaasSubscriptionId: payment.subscription },
+      select: { id: true },
+    });
+    if (!org) return null;
+    return {
+      organizationId: org.id,
+      amountCentavos: 4999,
+      expectedExternalReference: payment.externalReference ?? '',
+      requireExternalReference: false,
+    };
   }
 
   private async reconcilePayments(): Promise<void> {
@@ -342,15 +388,26 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async applyReconciledPayment(payment: AsaasPayment): Promise<void> {
-    const eventType =
-      payment.status === 'CONFIRMED'
-        ? 'PAYMENT_CONFIRMED'
-        : payment.status === 'REFUNDED'
-          ? 'PAYMENT_REFUNDED'
-          : this.isConfirmedChargeback(payment)
-            ? 'PAYMENT_CHARGEBACK_REQUESTED'
-            : null;
+    const eventType = this.isPaidStatus(payment.status)
+      ? 'PAYMENT_CONFIRMED'
+      : payment.status === 'REFUNDED'
+        ? 'PAYMENT_REFUNDED'
+        : this.isConfirmedChargeback(payment)
+          ? 'PAYMENT_CHARGEBACK_REQUESTED'
+          : null;
     if (eventType) await this.applyPayment(eventType, payment);
+  }
+
+  /** Card flow is CONFIRMED → RECEIVED; late GET often already shows RECEIVED. */
+  private isPaidStatus(status: string | undefined): boolean {
+    return status === 'CONFIRMED' || status === 'RECEIVED';
+  }
+
+  /**
+   * PAYMENT_RECEIVED must also fulfill when CONFIRMED was delayed/lost — complete* is idempotent.
+   */
+  private isGrantEvent(type: string): boolean {
+    return type === 'PAYMENT_CONFIRMED' || type === 'PAYMENT_RECEIVED';
   }
 
   private assertSupportedReversal(type: string): void {
@@ -383,13 +440,15 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       amountCentavos: number;
       externalReference: string;
       billingTypes?: string[];
+      requireExternalReference?: boolean;
     },
   ): void {
+    const requireExternalReference = expected.requireExternalReference !== false;
     if (
       !expected.customerId ||
       payment.customer !== expected.customerId ||
       Math.round((payment.value ?? -1) * 100) !== expected.amountCentavos ||
-      payment.externalReference !== expected.externalReference ||
+      (requireExternalReference && payment.externalReference !== expected.externalReference) ||
       !(expected.billingTypes ?? ['CREDIT_CARD', 'DEBIT_CARD']).includes(payment.billingType ?? '')
     ) {
       throw new Error('Asaas payment does not match the Prospectly checkout');
