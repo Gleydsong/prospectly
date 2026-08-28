@@ -237,7 +237,7 @@ export class BillingService {
         'Lifetime checkout is no longer available. Buy credits or subscribe monthly.',
       );
     }
-    const org = await this.requireOrg(organizationId);
+    const org = await this.hydrateOrg(organizationId);
     if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
       throw new BadRequestException(
         'Organization already has an active lifetime plan. Further checkouts are not allowed.',

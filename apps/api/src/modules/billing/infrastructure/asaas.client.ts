@@ -14,6 +14,7 @@ export type AsaasPayment = {
   id: string;
   customer?: string;
   value?: number;
+  currency?: string;
   externalReference?: string;
   billingType?: string;
   status?: string;
@@ -194,6 +195,7 @@ export class AsaasClient {
       id,
       customer: readString(response, 'customer'),
       value: readNumber(response, 'value'),
+      currency: readString(response, 'currency'),
       externalReference: readString(response, 'externalReference'),
       billingType: readString(response, 'billingType'),
       status: readString(response, 'status'),

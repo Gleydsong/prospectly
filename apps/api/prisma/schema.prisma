@@ -276,6 +276,7 @@ model Organization {
   abacateSubscriptionId String?          @unique
   abacatePaymentId      String?          @unique
   asaasSubscriptionId  String?          @unique
+  asaasPaymentId       String?          @unique
   plan                  OrgPlan          @default(FREE)
   planStatus            PlanStatus       @default(INACTIVE)
   planCurrency          String?
@@ -313,6 +314,7 @@ model Organization {
   @@index([stripeCustomerId])
   @@index([abacateCustomerId])
   @@index([asaasSubscriptionId])
+  @@index([asaasPaymentId])
   @@index([paymentProvider])
 }
 

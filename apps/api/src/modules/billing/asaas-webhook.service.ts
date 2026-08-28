@@ -182,6 +182,9 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       where: { externalId: payment.externalReference },
     });
     if (purchase) {
+      if (purchase.currency !== 'BRL') {
+        throw new Error('Asaas payment has invalid Prospectly currency metadata');
+      }
       const isPix = purchase.paymentMethod === 'PIX';
       const profile = await this.prisma.billingProfile.findUnique({
         where: { organizationId: purchase.organizationId },
@@ -190,6 +193,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         customerId: profile?.asaasCustomerId,
         amountCentavos: purchase.amountCentavos,
         externalReference: purchase.externalId,
+        currency: 'BRL',
         billingTypes: isPix ? ['PIX'] : ['CREDIT_CARD', 'DEBIT_CARD'],
       });
       this.assertSupportedReversal(type);
@@ -219,6 +223,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       customerId: profile?.asaasCustomerId,
       amountCentavos: attempt.amountCentavos,
       externalReference: attempt.externalId,
+      currency: 'BRL',
       billingTypes: isPix ? ['PIX'] : ['CREDIT_CARD'],
     });
     this.assertSupportedReversal(type);
@@ -231,7 +236,8 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         organizationId: attempt.organizationId,
         currency: 'BRL',
         provider: PaymentProvider.ASAAS,
-        ...(payment.subscription ? { asaasSubscriptionId: payment.subscription } : {}),
+        asaasSubscriptionId: isPix ? null : payment.subscription,
+        asaasPaymentId: isPix ? payment.id : null,
         currentPeriodEnd: isPix ? this.pixPeriodEnd() : this.periodEnd(payment.dueDate),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
@@ -240,7 +246,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         organizationId: attempt.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
-        ...(payment.subscription ? { asaasSubscriptionId: payment.subscription } : {}),
+        ...(isPix ? { asaasPaymentId: payment.id } : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
@@ -249,7 +255,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         organizationId: attempt.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
-        ...(payment.subscription ? { asaasSubscriptionId: payment.subscription } : {}),
+        ...(isPix ? { asaasPaymentId: payment.id } : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
@@ -400,6 +406,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       customerId?: string | null;
       amountCentavos: number;
       externalReference: string;
+      currency: 'BRL';
       billingTypes?: string[];
     },
   ): void {
@@ -407,6 +414,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       !expected.customerId ||
       payment.customer !== expected.customerId ||
       Math.round((payment.value ?? -1) * 100) !== expected.amountCentavos ||
+      (payment.currency !== undefined && payment.currency !== expected.currency) ||
       payment.externalReference !== expected.externalReference ||
       !(expected.billingTypes ?? ['CREDIT_CARD', 'DEBIT_CARD']).includes(payment.billingType ?? '')
     ) {

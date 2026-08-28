@@ -21,4 +21,5 @@ AbacatePay continua aceitando webhooks e reconciliação de registros histórico
 - A tentativa local é persistida antes do `POST` externo, e respostas ambíguas entram em `REVIEW_REQUIRED` sem repetição cega.
 - QR code, redirecionamento e callback de navegação não concedem benefício.
 - O webhook autenticado é persistido antes do processamento e o estado financeiro é confirmado por leitura autoritativa no Asaas.
+- A organização guarda o ID do pagamento PIX que originou o período vigente; repetição do recebimento é inócua e reversões antigas não cancelam um período posterior.
 - O ADR 0001 permanece como registro histórico e é substituído por esta decisão.

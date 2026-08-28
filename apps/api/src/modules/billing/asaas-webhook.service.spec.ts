@@ -92,6 +92,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-1',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:purchase-1',
       provider: 'ASAAS',
     });
@@ -114,6 +115,37 @@ describe('AsaasWebhookService', () => {
     );
   });
 
+  it('rejects a provider currency that conflicts with the BRL checkout contract', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      type: 'PAYMENT_CONFIRMED',
+      payload,
+    });
+    prisma.creditPurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1',
+      organizationId: 'org-1',
+      amountCentavos: 1499,
+      currency: 'BRL',
+      externalId: 'org:org-1:credits:purchase-1',
+      provider: 'ASAAS',
+      paymentMethod: 'CARD',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_1',
+      value: 14.99,
+      currency: 'USD',
+      externalReference: 'org:org-1:credits:purchase-1',
+      billingType: 'CREDIT_CARD',
+      status: 'CONFIRMED',
+    });
+
+    await expect(service.processEvent('evt_1')).rejects.toThrow(
+      'Asaas payment does not match the Prospectly checkout',
+    );
+    expect(purchases.completeById).not.toHaveBeenCalled();
+  });
+
   it('credits an Asaas PIX package only after the authoritative RECEIVED state', async () => {
     prisma.billingWebhookEvent.findUnique.mockResolvedValue({
       type: 'PAYMENT_RECEIVED',
@@ -124,6 +156,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-pix-1',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:pix-1',
       provider: 'ASAAS',
       paymentMethod: 'PIX',
@@ -153,6 +186,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-pix-1',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:pix-1',
       provider: 'ASAAS',
       paymentMethod: 'PIX',
@@ -182,6 +216,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-1',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:purchase-1',
     });
     prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
@@ -271,9 +306,11 @@ describe('AsaasWebhookService', () => {
     );
     const activationInput = activation.activateMonthly.mock.calls[0]?.[0] as {
       currentPeriodEnd: Date;
-      asaasSubscriptionId?: string;
+      asaasSubscriptionId?: string | null;
+      asaasPaymentId?: string;
     };
-    expect(activationInput.asaasSubscriptionId).toBeUndefined();
+    expect(activationInput.asaasSubscriptionId).toBeNull();
+    expect(activationInput.asaasPaymentId).toBe('pay_pix_monthly_1');
     expect(activationInput.currentPeriodEnd.getTime()).toBeGreaterThanOrEqual(
       before + 30 * 24 * 60 * 60 * 1000,
     );
@@ -324,6 +361,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-1',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:purchase-1',
     });
     prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
@@ -359,6 +397,7 @@ describe('AsaasWebhookService', () => {
       id: 'purchase-review',
       organizationId: 'org-1',
       amountCentavos: 1499,
+      currency: 'BRL',
       externalId: 'org:org-1:credits:review',
     });
     prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });

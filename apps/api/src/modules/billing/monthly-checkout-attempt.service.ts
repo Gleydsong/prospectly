@@ -79,7 +79,8 @@ export class MonthlyCheckoutAttemptService {
 
     if (
       attempt.status === BillingCheckoutAttemptStatus.READY &&
-      now - attempt.updatedAt.getTime() < READY_RECHECK_MS
+      (paymentMethod === BillingPaymentMethod.PIX ||
+        now - attempt.updatedAt.getTime() < READY_RECHECK_MS)
     ) {
       return { state: 'ready', attempt };
     }

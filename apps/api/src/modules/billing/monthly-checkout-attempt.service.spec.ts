@@ -100,7 +100,7 @@ describe('MonthlyCheckoutAttemptService', () => {
       attempts: 1,
       lastError: null,
       createdAt: new Date(),
-      updatedAt: new Date(),
+      updatedAt: new Date(Date.now() - 31 * 60 * 1000),
     });
 
     await expect(service.beginPix('org1')).resolves.toEqual({

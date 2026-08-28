@@ -23,7 +23,7 @@ Pix Automatic is outside this change. Existing AbacatePay and Stripe contracts a
 3. Never retry an ambiguous provider `POST` blindly.
 4. Persist authenticated webhook events before returning success.
 5. Process duplicate webhook events idempotently.
-6. Verify customer, amount, currency, external reference, and `billingType=PIX` using an authenticated Asaas read before granting a benefit.
+6. Verify customer, amount, external reference, and `billingType=PIX` using an authenticated Asaas read before granting a benefit. Enforce BRL in the persisted checkout contract and reject a non-BRL provider currency when Asaas returns that optional field; the documented charge response does not expose a mandatory currency field.
 7. PIX grants benefits only from the definitive received state. Browser redirects and QR rendering never grant benefits.
 8. Reversals remain auditable and may produce a negative credit balance when purchased credits were already consumed.
 9. New-provider failure never falls back silently to another provider.
