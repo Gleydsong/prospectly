@@ -23,6 +23,12 @@ export type AsaasPayment = {
   deleted?: boolean;
 };
 
+export type AsaasPixQrCode = {
+  payload: string;
+  encodedImage: string;
+  expirationDate?: string;
+};
+
 export class AsaasRequestError extends ServiceUnavailableException {
   constructor(readonly ambiguous: boolean) {
     super('Asaas request failed');
@@ -96,6 +102,46 @@ export class AsaasClient {
       throw new AsaasRequestError(true);
     }
     return { id, url, status: readString(response, 'status') };
+  }
+
+  async createPixPayment(input: {
+    customerId: string;
+    amountCentavos: number;
+    externalReference: string;
+    description: string;
+  }): Promise<{ id: string; status?: string }> {
+    const response = await this.request('POST', '/payments', {
+      customer: input.customerId,
+      billingType: 'PIX',
+      value: input.amountCentavos / 100,
+      dueDate: new Date().toISOString().slice(0, 10),
+      description: input.description,
+      externalReference: input.externalReference,
+    });
+    const id = readString(response, 'id');
+    if (!id) {
+      this.logger.warn('Asaas PIX payment response missing id');
+      throw new AsaasRequestError(true);
+    }
+    return { id, status: readString(response, 'status') };
+  }
+
+  async getPixQrCode(paymentId: string): Promise<AsaasPixQrCode> {
+    const response = await this.request(
+      'GET',
+      `/payments/${encodeURIComponent(paymentId)}/pixQrCode`,
+    );
+    const payload = readString(response, 'payload');
+    const encodedImage = readString(response, 'encodedImage');
+    if (!payload || !encodedImage) {
+      this.logger.warn('Asaas PIX QR response missing payload or encodedImage');
+      throw new AsaasRequestError(false);
+    }
+    return {
+      payload,
+      encodedImage,
+      expirationDate: readString(response, 'expirationDate'),
+    };
   }
 
   async createRecurringCheckout(input: {

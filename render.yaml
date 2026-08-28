@@ -89,6 +89,8 @@ projects:
                 value: '15000'
               - key: ASAAS_ENABLED
                 value: 'false'
+              - key: PIX_PROVIDER
+                value: ABACATE
               - key: ASAAS_API_KEY
                 sync: false
               - key: ASAAS_WEBHOOK_TOKEN
