@@ -168,6 +168,48 @@ describe('BillingActivationService', () => {
     expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 
+  it('applies the same Asaas PIX payment only once', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasPaymentId: 'pay_pix_1',
+      currentPeriodEnd: new Date('2026-09-27T00:00:00.000Z'),
+    });
+
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: null,
+      asaasPaymentId: 'pay_pix_1',
+      currentPeriodEnd: new Date('2026-09-28T00:00:00.000Z'),
+    });
+
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('does not let an old Asaas PIX refund cancel a newer paid period', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasPaymentId: 'pay_pix_new',
+    });
+
+    await service.syncMonthlyStatus({
+      organizationId: 'org1',
+      status: PlanStatus.CANCELED,
+      provider: PaymentProvider.ASAAS,
+      asaasPaymentId: 'pay_pix_old',
+      currentPeriodEnd: new Date(),
+    });
+
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
   it('does not downgrade lifetime on cancel sync', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',

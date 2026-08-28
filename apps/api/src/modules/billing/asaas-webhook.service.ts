@@ -182,6 +182,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       where: { externalId: payment.externalReference },
     });
     if (purchase) {
+      if (purchase.currency !== 'BRL') {
+        throw new Error('Asaas payment has invalid Prospectly currency metadata');
+      }
+      const isPix = purchase.paymentMethod === 'PIX';
       const profile = await this.prisma.billingProfile.findUnique({
         where: { organizationId: purchase.organizationId },
       });
@@ -189,10 +193,12 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         customerId: profile?.asaasCustomerId,
         amountCentavos: purchase.amountCentavos,
         externalReference: purchase.externalId,
+        currency: 'BRL',
+        billingTypes: isPix ? ['PIX'] : ['CREDIT_CARD', 'DEBIT_CARD'],
       });
       this.assertSupportedReversal(type);
       this.assertChargebackTerminal(type, payment);
-      if (type === 'PAYMENT_CONFIRMED' && payment.status === 'CONFIRMED') {
+      if (this.isBenefitReceived(type, payment, isPix)) {
         await this.purchases.completeById(purchase.id, payment.id);
       } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
         await this.purchases.refundById(purchase.id);
@@ -212,22 +218,27 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     if (attempt.product !== 'MONTHLY_ACCESS' || attempt.currency !== 'BRL') {
       throw new Error('Asaas payment has invalid Prospectly product metadata');
     }
+    const isPix = attempt.paymentMethod === 'PIX';
     this.assertPaymentMatches(payment, {
       customerId: profile?.asaasCustomerId,
       amountCentavos: attempt.amountCentavos,
       externalReference: attempt.externalId,
-      billingTypes: ['CREDIT_CARD'],
+      currency: 'BRL',
+      billingTypes: isPix ? ['PIX'] : ['CREDIT_CARD'],
     });
     this.assertSupportedReversal(type);
     this.assertChargebackTerminal(type, payment);
-    if (!payment.subscription) throw new Error('Asaas recurring payment without subscription');
-    if (type === 'PAYMENT_CONFIRMED' && payment.status === 'CONFIRMED') {
+    if (!isPix && !payment.subscription) {
+      throw new Error('Asaas recurring payment without subscription');
+    }
+    if (this.isBenefitReceived(type, payment, isPix)) {
       await this.activation.activateMonthly({
         organizationId: attempt.organizationId,
         currency: 'BRL',
         provider: PaymentProvider.ASAAS,
-        asaasSubscriptionId: payment.subscription,
-        currentPeriodEnd: this.periodEnd(payment.dueDate),
+        asaasSubscriptionId: isPix ? null : payment.subscription,
+        asaasPaymentId: isPix ? payment.id : null,
+        currentPeriodEnd: isPix ? this.pixPeriodEnd() : this.periodEnd(payment.dueDate),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
     } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
@@ -235,7 +246,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         organizationId: attempt.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
-        asaasSubscriptionId: payment.subscription,
+        ...(isPix ? { asaasPaymentId: payment.id } : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
@@ -244,7 +255,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         organizationId: attempt.organizationId,
         status: PlanStatus.CANCELED,
         provider: PaymentProvider.ASAAS,
-        asaasSubscriptionId: payment.subscription,
+        ...(isPix ? { asaasPaymentId: payment.id } : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
       });
       await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
@@ -315,10 +326,15 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
             new Error('Checkout response requires authoritative reconciliation'),
           );
         }
-        const payment = await this.client.findPayment({
-          externalReference: attempt.externalId,
-          ...(attempt.externalCheckoutId ? { checkoutSession: attempt.externalCheckoutId } : {}),
-        });
+        const payment =
+          attempt.paymentMethod === 'PIX' && attempt.externalCheckoutId
+            ? await this.client.getPayment(attempt.externalCheckoutId)
+            : await this.client.findPayment({
+                externalReference: attempt.externalId,
+                ...(attempt.externalCheckoutId
+                  ? { checkoutSession: attempt.externalCheckoutId }
+                  : {}),
+              });
         if (payment) {
           await this.applyReconciledPayment(payment);
           if (this.isTerminalWithoutBenefit(payment)) {
@@ -343,13 +359,15 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
 
   private async applyReconciledPayment(payment: AsaasPayment): Promise<void> {
     const eventType =
-      payment.status === 'CONFIRMED'
-        ? 'PAYMENT_CONFIRMED'
-        : payment.status === 'REFUNDED'
-          ? 'PAYMENT_REFUNDED'
-          : this.isConfirmedChargeback(payment)
-            ? 'PAYMENT_CHARGEBACK_REQUESTED'
-            : null;
+      payment.status === 'RECEIVED'
+        ? 'PAYMENT_RECEIVED'
+        : payment.status === 'CONFIRMED'
+          ? 'PAYMENT_CONFIRMED'
+          : payment.status === 'REFUNDED'
+            ? 'PAYMENT_REFUNDED'
+            : this.isConfirmedChargeback(payment)
+              ? 'PAYMENT_CHARGEBACK_REQUESTED'
+              : null;
     if (eventType) await this.applyPayment(eventType, payment);
   }
 
@@ -376,12 +394,19 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     return payment.deleted === true;
   }
 
+  private isBenefitReceived(type: string, payment: AsaasPayment, isPix: boolean): boolean {
+    return isPix
+      ? type === 'PAYMENT_RECEIVED' && payment.status === 'RECEIVED'
+      : type === 'PAYMENT_CONFIRMED' && payment.status === 'CONFIRMED';
+  }
+
   private assertPaymentMatches(
     payment: AsaasPayment,
     expected: {
       customerId?: string | null;
       amountCentavos: number;
       externalReference: string;
+      currency: 'BRL';
       billingTypes?: string[];
     },
   ): void {
@@ -389,6 +414,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       !expected.customerId ||
       payment.customer !== expected.customerId ||
       Math.round((payment.value ?? -1) * 100) !== expected.amountCentavos ||
+      (payment.currency !== undefined && payment.currency !== expected.currency) ||
       payment.externalReference !== expected.externalReference ||
       !(expected.billingTypes ?? ['CREDIT_CARD', 'DEBIT_CARD']).includes(payment.billingType ?? '')
     ) {
@@ -441,6 +467,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     const end = new Date(start);
     end.setUTCMonth(end.getUTCMonth() + 1);
     return end;
+  }
+
+  private pixPeriodEnd(): Date {
+    return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   }
 
   private sanitizeError(error: unknown): string {

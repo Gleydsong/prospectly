@@ -43,6 +43,7 @@ export class CreditPurchaseService {
     organizationId: string;
     offer: CreditOffer;
     externalId: string;
+    paymentMethod: PaymentMethod;
   }) {
     const active = await this.findActiveAsaasPackage(input.organizationId);
     if (active) return { purchase: active, created: false };
@@ -50,7 +51,6 @@ export class CreditPurchaseService {
       const purchase = await this.createPending({
         ...input,
         provider: PaymentProvider.ASAAS,
-        paymentMethod: 'card',
       });
       return { purchase, created: true };
     } catch (error) {
