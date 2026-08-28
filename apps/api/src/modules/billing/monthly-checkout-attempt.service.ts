@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { CheckoutResult } from './domain/payment-provider';
 
-const PROCESSING_LEASE_MS = 2 * 60 * 1000;
+export const MONTHLY_CHECKOUT_PROCESSING_LEASE_MS = 2 * 60 * 1000;
 const READY_RECHECK_MS = 30 * 60 * 1000;
 
 export type MonthlyCheckoutClaim = {
@@ -53,7 +53,7 @@ export class MonthlyCheckoutAttemptService {
 
     if (
       attempt.status === BillingCheckoutAttemptStatus.PROCESSING &&
-      now - attempt.updatedAt.getTime() < PROCESSING_LEASE_MS
+      now - attempt.updatedAt.getTime() < MONTHLY_CHECKOUT_PROCESSING_LEASE_MS
     ) {
       throw new ConflictException('Monthly checkout is already being created. Try again shortly.');
     }

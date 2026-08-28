@@ -23,12 +23,16 @@ describe('AsaasWebhookService', () => {
     },
     creditPurchase: { findUnique: jest.fn(), findMany: jest.fn() },
     billingProfile: { findUnique: jest.fn() },
-    monthlyCheckoutAttempt: { findUnique: jest.fn(), findMany: jest.fn() },
+    monthlyCheckoutAttempt: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
   };
   const client = { getPayment: jest.fn(), findPayment: jest.fn() };
   const purchases = { completeById: jest.fn(), refundById: jest.fn() };
   const activation = { activateMonthly: jest.fn(), syncMonthlyStatus: jest.fn() };
-  const monthlyAttempts = { markResolved: jest.fn(), markPaymentFailed: jest.fn() };
+  const monthlyAttempts = {
+    markResolved: jest.fn(),
+    markPaymentFailed: jest.fn(),
+    markReviewRequired: jest.fn(),
+  };
   let service: AsaasWebhookService;
 
   beforeEach(async () => {
@@ -266,5 +270,33 @@ describe('AsaasWebhookService', () => {
       externalReference: 'org:org-1:credits:review',
     });
     expect(purchases.completeById).toHaveBeenCalledWith('purchase-review', 'pay_recovered');
+  });
+
+  it('reconciles a monthly checkout whose processing lease expired', async () => {
+    const staleAttempt = {
+      id: 'attempt-stale',
+      organizationId: 'org-1',
+      externalId: 'org:org-1:monthly-card:stale',
+      externalCheckoutId: null,
+      status: 'PROCESSING',
+      updatedAt: new Date(Date.now() - 3 * 60 * 1000),
+    };
+    prisma.monthlyCheckoutAttempt.findMany.mockImplementation(async ({ where }) =>
+      JSON.stringify(where).includes('PROCESSING') ? [staleAttempt] : [],
+    );
+    client.findPayment.mockResolvedValue(null);
+
+    await service.processPending();
+
+    expect(client.findPayment).toHaveBeenCalledWith({
+      externalReference: staleAttempt.externalId,
+    });
+    expect(monthlyAttempts.markReviewRequired).toHaveBeenCalledWith(
+      staleAttempt.organizationId,
+      { id: staleAttempt.id, externalId: staleAttempt.externalId },
+      expect.objectContaining({
+        message: 'Checkout response requires authoritative reconciliation',
+      }),
+    );
   });
 });

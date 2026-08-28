@@ -14,7 +14,10 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { AsaasClient, type AsaasPayment } from './infrastructure/asaas.client';
-import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
+import {
+  MONTHLY_CHECKOUT_PROCESSING_LEASE_MS,
+  MonthlyCheckoutAttemptService,
+} from './monthly-checkout-attempt.service';
 
 type AsaasEnvelope = {
   id: string;
@@ -291,16 +294,27 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
+    const staleProcessingBefore = new Date(Date.now() - MONTHLY_CHECKOUT_PROCESSING_LEASE_MS);
     const attempts = await this.prisma.monthlyCheckoutAttempt.findMany({
       where: {
         provider: PaymentProvider.ASAAS,
-        status: { in: ['READY', 'REVIEW_REQUIRED'] },
+        OR: [
+          { status: { in: ['READY', 'REVIEW_REQUIRED'] } },
+          { status: 'PROCESSING', updatedAt: { lt: staleProcessingBefore } },
+        ],
       },
       orderBy: [{ lastReconciledAt: { sort: 'asc', nulls: 'first' } }, { updatedAt: 'asc' }],
       take: 20,
     });
     for (const attempt of attempts) {
       try {
+        if (attempt.status === 'PROCESSING') {
+          await this.monthlyAttempts.markReviewRequired(
+            attempt.organizationId,
+            { id: attempt.id, externalId: attempt.externalId },
+            new Error('Checkout response requires authoritative reconciliation'),
+          );
+        }
         const payment = await this.client.findPayment({
           externalReference: attempt.externalId,
           ...(attempt.externalCheckoutId ? { checkoutSession: attempt.externalCheckoutId } : {}),
