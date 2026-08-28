@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { logout, requestDataDeletion, requestDataExport } from '@/features/auth/api';
+import { deletePrivacyAccount, downloadPrivacyExport, logout } from '@/features/auth/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -23,14 +23,13 @@ export function PrivacyActionsCard() {
   const confirmWord = i18n.language.startsWith('en') ? 'DELETE' : 'EXCLUIR';
 
   const exportData = useMutation({
-    mutationFn: () =>
-      requestDataExport('Solicitação via app — exportação de dados pessoais (LGPD)'),
+    mutationFn: () => downloadPrivacyExport(),
     onSuccess: () => setDsrMessage(t('settings.exportSuccess')),
     onError: (err) => setDsrMessage(getApiErrorMessage(err)),
   });
 
   const deleteAccount = useMutation({
-    mutationFn: () => requestDataDeletion('Solicitação via app — exclusão de conta (LGPD)'),
+    mutationFn: () => deletePrivacyAccount(),
     onSuccess: async () => {
       setDsrMessage(t('settings.deleteSuccess'));
       setDeleteOpen(false);
@@ -44,7 +43,15 @@ export function PrivacyActionsCard() {
     },
     onError: (err) => {
       const msg = getApiErrorMessage(err);
-      setDsrMessage(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg);
+      if (msg === 'EMAIL_NOT_VERIFIED') {
+        setDsrMessage(t('settings.emailGateHint'));
+        return;
+      }
+      if (msg.includes('LAST_OWNER_CANNOT_SELF_DELETE')) {
+        setDsrMessage(t('settings.deleteLastOwner'));
+        return;
+      }
+      setDsrMessage(msg);
     },
   });
 

@@ -38,7 +38,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         }),
       payload.sub,
     );
-    if (!membership) {
+    const account = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { anonymizedAt: true },
+    });
+    if (!membership || account?.anonymizedAt) {
       throw new UnauthorizedException('Membership revoked');
     }
     return {

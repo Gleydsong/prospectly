@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { sanitizeLlmPayload } from '../../privacy/llm-privacy.sanitizer';
 import {
   ANGLE_LABELS,
   WHATSAPP_VARIANT_ANGLES,
@@ -55,16 +56,18 @@ export class OllamaChatClient {
 
     const user = [
       'Gere variantes personalizadas com estes dados:',
-      JSON.stringify({
-        companyName: lead.companyName,
-        tradeName: lead.tradeName ?? null,
-        city: lead.city ?? null,
-        segment: lead.segment ?? null,
-        website: lead.website ?? null,
-        senderName: lead.senderName ?? null,
-        seed: generationSeed,
-        angles,
-      }),
+      JSON.stringify(
+        sanitizeLlmPayload({
+          companyName: lead.companyName,
+          tradeName: lead.tradeName ?? null,
+          city: lead.city ?? null,
+          segment: lead.segment ?? null,
+          website: lead.website ?? null,
+          senderName: lead.senderName ?? null,
+          seed: generationSeed,
+          angles,
+        }),
+      ),
     ].join('\n');
 
     const controller = new AbortController();

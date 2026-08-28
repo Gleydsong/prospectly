@@ -8,6 +8,10 @@ export const AUDIT_ACTIONS = {
   DSR_CREATED: 'data_subject_request.created',
   DSR_APPROVED: 'data_subject_request.approved',
   DSR_COMPLETED: 'data_subject_request.completed',
+  CONSENT_CHANGED: 'consent.changed',
+  ACCOUNT_ANONYMIZED: 'account.anonymized',
+  DATA_EXPORTED: 'privacy.data_exported',
+  PRIVACY_CORRECTION: 'privacy.correction',
   CAMPAIGN_CREATED: 'campaign.created',
   CAMPAIGN_STATUS_CHANGED: 'campaign.status_changed',
   CAMPAIGN_LEADS_ADDED: 'campaign.leads_added',
@@ -22,4 +26,4 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
 /** Keys (case-insensitive) never persisted in AuditLog.metadata. */
 export const AUDIT_REDACTED_KEY_PATTERN =
-  /password|token|secret|authorization|cookie|csv|content|body|refresh|credential|api[_-]?key|private/i;
+  /password|token|secret|authorization|cookie|csv|content|body|refresh|credential|api[_-]?key|private|cpf|cnpj|phone|whatsapp/i;

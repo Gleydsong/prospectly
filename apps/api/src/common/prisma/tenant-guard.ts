@@ -35,6 +35,7 @@ export const TENANT_MODELS = new Set([
   'OpportunityRun',
   'AiRun',
   'DataSubjectRequest',
+  'SuppressionEntry',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */
@@ -58,6 +59,7 @@ export const GLOBAL_MODELS = new Set([
   'WaitlistEntry',
   'BillingWebhookEvent',
   'RefreshToken',
+  'ConsentRecord',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

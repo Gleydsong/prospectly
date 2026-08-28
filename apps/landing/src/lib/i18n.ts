@@ -121,7 +121,8 @@ const pt: Dict = {
   cookieTitle: 'Cookies',
   cookieBody:
     'Usamos apenas cookies essenciais para o site funcionar. Analytics fica desligado por padrão.',
-  cookieAccept: 'Entendi',
+  cookieAccept: 'Apenas essenciais',
+  cookiePolicy: 'Política de cookies',
   waitlistTitle: 'Entre na lista de espera',
   waitlistBody:
     'Deixe seu e-mail e avisamos quando liberar acesso. Sem spam — só o essencial para começar a prospectar.',
@@ -278,7 +279,8 @@ const en: Dict = {
   cookieTitle: 'Cookies',
   cookieBody:
     'We only use essential cookies to run the site. Analytics is off by default.',
-  cookieAccept: 'Got it',
+  cookieAccept: 'Essential only',
+  cookiePolicy: 'Cookie policy',
   waitlistTitle: 'Join the waitlist',
   waitlistBody:
     'Leave your email and we’ll tell you when access opens. No spam — just what you need to start prospecting.',

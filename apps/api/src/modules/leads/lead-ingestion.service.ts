@@ -3,6 +3,7 @@ import { ConfidenceLevel, LeadSource, LeadStatus, Prisma, WebsitePresence } from
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
+import { SuppressionService } from '../privacy/suppression.service';
 
 const INGESTED_LEAD_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -54,7 +55,8 @@ export interface LeadIngestionCandidate {
 
 export type LeadIngestionResult =
   | { status: 'IMPORTED'; lead: IngestedLead }
-  | { status: 'DUPLICATE' | 'POSSIBLE_DUPLICATE'; lead: DuplicateLead | null };
+  | { status: 'DUPLICATE' | 'POSSIBLE_DUPLICATE'; lead: DuplicateLead | null }
+  | { status: 'SUPPRESSED' };
 
 export function normalizeBrazilianPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -133,6 +135,7 @@ export class LeadIngestionService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
+    @Optional() private readonly suppression?: SuppressionService,
   ) {}
 
   async ingest(
@@ -141,6 +144,17 @@ export class LeadIngestionService {
     candidate: LeadIngestionCandidate,
   ): Promise<LeadIngestionResult> {
     const normalized = this.normalizeCandidate(candidate);
+
+    if (
+      this.suppression &&
+      (await this.suppression.isSuppressed(organizationId, {
+        email: normalized.email,
+        phone: normalized.phone,
+        domain: normalized.domain,
+      }))
+    ) {
+      return { status: 'SUPPRESSED' };
+    }
 
     try {
       const result = await this.prisma.$transaction(async (transaction) => {

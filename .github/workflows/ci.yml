@@ -37,6 +37,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Secret scan (heuristic)
+        run: node scripts/secret-scan.cjs
+
       - name: Audit dependencies (critical)
         run: pnpm audit --audit-level=critical
 

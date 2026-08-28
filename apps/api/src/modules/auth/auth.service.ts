@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  Optional,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { runWithBypass } from '../../common/prisma/tenant-context';
 import { MailService } from '../../common/mail/mail.service';
 import { SIGNUP_BONUS_CREDITS, TERMS_VERSION } from '../billing/billing.constants';
+import { ConsentService } from '../privacy/consent.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
@@ -69,6 +71,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly mail: MailService,
+    @Optional() private readonly consents?: ConsentService,
   ) {
     this.googleClient = new OAuth2Client(this.config.get<string>('google.clientId') ?? undefined);
   }
@@ -121,6 +124,9 @@ export class AuthService {
       include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
     });
     if (byGoogle) {
+      if (byGoogle.anonymizedAt) {
+        throw new UnauthorizedException(INVALID_CREDENTIALS);
+      }
       const membership = byGoogle.memberships[0];
       if (!membership) {
         throw noOrganizationException();
@@ -139,6 +145,9 @@ export class AuthService {
       include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
     });
     if (byEmail) {
+      if (byEmail.anonymizedAt) {
+        throw new UnauthorizedException(INVALID_CREDENTIALS);
+      }
       if (byEmail.googleId && byEmail.googleId !== googleId) {
         throw new ConflictException('Unable to complete registration with the provided data');
       }
@@ -198,7 +207,7 @@ export class AuthService {
       include: { memberships: { orderBy: { createdAt: 'asc' }, take: 1 } },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user || !user.passwordHash || user.anonymizedAt) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
 
@@ -369,7 +378,7 @@ export class AuthService {
 
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.passwordHash) {
+    if (!user || !user.passwordHash || user.anonymizedAt) {
       throw new UnauthorizedException(INVALID_CREDENTIALS);
     }
     const valid = await argon2.verify(user.passwordHash, dto.currentPassword);
@@ -622,6 +631,8 @@ export class AuthService {
       const membership = await tx.organizationMember.create({
         data: { userId: createdUser.id, organizationId: organization.id, role: 'OWNER' },
       });
+
+      await this.consents?.recordSignupConsents(tx, createdUser.id, 'register', acceptedAt);
 
       const pipeline = await tx.pipeline.create({
         data: { organizationId: organization.id, name: 'Pipeline padrão', isDefault: true },

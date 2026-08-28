@@ -126,7 +126,10 @@ function statusTone(status: SearchStatus): 'amber' | 'blue' | 'green' | 'red' {
 }
 
 function csvCell(value: unknown): string {
-  const text = value == null ? '' : String(value);
+  let text = value == null ? '' : String(value);
+  if (/^[=+\-@|\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
   return `"${text.replace(/"/g, '""')}"`;
 }
 
