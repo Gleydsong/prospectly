@@ -78,7 +78,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6" key={i18n.language}>
       {/* Hero — Principal Facilitey */}
-      <Card surface="default" className="overflow-hidden !border-white/[0.08]">
+      <Card surface="default" className="overflow-hidden">
         <CardContent className="relative p-6 sm:p-8">
           <div
             className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(ellipse_at_top_right,rgb(113_113_122_/_0.12),transparent_60%)]"
@@ -150,20 +150,20 @@ export function DashboardPage() {
 
       {/* Seus clientes */}
       <Card className="overflow-hidden">
-        <div className="border-b border-white/[0.08] px-5 py-5 sm:px-6">
+        <div className="border-b border-[color:var(--border)] px-5 py-5 sm:px-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-zinc-50">
+              <h2 className="text-lg font-bold tracking-tight text-[color:var(--ink)]">
                 {t('principal.clientsTitle')}
               </h2>
-              <p className="mt-1 text-sm text-zinc-400">{t('principal.clientsDesc')}</p>
+              <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{t('principal.clientsDesc')}</p>
             </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--ink-muted)]"
                 aria-hidden
               />
               <input
@@ -201,20 +201,22 @@ export function DashboardPage() {
                   className={cn(
                     'rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors',
                     status === tab.status
-                      ? 'bg-zinc-800 text-zinc-50'
-                      : 'border border-white/[0.08] text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200',
+                      ? 'bg-[color:var(--ink)] text-[color:var(--bg-raised)]'
+                      : 'border border-[color:var(--border)] text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
                   )}
                 >
                   {t(`principal.tab.${tab.key}`)}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1 rounded-control border border-white/[0.08] p-1">
+            <div className="flex items-center gap-1 rounded-control border border-[color:var(--border)] p-1">
               <button
                 type="button"
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium',
-                  view === 'list' ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400',
+                  view === 'list'
+                    ? 'bg-[color:var(--ink)] text-[color:var(--bg-raised)]'
+                    : 'text-[color:var(--ink-muted)]',
                 )}
                 onClick={() => setView('list')}
               >
@@ -225,7 +227,9 @@ export function DashboardPage() {
                 type="button"
                 className={cn(
                   'inline-flex items-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium',
-                  view === 'kanban' ? 'bg-zinc-800 text-zinc-50' : 'text-zinc-400',
+                  view === 'kanban'
+                    ? 'bg-[color:var(--ink)] text-[color:var(--bg-raised)]'
+                    : 'text-[color:var(--ink-muted)]',
                 )}
                 onClick={() => {
                   setView('kanban');
@@ -242,7 +246,7 @@ export function DashboardPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-medium uppercase tracking-wide text-zinc-500">
+              <tr className="border-b border-[color:var(--border)] text-xs font-medium uppercase tracking-wide text-[color:var(--ink-muted)]">
                 <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colClient')}</th>
                 <th className="px-3 py-3 font-semibold">{t('principal.colCity')}</th>
                 <th className="px-3 py-3 font-semibold">{t('principal.colStatus')}</th>
@@ -259,7 +263,7 @@ export function DashboardPage() {
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-sm text-zinc-500">
+                  <td colSpan={5} className="px-6 py-16 text-center text-sm text-[color:var(--ink-muted)]">
                     {t('principal.emptyClients')}
                   </td>
                 </tr>
@@ -267,7 +271,7 @@ export function DashboardPage() {
                 leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+                    className="border-b border-[color:var(--border)] transition-colors hover:bg-[color:var(--surface-hover)]"
                   >
                     <td className="px-5 py-3.5 sm:px-6">
                       <Link
@@ -277,15 +281,15 @@ export function DashboardPage() {
                         {lead.companyName}
                       </Link>
                     </td>
-                    <td className="px-3 py-3.5 text-zinc-400">{lead.city ?? '—'}</td>
+                    <td className="px-3 py-3.5 text-[color:var(--ink-muted)]">{lead.city ?? '—'}</td>
                     <td className="px-3 py-3.5">
                       <LeadStatusBadge status={lead.status} />
                     </td>
-                    <td className="px-3 py-3.5 tabular-nums text-zinc-300">{lead.score ?? '—'}</td>
+                    <td className="px-3 py-3.5 tabular-nums text-[color:var(--ink)]">{lead.score ?? '—'}</td>
                     <td className="px-5 py-3.5 sm:px-6">
                       <Link
                         to={`/leads/${lead.id}`}
-                        className="text-sm font-semibold text-zinc-300 hover:text-zinc-50"
+                        className="text-sm font-semibold text-[color:var(--accent)] hover:underline"
                       >
                         {t('principal.open')}
                       </Link>
@@ -297,7 +301,7 @@ export function DashboardPage() {
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] px-5 py-3 text-sm text-zinc-500 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color:var(--border)] px-5 py-3 text-sm text-[color:var(--ink-muted)] sm:px-6">
           <p>
             {t('principal.showing', {
               from: leads.length ? 1 : 0,

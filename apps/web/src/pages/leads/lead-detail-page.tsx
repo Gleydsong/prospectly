@@ -198,8 +198,8 @@ export function LeadDetailPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{lead.companyName}</h1>
-          <p className="text-sm text-zinc-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{lead.companyName}</h1>
+          <p className="text-sm text-[color:var(--ink-muted)]">
             {[
               lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
               lead.city,
@@ -282,10 +282,10 @@ export function LeadDetailPage() {
               })}
             />
             <div className="pt-2">
-              <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Etiquetas</p>
+              <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">Etiquetas</p>
               <div className="flex flex-wrap gap-1">
                 {lead.tags.length === 0 ? (
-                  <span className="text-zinc-400">—</span>
+                  <span className="text-[color:var(--ink-muted)]">—</span>
                 ) : (
                   lead.tags.map((tag) => <Badge key={tag.id}>{tag.name}</Badge>)
                 )}
@@ -293,36 +293,36 @@ export function LeadDetailPage() {
             </div>
             {lead.notes ? (
               <div className="pt-2">
-                <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Observações</p>
-                <p className="whitespace-pre-wrap text-zinc-300">{lead.notes}</p>
+                <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">Observações</p>
+                <p className="whitespace-pre-wrap text-[color:var(--ink)]">{lead.notes}</p>
               </div>
             ) : null}
 
-            <div className="border-t border-zinc-800 pt-3">
-              <p className="mb-2 text-xs font-medium uppercase text-zinc-400">Origem</p>
-              <dl className="space-y-2 text-sm text-zinc-300">
+            <div className="border-t border-[color:var(--border)] pt-3">
+              <p className="mb-2 text-xs font-medium uppercase text-[color:var(--ink-muted)]">Origem</p>
+              <dl className="space-y-2 text-sm text-[color:var(--ink)]">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Fonte</dt>
+                  <dt className="text-[color:var(--ink-muted)]">Fonte</dt>
                   <dd>{SOURCE_LABEL[lead.source] ?? 'Outra fonte'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Coletado em</dt>
+                  <dt className="text-[color:var(--ink-muted)]">Coletado em</dt>
                   <dd>{lead.dataCollectedAt ? formatDateTime(lead.dataCollectedAt) : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Última verificação</dt>
+                  <dt className="text-[color:var(--ink-muted)]">Última verificação</dt>
                   <dd>{lead.lastVerifiedAt ? formatDateTime(lead.lastVerifiedAt) : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Confiança</dt>
+                  <dt className="text-[color:var(--ink-muted)]">Confiança</dt>
                   <dd>{lead.confidenceLevel ? CONFIDENCE_LABEL[lead.confidenceLevel] : '—'}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">Site (fonte)</dt>
+                  <dt className="text-[color:var(--ink-muted)]">Site (fonte)</dt>
                   <dd>{websitePresenceLabel(lead.websitePresence)}</dd>
                 </div>
                 {lead.websiteStatusReason ? (
-                  <p className="text-xs text-zinc-500">{lead.websiteStatusReason}</p>
+                  <p className="text-xs text-[color:var(--ink-muted)]">{lead.websiteStatusReason}</p>
                 ) : null}
               </dl>
               <LeadContactChannels
@@ -341,7 +341,7 @@ export function LeadDetailPage() {
               lead.missingFields.filter((field) => !CONTACT_MISSING_FIELDS.has(field)).length >
                 0 ? (
                 <div className="mt-3">
-                  <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Dados ausentes</p>
+                  <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">Dados ausentes</p>
                   <div className="flex flex-wrap gap-1">
                     {lead.missingFields
                       .filter((field) => !CONTACT_MISSING_FIELDS.has(field))
@@ -369,7 +369,7 @@ export function LeadDetailPage() {
                   {lead.website ? 'Verificar site' : 'Verificar (precisa de site)'}
                 </Button>
                 {!lead.website ? (
-                  <p className="mt-2 text-xs text-zinc-500">
+                  <p className="mt-2 text-xs text-[color:var(--ink-muted)]">
                     Sem URL cadastrada não dá para checar o site automaticamente.
                   </p>
                 ) : null}
@@ -404,28 +404,28 @@ export function LeadDetailPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase text-zinc-500">
+                      <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
                         {t('scoreExplain.recommendedAction', { defaultValue: 'Ação recomendada' })}
                       </p>
-                      <p className="text-sm text-zinc-200">
+                      <p className="text-sm text-[color:var(--ink)]">
                         {t(`scoreExplain.actions.${latestScore.recommendedAction ?? 'NURTURE'}`, {
                           defaultValue: latestScore.recommendedAction ?? 'NURTURE',
                         })}
                       </p>
                     </div>
                     <div>
-                      <p className="mb-1 text-xs font-medium uppercase text-zinc-500">
+                      <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
                         {t('scoreExplain.configVersion', { defaultValue: 'Versão da configuração' })}
                       </p>
-                      <p className="text-sm text-zinc-200">v{latestScore.configVersion}</p>
+                      <p className="text-sm text-[color:var(--ink)]">v{latestScore.configVersion}</p>
                     </div>
                   </div>
 
                   <div>
-                    <p className="mb-2 text-xs font-medium uppercase text-zinc-500">
+                    <p className="mb-2 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
                       {t('scoreExplain.appliedRules', { defaultValue: 'Regras aplicadas' })}
                     </p>
-                    <ul className="space-y-1 text-sm text-zinc-300">
+                    <ul className="space-y-1 text-sm text-[color:var(--ink)]">
                       {(latestScore.rulesApplied as Array<{
                         key: string;
                         points: number;
@@ -435,7 +435,7 @@ export function LeadDetailPage() {
                           <span>
                             {t(`scoreRules.${rule.key}`, { defaultValue: rule.key })}
                             {rule.dimension ? (
-                              <span className="ml-2 text-xs text-zinc-500">
+                              <span className="ml-2 text-xs text-[color:var(--ink-muted)]">
                                 ({t(`scoreExplain.${rule.dimension}`, { defaultValue: rule.dimension })})
                               </span>
                             ) : null}
@@ -447,11 +447,11 @@ export function LeadDetailPage() {
                   </div>
 
                   <div>
-                    <p className="mb-2 text-xs font-medium uppercase text-zinc-500">
+                    <p className="mb-2 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
                       {t('scoreExplain.missingData', { defaultValue: 'Dados ausentes' })}
                     </p>
                     {(latestScore.missingData ?? []).length === 0 ? (
-                      <p className="text-sm text-zinc-500">—</p>
+                      <p className="text-sm text-[color:var(--ink-muted)]">—</p>
                     ) : (
                       <ul className="flex flex-wrap gap-1.5">
                         {(latestScore.missingData ?? []).map((field) => (
@@ -464,7 +464,7 @@ export function LeadDetailPage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-[color:var(--ink-muted)]">
                   A pontuação detalhada aparece após a primeira análise ou recálculo.
                 </p>
               )}
@@ -513,17 +513,17 @@ export function LeadDetailPage() {
               {activitiesQuery.isLoading ? (
                 <Skeleton className="h-24" />
               ) : !activitiesQuery.data || activitiesQuery.data.data.length === 0 ? (
-                <p className="text-sm text-zinc-500">Nenhuma atividade registrada.</p>
+                <p className="text-sm text-[color:var(--ink-muted)]">Nenhuma atividade registrada.</p>
               ) : (
-                <ol className="relative space-y-4 border-l border-zinc-800 pl-5">
+                <ol className="relative space-y-4 border-l border-[color:var(--border)] pl-5">
                   {activitiesQuery.data.data.map((activity) => (
                     <li key={activity.id} className="relative">
-                      <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500/150" aria-hidden />
-                      <p className="text-sm font-medium text-zinc-50">{formatActivityType(activity.type)}</p>
+                      <span className="absolute -left-[26px] top-1 h-2.5 w-2.5 rounded-full bg-brand-500" aria-hidden />
+                      <p className="text-sm font-medium text-[color:var(--ink)]">{formatActivityType(activity.type)}</p>
                       {activity.description ? (
-                        <p className="text-sm text-zinc-300">{activity.description}</p>
+                        <p className="text-sm text-[color:var(--ink)]">{activity.description}</p>
                       ) : null}
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-xs text-[color:var(--ink-muted)]">
                         {activity.user.name} · {formatDateTime(activity.createdAt)}
                       </p>
                     </li>
@@ -546,17 +546,17 @@ export function LeadDetailPage() {
               {tasksQuery.isLoading ? (
                 <Skeleton className="h-20" />
               ) : !tasksQuery.data || tasksQuery.data.data.length === 0 ? (
-                <p className="text-sm text-zinc-500">Nenhuma tarefa.</p>
+                <p className="text-sm text-[color:var(--ink-muted)]">Nenhuma tarefa.</p>
               ) : (
                 <ul className="space-y-2">
                   {tasksQuery.data.data.map((task) => (
                     <li
                       key={task.id}
-                      className="flex items-center justify-between rounded-lg border border-zinc-800 p-3"
+                      className="flex items-center justify-between rounded-lg border border-[color:var(--border)] p-3"
                     >
                       <div>
-                        <p className="text-sm font-medium text-zinc-50">{task.title}</p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="text-sm font-medium text-[color:var(--ink)]">{task.title}</p>
+                        <p className="text-xs text-[color:var(--ink-muted)]">
                           {task.assignee?.name ?? 'Sem responsável'} · {formatDateTime(task.dueAt)}
                         </p>
                       </div>
@@ -639,9 +639,9 @@ export function LeadDetailPage() {
 
 function DimensionStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 px-3 py-2">
-      <p className="text-xs uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 text-lg font-semibold text-zinc-100">{value}</p>
+    <div className="rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2">
+      <p className="text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[color:var(--ink)]">{value}</p>
     </div>
   );
 }
@@ -657,10 +657,10 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-4 w-4 text-zinc-400" aria-hidden />
+      <Icon className="mt-0.5 h-4 w-4 text-[color:var(--ink-muted)]" aria-hidden />
       <div>
-        <p className="text-xs font-medium uppercase text-zinc-400">{label}</p>
-        <p className="text-zinc-200">{value ?? '—'}</p>
+        <p className="text-xs font-medium uppercase text-[color:var(--ink-muted)]">{label}</p>
+        <p className="text-[color:var(--ink)]">{value ?? '—'}</p>
       </div>
     </div>
   );

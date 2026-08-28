@@ -47,7 +47,7 @@ export function AgentsPage() {
                   action={<Icon className="h-5 w-5 text-brand-300" aria-hidden />}
                 />
                 <CardContent className="space-y-6">
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-[color:var(--ink-muted)]">
                     {t(`agents.catalog.${agent.id}.description`, {
                       defaultValue: agent.description,
                     })}

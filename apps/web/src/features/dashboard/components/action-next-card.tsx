@@ -64,7 +64,7 @@ export function ActionNextCard({
         {loading ? (
           <Skeleton className="h-28" />
         ) : !lead ? (
-          <p className="text-sm text-zinc-500">{t('dashboard.nextActionEmpty')}</p>
+          <p className="text-sm text-[color:var(--ink-muted)]">{t('dashboard.nextActionEmpty')}</p>
         ) : (
           <>
             <div className="flex items-start gap-3">
@@ -82,8 +82,8 @@ export function ActionNextCard({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-zinc-50">{lead.title}</p>
-                <p className="mt-0.5 text-xs text-zinc-500">{lead.subtitle}</p>
+                <p className="truncate text-sm font-semibold text-[color:var(--ink)]">{lead.title}</p>
+                <p className="mt-0.5 text-xs text-[color:var(--ink-muted)]">{lead.subtitle}</p>
                 {lead.kind === 'opportunity' ? (
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <LeadStatusBadge status={lead.status} />

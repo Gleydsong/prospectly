@@ -18,7 +18,7 @@ export function Pagination({
       className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
       aria-label="Paginação"
     >
-      <p className="text-center text-sm text-zinc-500 sm:text-left">
+      <p className="text-center text-sm text-[color:var(--ink-muted)] sm:text-left">
         {total} resultado{total === 1 ? '' : 's'} — página {page} de {totalPages}
       </p>
       <div className="flex justify-center gap-2 sm:justify-end">

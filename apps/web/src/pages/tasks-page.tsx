@@ -123,7 +123,7 @@ export function TasksPage() {
       ) : (
         <>
           <Card className="overflow-hidden">
-            <ul className="divide-y divide-zinc-800 md:hidden">
+            <ul className="divide-y divide-[color:var(--border)] md:hidden">
               {tasks.map((task) => (
                 <li key={task.id} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2">
@@ -138,7 +138,7 @@ export function TasksPage() {
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <TaskLeadLink lead={task.lead} />
-                    <span className="text-xs text-zinc-400">{formatDate(task.dueAt)}</span>
+                    <span className="text-xs text-[color:var(--ink-muted)]">{formatDate(task.dueAt)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <Badge
@@ -165,7 +165,7 @@ export function TasksPage() {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[640px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+                  <tr className="border-b border-[color:var(--border)] text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
                     <th scope="col" className="px-5 py-3 font-medium">
                       Título
                     </th>
@@ -186,12 +186,12 @@ export function TasksPage() {
                 </thead>
                 <tbody>
                   {tasks.map((task) => (
-                    <tr key={task.id} className="border-b border-zinc-800">
+                    <tr key={task.id} className="border-b border-[color:var(--border)]">
                       <td className="px-5 py-3 font-medium text-[color:var(--ink)]">{task.title}</td>
                       <td className="px-5 py-3">
                         <TaskLeadLink lead={task.lead} />
                       </td>
-                      <td className="px-5 py-3 text-zinc-300">{formatDate(task.dueAt)}</td>
+                      <td className="px-5 py-3 text-[color:var(--ink)]">{formatDate(task.dueAt)}</td>
                       <td className="px-5 py-3">
                         <Badge
                           tone={
@@ -284,7 +284,7 @@ export function TasksPage() {
 
 function TaskLeadLink({ lead }: { lead: Task['lead'] }) {
   if (!lead) {
-    return <span className="text-zinc-500">—</span>;
+    return <span className="text-[color:var(--ink-muted)]">—</span>;
   }
 
   return (

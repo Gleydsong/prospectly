@@ -103,7 +103,7 @@ export function CampaignsPage() {
         }
       />
 
-      <Card className="border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90" role="note">
+      <Card className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]" role="note">
         {t('campaigns.assistedNotice')}
       </Card>
 
@@ -157,7 +157,7 @@ export function CampaignsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400">
+              <thead className="border-b border-[color:var(--border)] bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)]">
                 <tr>
                   <th className="px-4 py-3 font-medium">{t('campaigns.columns.name')}</th>
                   <th className="px-4 py-3 font-medium">{t('campaigns.columns.status')}</th>
@@ -169,16 +169,16 @@ export function CampaignsPage() {
               </thead>
               <tbody>
                 {rows.map((campaign) => (
-                  <tr key={campaign.id} className="border-b border-zinc-800/80 text-zinc-200">
+                  <tr key={campaign.id} className="border-b border-[color:var(--border)] text-[color:var(--ink)]">
                     <td className="px-4 py-3">
                       <Link
                         to={`/campaigns/${campaign.id}`}
-                        className="font-medium text-zinc-50 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
+                        className="font-medium text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
                       >
                         {campaign.name}
                       </Link>
                       {campaign.description ? (
-                        <div className="mt-0.5 line-clamp-1 text-xs text-zinc-500">
+                        <div className="mt-0.5 line-clamp-1 text-xs text-[color:var(--ink-muted)]">
                           {campaign.description}
                         </div>
                       ) : null}
@@ -188,17 +188,17 @@ export function CampaignsPage() {
                         {t(`campaigns.status.${campaign.status}`, { defaultValue: 'Estado não identificado' })}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-zinc-400">{campaign.segment ?? '—'}</td>
-                    <td className="px-4 py-3 text-zinc-400">{campaign.owner?.name ?? '—'}</td>
-                    <td className="px-4 py-3 text-zinc-400">{campaign._count?.leads ?? 0}</td>
-                    <td className="px-4 py-3 text-zinc-400">{formatDate(campaign.updatedAt)}</td>
+                    <td className="px-4 py-3 text-[color:var(--ink-muted)]">{campaign.segment ?? '—'}</td>
+                    <td className="px-4 py-3 text-[color:var(--ink-muted)]">{campaign.owner?.name ?? '—'}</td>
+                    <td className="px-4 py-3 text-[color:var(--ink-muted)]">{campaign._count?.leads ?? 0}</td>
+                    <td className="px-4 py-3 text-[color:var(--ink-muted)]">{formatDate(campaign.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
           {meta ? (
-            <div className="border-t border-zinc-800 p-3">
+            <div className="border-t border-[color:var(--border)] p-3">
               <Pagination
                 page={meta.page}
                 totalPages={meta.totalPages}
@@ -213,7 +213,7 @@ export function CampaignsPage() {
       <Modal open={open} onClose={() => setOpen(false)} title={t('campaigns.createTitle')}>
         <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
           <div>
-            <label className="mb-1 block text-sm text-zinc-300" htmlFor="campaign-name">
+            <label className="mb-1 block text-sm text-[color:var(--ink)]" htmlFor="campaign-name">
               {t('campaigns.fields.name')}
             </label>
             <Input id="campaign-name" {...form.register('name')} autoFocus />
@@ -222,7 +222,7 @@ export function CampaignsPage() {
             ) : null}
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-300" htmlFor="campaign-segment">
+            <label className="mb-1 block text-sm text-[color:var(--ink)]" htmlFor="campaign-segment">
               {t('campaigns.fields.segment')}
             </label>
             <Input
@@ -232,12 +232,12 @@ export function CampaignsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-zinc-300" htmlFor="campaign-description">
+            <label className="mb-1 block text-sm text-[color:var(--ink)]" htmlFor="campaign-description">
               {t('campaigns.fields.description')}
             </label>
             <Input id="campaign-description" {...form.register('description')} />
           </div>
-          <p className="text-xs text-zinc-500">{t('campaigns.createHint')}</p>
+          <p className="text-xs text-[color:var(--ink-muted)]">{t('campaigns.createHint')}</p>
           {error ? (
             <p className="text-sm text-red-400" role="alert">
               {error}

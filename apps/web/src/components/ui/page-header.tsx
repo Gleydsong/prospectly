@@ -22,7 +22,7 @@ export function PageHeader({
     <div className={cn('flex flex-wrap items-start justify-between gap-4', className)}>
       <div className="min-w-0 max-w-3xl">
         {eyebrow ? (
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--ink-muted)]">
             {eyebrow}
           </p>
         ) : null}

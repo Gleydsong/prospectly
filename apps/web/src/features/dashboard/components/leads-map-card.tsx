@@ -144,7 +144,7 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
         className="border-b-0 pb-0"
         action={
           !loading ? (
-            <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-zinc-300">
+            <span className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-2.5 py-1 text-[11px] font-semibold tabular-nums text-[color:var(--ink)]">
               {t('dashboard.mapPinCount', { count: projected.length })}
             </span>
           ) : null
@@ -155,7 +155,7 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
           <Skeleton className="min-h-[240px] flex-1" />
         ) : (
           <>
-            <div className="relative min-h-[260px] flex-1 overflow-hidden rounded-panel border border-white/[0.06] bg-[#05070b]">
+            <div className="relative min-h-[260px] flex-1 overflow-hidden rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-subtle)]">
               <svg
                 viewBox={viewBox}
                 className="h-full w-full"
@@ -295,9 +295,9 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
 
               {hovered ? (
                 <div className="pointer-events-none absolute bottom-3 left-3 right-3 sm:left-auto sm:right-3 sm:max-w-[240px]">
-                  <div className="rounded-control border border-white/15 bg-[#0c1018]/92 px-3 py-2 shadow-elevated backdrop-blur-md">
-                    <p className="truncate text-sm font-medium text-zinc-50">{hovered.companyName}</p>
-                    <p className="mt-0.5 text-xs text-zinc-400">
+                  <div className="rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] px-3 py-2 shadow-elevated backdrop-blur-md">
+                    <p className="truncate text-sm font-medium text-[color:var(--ink)]">{hovered.companyName}</p>
+                    <p className="mt-0.5 text-xs text-[color:var(--ink-muted)]">
                       {[hovered.city, `score ${hovered.score}`].filter(Boolean).join(' · ')}
                     </p>
                   </div>
@@ -307,7 +307,7 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
               {projected.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#05070b]/55 px-4 text-center backdrop-blur-[1px]">
                   <MapPin className="h-5 w-5 text-brand-300" aria-hidden />
-                  <p className="text-sm text-zinc-400">{t('dashboard.mapEmpty')}</p>
+                  <p className="text-sm text-[color:var(--ink-muted)]">{t('dashboard.mapEmpty')}</p>
                 </div>
               ) : null}
             </div>
@@ -315,18 +315,18 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
             <div className="space-y-2">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-2xl font-semibold tabular-nums tracking-tight text-zinc-50">
+                  <p className="text-2xl font-semibold tabular-nums tracking-tight text-[color:var(--ink)]">
                     {projected.length}
-                    <span className="ml-1 text-sm font-medium text-zinc-500">
+                    <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">
                       {t('dashboard.mapMapped')}
                     </span>
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-[color:var(--ink-muted)]">
                     {t('dashboard.mapCities', { count: cityCount })}
                   </p>
                 </div>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-1.5 overflow-hidden rounded-full bg-[color:var(--surface-subtle)]">
                 <div
                   className={cn(
                     'dashboard-map-progress h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-300',
@@ -343,7 +343,7 @@ export function LeadsMapCard({ loading, pins, cities }: LeadsMapCardProps) {
                     .map((c) => (
                       <span
                         key={c.city}
-                        className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-zinc-400"
+                        className="rounded-full border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-2 py-0.5 text-[10px] uppercase tracking-[0.1em] text-[color:var(--ink-muted)]"
                       >
                         {c.city} · {c.count}
                       </span>

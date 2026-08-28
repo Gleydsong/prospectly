@@ -84,7 +84,7 @@ export function AccentBarChart({ loading, data }: AccentBarChartProps) {
         {loading ? (
           <Skeleton className="h-full" />
         ) : chartData.length === 0 ? (
-          <p className="text-sm text-zinc-500">{t('dashboard.noLeads')}</p>
+          <p className="text-sm text-[color:var(--ink-muted)]">{t('dashboard.noLeads')}</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

@@ -143,7 +143,7 @@ export function LeadsPage() {
       />
 
       <Card className="overflow-hidden">
-        <div className="space-y-4 border-b border-white/[0.08] p-4 sm:p-5">
+        <div className="space-y-4 border-b border-[color:var(--border)] p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_170px_auto]">
           <div className="flex gap-2">
             <Input
@@ -219,18 +219,18 @@ export function LeadsPage() {
               <Alert tone="error">{actionError}</Alert>
             </div>
           ) : null}
-            <ul className="divide-y divide-zinc-800 md:hidden">
+            <ul className="divide-y divide-[color:var(--border)] md:hidden">
               {leads.map((lead) => (
                 <li key={lead.id}>
                   <button
                     type="button"
-                    className="flex w-full flex-col gap-2 px-4 py-3.5 text-left hover:bg-zinc-950/80"
+                    className="flex w-full flex-col gap-2 px-4 py-3.5 text-left hover:bg-[color:var(--surface-hover)]"
                     onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-zinc-50">{lead.companyName}</p>
-                        <p className="text-xs text-zinc-500">
+                        <p className="truncate font-medium text-[color:var(--ink)]">{lead.companyName}</p>
+                        <p className="text-xs text-[color:var(--ink-muted)]">
                           {[
                             lead.city,
                             lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
@@ -255,7 +255,7 @@ export function LeadsPage() {
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
-                <tr className="border-b border-zinc-800 text-xs uppercase tracking-wide text-zinc-500">
+                <tr className="border-b border-[color:var(--border)] text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
                   <th scope="col" className="px-5 py-3 font-medium">Empresa</th>
                   <th scope="col" className="px-5 py-3 font-medium">Cidade</th>
                   <th scope="col" className="px-5 py-3 font-medium">Status</th>
@@ -271,7 +271,7 @@ export function LeadsPage() {
                 {leads.map((lead) => (
                   <tr
                     key={lead.id}
-                    className="cursor-pointer border-b border-zinc-800 hover:bg-zinc-950"
+                    className="cursor-pointer border-b border-[color:var(--border)] hover:bg-[color:var(--surface-hover)]"
                     onClick={() => navigate(`/leads/${lead.id}`)}
                   >
                     <td className="px-5 py-3">
@@ -279,12 +279,12 @@ export function LeadsPage() {
                         <div>
                           <Link
                             to={`/leads/${lead.id}`}
-                            className="font-medium text-zinc-50 hover:text-brand-400"
+                            className="font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)]"
                             onClick={(event) => event.stopPropagation()}
                           >
                             {lead.companyName}
                           </Link>
-                          <p className="text-xs text-zinc-500">
+                          <p className="text-xs text-[color:var(--ink-muted)]">
                             {lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : '—')}
                           </p>
                         </div>
@@ -295,14 +295,14 @@ export function LeadsPage() {
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-zinc-300">{lead.city ?? '—'}</td>
+                    <td className="px-5 py-3 text-[color:var(--ink-muted)]">{lead.city ?? '—'}</td>
                     <td className="px-5 py-3">
                       <LeadStatusBadge status={lead.status} />
                     </td>
                     <td className="px-5 py-3">
                       <ScoreBadge score={lead.score} />
                     </td>
-                    <td className="px-5 py-3 text-zinc-300">{lead.owner?.name ?? '—'}</td>
+                    <td className="px-5 py-3 text-[color:var(--ink-muted)]">{lead.owner?.name ?? '—'}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
                         {lead.tags.slice(0, 3).map((tag) => (
@@ -332,7 +332,7 @@ export function LeadsPage() {
             </table>
             </div>
           {meta ? (
-            <div className="border-t border-white/[0.08] px-4 py-3">
+            <div className="border-t border-[color:var(--border)] px-4 py-3">
               <Pagination page={meta.page} totalPages={meta.totalPages} total={meta.total} onPageChange={setPage} />
             </div>
           ) : null}
@@ -344,13 +344,13 @@ export function LeadsPage() {
 
       <Modal open={exportOpen} onClose={() => setExportOpen(false)} title={t('leads.exportTitle')}>
         <div className="space-y-4">
-          <p className="text-sm text-zinc-400">{t('leads.exportColumns')}</p>
-          <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-zinc-800 p-3">
+          <p className="text-sm text-[color:var(--ink-muted)]">{t('leads.exportColumns')}</p>
+          <div className="grid max-h-56 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-[color:var(--border)] p-3">
             {EXPORTABLE_LEAD_COLUMNS.map((column) => (
-              <label key={column} className="flex items-center gap-2 text-sm text-zinc-200">
+              <label key={column} className="flex items-center gap-2 text-sm text-[color:var(--ink)]">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-zinc-700 text-brand-400 focus:ring-brand-400"
+                  className="h-4 w-4 rounded border-[color:var(--border)] text-brand-400 focus:ring-[color:var(--ring)]"
                   checked={exportColumns.includes(column)}
                   onChange={() => toggleExportColumn(column)}
                 />
@@ -358,7 +358,7 @@ export function LeadsPage() {
               </label>
             ))}
           </div>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[color:var(--ink-muted)]">
             Os filtros atuais (busca, status, website) serão aplicados à exportação.
           </p>
           <div className="flex justify-end gap-2">

@@ -113,16 +113,16 @@ export function PixCheckoutPage() {
             <img
               src={qrSrc}
               alt={t('billing.pixQrAlt')}
-              className="mx-auto h-56 w-56 rounded-lg border border-zinc-800 bg-zinc-900 p-2"
+              className="mx-auto h-56 w-56 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-card)] p-2"
             />
           ) : null}
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-zinc-100">{t('billing.pixCopyLabel')}</p>
+            <p className="text-sm font-medium text-[color:var(--ink)]">{t('billing.pixCopyLabel')}</p>
             <textarea
               readOnly
               value={pix.brCode}
-              className="h-24 w-full resize-none rounded-control border border-zinc-800 bg-zinc-950 p-3 font-mono text-xs text-zinc-200"
+              className="h-24 w-full resize-none rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] p-3 font-mono text-xs text-[color:var(--ink)]"
             />
             <Button
               type="button"
@@ -137,7 +137,7 @@ export function PixCheckoutPage() {
             </Button>
           </div>
 
-          <p className="text-sm text-zinc-500" role="status">
+          <p className="text-sm text-[color:var(--ink-muted)]" role="status">
             {t('billing.pixWaiting')}
           </p>
 

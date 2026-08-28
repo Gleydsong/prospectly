@@ -19,8 +19,8 @@ export function SearchQuotaBanner({ usage, plan }: { usage?: SearchUsage; plan?:
   if (usage.unlimited) {
     return (
       <div className="text-right">
-        <p className="text-sm font-medium text-zinc-200">Buscas ilimitadas</p>
-        <p className="text-xs text-zinc-500">Plano {planLabel(plan)}</p>
+        <p className="text-sm font-medium text-[color:var(--ink)]">Buscas ilimitadas</p>
+        <p className="text-xs text-[color:var(--ink-muted)]">Plano {planLabel(plan)}</p>
       </div>
     );
   }
@@ -32,13 +32,13 @@ export function SearchQuotaBanner({ usage, plan }: { usage?: SearchUsage; plan?:
   return (
     <div className="w-full sm:w-64">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-medium text-zinc-200">
+        <p className="text-sm font-medium text-[color:var(--ink)]">
           {usage.used} / {limit} buscas
         </p>
-        <span className="text-xs text-zinc-500">Plano {planLabel(plan)}</span>
+        <span className="text-xs text-[color:var(--ink-muted)]">Plano {planLabel(plan)}</span>
       </div>
       <div
-        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-zinc-800"
+        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--surface-subtle)]"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={limit}

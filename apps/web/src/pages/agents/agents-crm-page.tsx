@@ -114,18 +114,18 @@ export function AgentsCrmPage() {
                   <li key={lead.id}>
                     <button
                       type="button"
-                      className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-left hover:border-zinc-700"
+                      className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2 text-left hover:border-[color:var(--border-strong)]"
                       onClick={() => selectLead(lead.id)}
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-zinc-100">
+                        <span className="block truncate text-sm font-medium text-[color:var(--ink)]">
                           {lead.companyName}
                         </span>
-                        <span className="block truncate text-xs text-zinc-500">
+                        <span className="block truncate text-xs text-[color:var(--ink-muted)]">
                           {[lead.city, lead.segment].filter(Boolean).join(' · ') || '—'}
                         </span>
                       </span>
-                      <span className="text-xs text-zinc-500">score {lead.score}</span>
+                      <span className="text-xs text-[color:var(--ink-muted)]">score {lead.score}</span>
                     </button>
                   </li>
                 ))}
@@ -137,10 +137,10 @@ export function AgentsCrmPage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium text-zinc-100">
+              <p className="text-sm font-medium text-[color:var(--ink)]">
                 {preselected.data?.companyName ?? suggest.data?.companyName ?? '…'}
               </p>
-              <p className="text-xs text-zinc-500">{t('agents.crm.selectedLead')}</p>
+              <p className="text-xs text-[color:var(--ink-muted)]">{t('agents.crm.selectedLead')}</p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setSearchParams({})}>
               {t('agents.changeLead')}
@@ -166,25 +166,25 @@ export function AgentsCrmPage() {
                       ? 'rounded-control border border-red-500/30 bg-red-500/10 px-3 py-2'
                       : suggest.data.severity === 'warn'
                         ? 'rounded-control border border-amber-500/30 bg-amber-500/10 px-3 py-2'
-                        : 'rounded-control border border-zinc-800 bg-zinc-950/60 px-3 py-2'
+                        : 'rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2'
                   }
                 >
-                  <p className="text-sm font-medium text-zinc-50">{actionLabel}</p>
-                  <p className="mt-1 text-sm text-zinc-400">{suggest.data.rationale}</p>
+                  <p className="text-sm font-medium text-[color:var(--ink)]">{actionLabel}</p>
+                  <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{suggest.data.rationale}</p>
                 </div>
 
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs uppercase text-zinc-500">{t('agents.crm.currentStage')}</dt>
-                    <dd className="text-zinc-200">
+                    <dt className="text-xs uppercase text-[color:var(--ink-muted)]">{t('agents.crm.currentStage')}</dt>
+                    <dd className="text-[color:var(--ink)]">
                       {suggest.data.currentStage?.name ?? t('agents.crm.noStage')}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs uppercase text-zinc-500">
+                    <dt className="text-xs uppercase text-[color:var(--ink-muted)]">
                       {t('agents.crm.suggestedStage')}
                     </dt>
-                    <dd className="text-zinc-200">
+                    <dd className="text-[color:var(--ink)]">
                       {suggest.data.suggestedStage?.name ?? t('agents.crm.noSuggestedStage')}
                     </dd>
                   </div>

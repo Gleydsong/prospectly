@@ -4,9 +4,9 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-control bg-white/[0.06]',
+        'relative overflow-hidden rounded-control bg-[color:var(--surface-subtle)]',
         'after:absolute after:inset-0 after:-translate-x-full after:animate-shimmer',
-        'after:bg-gradient-to-r after:from-transparent after:via-white/[0.07] after:to-transparent',
+        'after:bg-gradient-to-r after:from-transparent after:via-[color:var(--surface-hover)] after:to-transparent',
         className,
       )}
       aria-hidden

@@ -53,10 +53,10 @@ function Ring({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="text-sm font-semibold tabular-nums text-zinc-50">{format(value)}</span>
+          <span className="text-sm font-semibold tabular-nums text-[color:var(--ink)]">{format(value)}</span>
         </div>
       </div>
-      <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+      <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">
         {label}
       </p>
     </div>
