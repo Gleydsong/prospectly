@@ -2,7 +2,7 @@
 
 ## Current routing
 
-Prospectly routes new PIX and hosted card checkout through Asaas. The rollout remains inert by default: `PIX_PROVIDER=ABACATE` and `ASAAS_ENABLED=false` until Sandbox homologation and an explicitly authorized cutover. AbacatePay remains active only for historical events and reconciliation after that cutover.
+Prospectly routes new PIX and hosted card checkout through Asaas. `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true` are the authorized cutover defaults on this branch. AbacatePay remains active only for historical events and reconciliation. Existing AbacatePay and Stripe contracts are not migrated or canceled automatically.
 
 | Product           |    Price | Method                | Provider              |
 | ----------------- | -------: | --------------------- | --------------------- |
@@ -25,7 +25,7 @@ The API keeps historical Stripe and AbacatePay identifiers. Existing contracts a
 - Prospectly stores a minimal organization billing profile but never receives card number, expiry date or CVV.
 - Refund and chargeback of packages create an auditable full reversal and may leave a negative credit balance.
 - Partial refunds are not converted into partial credits in this MVP. The inbox retains the event as failed for support review instead of silently changing the benefit.
-- `ASAAS_ENABLED` defaults to false and `PIX_PROVIDER` defaults to `ABACATE`. Sandbox and production credentials stay outside the repository.
+- `ASAAS_ENABLED` defaults to true and `PIX_PROVIDER` defaults to `ASAAS` after the authorized cutover. Sandbox and production credentials stay outside the repository. Rollback is `PIX_PROVIDER=ABACATE` without silent fallback.
 
 ## Sandbox wizard
 
@@ -33,9 +33,9 @@ The API keeps historical Stripe and AbacatePay identifiers. Existing contracts a
 2. Store the Sandbox API key in the external secret manager as `ASAAS_API_KEY`.
 3. Generate a dedicated webhook token and store the same value as `ASAAS_WEBHOOK_TOKEN`.
 4. Configure the Asaas webhook URL as `/api/v1/billing/webhook/asaas` and send the token in `asaas-access-token`.
-5. Keep `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`, set `PIX_PROVIDER=ASAAS`, and enable `ASAAS_ENABLED=true` only in the Sandbox environment.
+5. Keep `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. This branch uses `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true`. The API will not boot with those flags if `ASAAS_API_KEY` or `ASAAS_WEBHOOK_TOKEN` is empty.
 6. Homologate PIX QR creation and reuse, duplicate click, webhook authentication and duplicate delivery, package crediting, monthly activation for exactly 30 days, refund/chargeback, hosted credit, hosted debit, monthly card recurrence, and ambiguous timeout recovery.
-7. Restore `PIX_PROVIDER=ABACATE` and `ASAAS_ENABLED=false` after testing. Production activation requires explicit authorization and a controlled financial smoke.
+7. Production Asaas (`https://api.asaas.com/v3`) needs account approval, a PIX key after proof of life, separate production secrets, and a controlled financial smoke. Rollback is `PIX_PROVIDER=ABACATE` without silent fallback. Historical AbacatePay webhooks stay active.
 
 See [Render deployment](../deploy/render.md) for environment and webhook setup.
 

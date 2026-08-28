@@ -16,8 +16,8 @@ AbacatePay continua aceitando webhooks e reconciliação de registros histórico
 
 ## Consequences
 
-- `PIX_PROVIDER` controla a criação de novos checkouts e permanece `ABACATE` por padrão até a homologação e o cutover autorizados.
-- `PIX_PROVIDER=ASAAS` exige `ASAAS_ENABLED=true`.
+- `PIX_PROVIDER` controla a criação de novos checkouts. O cutover autorizado usa `PIX_PROVIDER=ASAAS` com `ASAAS_ENABLED=true`.
+- `PIX_PROVIDER=ASAAS` exige `ASAAS_ENABLED=true`. `ABACATE` permanece disponível só para rollback operacional.
 - A tentativa local é persistida antes do `POST` externo, e respostas ambíguas entram em `REVIEW_REQUIRED` sem repetição cega.
 - QR code, redirecionamento e callback de navegação não concedem benefício.
 - O webhook autenticado é persistido antes do processamento e o estado financeiro é confirmado por leitura autoritativa no Asaas.

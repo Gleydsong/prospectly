@@ -71,6 +71,7 @@ describe('BillingService', () => {
     createPixPayment: jest.fn(),
     getPixQrCode: jest.fn(),
     createRecurringCheckout: jest.fn(),
+    cancelSubscription: jest.fn(),
   };
 
   const monthlyAttempts = {
@@ -260,6 +261,22 @@ describe('BillingService', () => {
       organizationId: 'org1',
       status: PlanStatus.CANCELED,
     });
+  });
+
+  it('does not expire an Asaas card subscription when the invoice period lapses', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+      asaasSubscriptionId: 'sub_asaas_card',
+      creditBalance: 0,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+
+    await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
   });
 
   it('rejects cross-provider plan checkout when org already bound', async () => {
@@ -819,5 +836,26 @@ describe('BillingService', () => {
         metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'NO_COMPANIES_FOUND' },
       }),
     });
+  });
+
+  it('cancels an Asaas card subscription and syncs local entitlement', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_asaas_card',
+      deletedAt: null,
+    });
+    asaasClient.cancelSubscription.mockResolvedValue(undefined);
+
+    await expect(service.cancelSubscription('org1')).resolves.toEqual({ canceled: true });
+    expect(asaasClient.cancelSubscription).toHaveBeenCalledWith('sub_asaas_card');
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      status: PlanStatus.CANCELED,
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: null,
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 });

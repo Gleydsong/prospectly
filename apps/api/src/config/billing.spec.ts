@@ -34,4 +34,10 @@ describe('Billing environment configuration', () => {
       validateEnv({ ...baseConfig, PIX_PROVIDER: 'ASAAS', ASAAS_ENABLED: 'false' }),
     ).toThrow('PIX_PROVIDER=ASAAS requires ASAAS_ENABLED=true');
   });
+
+  it('rejects the Asaas PIX cutover flags without secrets', () => {
+    expect(() =>
+      validateEnv({ ...baseConfig, PIX_PROVIDER: 'ASAAS', ASAAS_ENABLED: 'true' }),
+    ).toThrow('Missing Asaas configuration: ASAAS_API_KEY, ASAAS_WEBHOOK_TOKEN');
+  });
 });

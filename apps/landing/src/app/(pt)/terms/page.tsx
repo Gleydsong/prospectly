@@ -10,7 +10,7 @@ export default function TermsPage() {
     <article className="legal mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <h1 className="text-3xl font-semibold tracking-tight">Termos de Uso</h1>
       <p className="mt-3 text-sm text-[color:var(--ink-muted)]">
-        Última atualização: 17 de agosto de 2026. Versão: 2026-08-17
+        Última atualização: 28 de agosto de 2026. Versão: 2026-08-28
       </p>
       <div className="mt-8 space-y-4 text-base leading-relaxed text-[color:var(--ink-muted)]">
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
@@ -31,10 +31,10 @@ export default function TermsPage() {
           3. Planos e pagamento
         </h2>
         <p>
-          Oferecemos pacotes de créditos (pagamento único) e assinatura ilimitada mensal. Novas
-          cobranças (PIX e cartão) via AbacatePay. Assinaturas de cartão antigas podem permanecer na
-          Stripe até o cancelamento. Cancelamento do plano mensal AbacatePay é imediato no app
-          (Créditos). Assinaturas Stripe legadas usam o portal de cobrança. Créditos avulsos não
+          Oferecemos pacotes de créditos (pagamento único) e acesso ilimitado mensal. Novas
+          cobranças (PIX e cartão) via Asaas. PIX mensal vale 30 dias, sem renovação automática.
+          Cartão mensal renova automaticamente até o cancelamento no app (Créditos). Contratos
+          históricos AbacatePay ou Stripe não são migrados automaticamente. Créditos avulsos não
           renovam.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">

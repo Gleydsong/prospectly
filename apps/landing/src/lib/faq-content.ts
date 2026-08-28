@@ -117,14 +117,14 @@ const faqPt: FaqItem[] = [
     category: 'pricing',
     question: 'Quais moedas posso pagar?',
     answer:
-      'Checkout apenas em BRL (Brasil), via PIX pela AbacatePay. Cartão está temporariamente indisponível. Exemplos: 2.000 créditos por R$ 14,99; 5.000 por R$ 23,99; ilimitado por R$ 49,99/mês.',
+      'Checkout apenas em BRL (Brasil), via PIX ou cartão pelo Asaas. Exemplos: 2.000 créditos por R$ 14,99; 5.000 por R$ 23,99; ilimitado por R$ 49,99/mês.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'Como cancelo a assinatura mensal?',
     answer:
-      'Cartão AbacatePay: cancele no app em Créditos (imediato). PIX mensal: também em Créditos. Assinaturas Stripe antigas: portal legado. Pacotes de créditos não têm renovação.',
+      'Cartão Asaas: cancele no app em Créditos (imediato). PIX mensal: também em Créditos, vale 30 dias sem renovação automática. Assinaturas Stripe ou AbacatePay antigas: suporte. Pacotes de créditos não têm renovação.',
   },
   {
     id: 'sources',
@@ -260,14 +260,14 @@ const faqEn: FaqItem[] = [
     category: 'pricing',
     question: 'Which currencies can I pay in?',
     answer:
-      'Checkout is BRL only (Brazil), using PIX through AbacatePay. Card payments are temporarily unavailable. Examples: 2,000 credits for R$ 14.99; 5,000 for R$ 23.99; unlimited for R$ 49.99/month.',
+      'Checkout is BRL only (Brazil), using PIX or card through Asaas. Examples: 2,000 credits for R$ 14.99; 5,000 for R$ 23.99; unlimited for R$ 49.99/month.',
   },
   {
     id: 'cancel',
     category: 'pricing',
     question: 'How do I cancel a monthly plan?',
     answer:
-      'AbacatePay card: cancel in-app under Credits (immediate). Monthly PIX: also under Credits. Legacy Stripe subscriptions: billing portal. Credit packs have no renewal.',
+      'Asaas card: cancel in-app under Credits (immediate). Monthly PIX: also under Credits, lasts 30 days with no auto-renew. Legacy Stripe or AbacatePay plans: support. Credit packs have no renewal.',
   },
   {
     id: 'sources',

@@ -30,6 +30,20 @@ describe('EntitlementService', () => {
     expect(snapshot.limits.csvExport).toBe(false);
   });
 
+  it('keeps Asaas card entitlement when the invoice period lapses', async () => {
+    prisma.organization.findUniqueOrThrow.mockResolvedValue({
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+      asaasSubscriptionId: 'sub_asaas_card',
+    });
+    prisma.organizationMember.count.mockResolvedValue(1);
+
+    const snapshot = await service.getSnapshot('org-1');
+    expect(snapshot.plan).toBe(OrgPlan.STARTER_MONTHLY);
+    expect(snapshot.limits.csvExport).toBe(true);
+  });
+
   it('allows CSV export after a completed credit purchase', async () => {
     prisma.organization.findUniqueOrThrow.mockResolvedValue({
       plan: OrgPlan.FREE,

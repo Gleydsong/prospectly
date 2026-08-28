@@ -75,7 +75,8 @@ API health check: `GET /health/ready` (Postgres + Redis).
 | `NEXT_PUBLIC_LANDING_URL` | landing           | its own URL                                                                   |
 | `NEXT_PUBLIC_API_URL`     | landing           | same as `VITE_API_URL`                                                        |
 | `ABACATE_*_URL`           | api               | billing success/cancel on web                                                 |
-| `PIX_PROVIDER`            | api               | keep `ABACATE` until Sandbox passes; set `ASAAS` only at authorized cutover   |
+| `PIX_PROVIDER`            | api               | `ASAAS` after the authorized cutover; rollback is `ABACATE`                   |
+| `ASAAS_ENABLED`           | api               | `true` with Sandbox/production Asaas secrets; empty keys refuse boot          |
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.

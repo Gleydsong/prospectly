@@ -84,4 +84,8 @@ Implementation and local commits do not authorize push, merge, Render mutation, 
 
 ## Continuation state
 
-Planning was approved on 2026-08-28 in `/Users/guidev/orca/workspaces/prospectly/integracao_asaas`. Reinspect the active branch and `origin/main` before creating any future worktree. A Git worktree does not create a staging environment.
+- Branch `Gleydsong/integracao_asaas` contains the Asaas PIX implementation plus the authorized cutover defaults: `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true` in `render.yaml` / `.env.example`. Card subscriptions stay open-ended until canceled; `/billing/success` confirms Asaas plans; Asaas card cancel syncs entitlement.
+- `ASAAS_API_BASE_URL` remains Sandbox until a separate production authorization. Render Dashboard was not mutated from this worktree (MCP unauthorized).
+- Local `.env` is not committed. Copying `.env.example` will refuse API boot until Asaas secrets are filled, or until `ASAAS_ENABLED=false` / `PIX_PROVIDER=DISABLED` for non-billing local work.
+- Rollback remains explicit: `PIX_PROVIDER=ABACATE`. No silent fallback.
+- Remaining work is still external: set Render secrets, Sandbox homologation smoke, inventory of historical AbacatePay records, then production Asaas (`api.asaas.com`) with a separate authorization. Do not merge to `main`, mutate Render, or create live payments unless the operator asks.

@@ -1,6 +1,6 @@
 import type { PaymentMethod, PaymentProviderId, PixProviderId } from './payment-provider';
 
-/** Cards stay on Asaas while PIX routing is an explicit operational decision. */
+/** Cards stay on Asaas. New PIX follows PIX_PROVIDER; cutover default is ASAAS. */
 export function resolvePaymentProviderId(
   method: PaymentMethod,
   pixProvider: PixProviderId,

@@ -88,9 +88,9 @@ projects:
               - key: ABACATE_HTTP_TIMEOUT_MS
                 value: '15000'
               - key: ASAAS_ENABLED
-                value: 'false'
+                value: 'true'
               - key: PIX_PROVIDER
-                value: ABACATE
+                value: ASAAS
               - key: ASAAS_API_KEY
                 sync: false
               - key: ASAAS_WEBHOOK_TOKEN

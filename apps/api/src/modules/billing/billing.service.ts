@@ -450,12 +450,20 @@ export class BillingService {
     pack: { credits: number; amountCentavos: number },
     paymentMethod: PaymentMethod,
   ): Promise<CheckoutResult> {
+    const methodUnavailable =
+      paymentMethod === 'pix'
+        ? 'PIX payments are temporarily unavailable'
+        : 'Card payments are temporarily unavailable';
     if (this.config.get<boolean>('asaas.enabled') !== true) {
-      throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+      throw new ServiceUnavailableException(methodUnavailable);
     }
     const profile = await this.prisma.billingProfile.findUnique({ where: { organizationId } });
     if (!profile?.asaasCustomerId) {
-      throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
+      throw new BadRequestException(
+        paymentMethod === 'pix'
+          ? 'Complete o perfil de cobrança antes de pagar com PIX'
+          : 'Complete o perfil de cobrança antes de pagar com cartão',
+      );
     }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
@@ -577,7 +585,7 @@ export class BillingService {
   }
 
   private pixProvider(): PixProviderId {
-    const configured = this.config.get<string>('billing.pixProvider') ?? 'ABACATE';
+    const configured = this.config.get<string>('billing.pixProvider') ?? 'ASAAS';
     if (configured === 'ABACATE' || configured === 'ASAAS' || configured === 'DISABLED') {
       return configured;
     }
@@ -608,9 +616,11 @@ export class BillingService {
 
     if (org.paymentProvider === PaymentProvider.ASAAS && org.asaasSubscriptionId) {
       await this.asaasClient.cancelSubscription(org.asaasSubscriptionId);
-      await this.prisma.organization.update({
-        where: { id: organizationId },
-        data: { asaasSubscriptionId: null },
+      await this.activation.syncMonthlyStatus({
+        organizationId,
+        status: PlanStatus.CANCELED,
+        provider: PaymentProvider.ASAAS,
+        asaasSubscriptionId: null,
       });
       return { canceled: true };
     }
