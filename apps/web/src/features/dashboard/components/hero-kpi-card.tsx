@@ -65,9 +65,9 @@ export function HeroKpiCard({
           <Skeleton className="h-16 w-36" />
         ) : (
           <div className="relative">
-            <p className="text-4xl font-semibold tabular-nums tracking-tight text-zinc-50 sm:text-5xl">
+            <p className="text-4xl font-semibold tabular-nums tracking-tight text-[color:var(--ink)] sm:text-5xl">
               {animatedRate.toFixed(1)}
-              <span className="ml-1 text-2xl text-zinc-400">%</span>
+              <span className="ml-1 text-2xl text-[color:var(--ink-muted)]">%</span>
             </p>
             <div className="pointer-events-none absolute -right-1 top-0 h-14 w-28 opacity-80">
               <ResponsiveContainer width="100%" height="100%">
@@ -92,7 +92,7 @@ export function HeroKpiCard({
             </div>
           </div>
         )}
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[color:var(--ink-muted)]">
           {loading ? '—' : t('dashboard.heroKpiHint', { newLeads, won })}
         </p>
         <Link

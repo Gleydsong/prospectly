@@ -10,9 +10,9 @@ import type { ProspectingSearchResult } from '@/types';
 import { computeResultOpportunitySignal } from '../opportunity-signal';
 
 const SCORE_TONE = {
-  HIGH: 'bg-brand-500/15 text-brand-300',
-  MEDIUM: 'bg-sky-500/15 text-sky-300',
-  LOW: 'bg-zinc-800 text-zinc-300',
+  HIGH: 'bg-brand-500/15 text-[color:var(--accent)]',
+  MEDIUM: 'bg-sky-500/15 text-[color:var(--ink)]',
+  LOW: 'bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)]',
 } as const;
 
 export interface SearchResultCardProps {
@@ -42,12 +42,12 @@ export function SearchResultCard({
   return (
     <article
       className={cn(
-        'flex h-full flex-col gap-3 rounded-control border bg-zinc-900 p-4 shadow-soft transition-colors',
-        selected ? 'border-brand-500' : 'border-zinc-800 hover:border-zinc-700',
+        'flex h-full flex-col gap-3 rounded-control border bg-[color:var(--surface-card)] p-4 shadow-soft transition-colors',
+        selected ? 'border-brand-500' : 'border-[color:var(--border)] hover:border-[color:var(--border-strong)]',
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 truncate text-sm font-semibold text-zinc-50" title={business.companyName}>
+        <h3 className="min-w-0 truncate text-sm font-semibold text-[color:var(--ink)]" title={business.companyName}>
           {business.companyName}
         </h3>
         <input
@@ -63,7 +63,7 @@ export function SearchResultCard({
                 ? 'Aguarde a conclusão da pesquisa'
                 : undefined
           }
-          className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-700 bg-zinc-950 text-brand-500 focus:ring-brand-400"
+          className="mt-0.5 h-4 w-4 shrink-0 rounded border-[color:var(--border)] bg-[color:var(--surface-card)] text-brand-500 focus:ring-[color:var(--ring)]"
         />
       </div>
 
@@ -83,16 +83,16 @@ export function SearchResultCard({
         </span>
       </div>
 
-      <dl className="space-y-1.5 text-xs text-zinc-400">
+      <dl className="space-y-1.5 text-xs text-[color:var(--ink-muted)]">
         {business.phone ? (
           <div className="flex items-center gap-1.5">
-            <Phone className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+            <Phone className="h-3.5 w-3.5 shrink-0 text-[color:var(--ink-muted)]" aria-hidden />
             <dt className="sr-only">Telefone</dt>
             <dd className="truncate">{business.phone}</dd>
           </div>
         ) : null}
         <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-[color:var(--ink-muted)]" aria-hidden />
           <dt className="sr-only">Localização</dt>
           <dd className="truncate">{location || '—'}</dd>
           <Badge tone={hasWebsite ? 'green' : 'amber'} className="ml-1">
@@ -113,7 +113,7 @@ export function SearchResultCard({
         {business.address ? (
           <div className="flex items-start gap-1.5">
             <dt className="sr-only">Endereço</dt>
-            <dd className="line-clamp-2 text-zinc-500">{business.address}</dd>
+            <dd className="line-clamp-2 text-[color:var(--ink-muted)]">{business.address}</dd>
           </div>
         ) : null}
       </dl>
@@ -135,7 +135,7 @@ export function SearchResultCard({
             href={safeWebsite}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex h-8 items-center gap-1.5 rounded-control border border-zinc-700 px-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-control border border-[color:var(--border)] px-3 text-sm text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)]"
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden />
             Site atual

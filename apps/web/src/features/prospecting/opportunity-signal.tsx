@@ -59,16 +59,16 @@ export function OpportunitySignalBadges({ signal }: { signal: OpportunitySignal 
         ))}
       <details className="relative">
         <summary
-          className="inline-flex min-h-8 min-w-8 cursor-pointer list-none items-center justify-center rounded-control text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
+          className="inline-flex min-h-8 min-w-8 cursor-pointer list-none items-center justify-center rounded-control text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400"
           aria-label={t('opportunity.explainAria')}
         >
           <Info className="h-4 w-4" aria-hidden />
         </summary>
         <div
-          className="absolute left-0 z-20 mt-2 w-64 rounded-control border border-zinc-700 bg-zinc-900 p-3 text-xs text-zinc-300 shadow-lg"
+          className="absolute left-0 z-20 mt-2 w-64 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] p-3 text-xs text-[color:var(--ink)] shadow-lg"
           role="tooltip"
         >
-          <p className="mb-2 font-medium text-zinc-100">{t('opportunity.explainTitle')}</p>
+          <p className="mb-2 font-medium text-[color:var(--ink)]">{t('opportunity.explainTitle')}</p>
           <ul className="list-disc space-y-1 pl-4">
             {signal.reasons.map((reason: OpportunitySignalReasonKey) => (
               <li key={reason}>{t(`opportunity.reason.${reason}`)}</li>

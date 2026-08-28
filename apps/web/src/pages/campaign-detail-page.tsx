@@ -221,7 +221,7 @@ export function CampaignDetailPage() {
         <div className="mt-3">
           <Link
             to="/campaigns"
-            className="text-sm text-zinc-300 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+            className="text-sm text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           >
             {t('campaigns.backToList')}
           </Link>
@@ -238,15 +238,15 @@ export function CampaignDetailPage() {
         <div>
           <Link
             to="/campaigns"
-            className="mb-2 inline-block text-sm text-zinc-300 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+            className="mb-2 inline-block text-sm text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
           >
             {t('campaigns.backToList')}
           </Link>
-          <h1 className="text-2xl font-semibold text-zinc-50">{campaign.name}</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-2xl font-semibold text-[color:var(--ink)]">{campaign.name}</h1>
+          <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
             {campaign.description || t('campaigns.noDescription')}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-400">
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--ink-muted)]">
             <Badge>
               {t(`campaigns.status.${campaign.status}`, {
                 defaultValue: 'Estado não identificado',
@@ -279,7 +279,7 @@ export function CampaignDetailPage() {
         </div>
       </div>
 
-      <Card className="border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90" role="note">
+      <Card className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]" role="note">
         {t('campaigns.assistedNotice')}
       </Card>
 
@@ -305,15 +305,15 @@ export function CampaignDetailPage() {
           ['optOut', metrics?.totals.optOut ?? 0],
         ].map(([key, value]) => (
           <Card key={key} className="p-4">
-            <div className="text-xs uppercase tracking-wide text-zinc-500">
+            <div className="text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
               {t(`campaigns.metrics.${key}`)}
             </div>
-            <div className="mt-1 text-2xl font-semibold text-zinc-50">{value}</div>
+            <div className="mt-1 text-2xl font-semibold text-[color:var(--ink)]">{value}</div>
           </Card>
         ))}
       </div>
       {metrics ? (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[color:var(--ink-muted)]">
           {metrics.eventsRecorded === 0
             ? t('campaigns.metrics.zeroEvents')
             : t('campaigns.metrics.eventsRecorded', { count: metrics.eventsRecorded })}
@@ -321,7 +321,7 @@ export function CampaignDetailPage() {
       ) : null}
 
       <section className="space-y-3" aria-labelledby="campaign-stages-heading">
-        <h2 id="campaign-stages-heading" className="text-lg font-medium text-zinc-100">
+        <h2 id="campaign-stages-heading" className="text-lg font-medium text-[color:var(--ink)]">
           {t('campaigns.stagesTitle')}
         </h2>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -331,7 +331,7 @@ export function CampaignDetailPage() {
                 title={stage.name}
                 description={t(`campaigns.stageType.${stage.type}`, { defaultValue: 'Etapa manual' })}
               />
-              <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
+              <div className="mt-3 flex flex-wrap gap-3 text-sm text-[color:var(--ink-muted)]">
                 <span>
                   {t('campaigns.metrics.leads')}: {'leadCount' in stage ? stage.leadCount : campaign.stageCounts?.[stage.id] ?? 0}
                 </span>
@@ -356,7 +356,7 @@ export function CampaignDetailPage() {
 
       <section className="space-y-3" aria-labelledby="campaign-leads-heading">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="campaign-leads-heading" className="text-lg font-medium text-zinc-100">
+          <h2 id="campaign-leads-heading" className="text-lg font-medium text-[color:var(--ink)]">
             {t('campaigns.leadsTitle')}
           </h2>
           <Button type="button" variant="ghost" size="sm" onClick={() => setTemplateOpen(true)}>
@@ -380,7 +380,7 @@ export function CampaignDetailPage() {
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400">
+                <thead className="border-b border-[color:var(--border)] bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)]">
                   <tr>
                     <th className="px-4 py-3">{t('campaigns.leadColumns.company')}</th>
                     <th className="px-4 py-3">{t('campaigns.leadColumns.contact')}</th>
@@ -391,32 +391,32 @@ export function CampaignDetailPage() {
                 </thead>
                 <tbody>
                   {(leadsQuery.data?.data ?? []).map((row) => (
-                    <tr key={row.leadId} className="border-b border-zinc-800/80 text-zinc-200">
+                    <tr key={row.leadId} className="border-b border-[color:var(--border)] text-[color:var(--ink)]">
                       <td className="px-4 py-3">
                         <Link
                           to={`/leads/${row.leadId}`}
-                          className="font-medium text-zinc-50 underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+                          className="font-medium text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
                         >
                           {row.lead.companyName}
                         </Link>
-                        <div className="text-xs text-zinc-500">
+                        <div className="text-xs text-[color:var(--ink-muted)]">
                           {[row.lead.city, row.lead.state].filter(Boolean).join(' · ') || '—'}
                           {' · '}
                           {t('campaigns.score')}: {row.lead.score}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
                         <div>{row.lead.email ?? '—'}</div>
                         <div>{row.lead.phone ?? '—'}</div>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
                         {formatCampaignLeadStatus(
                           row.status,
                           row.currentStageId,
                           campaign?.metrics?.stages,
                         )}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
                         {row.result
                           ? t(`campaigns.results.${row.result}`, {
                               defaultValue: 'Resultado registrado',
@@ -493,7 +493,7 @@ export function CampaignDetailPage() {
                 href={`https://wa.me/${activeLead.lead.phone.replace(/\D/g, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex h-8 items-center gap-2 rounded-control px-3 text-sm text-zinc-300 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+                className="inline-flex h-8 items-center gap-2 rounded-control px-3 text-sm text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
               >
                 <ExternalLink className="h-4 w-4" aria-hidden />
                 {t('campaigns.openWhatsApp')}
@@ -501,17 +501,17 @@ export function CampaignDetailPage() {
             ) : null}
             <Link
               to={`/leads/${activeLead.leadId}`}
-              className="inline-flex h-8 items-center rounded-control px-3 text-sm text-zinc-300 hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
+              className="inline-flex h-8 items-center rounded-control px-3 text-sm text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
             >
               {t('campaigns.openLead')}
             </Link>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <label className="text-sm text-zinc-300">
+            <label className="text-sm text-[color:var(--ink)]">
               {t('campaigns.resultLabel')}
               <select
-                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2"
+                className="mt-1 w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] px-3 py-2"
                 value={resultValue}
                 onChange={(e) => setResultValue(e.target.value as CampaignLeadResult)}
               >
@@ -522,11 +522,11 @@ export function CampaignDetailPage() {
                 ))}
               </select>
             </label>
-            <label className="text-sm text-zinc-300">
+            <label className="text-sm text-[color:var(--ink)]">
               {t('campaigns.nextAction')}
               <Input className="mt-1" value={nextAction} onChange={(e) => setNextAction(e.target.value)} />
             </label>
-            <label className="text-sm text-zinc-300">
+            <label className="text-sm text-[color:var(--ink)]">
               {t('campaigns.followUpAt')}
               <Input
                 className="mt-1"
@@ -555,7 +555,7 @@ export function CampaignDetailPage() {
           </div>
 
           {previewText ? (
-            <div className="rounded-md border border-zinc-800 bg-zinc-950 p-3 text-sm text-zinc-200">
+            <div className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] p-3 text-sm text-[color:var(--ink)]">
               <p className="mb-2 text-xs text-amber-200">{t('campaigns.previewNotice')}</p>
               <pre className="whitespace-pre-wrap font-sans">{previewText}</pre>
               <Button
@@ -594,7 +594,7 @@ export function CampaignDetailPage() {
                 return (
                   <li key={lead.id}>
                     <label
-                      className={`flex items-start gap-3 rounded-md border border-zinc-800 p-3 ${
+                      className={`flex items-start gap-3 rounded-md border border-[color:var(--border)] p-3 ${
                         blocked ? 'opacity-50' : ''
                       }`}
                     >
@@ -612,8 +612,8 @@ export function CampaignDetailPage() {
                         }}
                       />
                       <span>
-                        <span className="block font-medium text-zinc-100">{lead.companyName}</span>
-                        <span className="block text-xs text-zinc-500">
+                        <span className="block font-medium text-[color:var(--ink)]">{lead.companyName}</span>
+                        <span className="block text-xs text-[color:var(--ink-muted)]">
                           {[lead.city, lead.email, lead.phone].filter(Boolean).join(' · ')}
                         </span>
                         {blocked ? (
@@ -622,7 +622,7 @@ export function CampaignDetailPage() {
                           </span>
                         ) : null}
                         {alreadyIn ? (
-                          <span className="mt-1 block text-xs text-zinc-500">
+                          <span className="mt-1 block text-xs text-[color:var(--ink-muted)]">
                             {t('campaigns.alreadyInCampaign')}
                           </span>
                         ) : null}
@@ -664,7 +664,7 @@ export function CampaignDetailPage() {
       >
         <div className="space-y-4">
           <p className="text-xs text-amber-200">{t('campaigns.previewNotice')}</p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-[color:var(--ink-muted)]">
             {t('campaigns.variablesHint')}: {(variablesQuery.data ?? []).join(', ')}
           </p>
           <Input
@@ -686,7 +686,7 @@ export function CampaignDetailPage() {
             aria-label={t('campaigns.templateSubject')}
           />
           <textarea
-            className="min-h-28 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm"
+            className="min-h-28 w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm"
             value={templateForm.body}
             onChange={(e) => setTemplateForm((c) => ({ ...c, body: e.target.value }))}
             aria-label={t('campaigns.templateBody')}
@@ -703,11 +703,11 @@ export function CampaignDetailPage() {
               {t('campaigns.saveTemplate')}
             </Button>
           </div>
-          <ul className="space-y-2 text-sm text-zinc-300">
+          <ul className="space-y-2 text-sm text-[color:var(--ink)]">
             {(templatesQuery.data?.data ?? []).map((template) => (
-              <li key={template.id} className="rounded-md border border-zinc-800 p-3">
-                <div className="font-medium text-zinc-100">{template.name}</div>
-                <div className="text-xs text-zinc-500">
+              <li key={template.id} className="rounded-md border border-[color:var(--border)] p-3">
+                <div className="font-medium text-[color:var(--ink)]">{template.name}</div>
+                <div className="text-xs text-[color:var(--ink-muted)]">
                   {formatMessageTemplateCategory(template.category)}
                 </div>
               </li>

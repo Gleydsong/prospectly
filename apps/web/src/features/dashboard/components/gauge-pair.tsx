@@ -49,13 +49,13 @@ function Gauge({
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center pt-2">
-          <span className="text-lg font-semibold tabular-nums text-zinc-50">
+          <span className="text-lg font-semibold tabular-nums text-[color:var(--ink)]">
             {clamped.toFixed(0)}
-            <span className="text-xs text-zinc-500">%</span>
+            <span className="text-xs text-[color:var(--ink-muted)]">%</span>
           </span>
         </div>
       </div>
-      <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+      <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">
         {label}
       </p>
     </div>

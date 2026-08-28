@@ -53,8 +53,8 @@ const BANNER: Record<
     title: 'Ainda não verificamos este site',
     body: 'Quando quiser, clique em Reanalisar para checar se o site abre e como ele se apresenta.',
     icon: Globe2,
-    shell: 'border-white/10 bg-white/[0.03]',
-    iconClass: 'text-zinc-400',
+    shell: 'border-[color:var(--border)] bg-[color:var(--surface-subtle)]',
+    iconClass: 'text-[color:var(--ink-muted)]',
   },
   pending: {
     title: 'Verificando o site agora…',
@@ -98,20 +98,20 @@ function Signal({
   positive?: boolean | null;
 }) {
   return (
-    <div className="rounded-control border border-white/[0.08] bg-zinc-950/40 px-3 py-2.5">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">{label}</p>
+    <div className="rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2.5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">{label}</p>
       <p
         className={cn(
           'mt-1 text-sm font-medium',
-          positive === true && 'text-emerald-300',
-          positive === false && 'text-amber-200',
-          positive == null && 'text-zinc-100',
+          positive === true && 'text-emerald-600',
+          positive === false && 'text-amber-600',
+          positive == null && 'text-[color:var(--ink)]',
         )}
         title={hint}
       >
         {value}
       </p>
-      {hint ? <p className="mt-0.5 text-xs text-zinc-500">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-xs text-[color:var(--ink-muted)]">{hint}</p> : null}
     </div>
   );
 }
@@ -157,15 +157,15 @@ export function WebsiteAnalysisPanel({
       >
         <div
           className={cn(
-            'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/25',
+            'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--surface-hover)]',
             banner.iconClass,
           )}
         >
           <Icon className="h-4 w-4" aria-hidden />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-zinc-50">{banner.title}</p>
-          <p className="mt-1 text-sm leading-relaxed text-zinc-400">{banner.body}</p>
+          <p className="text-sm font-semibold text-[color:var(--ink)]">{banner.title}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-muted)]">{banner.body}</p>
         </div>
       </div>
 

@@ -13,8 +13,6 @@ const mocks = vi.hoisted(() => ({
   useCreateTask: vi.fn(),
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
-  useDeleteLead: vi.fn(),
-  mutateAsync: vi.fn(),
   deleteTaskAsync: vi.fn(),
 }));
 
@@ -23,10 +21,6 @@ vi.mock('@/features/tasks/hooks', () => ({
   useCreateTask: mocks.useCreateTask,
   useUpdateTask: mocks.useUpdateTask,
   useDeleteTask: mocks.useDeleteTask,
-}));
-
-vi.mock('@/features/leads/hooks', () => ({
-  useDeleteLead: mocks.useDeleteLead,
 }));
 
 function Wrapper({ children }: PropsWithChildren) {
@@ -50,11 +44,6 @@ describe('TasksPage', () => {
       isPending: false,
       variables: undefined,
     });
-    mocks.useDeleteLead.mockReturnValue({
-      mutateAsync: mocks.mutateAsync,
-      isPending: false,
-      variables: undefined,
-    });
     mocks.useTasks.mockReturnValue({
       isLoading: false,
       data: {
@@ -74,10 +63,10 @@ describe('TasksPage', () => {
     });
   });
 
-  it('deletes the linked client from the task card after confirmation', async () => {
+  it('deletes the task even when it is linked to a client', async () => {
     const user = userEvent.setup();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    mocks.mutateAsync.mockResolvedValue({});
+    mocks.deleteTaskAsync.mockResolvedValue({});
 
     render(
       <Wrapper>
@@ -85,10 +74,10 @@ describe('TasksPage', () => {
       </Wrapper>,
     );
 
-    const buttons = screen.getAllByRole('button', { name: /apagar cliente medic saúde/i });
+    const buttons = screen.getAllByRole('button', { name: /apagar tarefa contato/i });
     expect(buttons.length).toBeGreaterThan(0);
     await user.click(buttons[0]!);
-    expect(mocks.mutateAsync).toHaveBeenCalledWith('lead-1');
+    expect(mocks.deleteTaskAsync).toHaveBeenCalledWith('task-1');
   });
 
   it('deletes an orphan task from the actions column', async () => {

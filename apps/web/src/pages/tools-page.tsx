@@ -10,14 +10,9 @@ export const QUICK = [
   { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
   { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
   { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },
-  { to: '/pipeline', titleKey: 'tools.pipelineTitle', descKey: 'tools.pipelineDesc' },
 ] as const;
 
 export const ALL = [
-  { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
-  { to: '/search', titleKey: 'tools.searchTitle', descKey: 'tools.searchDesc' },
-  { to: '/imports', titleKey: 'tools.importTitle', descKey: 'tools.importDesc' },
-  { to: '/agents', titleKey: 'tools.agentsTitle', descKey: 'tools.agentsDesc' },
   { to: '/agents/whatsapp', titleKey: 'tools.whatsappTitle', descKey: 'tools.whatsappDesc' },
   { to: '/campaigns', titleKey: 'tools.campaignsTitle', descKey: 'tools.campaignsDesc' },
   { to: '/pipeline', titleKey: 'tools.pipelineTitle', descKey: 'tools.pipelineDesc' },

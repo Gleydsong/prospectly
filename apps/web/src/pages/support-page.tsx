@@ -28,10 +28,10 @@ export function SupportPage() {
               ?
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
             {t('support.title')}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t('support.subtitle')}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{t('support.subtitle')}</p>
           {supportMailto ? (
             <a
               href={supportMailto}
@@ -42,7 +42,7 @@ export function SupportPage() {
           ) : null}
 
           {sent ? (
-            <p className="mt-8 rounded-control border border-white/[0.08] bg-zinc-900/50 px-4 py-3 text-sm text-zinc-300">
+            <p className="mt-8 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-4 py-3 text-sm text-[color:var(--ink)]">
               {t('support.sent', { email: SUPPORT_EMAIL })}
             </p>
           ) : (

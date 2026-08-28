@@ -19,9 +19,9 @@ const variants: Record<Variant, string> = {
   glass: 'cta-glass',
   secondary:
     'border border-[color:var(--cta-secondary-border)] bg-[color:var(--cta-secondary-bg)] text-[color:var(--cta-secondary-ink)] hover:bg-[color:var(--cta-secondary-hover)] backdrop-blur-xl',
-  ghost: 'text-zinc-300 hover:bg-[color:var(--cta-ghost-hover)] hover:text-zinc-50',
+  ghost: 'text-[color:var(--ink-muted)] hover:bg-[color:var(--cta-ghost-hover)] hover:text-[color:var(--ink)]',
   outline:
-    'border border-[color:var(--border)] bg-transparent text-zinc-200 hover:bg-[color:var(--cta-ghost-hover)] backdrop-blur-sm',
+    'border border-[color:var(--border)] bg-transparent text-[color:var(--ink)] hover:bg-[color:var(--cta-ghost-hover)] backdrop-blur-sm',
   danger: 'bg-red-600 text-white hover:bg-red-500',
 };
 

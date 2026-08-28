@@ -53,8 +53,8 @@ export class AppErrorBoundary extends Component<Props, State> {
       <div className="flex min-h-screen items-center justify-center bg-zinc-950 p-6">
         <Card className="w-full max-w-md" role="alert">
           <CardHeader
-            title="Algo correu mal"
-            description="Uma falha inesperada impediu o carregamento desta vista. Os restantes fluxos devem continuar acessíveis após recuperar."
+            title="Algo deu errado"
+            description="Uma falha inesperada impediu o carregamento desta tela. Os outros fluxos devem continuar acessíveis depois de recuperar."
           />
           <CardContent className="space-y-4">
             <p className="text-sm text-zinc-400">

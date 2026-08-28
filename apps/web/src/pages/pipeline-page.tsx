@@ -99,8 +99,8 @@ export function PipelinePage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.pipeline')}</h1>
-        <p className="text-sm text-zinc-500">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.pipeline')}</h1>
+        <p className="text-sm text-[color:var(--ink-muted)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
       </div>
 
       <div
@@ -143,22 +143,22 @@ export function PipelinePage() {
               setOverStageId(null);
             }}
             className={cn(
-              'flex w-72 shrink-0 flex-col rounded-control border border-zinc-800 bg-zinc-900/60',
-              overStageId === stage.id ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-zinc-800',
+              'flex w-72 shrink-0 flex-col rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)]',
+              overStageId === stage.id ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-[color:var(--border)]',
             )}
           >
             <header
               className="flex items-center justify-between rounded-t-xl px-3 py-2.5"
               style={{ borderTop: `3px solid ${stage.color ?? '#94a3b8'}` }}
             >
-              <h2 className="text-sm font-semibold text-zinc-100">{stage.name}</h2>
-              <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-xs font-medium text-zinc-500">
+              <h2 className="text-sm font-semibold text-[color:var(--ink)]">{stage.name}</h2>
+              <span className="rounded-full bg-[color:var(--surface-card)] px-2 py-0.5 text-xs font-medium text-[color:var(--ink-muted)]">
                 {stage.totalCount}
               </span>
             </header>
             <div className="flex flex-1 flex-col gap-2 p-2">
               {stage.leads.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-zinc-700 p-3 text-center text-xs text-zinc-400">
+                <p className="rounded-lg border border-dashed border-[color:var(--border)] p-3 text-center text-xs text-[color:var(--ink-muted)]">
                   {t('pipeline.emptyColumn')}
                 </p>
               ) : (
@@ -246,20 +246,20 @@ function LeadCard({
     >
       <Link
         to={`/leads/${lead.id}`}
-        className="block text-sm font-medium text-zinc-50 hover:text-brand-400"
+        className="block text-sm font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)]"
       >
         {lead.companyName}
       </Link>
-      <p className="text-xs text-zinc-500">{lead.city ?? '—'}</p>
+      <p className="text-xs text-[color:var(--ink-muted)]">{lead.city ?? '—'}</p>
       <div className="flex items-center justify-between">
         <ScoreBadge score={lead.score} />
-        <span className="text-xs text-zinc-400">{lead.owner?.name ?? ''}</span>
+        <span className="text-xs text-[color:var(--ink-muted)]">{lead.owner?.name ?? ''}</span>
       </div>
       <label className="block space-y-1">
-        <span className="text-xs font-medium text-zinc-400">{t('pipeline.moveToStage')}</span>
+        <span className="text-xs font-medium text-[color:var(--ink-muted)]">{t('pipeline.moveToStage')}</span>
         <select
           ref={selectRef}
-          className="h-8 w-full rounded-control border border-zinc-700 bg-zinc-950 px-2 text-xs text-zinc-100 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/20"
+          className="h-8 w-full rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] px-2 text-xs text-[color:var(--ink)] focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"
           defaultValue=""
           disabled={disabled || otherStages.length === 0}
           aria-label={t('pipeline.moveToStageFor', { lead: lead.companyName })}

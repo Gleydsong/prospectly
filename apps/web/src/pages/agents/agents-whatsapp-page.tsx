@@ -157,14 +157,14 @@ export function AgentsWhatsappPage() {
                   <li key={lead.id}>
                     <button
                       type="button"
-                      className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-zinc-800 bg-zinc-950/60 px-3 py-2 text-left hover:border-zinc-700"
+                      className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2 text-left hover:border-[color:var(--border-strong)]"
                       onClick={() => selectLead(lead.id)}
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-zinc-100">
+                        <span className="block truncate text-sm font-medium text-[color:var(--ink)]">
                           {lead.companyName}
                         </span>
-                        <span className="block truncate text-xs text-zinc-500">
+                        <span className="block truncate text-xs text-[color:var(--ink-muted)]">
                           {lead.phone ?? t('agents.whatsapp.noPhone')}
                         </span>
                       </span>
@@ -179,10 +179,10 @@ export function AgentsWhatsappPage() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-medium text-zinc-100">
+              <p className="text-sm font-medium text-[color:var(--ink)]">
                 {preselected.data?.companyName ?? variants.data?.companyName ?? '…'}
               </p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[color:var(--ink-muted)]">
                 {preselected.data?.phone ??
                   preselected.data?.whatsapp ??
                   variants.data?.phone ??
@@ -207,7 +207,7 @@ export function AgentsWhatsappPage() {
                       'rounded-control border px-2 py-0.5 text-[10px] uppercase tracking-wide',
                       variants.data.source === 'ollama'
                         ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-                        : 'border-zinc-700 bg-zinc-900 text-zinc-400',
+                        : 'border-[color:var(--border)] bg-[color:var(--surface-card)] text-[color:var(--ink-muted)]',
                     )}
                     data-testid="whatsapp-source-badge"
                   >
@@ -252,7 +252,7 @@ export function AgentsWhatsappPage() {
                             'flex h-full w-full flex-col gap-1 rounded-control border px-3 py-2 text-left',
                             active
                               ? 'border-brand-500/40 bg-brand-500/10'
-                              : 'border-zinc-800 bg-zinc-950/60 hover:border-zinc-700',
+                              : 'border-[color:var(--border)] bg-[color:var(--surface-subtle)] hover:border-[color:var(--border-strong)]',
                           )}
                           onClick={() => {
                             setShowSavedTemplates(false);
@@ -262,12 +262,12 @@ export function AgentsWhatsappPage() {
                             setCopyOk(false);
                           }}
                         >
-                          <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                          <span className="text-xs font-medium uppercase tracking-wide text-[color:var(--ink-muted)]">
                             {t(`agents.whatsapp.angles.${item.angle}`, {
                               defaultValue: item.label,
                             })}
                           </span>
-                          <span className="line-clamp-3 text-sm text-zinc-200">{item.body}</span>
+                          <span className="line-clamp-3 text-sm text-[color:var(--ink)]">{item.body}</span>
                         </button>
                       </li>
                     );
@@ -276,7 +276,7 @@ export function AgentsWhatsappPage() {
               ) : null}
 
               {(templates.data?.data?.length ?? 0) > 0 ? (
-                <div className="space-y-2 border-t border-zinc-800 pt-3">
+                <div className="space-y-2 border-t border-[color:var(--border)] pt-3">
                   <Button
                     size="sm"
                     variant="ghost"
@@ -314,7 +314,7 @@ export function AgentsWhatsappPage() {
                 data-testid="whatsapp-preview"
               />
 
-              <p className="text-xs text-zinc-500">{t('agents.whatsapp.assistedNote')}</p>
+              <p className="text-xs text-[color:var(--ink-muted)]">{t('agents.whatsapp.assistedNote')}</p>
 
               {message.isError && showSavedTemplates ? (
                 <p className="text-sm text-red-300" role="alert">

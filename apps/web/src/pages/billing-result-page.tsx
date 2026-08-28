@@ -44,10 +44,10 @@ export function BillingSuccessPage() {
   else if (timedOut) state = 'delayed';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-800 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-bold text-zinc-50">{t(`billing.successTitle.${state}`)}</h1>
-        <p className="mt-3 text-sm text-zinc-300" role="status">
+    <div className="flex min-h-screen items-center justify-center bg-[color:var(--bg)] p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-card)] p-8 text-center shadow-sm">
+        <h1 className="text-2xl font-bold text-[color:var(--ink)]">{t(`billing.successTitle.${state}`)}</h1>
+        <p className="mt-3 text-sm text-[color:var(--ink-muted)]" role="status">
           {t(`billing.successBody.${state}`)}
         </p>
         <Link to="/credits" className="mt-6 inline-block" onClick={() => clearCheckoutIntent()}>
@@ -67,10 +67,10 @@ export function BillingCancelPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-800 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-bold text-zinc-50">{t('billing.cancelTitle')}</h1>
-        <p className="mt-3 text-sm text-zinc-300">{t('billing.cancelBody')}</p>
+    <div className="flex min-h-screen items-center justify-center bg-[color:var(--bg)] p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-card)] p-8 text-center shadow-sm">
+        <h1 className="text-2xl font-bold text-[color:var(--ink)]">{t('billing.cancelTitle')}</h1>
+        <p className="mt-3 text-sm text-[color:var(--ink-muted)]">{t('billing.cancelBody')}</p>
         <div className="mt-6 flex justify-center gap-3">
           <Link to="/credits">
             <Button type="button">{t('billing.tryAgain')}</Button>

@@ -152,7 +152,7 @@ function buildResultsCsv(results: ProspectingSearchResult[]): string {
 
 function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
   return (
-    <div className="space-y-2 rounded-control bg-zinc-800/60 p-3 text-sm text-zinc-300" role="status">
+    <div className="space-y-2 rounded-control bg-[color:var(--surface-subtle)] p-3 text-sm text-[color:var(--ink)]" role="status">
       <p>
         Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s),{' '}
         {summary.invalid} inválido(s) e {summary.conflicts} possível(is) duplicado(s).
@@ -166,8 +166,8 @@ function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
                 <>
                   {' '}
                   —{' '}
-                  <Link className="underline hover:text-white" to={`/leads/${item.leadId}`}>
-                    ver cliente potencial
+                  <Link className="underline hover:text-[color:var(--accent)]" to={`/leads/${item.leadId}`}>
+                    ver cliente
                   </Link>
                 </>
               ) : null}
@@ -393,13 +393,13 @@ export function SearchPage() {
         <CardContent className="space-y-5 p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 max-w-2xl">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--ink-muted)]">
                 {t('search.highIntentEyebrow')}
               </p>
-              <h1 className="mt-2 text-balance text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+              <h1 className="mt-2 text-balance text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
                 {t('search.highIntentTitle')}
               </h1>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+              <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">
                 {t('search.highIntentDesc')}
               </p>
             </div>
@@ -424,7 +424,7 @@ export function SearchPage() {
                 disabled={!selectedCountry || regionsQuery.isLoading}
                 {...register('state')}
               >
-                <option value="">{regionsQuery.isLoading ? 'A carregar…' : 'Selecione o estado'}</option>
+                <option value="">{regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}</option>
                 {regions.map((region) => (
                   <option key={region.code} value={region.code}>
                     {selectedCountry === 'BR' ? `${region.code} — ${region.name}` : region.name}
@@ -444,7 +444,7 @@ export function SearchPage() {
                   {!selectedRegion
                     ? 'Escolha o estado primeiro'
                     : citiesQuery.isLoading
-                      ? 'A carregar…'
+                      ? 'Carregando…'
                       : 'Selecione a cidade'}
                 </option>
                 {cities.map((city) => (
@@ -485,7 +485,7 @@ export function SearchPage() {
               <ul className="flex flex-wrap gap-2" aria-label="Nichos selecionados">
                 {selectedCategories.map((category) => (
                   <li key={category}>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 py-1 pl-3 pr-1 text-xs font-medium text-brand-200">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 py-1 pl-3 pr-1 text-xs font-medium text-[color:var(--accent)]">
                       {CATEGORY_LABEL[category] ?? category}
                       <button
                         type="button"
@@ -507,15 +507,15 @@ export function SearchPage() {
             ) : null}
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--ink)]">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-brand-500 focus:ring-brand-400"
+                  className="h-4 w-4 rounded border-[color:var(--border)] bg-[color:var(--surface-card)] text-brand-500 focus:ring-[color:var(--ring)]"
                   {...register('onlyWithoutWebsite')}
                 />
                 Somente empresas sem site informado
               </label>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-[color:var(--ink-muted)]">
                 Cada busca consome {CREDIT_COSTS.mapsSearch} créditos após as buscas grátis.
               </p>
             </div>
@@ -527,7 +527,7 @@ export function SearchPage() {
             ) : null}
           </form>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800 pt-3 text-xs text-zinc-500">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--border)] pt-3 text-xs text-[color:var(--ink-muted)]">
             <p className="flex items-center gap-1.5">
               {availableCategoryCount < categoryOptions.length ? (
                 <Lock className="h-3.5 w-3.5" aria-hidden />
@@ -535,7 +535,7 @@ export function SearchPage() {
               {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
               {planLabel(plan)}
             </p>
-            <Link to="/credits" className="font-semibold text-zinc-300 hover:text-zinc-50 hover:underline">
+            <Link to="/credits" className="font-semibold text-[color:var(--accent)] hover:underline">
               Ver todos os planos →
             </Link>
           </div>
@@ -553,7 +553,7 @@ export function SearchPage() {
                       ? ' — selecione os resultados para enviar ao CRM.'
                       : ' — atualizando automaticamente enquanto estiver ativa.'
                   }`
-                : 'A carregar pesquisa.'
+                : 'Carregando pesquisa.'
             }
             action={
               <div className="flex flex-wrap items-center gap-2">
@@ -608,21 +608,21 @@ export function SearchPage() {
             ) : (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-[color:var(--ink)]">
                     <input
                       type="checkbox"
                       aria-label="Selecionar todos os resultados desta página"
                       checked={allCurrentResultsSelected}
                       onChange={toggleCurrentPage}
                       disabled={selectableResultIds.length === 0}
-                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-950 text-brand-500 focus:ring-brand-400"
+                      className="h-4 w-4 rounded border-[color:var(--border)] bg-[color:var(--surface-card)] text-brand-500 focus:ring-[color:var(--ring)]"
                     />
                     Selecionar todos
                   </label>
-                  <p className="text-sm text-zinc-500">
-                    <span className="font-medium text-amber-300">{withoutWebsiteCount}</span> sem site
+                  <p className="text-sm text-[color:var(--ink-muted)]">
+                    <span className="font-medium text-amber-600">{withoutWebsiteCount}</span> sem site
                     {' · '}
-                    <span className="font-medium text-zinc-300">
+                    <span className="font-medium text-[color:var(--ink)]">
                       {resultPage?.meta.total ?? results.length}
                     </span>{' '}
                     total
@@ -647,13 +647,13 @@ export function SearchPage() {
                 {resultPage?.meta ? (
                   <Pagination {...resultPage.meta} onPageChange={changeResultsPage} />
                 ) : null}
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-[color:var(--ink-muted)]">
                   Resultados combinados de OpenStreetMap e Google Places quando disponíveis. Dados ©{' '}
                   <a
                     href="https://www.openstreetmap.org/copyright"
                     target="_blank"
                     rel="noreferrer"
-                    className="underline hover:text-zinc-200"
+                    className="underline hover:text-[color:var(--ink)]"
                   >
                     colaboradores do OpenStreetMap
                   </a>
@@ -688,7 +688,7 @@ export function SearchPage() {
             />
           ) : (
             <div className="space-y-3">
-              <ul className="divide-y divide-zinc-800" aria-label="Histórico de pesquisas">
+              <ul className="divide-y divide-[color:var(--border)]" aria-label="Histórico de pesquisas">
                 {searches.map((search) => (
                   <li key={search.id}>
                     <div className="flex items-start gap-2 py-3">
@@ -696,13 +696,13 @@ export function SearchPage() {
                         type="button"
                         onClick={() => selectSearch(search.id)}
                         aria-pressed={search.id === selectedSearchId}
-                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-zinc-950 focus-visible:rounded-control"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left hover:bg-[color:var(--surface-hover)] focus-visible:rounded-control"
                       >
                         <span className="min-w-0">
-                          <span className="block font-medium text-zinc-50">
+                          <span className="block font-medium text-[color:var(--ink)]">
                             {formatSearchHeading(search.input)}
                           </span>
-                          <span className="text-sm text-zinc-500">
+                          <span className="text-sm text-[color:var(--ink-muted)]">
                             {formatDateTime(search.createdAt)}
                           </span>
                         </span>
