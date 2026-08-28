@@ -106,7 +106,7 @@ export function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[var(--chrome-bg)] shadow-[0_1px_0_rgba(16,24,40,0.03)] backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-3 px-4 lg:px-6">
+      <div className="mx-auto flex h-16 min-w-0 max-w-[1200px] items-center gap-1.5 overflow-hidden px-3 sm:gap-3 sm:px-4 lg:px-6">
         <button
           type="button"
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] lg:hidden"
@@ -123,8 +123,8 @@ export function TopNav() {
           aria-label="Prospectly"
           className="inline-flex shrink-0 items-center gap-0 text-lg font-semibold tracking-tight text-[color:var(--ink)]"
         >
-          <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-          <span className="-ml-0.5 leading-none">rospectly</span>
+          <img src={prospectlyMark} alt="" aria-hidden className="h-7 w-7 shrink-0" />
+          <span className="hidden leading-none min-[380px]:inline">rospectly</span>
         </Link>
 
         <nav className="ml-2 hidden items-center gap-0.5 lg:flex" aria-label={t('nav.mainNav')}>

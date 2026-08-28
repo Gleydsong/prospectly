@@ -231,63 +231,85 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.08] text-xs font-medium uppercase tracking-wide text-zinc-500">
-                <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colClient')}</th>
-                <th className="px-3 py-3 font-semibold">{t('principal.colCity')}</th>
-                <th className="px-3 py-3 font-semibold">{t('principal.colStatus')}</th>
-                <th className="px-3 py-3 font-semibold">{t('principal.colScore')}</th>
-                <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colActions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leadsQuery.isLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8">
-                    <Skeleton className="h-24 w-full" />
-                  </td>
-                </tr>
-              ) : leads.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center text-sm text-zinc-500">
-                    {t('principal.emptyClients')}
-                  </td>
-                </tr>
-              ) : (
-                leads.map((lead) => (
-                  <tr
-                    key={lead.id}
-                    className="border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+        {leadsQuery.isLoading ? (
+          <div className="px-5 py-8 sm:px-6">
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : leads.length === 0 ? (
+          <p className="px-5 py-16 text-center text-sm text-zinc-500 sm:px-6">
+            {t('principal.emptyClients')}
+          </p>
+        ) : (
+          <>
+            <ul className="divide-y divide-white/[0.06] md:hidden">
+              {leads.map((lead) => (
+                <li key={lead.id}>
+                  <Link
+                    to={`/leads/${lead.id}`}
+                    className="flex min-w-0 flex-col gap-2 px-4 py-3.5 hover:bg-white/[0.03]"
                   >
-                    <td className="px-5 py-3.5 sm:px-6">
-                      <Link
-                        to={`/leads/${lead.id}`}
-                        className="font-semibold text-zinc-50 hover:underline"
-                      >
-                        {lead.companyName}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-3.5 text-zinc-400">{lead.city ?? '—'}</td>
-                    <td className="px-3 py-3.5">
-                      <LeadStatusBadge status={lead.status} />
-                    </td>
-                    <td className="px-3 py-3.5 tabular-nums text-zinc-300">{lead.score ?? '—'}</td>
-                    <td className="px-5 py-3.5 sm:px-6">
-                      <Link
-                        to={`/leads/${lead.id}`}
-                        className="text-sm font-semibold text-zinc-300 hover:text-zinc-50"
-                      >
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-zinc-50">{lead.companyName}</p>
+                        <p className="truncate text-xs text-zinc-500">{lead.city ?? '—'}</p>
+                      </div>
+                      <span className="shrink-0 text-sm font-semibold text-zinc-300">
                         {t('principal.open')}
-                      </Link>
-                    </td>
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <LeadStatusBadge status={lead.status} />
+                      <span className="tabular-nums text-xs text-zinc-400">{lead.score ?? '—'}</span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-xs font-medium uppercase tracking-wide text-zinc-500">
+                    <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colClient')}</th>
+                    <th className="px-3 py-3 font-semibold">{t('principal.colCity')}</th>
+                    <th className="px-3 py-3 font-semibold">{t('principal.colStatus')}</th>
+                    <th className="px-3 py-3 font-semibold">{t('principal.colScore')}</th>
+                    <th className="px-5 py-3 font-semibold sm:px-6">{t('principal.colActions')}</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      className="border-b border-white/[0.06] transition-colors hover:bg-white/[0.03]"
+                    >
+                      <td className="px-5 py-3.5 sm:px-6">
+                        <Link
+                          to={`/leads/${lead.id}`}
+                          className="font-semibold text-zinc-50 hover:underline"
+                        >
+                          {lead.companyName}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-3.5 text-zinc-400">{lead.city ?? '—'}</td>
+                      <td className="px-3 py-3.5">
+                        <LeadStatusBadge status={lead.status} />
+                      </td>
+                      <td className="px-3 py-3.5 tabular-nums text-zinc-300">{lead.score ?? '—'}</td>
+                      <td className="px-5 py-3.5 sm:px-6">
+                        <Link
+                          to={`/leads/${lead.id}`}
+                          className="text-sm font-semibold text-zinc-300 hover:text-zinc-50"
+                        >
+                          {t('principal.open')}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] px-5 py-3 text-sm text-zinc-500 sm:px-6">
           <p>
