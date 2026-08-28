@@ -16,7 +16,6 @@ import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { useDeleteLead } from '@/features/leads/hooks';
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '@/features/tasks/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { TASK_STATUS_LABELS } from '@/lib/presentation-labels';
@@ -45,22 +44,8 @@ export function TasksPage() {
   const query = useTasks({ page, pageSize: 15, status: status || undefined });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const deleteLead = useDeleteLead();
   const deleteTask = useDeleteTask();
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const removeLead = async (leadId: string, companyName: string) => {
-    const confirmed = window.confirm(
-      `Apagar o cliente "${companyName}"? Ele será removido da lista de clientes potenciais.`,
-    );
-    if (!confirmed) return;
-    setActionError(null);
-    try {
-      await deleteLead.mutateAsync(leadId);
-    } catch (error) {
-      setActionError(getApiErrorMessage(error));
-    }
-  };
 
   const removeTask = async (task: Task) => {
     const confirmed = window.confirm(`Apagar a tarefa "${task.title}"?`);
@@ -90,8 +75,8 @@ export function TasksPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-50">{t('leads.tasks')}</h1>
-          <p className="text-sm text-zinc-500">Acompanhe próximos passos com os leads</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.tasks')}</h1>
+          <p className="text-sm text-[color:var(--ink-muted)]">Acompanhe os próximos passos com os clientes</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4" aria-hidden />
@@ -142,7 +127,7 @@ export function TasksPage() {
               {tasks.map((task) => (
                 <li key={task.id} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="font-medium text-zinc-50">{task.title}</p>
+                    <p className="font-medium text-[color:var(--ink)]">{task.title}</p>
                     <Badge
                       tone={
                         task.priority === 'URGENT' || task.priority === 'HIGH' ? 'red' : 'slate'
@@ -169,10 +154,8 @@ export function TasksPage() {
                     </Badge>
                     <TaskRowActions
                       task={task}
-                      deletingLead={deleteLead.isPending && deleteLead.variables === task.lead?.id}
                       deletingTask={deleteTask.isPending && deleteTask.variables === task.id}
                       onComplete={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
-                      onDeleteLead={removeLead}
                       onDeleteTask={removeTask}
                     />
                   </div>
@@ -187,7 +170,7 @@ export function TasksPage() {
                       Título
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
-                      Cliente potencial
+                      Cliente
                     </th>
                     <th scope="col" className="px-5 py-3 font-medium">
                       Vencimento
@@ -204,7 +187,7 @@ export function TasksPage() {
                 <tbody>
                   {tasks.map((task) => (
                     <tr key={task.id} className="border-b border-zinc-800">
-                      <td className="px-5 py-3 font-medium text-zinc-50">{task.title}</td>
+                      <td className="px-5 py-3 font-medium text-[color:var(--ink)]">{task.title}</td>
                       <td className="px-5 py-3">
                         <TaskLeadLink lead={task.lead} />
                       </td>
@@ -234,10 +217,8 @@ export function TasksPage() {
                       <td className="px-5 py-3 text-right">
                         <TaskRowActions
                           task={task}
-                          deletingLead={deleteLead.isPending && deleteLead.variables === task.lead?.id}
                           deletingTask={deleteTask.isPending && deleteTask.variables === task.id}
                           onComplete={() => updateTask.mutate({ id: task.id, status: 'DONE' })}
-                          onDeleteLead={removeLead}
                           onDeleteTask={removeTask}
                         />
                       </td>
@@ -315,17 +296,13 @@ function TaskLeadLink({ lead }: { lead: Task['lead'] }) {
 
 function TaskRowActions({
   task,
-  deletingLead,
   deletingTask,
   onComplete,
-  onDeleteLead,
   onDeleteTask,
 }: {
   task: Task;
-  deletingLead: boolean;
   deletingTask: boolean;
   onComplete: () => void;
-  onDeleteLead: (leadId: string, companyName: string) => void;
   onDeleteTask: (task: Task) => void;
 }) {
   return (
@@ -335,31 +312,17 @@ function TaskRowActions({
           Concluir
         </Button>
       ) : null}
-      {task.lead ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          aria-label={`Apagar cliente ${task.lead.companyName}`}
-          loading={deletingLead}
-          onClick={() => onDeleteLead(task.lead!.id, task.lead!.companyName)}
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          aria-label={`Apagar tarefa ${task.title}`}
-          loading={deletingTask}
-          onClick={() => onDeleteTask(task)}
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
-      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+        aria-label={`Apagar tarefa ${task.title}`}
+        loading={deletingTask}
+        onClick={() => onDeleteTask(task)}
+      >
+        <Trash2 className="h-4 w-4" aria-hidden />
+      </Button>
     </div>
   );
 }

@@ -424,7 +424,7 @@ export function SearchPage() {
                 disabled={!selectedCountry || regionsQuery.isLoading}
                 {...register('state')}
               >
-                <option value="">{regionsQuery.isLoading ? 'A carregar…' : 'Selecione o estado'}</option>
+                <option value="">{regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}</option>
                 {regions.map((region) => (
                   <option key={region.code} value={region.code}>
                     {selectedCountry === 'BR' ? `${region.code} — ${region.name}` : region.name}
@@ -444,7 +444,7 @@ export function SearchPage() {
                   {!selectedRegion
                     ? 'Escolha o estado primeiro'
                     : citiesQuery.isLoading
-                      ? 'A carregar…'
+                      ? 'Carregando…'
                       : 'Selecione a cidade'}
                 </option>
                 {cities.map((city) => (
@@ -553,7 +553,7 @@ export function SearchPage() {
                       ? ' — selecione os resultados para enviar ao CRM.'
                       : ' — atualizando automaticamente enquanto estiver ativa.'
                   }`
-                : 'A carregar pesquisa.'
+                : 'Carregando pesquisa.'
             }
             action={
               <div className="flex flex-wrap items-center gap-2">

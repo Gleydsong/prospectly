@@ -1,6 +1,6 @@
 import { sanitizeMailtoHref } from './safe-url';
 
-export const SUPPORT_EMAIL = 'prospecltlyadmin@prospectlyonboard.com';
+export const SUPPORT_EMAIL = 'support@prospectlyonboard.com';
 
 export function buildSupportMailto(input: {
   subject: string;

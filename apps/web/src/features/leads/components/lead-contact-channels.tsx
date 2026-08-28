@@ -53,9 +53,9 @@ export function buildWhatsAppOutreachMessage(lead: LeadContactChannelInput): str
     ? humanizeRecommendedAction(lead.recommendedAction)
     : undefined;
   if (tip) {
-    return `Olá! Vi a ${lead.companyName}${city} e queria partilhar uma ideia: ${tip} Posso enviar mais detalhes?`;
+    return `Olá! Vi a ${lead.companyName}${city} e queria compartilhar uma ideia: ${tip} Posso enviar mais detalhes?`;
   }
-  return `Olá! Vi a ${lead.companyName}${city} e gostaria de conversar sobre como podemos ajudar no vosso negócio. Tem 2 minutos para falar?`;
+  return `Olá! Vi a ${lead.companyName}${city} e gostaria de conversar sobre como podemos ajudar no seu negócio. Tem 2 minutos para falar?`;
 }
 
 export function buildWhatsAppHref(phoneRaw: string, message: string): string | null {
@@ -83,7 +83,7 @@ interface LeadContactChannelsProps {
 }
 
 /**
- * Chips de contacto acionáveis: mailto, website e WhatsApp (wa.me + mensagem).
+ * Chips de contato acionáveis: mailto, website e WhatsApp (wa.me + mensagem).
  * Sem verificação oficial “tem WhatsApp?” — Cloud API não oferece isso.
  */
 export function LeadContactChannels({ lead, className }: LeadContactChannelsProps) {
@@ -111,7 +111,7 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
 
   return (
     <div className={cn('mt-3', className)}>
-      <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Canais de contacto</p>
+      <p className="mb-1 text-xs font-medium uppercase text-zinc-400">Canais de contato</p>
       <div className="flex flex-wrap gap-1.5">
         {emailHref && !blocked ? (
           <a

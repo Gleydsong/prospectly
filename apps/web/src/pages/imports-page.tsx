@@ -212,7 +212,7 @@ export function ImportsPage() {
       <Card>
         <CardHeader title="Histórico de importações" description="Selecione uma importação para acompanhar o processamento e as linhas rejeitadas." />
         <CardContent>
-          {importsQuery.isLoading ? <p className="text-sm text-zinc-500">A carregar importações…</p> : importsQuery.isError ? (
+          {importsQuery.isLoading ? <p className="text-sm text-zinc-500">Carregando importações…</p> : importsQuery.isError ? (
             <QueryErrorState
               title="Não foi possível carregar o histórico de importações."
               error={importsQuery.error}
@@ -264,7 +264,7 @@ export function ImportsPage() {
             {selectedImport.invalidCount > 0 ? (
               <section aria-labelledby="import-errors-heading">
                 <h2 id="import-errors-heading" className="text-base font-semibold text-zinc-50">Erros por linha</h2>
-                {errorsQuery.isLoading ? <p className="mt-2 text-sm text-zinc-500">A carregar erros…</p> : errorsQuery.isError ? (
+                {errorsQuery.isLoading ? <p className="mt-2 text-sm text-zinc-500">Carregando erros…</p> : errorsQuery.isError ? (
                   <div className="mt-2">
                     <QueryErrorState
                       title="Não foi possível carregar os erros por linha."

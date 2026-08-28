@@ -31,7 +31,7 @@ export default function EnTermsPage() {
           No illegal spam or abusive outreach. Public map data does not exempt you from privacy laws
           when contacting identifiable people.
         </p>
-        <p>support@prospectly.dev</p>
+        <p>support@prospectlyonboard.com</p>
       </div>
     </article>
   );

@@ -33,7 +33,7 @@ describe('AppErrorBoundary', () => {
     );
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.getByText(/Algo correu mal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Algo deu errado/i)).toBeInTheDocument();
     expect(screen.getByText('corr-test-123')).toBeInTheDocument();
     expect(screen.getByText(/Boom from child/i)).toBeInTheDocument();
 

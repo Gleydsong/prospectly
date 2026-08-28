@@ -54,7 +54,7 @@ export default function TermsPage() {
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           6. Contato
         </h2>
-        <p>support@prospectly.dev</p>
+        <p>support@prospectlyonboard.com</p>
       </div>
     </article>
   );

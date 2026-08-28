@@ -109,7 +109,7 @@ export function LeadsPage() {
 
   const removeLead = async (leadId: string, companyName: string) => {
     const confirmed = window.confirm(
-      `Apagar o lead "${companyName}"? Ele será removido da lista.`,
+      `Apagar o cliente "${companyName}"? Ele será removido da lista.`,
     );
     if (!confirmed) return;
     setActionError(null);
@@ -197,13 +197,13 @@ export function LeadsPage() {
         </div>
       ) : query.isError ? (
         <div className="p-5">
-          <Alert tone="error">Erro ao carregar leads. Tente novamente.</Alert>
+          <Alert tone="error">Erro ao carregar clientes. Tente novamente.</Alert>
         </div>
       ) : leads.length === 0 ? (
         <div className="p-5">
         <EmptyState
-          title="Nenhum lead encontrado"
-          description="Ajuste os filtros ou crie o primeiro lead manualmente."
+          title="Nenhum cliente encontrado"
+          description="Ajuste os filtros ou crie o primeiro cliente manualmente."
           action={
             <Button onClick={() => setModalOpen(true)}>
               <Plus className="h-4 w-4" aria-hidden />
@@ -316,7 +316,7 @@ export function LeadsPage() {
                         variant="ghost"
                         size="sm"
                         className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                        aria-label={`Apagar lead ${lead.companyName}`}
+                        aria-label={`Apagar cliente ${lead.companyName}`}
                         loading={deleteLead.isPending && deleteLead.variables === lead.id}
                         onClick={(event) => {
                           event.stopPropagation();

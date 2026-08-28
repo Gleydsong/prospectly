@@ -86,41 +86,49 @@ export function DashboardPage() {
           />
           <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-end">
             <div>
-              <p className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+              <p className="flex items-center gap-2 text-sm font-medium text-[color:var(--ink-muted)]">
                 {greeting}
                 <Hand className="h-4 w-4 text-amber-300" aria-hidden />
               </p>
-              <h1 className="mt-2 max-w-[22ch] text-balance text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
+              <h1 className="mt-2 max-w-[22ch] text-balance text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
                 {t('principal.headline')}
               </h1>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-8 sm:gap-y-3">
                 <StatLine
                   icon={<Users className="h-4 w-4 text-zinc-300" />}
                   loading={summary.isLoading}
-                  label={t('principal.statNew', { count: data?.newLeads ?? 0 })}
+                  label={t((data?.newLeads ?? 0) === 1 ? 'principal.statNew_one' : 'principal.statNew_other', {
+                    count: data?.newLeads ?? 0,
+                  })}
                 />
                 <StatLine
                   icon={<CheckCircle2 className="h-4 w-4 text-sky-400" />}
                   loading={summary.isLoading}
-                  label={t('principal.statContacted', { count: data?.contacted ?? 0 })}
+                  label={t(
+                    (data?.contacted ?? 0) === 1 ? 'principal.statContacted_one' : 'principal.statContacted_other',
+                    { count: data?.contacted ?? 0 },
+                  )}
                 />
                 <StatLine
                   icon={<Clock3 className="h-4 w-4 text-amber-400" />}
                   loading={summary.isLoading}
-                  label={t('principal.statFollowUps', {
-                    count: data?.overdueFollowUps?.length ?? data?.overdueTasks ?? 0,
-                  })}
+                  label={t(
+                    (data?.overdueFollowUps?.length ?? data?.overdueTasks ?? 0) === 1
+                      ? 'principal.statFollowUps_one'
+                      : 'principal.statFollowUps_other',
+                    { count: data?.overdueFollowUps?.length ?? data?.overdueTasks ?? 0 },
+                  )}
                 />
               </div>
             </div>
             <div className="flex flex-col gap-3 lg:items-end">
-              <p className="max-w-xs text-sm leading-relaxed text-zinc-400 lg:text-right">
+              <p className="max-w-xs text-sm leading-relaxed text-[color:var(--ink-muted)] lg:text-right">
                 {t('principal.ctaHint')}
               </p>
               <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:flex-col">
                 <Button
                   size="lg"
-                  className="w-full uppercase tracking-wide sm:min-w-[220px]"
+                  className="w-full sm:min-w-[220px]"
                   onClick={() => navigate('/search')}
                 >
                   {t('principal.searchClients')}
@@ -264,7 +272,7 @@ export function DashboardPage() {
                     <td className="px-5 py-3.5 sm:px-6">
                       <Link
                         to={`/leads/${lead.id}`}
-                        className="font-semibold text-zinc-50 hover:underline"
+                        className="font-semibold text-[color:var(--ink)] hover:underline"
                       >
                         {lead.companyName}
                       </Link>
@@ -317,7 +325,7 @@ function StatLine({
 }) {
   if (loading) return <Skeleton className="h-5 w-48" />;
   return (
-    <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+    <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--ink)]">
       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80">
         {icon}
       </span>

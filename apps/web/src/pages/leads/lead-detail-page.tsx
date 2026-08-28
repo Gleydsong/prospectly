@@ -176,7 +176,7 @@ export function LeadDetailPage() {
     return (
       <div className="space-y-4">
         <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400">
-          <ArrowLeft className="h-4 w-4" /> Voltar para clientes potenciais
+          <ArrowLeft className="h-4 w-4" /> Voltar para clientes
         </Link>
         <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
           Cliente potencial não encontrado ou sem permissão de acesso.
@@ -193,7 +193,7 @@ export function LeadDetailPage() {
   return (
     <div className="space-y-5">
       <Link to="/leads" className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300">
-        <ArrowLeft className="h-4 w-4" /> Voltar para clientes potenciais
+        <ArrowLeft className="h-4 w-4" /> Voltar para clientes
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -299,7 +299,7 @@ export function LeadDetailPage() {
             ) : null}
 
             <div className="border-t border-zinc-800 pt-3">
-              <p className="mb-2 text-xs font-medium uppercase text-zinc-400">Proveniência</p>
+              <p className="mb-2 text-xs font-medium uppercase text-zinc-400">Origem</p>
               <dl className="space-y-2 text-sm text-zinc-300">
                 <div className="flex justify-between gap-3">
                   <dt className="text-zinc-500">Fonte</dt>

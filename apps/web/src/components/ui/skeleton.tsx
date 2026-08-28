@@ -16,7 +16,7 @@ export function Skeleton({ className }: { className?: string }) {
 
 export function TableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <div className="space-y-3" role="status" aria-label="A carregar">
+    <div className="space-y-3" role="status" aria-label="Carregando">
       {Array.from({ length: rows }).map((_, row) => (
         <div key={row} className="flex gap-3">
           {Array.from({ length: columns }).map((_, col) => (
@@ -33,7 +33,7 @@ export function CardGridSkeleton({ items = 6 }: { items?: number }) {
     <div
       className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
       role="status"
-      aria-label="A carregar"
+      aria-label="Carregando"
     >
       {Array.from({ length: items }).map((_, index) => (
         <Skeleton key={index} className="h-40 rounded-panel" />

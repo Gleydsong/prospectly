@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Bell, Coins, LogOut, Menu, Search, X } from 'lucide-react';
+import { Coins, LogOut, Menu, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -179,17 +179,6 @@ export function TopNav() {
         </Link>
 
         <ThemeToggle />
-
-        <button
-          type="button"
-          className="theme-toggle-ios hidden h-10 w-10 items-center justify-center opacity-50 sm:inline-flex"
-          aria-label={t('nav.notifications')}
-          title={t('nav.notifications')}
-          disabled
-          aria-disabled="true"
-        >
-          <Bell className="h-4 w-4" aria-hidden />
-        </button>
 
         <UserAvatar
           name={user?.name}
