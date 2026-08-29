@@ -1,4 +1,9 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export type AsaasCustomerInput = {
@@ -24,8 +29,12 @@ export type AsaasPayment = {
 };
 
 export class AsaasRequestError extends ServiceUnavailableException {
-  constructor(readonly ambiguous: boolean) {
-    super('Asaas request failed');
+  constructor(
+    readonly ambiguous: boolean,
+    readonly httpStatus?: number,
+    message = 'Não foi possível comunicar com o provedor de pagamento. Tente novamente.',
+  ) {
+    super(message);
   }
 }
 
@@ -37,14 +46,14 @@ export class AsaasClient {
 
   async ensureCustomer(input: AsaasCustomerInput): Promise<string> {
     if (input.existingCustomerId) {
-      await this.request('PUT', `/customers/${encodeURIComponent(input.existingCustomerId)}`, {
-        name: input.name,
-        cpfCnpj: input.cpfCnpj,
-        mobilePhone: input.phone,
-        email: input.email,
-        notificationDisabled: true,
-      });
-      return input.existingCustomerId;
+      try {
+        await this.request('PUT', `/customers/${encodeURIComponent(input.existingCustomerId)}`, {
+          ...asaasCustomerBody(input),
+        });
+        return input.existingCustomerId;
+      } catch (error) {
+        if (!isMissingAsaasCustomer(error)) throw error;
+      }
     }
     const externalReference = `prospectly:organization:${input.organizationId}`;
     const existing = await this.findResourceId('/customers', { externalReference });
@@ -52,12 +61,8 @@ export class AsaasClient {
     let response: unknown;
     try {
       response = await this.request('POST', '/customers', {
-        name: input.name,
-        cpfCnpj: input.cpfCnpj,
-        mobilePhone: input.phone,
-        email: input.email,
+        ...asaasCustomerBody(input),
         externalReference,
-        notificationDisabled: true,
       });
     } catch (error) {
       const recovered = await this.findResourceId('/customers', { externalReference });
@@ -218,12 +223,72 @@ export class AsaasClient {
     }
 
     const json = (await response.json().catch(() => null)) as unknown;
-    if (!response.ok || !json) {
-      this.logger.warn(`Asaas HTTP ${response.status} on ${path}`);
-      throw new AsaasRequestError(method === 'POST' && (response.ok || response.status >= 500));
+    if (response.ok && json) {
+      return json;
     }
-    return json;
+    if (response.ok) {
+      this.logger.warn(`Asaas HTTP ${response.status} on ${path}`);
+      throw new AsaasRequestError(method === 'POST');
+    }
+    this.throwForFailedResponse(method, path, response.status, json);
   }
+
+  private throwForFailedResponse(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    path: string,
+    status: number,
+    json: unknown,
+  ): never {
+    const descriptions = readAsaasErrorDescriptions(json);
+    this.logger.warn(
+      `Asaas HTTP ${status} on ${path}${descriptions.length ? `: ${descriptions.join('; ')}` : ''}`,
+    );
+
+    if (status === 400) {
+      throw new BadRequestException(
+        descriptions.length > 0
+          ? descriptions.join(' ')
+          : 'Não foi possível validar os dados de cobrança. Verifique CPF/CNPJ, telefone e e-mail.',
+      );
+    }
+
+    if (status === 401 || status === 403) {
+      throw new AsaasRequestError(false, status, 'Card payments are temporarily unavailable');
+    }
+
+    throw new AsaasRequestError(method === 'POST' && status >= 500, status);
+  }
+}
+
+function asaasCustomerBody(
+  input: Pick<AsaasCustomerInput, 'name' | 'cpfCnpj' | 'phone' | 'email'>,
+) {
+  return {
+    name: input.name,
+    cpfCnpj: input.cpfCnpj,
+    email: input.email,
+    notificationDisabled: true,
+    ...asaasPhoneFields(input.phone),
+  };
+}
+
+function asaasPhoneFields(phone: string): { phone?: string; mobilePhone?: string } {
+  const subscriber = phone.slice(2);
+  if (phone.length === 11 || subscriber.startsWith('9')) {
+    return { mobilePhone: phone };
+  }
+  return { phone };
+}
+
+function isMissingAsaasCustomer(error: unknown): boolean {
+  return error instanceof AsaasRequestError && error.httpStatus === 404;
+}
+
+function readAsaasErrorDescriptions(value: unknown): string[] {
+  return readArray(value, 'errors').flatMap((item) => {
+    const description = readString(item, 'description');
+    return description ? [description] : [];
+  });
 }
 
 function readString(value: unknown, key: string): string | undefined {

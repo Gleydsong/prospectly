@@ -323,6 +323,10 @@ export class BillingService {
       await this.monthlyAttempts.markReady(org.id, begin.claim, result);
       return result;
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
+        throw error;
+      }
       if (error instanceof AsaasRequestError && !error.ambiguous) {
         await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
         throw new ServiceUnavailableException('Card payments are temporarily unavailable');
@@ -428,6 +432,13 @@ export class BillingService {
         externalCheckoutId: payment.id,
       };
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.prisma.creditPurchase.update({
+          where: { id: purchase.id },
+          data: { status: 'FAILED' },
+        });
+        throw error;
+      }
       if (error instanceof AsaasRequestError && !error.ambiguous) {
         await this.prisma.creditPurchase.update({
           where: { id: purchase.id },

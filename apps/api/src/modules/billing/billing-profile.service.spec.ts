@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 
@@ -72,6 +73,63 @@ describe('BillingProfileService', () => {
       },
     });
     expect(asaasClient.ensureCustomer).not.toHaveBeenCalled();
+  });
+
+  it('stores the Asaas customer id after a successful payer sync', async () => {
+    config.get.mockReturnValue(true);
+    prisma.billingProfile.upsert.mockResolvedValue({
+      organizationId: 'org-1',
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      asaasCustomerId: null,
+    });
+    prisma.billingProfile.update.mockResolvedValue({
+      organizationId: 'org-1',
+      asaasCustomerId: 'cus_1',
+    });
+    asaasClient.ensureCustomer.mockResolvedValue('cus_1');
+
+    await expect(
+      service.updateProfile('org-1', {
+        name: 'Acme Ltda',
+        cpfCnpj: '11.222.333/0001-81',
+        phone: '(11) 99999-9999',
+        email: 'financeiro@acme.test',
+      }),
+    ).resolves.toMatchObject({ asaasCustomerId: 'cus_1' });
+    expect(asaasClient.ensureCustomer).toHaveBeenCalledWith({
+      organizationId: 'org-1',
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      existingCustomerId: null,
+    });
+  });
+
+  it('propagates Asaas payer validation errors instead of a generic 503', async () => {
+    config.get.mockReturnValue(true);
+    prisma.billingProfile.upsert.mockResolvedValue({
+      organizationId: 'org-1',
+      asaasCustomerId: null,
+    });
+    asaasClient.ensureCustomer.mockRejectedValue(
+      new BadRequestException('O CPF informado é inválido'),
+    );
+
+    await expect(
+      service.updateProfile('org-1', {
+        name: 'Acme Ltda',
+        cpfCnpj: '11111111111',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'O CPF informado é inválido',
+    });
   });
 
   it('returns the organization billing profile', async () => {
