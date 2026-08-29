@@ -45,4 +45,47 @@ describe('BillingProfileForm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('O CPF informado é inválido');
   });
+
+  it('shows a payer-facing phone error instead of the class-validator regex', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<BillingProfileForm />);
+
+    await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
+    await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
+    await user.type(screen.getByLabelText(/Telefone/i), '1199');
+    await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+    await user.click(screen.getByRole('button', { name: /Salvar perfil de cobrança/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Informe um telefone com DDD, com 10 ou 11 dígitos.',
+    );
+    expect(screen.queryByText(/regular expression/i)).not.toBeInTheDocument();
+    expect(updateBillingProfile).not.toHaveBeenCalled();
+  });
+
+  it('rewrites a backend phone regex error into the same payer-facing copy', async () => {
+    const user = userEvent.setup();
+    const error = new AxiosError('fail');
+    error.response = {
+      status: 400,
+      data: { message: 'phone must match /^\\d{10,11}$/ regular expression' },
+      statusText: 'Bad Request',
+      headers: {},
+      config: {} as never,
+    };
+    updateBillingProfile.mockRejectedValue(error);
+
+    renderWithProviders(<BillingProfileForm />);
+
+    await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
+    await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
+    await user.type(screen.getByLabelText(/Telefone/i), '11999999999');
+    await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+    await user.click(screen.getByRole('button', { name: /Salvar perfil de cobrança/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Informe um telefone com DDD, com 10 ou 11 dígitos.',
+    );
+    expect(screen.queryByText(/regular expression/i)).not.toBeInTheDocument();
+  });
 });
