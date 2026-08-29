@@ -222,7 +222,19 @@ export class OpportunityFinderService {
     await this.requireRun(organizationId, runId);
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
-    if (candidate.importedLeadId) return { status: 'ALREADY_SAVED' as const, leadId: candidate.importedLeadId };
+    if (candidate.importedLeadId) {
+      const activeLead = await this.prisma.lead.findFirst({
+        where: { id: candidate.importedLeadId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (activeLead) {
+        return { status: 'ALREADY_SAVED' as const, leadId: activeLead.id };
+      }
+      await this.prisma.opportunityCandidate.update({
+        where: { id: candidate.id },
+        data: { importedLeadId: null },
+      });
+    }
     await this.billing.consumeCreditForSaveLead(organizationId, candidate.id, runId);
     try {
       const company = candidate.company as unknown as OpportunityCompany;
@@ -255,12 +267,33 @@ export class OpportunityFinderService {
         notes: `Opportunity Finder: score ${candidate.overallScore}/100, confiança ${candidate.confidenceScore}%.`,
         tags: ['opportunity-finder'],
       });
-      const lead = 'lead' in outcome ? outcome.lead : null;
-      if (lead) {
-        await this.prisma.opportunityCandidate.updateMany({ where: { id: candidate.id, importedLeadId: null }, data: { importedLeadId: lead.id } });
+      if (outcome.status !== 'IMPORTED') {
+        await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
+        const leadId = 'lead' in outcome ? (outcome.lead?.id ?? null) : null;
+        await this.audit.log({
+          organizationId,
+          userId,
+          action: 'OPPORTUNITY_SAVED_AS_LEAD',
+          entity: 'OpportunityCandidate',
+          entityId: candidate.id,
+          metadata: { outcome: outcome.status, leadId },
+        });
+        return { status: outcome.status, leadId };
       }
-      await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_SAVED_AS_LEAD', entity: 'OpportunityCandidate', entityId: candidate.id, metadata: { outcome: outcome.status, leadId: lead?.id } });
-      return { status: outcome.status, leadId: lead?.id ?? null };
+      const lead = outcome.lead;
+      await this.prisma.opportunityCandidate.updateMany({
+        where: { id: candidate.id, importedLeadId: null },
+        data: { importedLeadId: lead.id },
+      });
+      await this.audit.log({
+        organizationId,
+        userId,
+        action: 'OPPORTUNITY_SAVED_AS_LEAD',
+        entity: 'OpportunityCandidate',
+        entityId: candidate.id,
+        metadata: { outcome: outcome.status, leadId: lead.id },
+      });
+      return { status: outcome.status, leadId: lead.id };
     } catch (error) {
       await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
       throw error;

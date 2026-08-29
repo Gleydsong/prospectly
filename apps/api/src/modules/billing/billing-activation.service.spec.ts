@@ -95,6 +95,32 @@ describe('BillingActivationService', () => {
     });
   });
 
+  it('clears stale card subscription id when activating PIX monthly', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      abacateSubscriptionId: 'subs_stale_card',
+    });
+    prisma.organization.update.mockResolvedValue({});
+    const periodEnd = new Date('2026-09-24T00:00:00.000Z');
+    await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: null,
+      currentPeriodEnd: periodEnd,
+    });
+    expect(prisma.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org1' },
+      data: expect.objectContaining({
+        plan: OrgPlan.STARTER_MONTHLY,
+        planStatus: PlanStatus.ACTIVE,
+        abacateSubscriptionId: null,
+        currentPeriodEnd: periodEnd,
+      }),
+    });
+  });
+
   it('does not overwrite lifetime with monthly activation', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',

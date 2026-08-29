@@ -6,7 +6,7 @@ import {
   WEBSITE_ANALYSIS_TIMEOUT_MS,
   WEBSITE_ANALYSIS_USER_AGENT,
 } from './website-analysis.constants';
-import { assertSafePublicUrl, SsrfBlockedError } from './ssrf';
+import { assertSafePublicUrl, fetchWithPinnedDns, SsrfBlockedError } from './ssrf';
 
 function extractMeta(html: string, name: string): string | undefined {
   const patterns = [
@@ -215,8 +215,11 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     const fetchImpl = this.options.fetchImpl ?? fetch;
 
     let currentUrl: string;
+    let pinnedAddresses: string[];
     try {
-      currentUrl = (await assertSafePublicUrl(url)).toString();
+      const safe = await assertSafePublicUrl(url);
+      currentUrl = safe.url.toString();
+      pinnedAddresses = safe.addresses;
     } catch (error) {
       return {
         url,
@@ -238,6 +241,7 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     let redirects = 0;
     let response: Response | undefined;
     const visited = new Set<string>();
+    const useInjectedFetch = Boolean(this.options.fetchImpl);
 
     try {
       while (redirects <= maxRedirects) {
@@ -247,20 +251,28 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
           throw new SsrfBlockedError('Redirect loop detected');
         }
         visited.add(currentUrl);
-        await assertSafePublicUrl(currentUrl);
+        const safe = await assertSafePublicUrl(currentUrl);
+        currentUrl = safe.url.toString();
+        pinnedAddresses = safe.addresses;
 
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), remainingMs);
+        const requestInit = {
+          method: 'GET',
+          redirect: 'manual' as const,
+          signal: controller.signal,
+          headers: {
+            'User-Agent': WEBSITE_ANALYSIS_USER_AGENT,
+            Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+          },
+        };
         try {
-          response = await fetchImpl(currentUrl, {
-            method: 'GET',
-            redirect: 'manual',
-            signal: controller.signal,
-            headers: {
-              'User-Agent': WEBSITE_ANALYSIS_USER_AGENT,
-              Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
-            },
-          });
+          // Default path pins DNS at connect time so a rebinding A record
+          // cannot slip past assertSafePublicUrl between resolve and fetch.
+          // Injected fetchImpl is for tests only — it cannot pin DNS.
+          response = useInjectedFetch
+            ? await fetchImpl(currentUrl, requestInit)
+            : await fetchWithPinnedDns(currentUrl, pinnedAddresses, requestInit);
         } finally {
           clearTimeout(timer);
         }

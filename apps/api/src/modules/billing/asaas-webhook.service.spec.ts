@@ -24,6 +24,7 @@ describe('AsaasWebhookService', () => {
     creditPurchase: { findUnique: jest.fn(), findMany: jest.fn() },
     billingProfile: { findUnique: jest.fn() },
     monthlyCheckoutAttempt: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
+    organization: { findUnique: jest.fn() },
   };
   const client = { getPayment: jest.fn(), findPayment: jest.fn() };
   const purchases = { completeById: jest.fn(), refundById: jest.fn() };
@@ -40,6 +41,7 @@ describe('AsaasWebhookService', () => {
     prisma.billingWebhookEvent.findMany.mockResolvedValue([]);
     prisma.creditPurchase.findMany.mockResolvedValue([]);
     prisma.monthlyCheckoutAttempt.findMany.mockResolvedValue([]);
+    prisma.organization.findUnique.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AsaasWebhookService,
@@ -113,6 +115,136 @@ describe('AsaasWebhookService', () => {
     expect(prisma.billingWebhookEvent.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'PROCESSED' }) }),
     );
+  });
+
+  it('confirms a card package when authoritative status already advanced to RECEIVED', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      id: 'inbox-1',
+      provider: 'ASAAS',
+      eventId: 'evt_1',
+      type: 'PAYMENT_CONFIRMED',
+      status: 'PENDING',
+      payload,
+    });
+    prisma.creditPurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1',
+      organizationId: 'org-1',
+      amountCentavos: 1499,
+      currency: 'BRL',
+      externalId: 'org:org-1:credits:purchase-1',
+      provider: 'ASAAS',
+      paymentMethod: 'CARD',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_1',
+      value: 14.99,
+      externalReference: 'org:org-1:credits:purchase-1',
+      billingType: 'CREDIT_CARD',
+      status: 'RECEIVED',
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.processEvent('evt_1');
+
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1');
+  });
+
+  it('fulfills a still-pending card package from PAYMENT_RECEIVED after CONFIRMED was missed', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      id: 'inbox-1',
+      provider: 'ASAAS',
+      eventId: 'evt_received',
+      type: 'PAYMENT_RECEIVED',
+      status: 'PENDING',
+      payload: { ...payload, id: 'evt_received', event: 'PAYMENT_RECEIVED' },
+    });
+    prisma.creditPurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1',
+      organizationId: 'org-1',
+      amountCentavos: 1499,
+      currency: 'BRL',
+      externalId: 'org:org-1:credits:purchase-1',
+      provider: 'ASAAS',
+      paymentMethod: 'CARD',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_1',
+      value: 14.99,
+      externalReference: 'org:org-1:credits:purchase-1',
+      billingType: 'CREDIT_CARD',
+      status: 'RECEIVED',
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.processEvent('evt_received');
+
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1');
+  });
+
+  it('extends an active Asaas card subscription when a renewal lacks the original checkout reference', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      type: 'PAYMENT_CONFIRMED',
+      payload,
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.creditPurchase.findUnique.mockResolvedValue(null);
+    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue(null);
+    prisma.organization.findUnique.mockResolvedValue({ id: 'org-1' });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_renewal',
+      customer: 'cus_1',
+      value: 49.99,
+      billingType: 'CREDIT_CARD',
+      status: 'RECEIVED',
+      subscription: 'sub_live',
+      dueDate: '2026-09-25',
+    });
+
+    await service.processEvent('evt_1');
+
+    expect(prisma.organization.findUnique).toHaveBeenCalledWith({
+      where: { asaasSubscriptionId: 'sub_live' },
+      select: { id: true },
+    });
+    expect(activation.activateMonthly).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        provider: 'ASAAS',
+        asaasSubscriptionId: 'sub_live',
+        asaasPaymentId: null,
+      }),
+    );
+    expect(monthlyAttempts.markResolved).not.toHaveBeenCalled();
+  });
+
+  it('does not grant PIX via a card subscription fallback when the checkout reference is missing', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      type: 'PAYMENT_RECEIVED',
+      payload: { ...payload, event: 'PAYMENT_RECEIVED' },
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.creditPurchase.findUnique.mockResolvedValue(null);
+    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue(null);
+    prisma.organization.findUnique.mockResolvedValue({ id: 'org-1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_pix_orphan',
+      customer: 'cus_1',
+      value: 49.99,
+      billingType: 'PIX',
+      status: 'RECEIVED',
+      subscription: 'sub_live',
+    });
+
+    await expect(service.processEvent('evt_1')).rejects.toThrow(
+      'Asaas payment does not match a Prospectly checkout',
+    );
+    expect(prisma.organization.findUnique).not.toHaveBeenCalled();
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
   });
 
   it('rejects a provider currency that conflicts with the BRL checkout contract', async () => {

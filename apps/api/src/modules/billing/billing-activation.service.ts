@@ -192,7 +192,7 @@ export class BillingActivationService {
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId
+        ...(input.abacateSubscriptionId !== undefined
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
         ...(input.asaasSubscriptionId !== undefined
@@ -250,7 +250,7 @@ export class BillingActivationService {
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId
+        ...(input.abacateSubscriptionId !== undefined
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
         ...(input.asaasSubscriptionId !== undefined
