@@ -212,12 +212,7 @@ describe('AsaasClient', () => {
       client.createRecurringCheckout({
         externalReference: 'org:org-1:monthly-card:attempt-1',
         amountCentavos: 4999,
-        customer: {
-          name: 'Acme Ltda',
-          cpfCnpj: '11222333000181',
-          phone: '11999999999',
-          email: 'financeiro@acme.test',
-        },
+        customerId: 'cus_1',
         successUrl: 'https://app.test/billing/success',
         cancelUrl: 'https://app.test/billing/cancel',
       }),
@@ -229,9 +224,11 @@ describe('AsaasClient', () => {
         billingTypes: ['CREDIT_CARD'],
         chargeTypes: ['RECURRENT'],
         externalReference: 'org:org-1:monthly-card:attempt-1',
+        customer: 'cus_1',
         subscription: { cycle: 'MONTHLY' },
       }),
     );
+    expect(JSON.parse(String(init.body))).not.toHaveProperty('customerData');
   });
 
   it('surfaces Asaas customer validation errors instead of a generic 503', async () => {

@@ -569,6 +569,13 @@ describe('BillingService', () => {
       provider: 'ASAAS',
       externalCheckoutId: 'checkout-1',
     });
+    expect(asaasClient.createRecurringCheckout).toHaveBeenCalledWith({
+      externalReference: 'org:org1:monthly-card:1',
+      amountCentavos: 4999,
+      customerId: 'cus_1',
+      successUrl: expect.any(String),
+      cancelUrl: expect.any(String),
+    });
     expect(monthlyAttempts.markReady).toHaveBeenCalled();
   });
 
