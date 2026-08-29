@@ -1,4 +1,5 @@
 export type PaymentProviderId = 'ABACATE' | 'ASAAS';
+export type PixProviderId = PaymentProviderId | 'DISABLED';
 
 /** Brazil-only billing currency. */
 export type BillingCurrency = 'BRL';
@@ -41,7 +42,7 @@ export type CheckoutResult =
     }
   | {
       mode: 'pix';
-      provider: 'ABACATE';
+      provider: PaymentProviderId;
       brCode: string;
       brCodeBase64: string;
       externalPaymentId: string;

@@ -10,6 +10,33 @@ vi.mock('@/lib/safe-url', () => ({
 }));
 
 describe('handleCheckoutResult', () => {
+  it('stores an Asaas PIX checkout for the in-app QR page', () => {
+    sessionStorage.clear();
+    const navigationError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    handleCheckoutResult(
+      {
+        mode: 'pix',
+        provider: 'ASAAS',
+        brCode: 'pix-copy-and-paste',
+        brCodeBase64: 'base64-image',
+        amountCentavos: 1499,
+        externalPaymentId: 'pay_pix_1',
+      },
+      { purpose: 'credits', offer: 'credits-2000', baselineCreditBalance: 400 },
+    );
+
+    expect(JSON.parse(sessionStorage.getItem('prospectly.pixCheckout') ?? 'null')).toEqual(
+      expect.objectContaining({
+        provider: 'ASAAS',
+        brCode: 'pix-copy-and-paste',
+        externalPaymentId: 'pay_pix_1',
+        purpose: 'credits',
+      }),
+    );
+    navigationError.mockRestore();
+  });
+
   it('saves Abacate card redirect intent and calls the host allowlist', () => {
     sessionStorage.clear();
     handleCheckoutResult(

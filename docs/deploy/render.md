@@ -75,10 +75,12 @@ API health check: `GET /health/ready` (Postgres + Redis).
 | `NEXT_PUBLIC_LANDING_URL` | landing           | its own URL                                                                   |
 | `NEXT_PUBLIC_API_URL`     | landing           | same as `VITE_API_URL`                                                        |
 | `ABACATE_*_URL`           | api               | billing success/cancel on web                                                 |
+| `PIX_PROVIDER`            | api               | `ASAAS` after the authorized cutover; rollback is `ABACATE`                   |
+| `ASAAS_ENABLED`           | api               | `true` with Sandbox/production Asaas secrets; empty keys refuse boot          |
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
-7. Point the AbacatePay webhook to `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>`. Query-string secrets are not accepted.
+7. Keep the historical AbacatePay webhook at `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>`. Query-string secrets are not accepted. Point the Asaas webhook to `https://<api>/api/v1/billing/webhook/asaas` with the same dedicated token stored as `ASAAS_WEBHOOK_TOKEN` and sent in `asaas-access-token`.
 8. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
 
 ## Local Dockerfiles (optional)
@@ -106,7 +108,8 @@ API health check: `GET /health/ready` (Postgres + Redis).
 - [ ] F5 restores session via cookie refresh; logout clears cookie
 - [ ] Unverified email: banner shown; checkout/invite return 403 `EMAIL_NOT_VERIFIED`
 - [ ] Landing CTAs open app with correct plan/currency query
-- [ ] AbacatePay BRL PIX: both credit packs and monthly unlimited (see `docs/billing/payments.md`)
+- [ ] Asaas BRL PIX: both credit packs and monthly unlimited, including authenticated webhook and authoritative receipt (see `docs/billing/payments.md`)
+- [ ] Historical AbacatePay webhook still accepts and reconciles existing records
 - [ ] Verification + forgot-password e-mail once SMTP is wired
 - [ ] Seed never run in production (`prisma/seed.ts` throws)
 

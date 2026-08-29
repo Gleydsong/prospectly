@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded-by: 0004-asaas-pix-and-historical-abacatepay.md
 ---
 
 # Asaas hospedado para cartões e AbacatePay para PIX

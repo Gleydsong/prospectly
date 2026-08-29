@@ -56,6 +56,9 @@ export const configuration = () => ({
   waitlist: {
     notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
   },
+  billing: {
+    pixProvider: process.env.PIX_PROVIDER ?? 'ASAAS',
+  },
   abacate: {
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',

@@ -136,6 +136,7 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     'ABACATE_SUCCESS_URL',
     'ABACATE_CANCEL_URL',
     'ABACATE_API_BASE_URL',
+    'PIX_PROVIDER',
     'ASAAS_ENABLED',
     'ASAAS_API_KEY',
     'ASAAS_WEBHOOK_TOKEN',
@@ -155,6 +156,19 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     config.ASAAS_ENABLED !== 'false'
   ) {
     throw new Error('ASAAS_ENABLED must be true or false');
+  }
+
+  if (
+    config.PIX_PROVIDER !== undefined &&
+    config.PIX_PROVIDER !== 'ABACATE' &&
+    config.PIX_PROVIDER !== 'ASAAS' &&
+    config.PIX_PROVIDER !== 'DISABLED'
+  ) {
+    throw new Error('PIX_PROVIDER must be ABACATE, ASAAS or DISABLED');
+  }
+
+  if (config.PIX_PROVIDER === 'ASAAS' && config.ASAAS_ENABLED !== 'true') {
+    throw new Error('PIX_PROVIDER=ASAAS requires ASAAS_ENABLED=true');
   }
 
   if (config.ASAAS_ENABLED === 'true') {

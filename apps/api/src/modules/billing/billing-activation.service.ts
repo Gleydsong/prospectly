@@ -119,6 +119,7 @@ export class BillingActivationService {
     abacateCustomerId?: string | null;
     abacateSubscriptionId?: string | null;
     asaasSubscriptionId?: string | null;
+    asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
     const org = await this.prisma.organization.findUnique({
@@ -157,6 +158,22 @@ export class BillingActivationService {
       );
       return;
     }
+    if (input.provider === PaymentProvider.ASAAS && input.asaasPaymentId) {
+      if (org.asaasPaymentId === input.asaasPaymentId) {
+        this.logger.debug(
+          `Ignoring duplicate Asaas PIX activation for org ${input.organizationId}`,
+        );
+        return;
+      }
+      if (
+        org.asaasPaymentId &&
+        org.asaasPaymentId !== input.asaasPaymentId &&
+        (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+      ) {
+        this.logger.warn(`Ignoring stale Asaas PIX activation for org ${input.organizationId}`);
+        return;
+      }
+    }
 
     const currentPeriodEnd =
       input.currentPeriodEnd &&
@@ -175,10 +192,13 @@ export class BillingActivationService {
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId
+        ...(input.abacateSubscriptionId !== undefined
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
-        ...(input.asaasSubscriptionId ? { asaasSubscriptionId: input.asaasSubscriptionId } : {}),
+        ...(input.asaasSubscriptionId !== undefined
+          ? { asaasSubscriptionId: input.asaasSubscriptionId }
+          : {}),
+        ...(input.asaasPaymentId !== undefined ? { asaasPaymentId: input.asaasPaymentId } : {}),
         ...(input.currentPeriodEnd !== undefined ? { currentPeriodEnd } : {}),
       },
     });
@@ -193,6 +213,7 @@ export class BillingActivationService {
     abacateCustomerId?: string | null;
     abacateSubscriptionId?: string | null;
     asaasSubscriptionId?: string | null;
+    asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
   }): Promise<void> {
     const org = await this.prisma.organization.findUnique({
@@ -215,6 +236,9 @@ export class BillingActivationService {
     ) {
       return;
     }
+    if (input.asaasPaymentId && org.asaasPaymentId !== input.asaasPaymentId) {
+      return;
+    }
 
     const canceled = input.status === PlanStatus.CANCELED || input.status === PlanStatus.INACTIVE;
 
@@ -226,10 +250,13 @@ export class BillingActivationService {
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
         ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId
+        ...(input.abacateSubscriptionId !== undefined
           ? { abacateSubscriptionId: input.abacateSubscriptionId }
           : {}),
-        ...(input.asaasSubscriptionId ? { asaasSubscriptionId: input.asaasSubscriptionId } : {}),
+        ...(input.asaasSubscriptionId !== undefined
+          ? { asaasSubscriptionId: input.asaasSubscriptionId }
+          : {}),
+        ...(input.asaasPaymentId !== undefined ? { asaasPaymentId: input.asaasPaymentId } : {}),
         ...(input.currentPeriodEnd !== undefined
           ? { currentPeriodEnd: input.currentPeriodEnd }
           : canceled

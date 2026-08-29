@@ -4,9 +4,14 @@ export type PlanAccessOrg = {
   plan: OrgPlan;
   planStatus: PlanStatus;
   currentPeriodEnd: Date | null;
-  /** Abacate card subscription — open-ended until cancelled; not bound to PIX period end. */
+  /** Open-ended card subscriptions stay active until cancelled; not bound to PIX period end. */
   abacateSubscriptionId?: string | null;
+  asaasSubscriptionId?: string | null;
 };
+
+function hasRecurringCardSubscription(org: PlanAccessOrg): boolean {
+  return Boolean(org.abacateSubscriptionId || org.asaasSubscriptionId);
+}
 
 /** ACTIVE paid access. LIFETIME never expires. Monthly PIX expires at currentPeriodEnd. */
 export function hasUnlimitedAccess(org: PlanAccessOrg, now = new Date()): boolean {
@@ -19,7 +24,7 @@ export function hasUnlimitedAccess(org: PlanAccessOrg, now = new Date()): boolea
   if (
     org.currentPeriodEnd &&
     org.currentPeriodEnd.getTime() <= now.getTime() &&
-    !org.abacateSubscriptionId
+    !hasRecurringCardSubscription(org)
   ) {
     return false;
   }
@@ -32,6 +37,6 @@ export function isMonthlyPeriodExpired(org: PlanAccessOrg, now = new Date()): bo
     org.planStatus === PlanStatus.ACTIVE &&
     org.currentPeriodEnd != null &&
     org.currentPeriodEnd.getTime() <= now.getTime() &&
-    !org.abacateSubscriptionId
+    !hasRecurringCardSubscription(org)
   );
 }

@@ -1,3 +1,4 @@
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { AsaasClient, AsaasRequestError } from './asaas.client';
@@ -127,6 +128,54 @@ describe('AsaasClient', () => {
     expect(JSON.parse(String(init.body))).not.toHaveProperty('installmentCount');
   });
 
+  it('creates a one-time PIX payment and retrieves its dynamic QR code', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'pay_pix_1', status: 'PENDING' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          payload: '000201010212pix-copy-paste',
+          encodedImage: 'cG5nLWJhc2U2NA==',
+          expirationDate: '2026-08-29 23:59:59',
+        }),
+      } as Response);
+
+    await expect(
+      client.createPixPayment({
+        customerId: 'cus_1',
+        amountCentavos: 1499,
+        externalReference: 'org:org-1:credits:pix-1',
+        description: 'Prospectly - 2.000 créditos',
+      }),
+    ).resolves.toEqual({ id: 'pay_pix_1', status: 'PENDING' });
+    await expect(client.getPixQrCode('pay_pix_1')).resolves.toEqual({
+      payload: '000201010212pix-copy-paste',
+      encodedImage: 'cG5nLWJhc2U2NA==',
+      expirationDate: '2026-08-29 23:59:59',
+    });
+
+    const [, createInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(createInit.body))).toEqual(
+      expect.objectContaining({
+        customer: 'cus_1',
+        billingType: 'PIX',
+        value: 14.99,
+        externalReference: 'org:org-1:credits:pix-1',
+      }),
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      'https://api-sandbox.asaas.com/v3/payments/pay_pix_1/pixQrCode',
+    );
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock.mock.calls[1]?.[1]).not.toHaveProperty('body');
+  });
+
   it('classifies a successful POST with an unreadable body as ambiguous', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -183,5 +232,148 @@ describe('AsaasClient', () => {
         subscription: { cycle: 'MONTHLY' },
       }),
     );
+  });
+
+  it('surfaces Asaas customer validation errors instead of a generic 503', async () => {
+    jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          errors: [{ code: 'invalid_cpfCnpj', description: 'O CPF informado é inválido' }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response);
+
+    const error = await client
+      .ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11111111111',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).getStatus()).toBe(400);
+    expect((error as BadRequestException).message).toBe('O CPF informado é inválido');
+  });
+
+  it('does not leak Asaas credential errors to the payer', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        errors: [
+          { code: 'invalid_access_token', description: 'A chave de API fornecida é inválida' },
+        ],
+      }),
+    } as Response);
+
+    const error = await client
+      .ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+        existingCustomerId: 'cus_1',
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    expect((error as ServiceUnavailableException).getStatus()).toBe(503);
+    expect((error as ServiceUnavailableException).message).toBe(
+      'Card payments are temporarily unavailable',
+    );
+    expect((error as ServiceUnavailableException).message).not.toContain('chave de API');
+  });
+
+  it('recreates the Asaas customer when the stored id no longer exists', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          errors: [{ code: 'invalid_object', description: 'Cliente não encontrado' }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'cus_new' }),
+      } as Response);
+
+    await expect(
+      client.ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+        existingCustomerId: 'cus_deleted',
+      }),
+    ).resolves.toBe('cus_new');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api-sandbox.asaas.com/v3/customers/cus_deleted',
+      expect.objectContaining({ method: 'PUT' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'https://api-sandbox.asaas.com/v3/customers',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('sends landline numbers as phone instead of mobilePhone', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'cus_landline' }),
+      } as Response);
+
+    await expect(
+      client.ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '4738010919',
+        email: 'financeiro@acme.test',
+      }),
+    ).resolves.toBe('cus_landline');
+
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual(
+      expect.objectContaining({
+        phone: '4738010919',
+      }),
+    );
+    expect(JSON.parse(String(init.body))).not.toHaveProperty('mobilePhone');
   });
 });

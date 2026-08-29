@@ -9,7 +9,7 @@ A forma escolhida pelo pagador para quitar uma compra: PIX, cartão de crédito 
 _Avoid_: Gateway, provedor, cartão
 
 **Provedor de pagamento**:
-O serviço externo responsável por processar um meio de pagamento. AbacatePay é o provedor de PIX; Asaas é o provedor dos cartões suportados.
+O serviço externo responsável por processar um meio de pagamento. Asaas é o provedor de novos pagamentos PIX e dos cartões suportados; AbacatePay permanece somente para contratos históricos.
 _Avoid_: Meio de pagamento, adquirente
 
 **Pacote de créditos**:
