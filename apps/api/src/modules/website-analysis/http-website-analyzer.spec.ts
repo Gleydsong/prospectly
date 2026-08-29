@@ -2,7 +2,10 @@ jest.mock('./ssrf', () => {
   const actual = jest.requireActual('./ssrf') as typeof import('./ssrf');
   return {
     ...actual,
-    assertSafePublicUrl: jest.fn(async (url: string) => new URL(url)),
+    assertSafePublicUrl: jest.fn(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    })),
   };
 });
 
@@ -110,7 +113,15 @@ describe('HttpWebsiteAnalyzer', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('parses a successful HTML response', async () => {
+  it('uses injected fetchImpl with pinned addresses from assertSafePublicUrl', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as {
+      assertSafePublicUrl: jest.Mock;
+    };
+    assertSafePublicUrl.mockResolvedValue({
+      url: new URL('https://example.com'),
+      addresses: ['93.184.216.34'],
+    });
+
     const html =
       '<html><head><title>Ok</title><meta name="viewport" content="width=device-width" /></head><body></body></html>';
     const fetchImpl = jest.fn().mockResolvedValue(streamResponse([Buffer.from(html)]));
@@ -120,6 +131,10 @@ describe('HttpWebsiteAnalyzer', () => {
     expect(result.https).toBe(true);
     expect(result.title).toBe('Ok');
     expect(result.hasViewport).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://example.com/',
+      expect.objectContaining({ method: 'GET', redirect: 'manual' }),
+    );
   });
 
   it('does not buffer an entire oversized HTML body into memory', async () => {

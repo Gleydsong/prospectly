@@ -36,6 +36,9 @@ function createService(overrides: Record<string, unknown> = {}) {
     organization: {
       findFirst: jest.fn().mockResolvedValue({ plan: 'LIFETIME', planStatus: 'ACTIVE' }),
     },
+    lead: {
+      findFirst: jest.fn(),
+    },
     $transaction: jest.fn(),
     ...overrides,
   };
@@ -341,6 +344,7 @@ describe('ProspectingService', () => {
       id: 'search-1',
       organizationId: 'org-1',
       provider: 'OPENSTREETMAP',
+      status: 'PENDING',
       input: searchInput,
     });
     prisma.search.update.mockResolvedValue(undefined);
@@ -371,6 +375,45 @@ describe('ProspectingService', () => {
     expect(prisma.searchResult.deleteMany).toHaveBeenCalledWith({
       where: { searchId: 'search-1', externalId: { notIn: ['node/1'] } },
     });
+    expect(prisma.search.update).toHaveBeenLastCalledWith({
+      where: { id: 'search-1' },
+      data: { status: 'COMPLETED', error: null, completedAt: expect.any(Date) },
+    });
+  });
+
+  it('skips reprocessing a completed search so BullMQ retries cannot wipe results', async () => {
+    const { prisma, provider, service } = createService();
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      status: 'COMPLETED',
+      input: searchInput,
+    });
+
+    await service.process('search-1');
+
+    expect(provider.search).not.toHaveBeenCalled();
+    expect(prisma.search.update).not.toHaveBeenCalled();
+    expect(prisma.searchResult.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('does not wipe existing results when providers return an empty batch', async () => {
+    const { prisma, provider, service } = createService();
+    prisma.search.findUnique.mockResolvedValue({
+      id: 'search-1',
+      organizationId: 'org-1',
+      provider: 'OPENSTREETMAP',
+      status: 'PROCESSING',
+      input: searchInput,
+    });
+    prisma.search.update.mockResolvedValue(undefined);
+    provider.search.mockResolvedValue([]);
+
+    await service.process('search-1');
+
+    expect(prisma.searchResult.upsert).not.toHaveBeenCalled();
+    expect(prisma.searchResult.deleteMany).not.toHaveBeenCalled();
     expect(prisma.search.update).toHaveBeenLastCalledWith({
       where: { id: 'search-1' },
       data: { status: 'COMPLETED', error: null, completedAt: expect.any(Date) },
@@ -605,6 +648,51 @@ describe('ProspectingService', () => {
       where: { id: 'result-1', importedLeadId: null },
       data: { importedLeadId: 'lead-existing' },
     });
+  });
+
+  it('re-imports after the previously linked lead was soft-deleted', async () => {
+    const { prisma, ingestion, service } = createService();
+    prisma.search.findFirst.mockResolvedValue({ id: 'search-1', organizationId: 'org-1', status: 'COMPLETED' });
+    prisma.searchResult.findMany.mockResolvedValue([
+      {
+        id: 'result-1',
+        importedLeadId: 'lead-deleted',
+        normalizedData: {
+          externalId: 'node/1',
+          companyName: 'Restaurante Bom',
+          city: 'São Paulo',
+          state: 'SP',
+          country: 'BR',
+          source: 'OPENSTREETMAP',
+          websitePresence: WebsitePresence.NO_WEBSITE_REPORTED,
+        },
+      },
+    ]);
+    prisma.lead.findFirst.mockResolvedValue(null);
+    ingestion.ingest.mockResolvedValue({ status: 'IMPORTED', lead: { id: 'lead-new' } });
+    prisma.searchResult.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
+
+    await expect(service.importResults('org-1', 'user-1', 'search-1', ['result-1'])).resolves.toEqual({
+      imported: 1,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [
+        expect.objectContaining({
+          resultId: 'result-1',
+          status: 'IMPORTED',
+          leadId: 'lead-new',
+        }),
+      ],
+    });
+
+    expect(prisma.searchResult.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { id: 'result-1', importedLeadId: 'lead-deleted' },
+      data: { importedLeadId: null },
+    });
+    expect(ingestion.ingest).toHaveBeenCalled();
   });
 
   it('does not report an imported result when a concurrent request wins the link', async () => {

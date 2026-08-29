@@ -272,6 +272,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
         currency: 'BRL',
         provider: PaymentProvider.ABACATE,
         currentPeriodEnd: periodEnd,
+        abacateSubscriptionId: null,
       });
       if (paymentId) {
         await this.prisma.organization.update({
@@ -392,6 +393,9 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       );
       return;
     }
+    if (!this.subscriptionEventMatchesOrg(org.abacateSubscriptionId, normalized, 'payment_failed')) {
+      return;
+    }
     await this.activation.syncMonthlyStatus({
       organizationId,
       status: PlanStatus.PAST_DUE,
@@ -410,12 +414,40 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       );
       return;
     }
+    if (!this.subscriptionEventMatchesOrg(org.abacateSubscriptionId, normalized, 'cancelled')) {
+      return;
+    }
     await this.activation.syncMonthlyStatus({
       organizationId,
       status: PlanStatus.CANCELED,
       abacateSubscriptionId: resolveSubscriptionId(normalized),
       abacateCustomerId: resolveCustomerId(normalized),
     });
+  }
+
+  /**
+   * Card subscription lifecycle must not touch PIX-only orgs (no subscription id)
+   * or a newer card sub when a delayed event for an older id arrives.
+   */
+  private subscriptionEventMatchesOrg(
+    orgSubscriptionId: string | null | undefined,
+    normalized: NormalizedAbacateWebhook,
+    label: string,
+  ): boolean {
+    const eventSubscriptionId = resolveSubscriptionId(normalized);
+    if (!orgSubscriptionId) {
+      this.logger.warn(
+        `Ignoring subscription.${label}: org has no Abacate card subscription (PIX-only or cleared)`,
+      );
+      return false;
+    }
+    if (eventSubscriptionId && orgSubscriptionId !== eventSubscriptionId) {
+      this.logger.warn(
+        `Ignoring subscription.${label}: event ${eventSubscriptionId} does not match live ${orgSubscriptionId}`,
+      );
+      return false;
+    }
+    return true;
   }
 
   private async completeCreditsIfMatching(normalized: NormalizedAbacateWebhook): Promise<boolean> {

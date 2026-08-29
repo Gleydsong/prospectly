@@ -308,6 +308,7 @@ describe('AbacatePaymentProvider', () => {
       expect.objectContaining({
         organizationId: 'org1',
         provider: PaymentProvider.ABACATE,
+        abacateSubscriptionId: null,
       }),
     );
   });
@@ -392,6 +393,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_1',
     });
     await provider.applyWebhookEvent(
       {
@@ -413,6 +415,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_1',
     });
     await provider.applyWebhookEvent(
       {
@@ -435,6 +438,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.STRIPE,
+      abacateSubscriptionId: 'subs_old',
     });
     await provider.applyWebhookEvent(
       {
@@ -442,6 +446,46 @@ describe('AbacatePaymentProvider', () => {
         event: 'subscription.cancelled',
         data: {
           subscription: { id: 'subs_old', status: 'CANCELLED' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('ignores subscription.cancelled for a replaced Abacate card subscription', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_live',
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel_replaced',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_old', status: 'CANCELLED' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('ignores subscription.cancelled when org is on PIX-only monthly (no card subscription id)', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: null,
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel_pix_only',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_stale_card', status: 'CANCELLED' },
           checkout: { metadata: { organizationId: 'org1' } },
         },
       },
