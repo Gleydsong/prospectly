@@ -317,6 +317,10 @@ export class BillingService {
         description: 'Prospectly Ilimitado (30 dias)',
       });
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
+        throw error;
+      }
       if (error instanceof AsaasRequestError && !error.ambiguous) {
         await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
       } else {
@@ -512,6 +516,7 @@ export class BillingService {
         });
       } catch (error) {
         await this.markAsaasPurchaseCreationFailure(purchase.id, error);
+        if (error instanceof BadRequestException) throw error;
         throw this.asaasCheckoutError(error, 'PIX payments are temporarily unavailable');
       }
       await this.creditPurchases.attachPayment(purchase.id, payment.id);
@@ -578,10 +583,16 @@ export class BillingService {
     await this.prisma.creditPurchase.update({
       where: { id: purchaseId },
       data: {
-        status:
-          error instanceof AsaasRequestError && !error.ambiguous ? 'FAILED' : 'REVIEW_REQUIRED',
+        status: this.isDeterministicAsaasCheckoutFailure(error) ? 'FAILED' : 'REVIEW_REQUIRED',
       },
     });
+  }
+
+  private isDeterministicAsaasCheckoutFailure(error: unknown): boolean {
+    return (
+      error instanceof BadRequestException ||
+      (error instanceof AsaasRequestError && !error.ambiguous)
+    );
   }
 
   private asaasCheckoutError(
@@ -589,7 +600,7 @@ export class BillingService {
     unavailableMessage: string,
   ): ServiceUnavailableException {
     return new ServiceUnavailableException(
-      error instanceof AsaasRequestError && !error.ambiguous
+      this.isDeterministicAsaasCheckoutFailure(error)
         ? unavailableMessage
         : 'Estamos confirmando seu checkout',
     );

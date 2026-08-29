@@ -485,6 +485,35 @@ describe('BillingService', () => {
     });
   });
 
+  it('returns the Asaas PIX rejection instead of locking the organization in review', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-pix-rejected' },
+    });
+    asaasClient.createPixPayment.mockRejectedValue(
+      new BadRequestException(
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+      ),
+    );
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'pix'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message:
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+    });
+    expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-pix-rejected' },
+      data: { status: 'FAILED' },
+    });
+  });
+
   it('returns the Asaas payer validation error instead of marking the package as uncertain', async () => {
     prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
     prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
@@ -591,6 +620,40 @@ describe('BillingService', () => {
       'cus_1',
     );
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('returns the Asaas monthly PIX rejection instead of locking the organization in review', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-pix-rejected', externalId: 'org:org1:monthly-pix:rejected' },
+    });
+    asaasClient.createPixPayment.mockRejectedValue(
+      new BadRequestException(
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+      ),
+    );
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message:
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+    });
+    expect(monthlyAttempts.markFailed).toHaveBeenCalled();
+    expect(monthlyAttempts.markReviewRequired).not.toHaveBeenCalled();
   });
 
   it('expires an overdue monthly period inside the checkout request before renewing by PIX', async () => {
