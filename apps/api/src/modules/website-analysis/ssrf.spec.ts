@@ -1,4 +1,9 @@
-import { isBlockedIp, assertSafePublicUrl, SsrfBlockedError } from './ssrf';
+import {
+  isBlockedIp,
+  assertSafePublicUrl,
+  createPinnedLookup,
+  SsrfBlockedError,
+} from './ssrf';
 
 describe('ssrf guards', () => {
   it('blocks private IPv4 ranges', () => {
@@ -40,5 +45,23 @@ describe('ssrf guards', () => {
     await expect(assertSafePublicUrl('http://169.254.169.254/latest')).rejects.toBeInstanceOf(
       SsrfBlockedError,
     );
+  });
+
+  it('returns the literal public IP as the pinned address', async () => {
+    const safe = await assertSafePublicUrl('http://8.8.8.8/health');
+    expect(safe.url.toString()).toBe('http://8.8.8.8/health');
+    expect(safe.addresses).toEqual(['8.8.8.8']);
+  });
+
+  it('pins lookup to validated addresses and never returns other IPs', () => {
+    const lookup = createPinnedLookup(['93.184.216.34', '2606:2800:220:1:248:1893:25c8:1946']);
+    const single = new Promise<{ address: string; family: number }>((resolve, reject) => {
+      lookup('example.com', {}, (err, address, family) => {
+        if (err) reject(err);
+        else resolve({ address: address as string, family: family as number });
+      });
+    });
+
+    return expect(single).resolves.toEqual({ address: '93.184.216.34', family: 4 });
   });
 });

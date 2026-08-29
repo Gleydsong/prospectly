@@ -128,6 +128,54 @@ describe('AsaasClient', () => {
     expect(JSON.parse(String(init.body))).not.toHaveProperty('installmentCount');
   });
 
+  it('creates a one-time PIX payment and retrieves its dynamic QR code', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'pay_pix_1', status: 'PENDING' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          payload: '000201010212pix-copy-paste',
+          encodedImage: 'cG5nLWJhc2U2NA==',
+          expirationDate: '2026-08-29 23:59:59',
+        }),
+      } as Response);
+
+    await expect(
+      client.createPixPayment({
+        customerId: 'cus_1',
+        amountCentavos: 1499,
+        externalReference: 'org:org-1:credits:pix-1',
+        description: 'Prospectly - 2.000 créditos',
+      }),
+    ).resolves.toEqual({ id: 'pay_pix_1', status: 'PENDING' });
+    await expect(client.getPixQrCode('pay_pix_1')).resolves.toEqual({
+      payload: '000201010212pix-copy-paste',
+      encodedImage: 'cG5nLWJhc2U2NA==',
+      expirationDate: '2026-08-29 23:59:59',
+    });
+
+    const [, createInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(createInit.body))).toEqual(
+      expect.objectContaining({
+        customer: 'cus_1',
+        billingType: 'PIX',
+        value: 14.99,
+        externalReference: 'org:org-1:credits:pix-1',
+      }),
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      'https://api-sandbox.asaas.com/v3/payments/pay_pix_1/pixQrCode',
+    );
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(expect.objectContaining({ method: 'GET' }));
+    expect(fetchMock.mock.calls[1]?.[1]).not.toHaveProperty('body');
+  });
+
   it('classifies a successful POST with an unreadable body as ambiguous', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,

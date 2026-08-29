@@ -53,6 +53,87 @@ describe('MonthlyCheckoutAttemptService', () => {
     });
   });
 
+  it('creates a durable Asaas PIX attempt before external payment creation', async () => {
+    prisma.monthlyCheckoutAttempt.create.mockImplementation(async ({ data }) => ({
+      id: 'attempt_pix_1',
+      ...data,
+      status: BillingCheckoutAttemptStatus.PROCESSING,
+      externalCheckoutId: null,
+      externalCustomerId: null,
+      checkoutUrl: null,
+      attempts: 1,
+      lastError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    await expect(service.beginPix('org1')).resolves.toEqual(
+      expect.objectContaining({
+        state: 'acquired',
+        claim: expect.objectContaining({ id: 'attempt_pix_1' }),
+      }),
+    );
+    expect(prisma.monthlyCheckoutAttempt.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: 'org1',
+        provider: PaymentProvider.ASAAS,
+        paymentMethod: BillingPaymentMethod.PIX,
+        externalId: expect.stringContaining('org:org1:monthly-pix:'),
+      }),
+    });
+  });
+
+  it('reuses the persisted Asaas monthly PIX payment', async () => {
+    prisma.monthlyCheckoutAttempt.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }),
+    );
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue({
+      id: 'attempt_pix_1',
+      organizationId: 'org1',
+      provider: PaymentProvider.ASAAS,
+      paymentMethod: BillingPaymentMethod.PIX,
+      status: BillingCheckoutAttemptStatus.READY,
+      externalId: 'org:org1:monthly-pix:1',
+      externalCheckoutId: 'pay_pix_1',
+      externalCustomerId: 'cus_1',
+      checkoutUrl: null,
+      attempts: 1,
+      lastError: null,
+      createdAt: new Date(),
+      updatedAt: new Date(Date.now() - 31 * 60 * 1000),
+    });
+
+    await expect(service.beginPix('org1')).resolves.toEqual({
+      state: 'ready',
+      paymentId: 'pay_pix_1',
+    });
+  });
+
+  it('marks a monthly PIX payment ready without storing its QR image', async () => {
+    prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValue({ count: 1 });
+
+    await service.markPixReady(
+      'org1',
+      { id: 'attempt_pix_1', externalId: 'org:org1:monthly-pix:1' },
+      'pay_pix_1',
+      'cus_1',
+    );
+
+    expect(prisma.monthlyCheckoutAttempt.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'attempt_pix_1',
+        organizationId: 'org1',
+        status: BillingCheckoutAttemptStatus.PROCESSING,
+      },
+      data: {
+        status: BillingCheckoutAttemptStatus.READY,
+        externalCheckoutId: 'pay_pix_1',
+        externalCustomerId: 'cus_1',
+        lastError: null,
+      },
+    });
+  });
+
   it('reuses a recent ready checkout without another provider call', async () => {
     prisma.monthlyCheckoutAttempt.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: '6' }),

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { CampaignLeadResult, CampaignStatus, Prisma } from '@prisma/client';
 
@@ -9,6 +10,7 @@ import { paginate } from '../../../common/dto/pagination.dto';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../../audit/audit.constants';
 import { AuditService } from '../../audit/audit.service';
+import { SuppressionService } from '../../privacy/suppression.service';
 import {
   defaultStages,
   emptyStageMetrics,
@@ -48,6 +50,7 @@ export class CampaignsService {
     private readonly prisma: PrismaService,
     private readonly templates: TemplatesService,
     private readonly audit: AuditService,
+    @Optional() private readonly suppression?: SuppressionService,
   ) {}
 
   async list(organizationId: string, query: QueryCampaignsDto) {
@@ -435,6 +438,10 @@ export class CampaignsService {
 
       return [created] as const;
     });
+
+    if (dto.result === 'OPT_OUT') {
+      await this.suppression?.suppressFromLead(organizationId, leadId, 'campaign_opt_out');
+    }
 
     await this.audit.log({
       organizationId,

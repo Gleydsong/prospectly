@@ -87,6 +87,7 @@ describe('Prospecting HTTP integration', () => {
     search: Record<string, jest.Mock>;
     searchResult: Record<string, jest.Mock>;
     organization: Record<string, jest.Mock>;
+    lead: Record<string, jest.Mock>;
     $transaction: jest.Mock;
   };
 
@@ -170,11 +171,17 @@ describe('Prospecting HTTP integration', () => {
             where,
             data,
           }: {
-            where: { id: string; importedLeadId: null };
-            data: { importedLeadId: string };
+            where: { id: string; importedLeadId?: string | null };
+            data: { importedLeadId: string | null };
           }) => {
             const result = results.get(where.id);
-            if (!result || result.importedLeadId !== null) return { count: 0 };
+            if (!result) return { count: 0 };
+            if (
+              where.importedLeadId !== undefined &&
+              result.importedLeadId !== where.importedLeadId
+            ) {
+              return { count: 0 };
+            }
             results.set(where.id, { ...result, importedLeadId: data.importedLeadId });
             return { count: 1 };
           },
@@ -182,6 +189,16 @@ describe('Prospecting HTTP integration', () => {
       },
       organization: {
         findFirst: jest.fn(async () => ({ plan: 'LIFETIME', planStatus: 'ACTIVE' })),
+      },
+      lead: {
+        findFirst: jest.fn(
+          async ({ where }: { where: { id: string; organizationId: string; deletedAt: null } }) => {
+            const linked = [...results.values()].some(
+              (result) => result.importedLeadId === where.id,
+            );
+            return linked ? { id: where.id } : null;
+          },
+        ),
       },
       $transaction: jest.fn(async (work: unknown) => {
         if (typeof work === 'function') {

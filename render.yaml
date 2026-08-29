@@ -88,7 +88,9 @@ projects:
               - key: ABACATE_HTTP_TIMEOUT_MS
                 value: '15000'
               - key: ASAAS_ENABLED
-                value: 'false'
+                value: 'true'
+              - key: PIX_PROVIDER
+                value: ASAAS
               - key: ASAAS_API_KEY
                 sync: false
               - key: ASAAS_WEBHOOK_TOKEN
@@ -122,6 +124,8 @@ projects:
               - key: GOOGLE_PLACES_API_KEY
                 sync: false
               - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: OPS_METRICS_TOKEN
                 sync: false
 
           - type: web

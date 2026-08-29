@@ -54,6 +54,20 @@ describe('hasUnlimitedAccess', () => {
     ).toBe(true);
   });
 
+  it('keeps Asaas card subscription active despite stale invoice period end', () => {
+    expect(
+      hasUnlimitedAccess(
+        {
+          plan: OrgPlan.STARTER_MONTHLY,
+          planStatus: PlanStatus.ACTIVE,
+          currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+          asaasSubscriptionId: 'sub_asaas_card',
+        },
+        now,
+      ),
+    ).toBe(true);
+  });
+
   it('is false for FREE / inactive', () => {
     expect(
       hasUnlimitedAccess(
@@ -99,6 +113,20 @@ describe('isMonthlyPeriodExpired', () => {
           planStatus: PlanStatus.ACTIVE,
           currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
           abacateSubscriptionId: 'subs_card',
+        },
+        now,
+      ),
+    ).toBe(false);
+  });
+
+  it('does not expire Asaas card subscription with stale invoice period end', () => {
+    expect(
+      isMonthlyPeriodExpired(
+        {
+          plan: OrgPlan.STARTER_MONTHLY,
+          planStatus: PlanStatus.ACTIVE,
+          currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
+          asaasSubscriptionId: 'sub_asaas_card',
         },
         now,
       ),

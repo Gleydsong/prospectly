@@ -53,6 +53,7 @@ import {
   resolveOpportunityNiche,
 } from './domain/opportunity-profile';
 import { buildOpportunitySignals, scoreOpportunity } from './domain/opportunity-scoring';
+import { sanitizeCompanyForLlm } from '../privacy/llm-privacy.sanitizer';
 import type { CreateOpportunityRunDto } from './dto/create-opportunity-run.dto';
 import type { QueryOpportunityCandidatesDto } from './dto/query-opportunity-candidates.dto';
 
@@ -221,7 +222,19 @@ export class OpportunityFinderService {
     await this.requireRun(organizationId, runId);
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
-    if (candidate.importedLeadId) return { status: 'ALREADY_SAVED' as const, leadId: candidate.importedLeadId };
+    if (candidate.importedLeadId) {
+      const activeLead = await this.prisma.lead.findFirst({
+        where: { id: candidate.importedLeadId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (activeLead) {
+        return { status: 'ALREADY_SAVED' as const, leadId: activeLead.id };
+      }
+      await this.prisma.opportunityCandidate.update({
+        where: { id: candidate.id },
+        data: { importedLeadId: null },
+      });
+    }
     await this.billing.consumeCreditForSaveLead(organizationId, candidate.id, runId);
     try {
       const company = candidate.company as unknown as OpportunityCompany;
@@ -254,12 +267,33 @@ export class OpportunityFinderService {
         notes: `Opportunity Finder: score ${candidate.overallScore}/100, confiança ${candidate.confidenceScore}%.`,
         tags: ['opportunity-finder'],
       });
-      const lead = outcome.lead;
-      if (lead) {
-        await this.prisma.opportunityCandidate.updateMany({ where: { id: candidate.id, importedLeadId: null }, data: { importedLeadId: lead.id } });
+      if (outcome.status !== 'IMPORTED') {
+        await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
+        const leadId = 'lead' in outcome ? (outcome.lead?.id ?? null) : null;
+        await this.audit.log({
+          organizationId,
+          userId,
+          action: 'OPPORTUNITY_SAVED_AS_LEAD',
+          entity: 'OpportunityCandidate',
+          entityId: candidate.id,
+          metadata: { outcome: outcome.status, leadId },
+        });
+        return { status: outcome.status, leadId };
       }
-      await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_SAVED_AS_LEAD', entity: 'OpportunityCandidate', entityId: candidate.id, metadata: { outcome: outcome.status, leadId: lead?.id } });
-      return { status: outcome.status, leadId: lead?.id ?? null };
+      const lead = outcome.lead;
+      await this.prisma.opportunityCandidate.updateMany({
+        where: { id: candidate.id, importedLeadId: null },
+        data: { importedLeadId: lead.id },
+      });
+      await this.audit.log({
+        organizationId,
+        userId,
+        action: 'OPPORTUNITY_SAVED_AS_LEAD',
+        entity: 'OpportunityCandidate',
+        entityId: candidate.id,
+        metadata: { outcome: outcome.status, leadId: lead.id },
+      });
+      return { status: outcome.status, leadId: lead.id };
     } catch (error) {
       await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
       throw error;
@@ -425,15 +459,7 @@ export class OpportunityFinderService {
 
   private async generateExplanation(run: { id: string; organizationId: string; userId: string; service: string }, candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue }, userId: string): Promise<OpportunityExplanation> {
     const rawCompany = candidate.company as unknown as OpportunityCompany;
-    const company: Record<string, unknown> = {
-      companyName: rawCompany.companyName,
-      category: rawCompany.category,
-      city: rawCompany.city,
-      state: rawCompany.state,
-      rating: rawCompany.rating,
-      reviewCount: rawCompany.reviewCount,
-      websitePresence: rawCompany.websitePresence,
-    };
+    const company = sanitizeCompanyForLlm(rawCompany as unknown as Record<string, unknown>);
     const signals = candidate.signals as unknown as OpportunityCandidateView['signals'];
     const scoreBreakdown = candidate.scoreBreakdown as unknown as OpportunityCandidateView['scoreBreakdown'];
     const ai = await this.ai.explainOpportunity({ organizationId: run.organizationId, userId, opportunityRunId: run.id, candidateId: candidate.id }, { service: run.service, company, signals, scoreBreakdown });

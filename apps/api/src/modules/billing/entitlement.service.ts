@@ -50,7 +50,13 @@ export class EntitlementService {
   async getSnapshot(organizationId: string) {
     const org = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { plan: true, planStatus: true, currentPeriodEnd: true, abacateSubscriptionId: true },
+      select: {
+        plan: true,
+        planStatus: true,
+        currentPeriodEnd: true,
+        abacateSubscriptionId: true,
+        asaasSubscriptionId: true,
+      },
     });
     const plan = hasUnlimitedAccess(org) ? org.plan : OrgPlan.FREE;
     const limits = PLAN_ENTITLEMENTS[plan];
@@ -71,7 +77,13 @@ export class EntitlementService {
   async canExportCsv(organizationId: string): Promise<boolean> {
     const org = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { plan: true, planStatus: true, currentPeriodEnd: true, abacateSubscriptionId: true },
+      select: {
+        plan: true,
+        planStatus: true,
+        currentPeriodEnd: true,
+        abacateSubscriptionId: true,
+        asaasSubscriptionId: true,
+      },
     });
     if (hasUnlimitedAccess(org)) {
       return true;

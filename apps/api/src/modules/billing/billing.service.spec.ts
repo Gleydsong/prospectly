@@ -68,12 +68,17 @@ describe('BillingService', () => {
 
   const asaasClient = {
     createHostedPayment: jest.fn(),
+    createPixPayment: jest.fn(),
+    getPixQrCode: jest.fn(),
     createRecurringCheckout: jest.fn(),
+    cancelSubscription: jest.fn(),
   };
 
   const monthlyAttempts = {
     beginCard: jest.fn(),
+    beginPix: jest.fn(),
     markReady: jest.fn(),
+    markPixReady: jest.fn(),
     markFailed: jest.fn(),
     markReviewRequired: jest.fn(),
   };
@@ -92,6 +97,7 @@ describe('BillingService', () => {
       'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
       'asaas.enabled': true,
+      'billing.pixProvider': 'ABACATE',
     };
     return map[key];
   };
@@ -257,6 +263,22 @@ describe('BillingService', () => {
     });
   });
 
+  it('does not expire an Asaas card subscription when the invoice period lapses', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+      asaasSubscriptionId: 'sub_asaas_card',
+      creditBalance: 0,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(3);
+
+    await expect(service.assertCanCreateSearch('org1')).resolves.toBeUndefined();
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
   it('rejects cross-provider plan checkout when org already bound', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
@@ -319,6 +341,86 @@ describe('BillingService', () => {
     );
   });
 
+  it('creates an Asaas PIX charge for a credit package after persisting the attempt', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-pix-1' },
+    });
+    asaasClient.createPixPayment.mockResolvedValue({ id: 'pay_pix_1', status: 'PENDING' });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: '000201010212pix-copy-paste',
+      encodedImage: 'cG5nLWJhc2U2NA==',
+      expirationDate: '2026-08-29T23:59:59Z',
+    });
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'pix'),
+    ).resolves.toEqual({
+      mode: 'pix',
+      provider: 'ASAAS',
+      brCode: '000201010212pix-copy-paste',
+      brCodeBase64: 'cG5nLWJhc2U2NA==',
+      externalPaymentId: 'pay_pix_1',
+      amountCentavos: 1499,
+      expiresAt: '2026-08-29T23:59:59Z',
+    });
+    expect(creditPurchases.beginAsaasPackage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        offer: 'credits-2000',
+        paymentMethod: 'pix',
+      }),
+    );
+    expect(creditPurchases.attachPayment).toHaveBeenCalledWith('purchase-pix-1', 'pay_pix_1');
+    expect(creditPurchases.attachPayment.mock.invocationCallOrder[0]).toBeLessThan(
+      asaasClient.getPixQrCode.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(abacateProvider.createCreditCheckout).not.toHaveBeenCalled();
+  });
+
+  it('reuses the persisted Asaas PIX payment instead of creating another charge', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: false,
+      purchase: {
+        id: 'purchase-pix-1',
+        offer: 'credits-2000',
+        paymentMethod: 'PIX',
+        status: 'PENDING',
+        externalPaymentId: 'pay_pix_1',
+      },
+    });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: 'pix-copy-paste',
+      encodedImage: 'cG5n',
+    });
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'pix'),
+    ).resolves.toMatchObject({
+      mode: 'pix',
+      provider: 'ASAAS',
+      externalPaymentId: 'pay_pix_1',
+    });
+    expect(asaasClient.createPixPayment).not.toHaveBeenCalled();
+    expect(asaasClient.getPixQrCode).toHaveBeenCalledWith('pay_pix_1');
+  });
+
   it('reuses the persisted hosted package URL after the browser loses the response', async () => {
     prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
     creditPurchases.beginAsaasPackage.mockResolvedValue({
@@ -326,6 +428,7 @@ describe('BillingService', () => {
       purchase: {
         id: 'purchase-1',
         offer: 'credits-2000',
+        paymentMethod: 'CARD',
         status: 'PENDING',
         externalPaymentId: 'pay_1',
         checkoutUrl: 'https://sandbox.asaas.com/i/pay_1',
@@ -378,6 +481,35 @@ describe('BillingService', () => {
     ).rejects.toMatchObject({ status: 503 });
     expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
       where: { id: 'purchase-rejected' },
+      data: { status: 'FAILED' },
+    });
+  });
+
+  it('returns the Asaas PIX rejection instead of locking the organization in review', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-pix-rejected' },
+    });
+    asaasClient.createPixPayment.mockRejectedValue(
+      new BadRequestException(
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+      ),
+    );
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'pix'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message:
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+    });
+    expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-pix-rejected' },
       data: { status: 'FAILED' },
     });
   });
@@ -438,6 +570,131 @@ describe('BillingService', () => {
       externalCheckoutId: 'checkout-1',
     });
     expect(monthlyAttempts.markReady).toHaveBeenCalled();
+  });
+
+  it('creates a one-time Asaas PIX payment for 30 days of monthly access', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-pix-1', externalId: 'org:org1:monthly-pix:1' },
+    });
+    asaasClient.createPixPayment.mockResolvedValue({ id: 'pay_pix_monthly_1' });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: 'monthly-pix-copy-paste',
+      encodedImage: 'cG5n',
+      expirationDate: '2026-08-29T23:59:59Z',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).resolves.toEqual({
+      mode: 'pix',
+      provider: 'ASAAS',
+      brCode: 'monthly-pix-copy-paste',
+      brCodeBase64: 'cG5n',
+      externalPaymentId: 'pay_pix_monthly_1',
+      amountCentavos: 4999,
+      expiresAt: '2026-08-29T23:59:59Z',
+    });
+    expect(asaasClient.createPixPayment).toHaveBeenCalledWith({
+      customerId: 'cus_1',
+      amountCentavos: 4999,
+      externalReference: 'org:org1:monthly-pix:1',
+      description: 'Prospectly Ilimitado (30 dias)',
+    });
+    expect(monthlyAttempts.markPixReady).toHaveBeenCalledWith(
+      'org1',
+      { id: 'attempt-pix-1', externalId: 'org:org1:monthly-pix:1' },
+      'pay_pix_monthly_1',
+      'cus_1',
+    );
+    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('returns the Asaas monthly PIX rejection instead of locking the organization in review', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-pix-rejected', externalId: 'org:org1:monthly-pix:rejected' },
+    });
+    asaasClient.createPixPayment.mockRejectedValue(
+      new BadRequestException(
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+      ),
+    );
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message:
+        'O Pix não está disponível no momento. Para utilizá-lo, sua conta precisa estar aprovada.',
+    });
+    expect(monthlyAttempts.markFailed).toHaveBeenCalled();
+    expect(monthlyAttempts.markReviewRequired).not.toHaveBeenCalled();
+  });
+
+  it('expires an overdue monthly period inside the checkout request before renewing by PIX', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    const expired = {
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.STARTER_MONTHLY,
+      paymentProvider: PaymentProvider.ASAAS,
+      planStatus: PlanStatus.ACTIVE,
+      currentPeriodEnd: new Date('2020-01-01T00:00:00.000Z'),
+      deletedAt: null,
+    };
+    prisma.organization.findFirst.mockResolvedValueOnce(expired).mockResolvedValueOnce({
+      ...expired,
+      plan: OrgPlan.FREE,
+      planStatus: PlanStatus.CANCELED,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'ready',
+      paymentId: 'pay_pix_monthly_2',
+    });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: 'monthly-pix-copy-paste',
+      encodedImage: 'cG5n',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).resolves.toMatchObject({
+      mode: 'pix',
+      provider: 'ASAAS',
+      externalPaymentId: 'pay_pix_monthly_2',
+    });
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      status: PlanStatus.CANCELED,
+    });
   });
 
   it('blocks every Asaas checkout while any organization checkout needs review', async () => {
@@ -665,5 +922,26 @@ describe('BillingService', () => {
         metadata: { feature: 'AI_OPPORTUNITY_FINDER', cause: 'NO_COMPANIES_FOUND' },
       }),
     });
+  });
+
+  it('cancels an Asaas card subscription and syncs local entitlement', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_asaas_card',
+      deletedAt: null,
+    });
+    asaasClient.cancelSubscription.mockResolvedValue(undefined);
+
+    await expect(service.cancelSubscription('org1')).resolves.toEqual({ canceled: true });
+    expect(asaasClient.cancelSubscription).toHaveBeenCalledWith('sub_asaas_card');
+    expect(activation.syncMonthlyStatus).toHaveBeenCalledWith({
+      organizationId: 'org1',
+      status: PlanStatus.CANCELED,
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: null,
+    });
+    expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 });

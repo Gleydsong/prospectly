@@ -12,6 +12,7 @@ import type {
 import { z } from 'zod';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { sanitizeLlmPayload } from '../privacy/llm-privacy.sanitizer';
 import {
   OPPORTUNITY_EXPLANATION_PROMPT_VERSION,
   OPPORTUNITY_PROFILE_PROMPT_VERSION,
@@ -160,7 +161,7 @@ export class StructuredAiService {
           options: { temperature: 0.2, num_predict: 900 },
           messages: [
             { role: 'system', content: input.system },
-            { role: 'user', content: JSON.stringify(input.input) },
+            { role: 'user', content: JSON.stringify(sanitizeLlmPayload(input.input)) },
           ],
         }),
       });

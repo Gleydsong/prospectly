@@ -1,6 +1,6 @@
 # Prospectly ops runbook
 
-Private operational metrics: `GET /api/v1/ops/metrics` (JWT + role `OWNER`/`ADMIN` only). Never expose this route publicly and never put stack traces, lead payloads, or secrets in public health responses.
+Private operational metrics: `GET /api/v1/ops/metrics` (header `X-Prospectly-Ops-Token` matching `OPS_METRICS_TOKEN`, ≥ 32 characters). Tenant JWT roles are not accepted. If the token is unset, the route returns 404. Never expose this route publicly and never put stack traces, lead payloads, or secrets in public health responses.
 
 Queues in scope: `prospecting`, `imports`, `scoring`, `website-analysis`.
 
@@ -15,7 +15,7 @@ Symptoms:
 Actions:
 
 1. Confirm API process is up: `GET /health/live` and `GET /health/ready`.
-2. As `OWNER`/`ADMIN`, call `GET /api/v1/ops/metrics` and note queue depths + recent fail/retry counters.
+2. Call `GET /api/v1/ops/metrics` with `X-Prospectly-Ops-Token` and note queue depths + recent fail/retry counters.
 3. Check API logs filtered by `correlationId` from the originating HTTP request (`x-correlation-id`).
 4. If Redis is healthy but workers appear idle, restart the API service (workers currently run in-process with HTTP).
 5. For a single stuck search/import, inspect the entity status in the app/DB. Prefer a controlled retry from the product UI over manual Redis edits.
@@ -28,7 +28,7 @@ Escalate if depths keep rising after restart or if failed jobs accumulate with p
 Symptoms:
 
 - `GET /health/ready` returns `503` with `{ "status": "not_ready" }`
-- `ops/metrics` reports `redis.status: "down"` (when the process can still serve auth)
+- `ops/metrics` reports `redis.status: "down"` (when the process can still serve the ops token)
 - Enqueue/rate-limit paths fail; jobs stop progressing
 
 Actions:
@@ -65,7 +65,7 @@ Use when a deploy introduces error spikes, stuck queues, or auth/ops regressions
 
 1. Identify the bad deploy in Render (API service `prospectly-api`) and the preceding healthy deploy.
 2. Roll back the API service to the last known-good deploy. Prefer rolling API + web together when the change crossed the auth cookie/`withCredentials` boundary.
-3. Confirm `GET /health/ready` is ready and `GET /api/v1/ops/metrics` (authenticated) shows recovering queue depths.
+3. Confirm `GET /health/ready` is ready and `GET /api/v1/ops/metrics` (ops token) shows recovering queue depths.
 4. Watch `http.errors5xx`, job `failed`/`retries`, and Redis status for 10–15 minutes.
 5. If migrations were applied in the bad release, do **not** assume a simple image rollback undoes schema changes — follow Prisma migrate guidance / deploy docs before reprocessing jobs.
 6. Communicate impact window and whether users should retry searches/imports.
@@ -76,6 +76,7 @@ Use when a deploy introduces error spikes, stuck queues, or auth/ops regressions
 |-------|----------|
 | `GET /health` | public liveness-style OK, no internals |
 | `GET /health/ready` | ready only when Postgres + Redis respond |
-| `GET /api/v1/ops/metrics` without JWT | 401 |
-| `GET /api/v1/ops/metrics` as `MEMBER`/`VIEWER` | 403 |
-| `GET /api/v1/ops/metrics` as `OWNER`/`ADMIN` | JSON with `http`, `jobs`, `queues`, `redis` |
+| `GET /api/v1/ops/metrics` without `OPS_METRICS_TOKEN` configured | 404 |
+| `GET /api/v1/ops/metrics` with missing/wrong `X-Prospectly-Ops-Token` | 401 |
+| `GET /api/v1/ops/metrics` with tenant JWT only | 401 (or 404 if token unset) |
+| `GET /api/v1/ops/metrics` with matching ops token | JSON with `http`, `jobs`, `queues`, `redis` |

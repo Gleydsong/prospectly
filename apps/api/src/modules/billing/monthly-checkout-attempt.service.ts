@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import type { CheckoutResult } from './domain/payment-provider';
 
 export const MONTHLY_CHECKOUT_PROCESSING_LEASE_MS = 2 * 60 * 1000;
@@ -22,12 +23,41 @@ export type MonthlyCheckoutClaim = {
 export type MonthlyCheckoutBeginResult =
   { state: 'ready'; checkout: CheckoutResult } | { state: 'acquired'; claim: MonthlyCheckoutClaim };
 
+export type MonthlyPixCheckoutBeginResult =
+  { state: 'ready'; paymentId: string } | { state: 'acquired'; claim: MonthlyCheckoutClaim };
+
+type InternalBeginResult =
+  | { state: 'ready'; attempt: MonthlyCheckoutAttempt }
+  | { state: 'acquired'; claim: MonthlyCheckoutClaim };
+
 @Injectable()
 export class MonthlyCheckoutAttemptService {
   constructor(private readonly prisma: PrismaService) {}
 
   async beginCard(organizationId: string): Promise<MonthlyCheckoutBeginResult> {
-    const { attempt, created } = await this.createOrFind(organizationId);
+    const begin = await this.begin(organizationId, BillingPaymentMethod.CARD);
+    if (begin.state === 'ready') {
+      return { state: 'ready', checkout: this.toCheckout(begin.attempt) };
+    }
+    return begin;
+  }
+
+  async beginPix(organizationId: string): Promise<MonthlyPixCheckoutBeginResult> {
+    const begin = await this.begin(organizationId, BillingPaymentMethod.PIX);
+    if (begin.state === 'ready') {
+      if (!begin.attempt.externalCheckoutId) {
+        throw new ConflictException('Monthly PIX checkout is not ready. Try again shortly.');
+      }
+      return { state: 'ready', paymentId: begin.attempt.externalCheckoutId };
+    }
+    return begin;
+  }
+
+  private async begin(
+    organizationId: string,
+    paymentMethod: BillingPaymentMethod,
+  ): Promise<InternalBeginResult> {
+    const { attempt, created } = await this.createOrFind(organizationId, paymentMethod);
     if (created) {
       return {
         state: 'acquired',
@@ -39,16 +69,20 @@ export class MonthlyCheckoutAttemptService {
     }
     const now = Date.now();
 
+    if (attempt.paymentMethod !== paymentMethod) {
+      throw new ConflictException('Another Asaas checkout is already in progress.');
+    }
+
     if (attempt.status === BillingCheckoutAttemptStatus.REVIEW_REQUIRED) {
       throw new ConflictException('Estamos confirmando seu checkout');
     }
 
     if (
       attempt.status === BillingCheckoutAttemptStatus.READY &&
-      attempt.checkoutUrl &&
-      now - attempt.updatedAt.getTime() < READY_RECHECK_MS
+      (paymentMethod === BillingPaymentMethod.PIX ||
+        now - attempt.updatedAt.getTime() < READY_RECHECK_MS)
     ) {
-      return { state: 'ready', checkout: this.toCheckout(attempt) };
+      return { state: 'ready', attempt };
     }
 
     if (
@@ -96,6 +130,30 @@ export class MonthlyCheckoutAttemptService {
     });
     if (updated.count !== 1) {
       throw new ConflictException('Monthly checkout claim was lost. Try again.');
+    }
+  }
+
+  async markPixReady(
+    organizationId: string,
+    claim: MonthlyCheckoutClaim,
+    paymentId: string,
+    externalCustomerId: string,
+  ): Promise<void> {
+    const updated = await this.prisma.monthlyCheckoutAttempt.updateMany({
+      where: {
+        id: claim.id,
+        organizationId,
+        status: BillingCheckoutAttemptStatus.PROCESSING,
+      },
+      data: {
+        status: BillingCheckoutAttemptStatus.READY,
+        externalCheckoutId: paymentId,
+        externalCustomerId,
+        lastError: null,
+      },
+    });
+    if (updated.count !== 1) {
+      throw new ConflictException('Monthly PIX checkout claim was lost. Try again.');
     }
   }
 
@@ -171,17 +229,18 @@ export class MonthlyCheckoutAttemptService {
 
   private async createOrFind(
     organizationId: string,
+    paymentMethod: BillingPaymentMethod,
   ): Promise<{ attempt: MonthlyCheckoutAttempt; created: boolean }> {
     try {
       const attempt = await this.prisma.monthlyCheckoutAttempt.create({
         data: {
           organizationId,
           provider: PaymentProvider.ASAAS,
-          paymentMethod: BillingPaymentMethod.CARD,
+          paymentMethod,
           product: 'MONTHLY_ACCESS',
-          amountCentavos: 4999,
+          amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
           currency: 'BRL',
-          externalId: this.newExternalId(organizationId),
+          externalId: this.newExternalId(organizationId, paymentMethod),
         },
       });
       return { attempt, created: true };
@@ -191,7 +250,6 @@ export class MonthlyCheckoutAttemptService {
         where: {
           organizationId,
           provider: PaymentProvider.ASAAS,
-          paymentMethod: BillingPaymentMethod.CARD,
           status: {
             in: [
               BillingCheckoutAttemptStatus.PROCESSING,
@@ -224,8 +282,9 @@ export class MonthlyCheckoutAttemptService {
     };
   }
 
-  private newExternalId(organizationId: string): string {
-    return `org:${organizationId}:monthly-card:${randomUUID()}`;
+  private newExternalId(organizationId: string, paymentMethod: BillingPaymentMethod): string {
+    const method = paymentMethod === BillingPaymentMethod.PIX ? 'pix' : 'card';
+    return `org:${organizationId}:monthly-${method}:${randomUUID()}`;
   }
 
   private isUniqueConstraintViolation(error: unknown): boolean {

@@ -1,41 +1,42 @@
 # LGPD checklist — Prospectly SaaS MVP
 
-Última revisão: 2026-08-01
+Última revisão: 2026-08-28
 
-## Entregue nesta branch
+Inventário completo: `docs/privacy/LGPD_AUDIT.md`.
+
+## Entregue
 
 | Item | Status |
 | --- | --- |
-| Política de Privacidade (`/privacy`) | Feito (landing PT + resumo EN) |
+| Política de Privacidade (`/privacy`) | Atualizada (rotas reais de export/delete) |
 | Termos de Uso (`/terms`) | Feito |
 | Política de Cookies (`/cookies`) | Feito |
-| Banner de cookies (essenciais; analytics off) | Feito na landing |
-| Consentimento no register (`acceptTerms` + `termsAcceptedAt` / `termsVersion`) | Feito |
-| Soft gate de plano + billing Stripe | Feito |
-| Stub DSR (`POST /users/me/data-requests`) | Feito |
-| Audit log operacional (`AuditService`) | Feito (stage, import, membros/settings, DSR) |
-| Workflow DSR admin (`GET/approve/complete` OWNER) | Feito (stub assíncrono + confirmação) |
-| Inventário / ROPA stub | Ver `docs/saas-mvp/ropa-stub.md` |
+| Banner de cookies (essenciais; analytics off) | Versionado na landing |
+| Consentimento no register + `ConsentRecord` | Feito |
+| Export JSON `GET /privacy/export` | Feito |
+| Exclusão/anonimização `DELETE /privacy/account` | Feito (bloqueia last OWNER) |
+| DSR admin (`GET/approve/complete`) | Approve executa DELETE real |
+| Suppression list hashed | Feito |
+| Audit log operacional | Feito |
+| Inventário / ROPA | `docs/privacy/*` + stub legado |
 
-## Gaps remanescentes (fase 2+)
+## Gaps (jurídico / produto)
 
-- [ ] Nomear DPO / encarregado e publicar canal dedicado além de `privacy@prospectly.dev`
-- [ ] RIPD (Relatório de Impacto) para prospecção com dados de pessoas físicas identificáveis
-- [ ] Inventário formal de subprocessadores (Stripe, Redis, Postgres host, Render/Vercel, Google Places, OSM) — rascunho em ROPA stub
-- [ ] Automação completa de exclusão/exportação (`DELETE /me` end-to-end + retenção)
-- [ ] Política de retenção documentada com prazos por entidade (User, Lead, AuditLog)
-- [ ] SCCs / cláusulas para transferências internacionais quando aplicável
-- [ ] ROPA completo (substituir stub)
-- [ ] Opt-in analytics com base legal distinta
+- [ ] Nomear DPO / encarregado
+- [ ] RIPD formal de prospecção
+- [ ] DPA / SCCs subprocessadores
+- [ ] Cifrar `BillingProfile.cpfCnpj` ou tokenizar no PSP
+- [ ] Opt-out público do titular-lead
+- [ ] Retenção AuditLog / waitlist / backups
+- [ ] Soft-delete de lead ≠ erasure
 
 ## Notas de produto
 
 Dados públicos de mapas **não isentam** finalidade, transparência e direitos do titular quando telefone/e-mail identificam pessoa física (ex.: MEI). O outreach do cliente final permanece sob responsabilidade do controlador contratante (organização usuária), com o Prospectly como operador do SaaS.
 
-## Workflow DSR (MVP)
+## Workflow DSR
 
-1. Titular: `POST /v1/users/me/data-requests` → `PENDING`
-2. OWNER: `GET /v1/users/data-requests` (membros da org)
-3. OWNER: `POST /v1/users/data-requests/:id/approve` → `APPROVED` + stub assíncrono
-4. Stub / OWNER: completa com `confirmationSentAt`, `confirmationChannel`, `confirmationNote`
-5. Eventos gravados em `AuditLog` sem senhas/tokens/CSV
+1. Titular: `GET /v1/privacy/export` (imediato) ou `POST /v1/privacy/requests`
+2. Titular: `DELETE /v1/privacy/account` (anonimização; 409 se last OWNER)
+3. OWNER: `GET /v1/users/data-requests` → `POST .../approve` (DELETE executa erasure)
+4. Eventos em `AuditLog` sem senhas/tokens/CSV

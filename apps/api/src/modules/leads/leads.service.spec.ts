@@ -227,12 +227,22 @@ describe('LeadsService', () => {
 
     await service.softDelete('org1', 'l1');
 
-    expect(prisma.task.deleteMany).toHaveBeenCalledWith({
-      where: { organizationId: 'org1', leadId: 'l1' },
-    });
+    expect(prisma.task.deleteMany).not.toHaveBeenCalled();
     expect(prisma.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
     );
+  });
+
+  it('softDelete preserves tasks so restore can recover the lead workspace', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({ id: 'l1', organizationId: 'org1', deletedAt: null });
+    prisma.lead.update.mockResolvedValue({});
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.softDelete('org1', 'l1');
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.task.deleteMany).not.toHaveBeenCalled();
   });
 
   it('softDelete is a no-op when the lead is already deleted', async () => {

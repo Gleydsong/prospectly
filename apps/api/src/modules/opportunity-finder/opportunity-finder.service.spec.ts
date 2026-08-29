@@ -283,3 +283,108 @@ describe('OpportunityFinderService niche targeting', () => {
     );
   });
 });
+
+describe('OpportunityFinderService.saveAsLead', () => {
+  function createSaveHarness() {
+    const prisma = {
+      opportunityRun: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'run-1', organizationId: 'org-1' }),
+      },
+      opportunityCandidate: {
+        findFirst: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      lead: {
+        findFirst: jest.fn(),
+      },
+    };
+    const billing = {
+      consumeCreditForSaveLead: jest.fn().mockResolvedValue(undefined),
+      refundSaveLeadCredit: jest.fn().mockResolvedValue(undefined),
+    };
+    const leadIngestion = {
+      ingest: jest.fn(),
+    };
+    const audit = { log: jest.fn().mockResolvedValue(undefined) };
+    const service = new OpportunityFinderService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      billing as never,
+      {} as never,
+      leadIngestion as never,
+      audit as never,
+    );
+    return { service, prisma, billing, leadIngestion, audit };
+  }
+
+  const candidateBase = {
+    id: 'cand-1',
+    runId: 'run-1',
+    overallScore: 80,
+    confidenceScore: 70,
+    importedLeadId: null as string | null,
+    company: {
+      companyName: 'Loja X',
+      category: 'clothes',
+      phone: '+5511999999999',
+      email: null,
+      website: null,
+      address: null,
+      city: 'São Paulo',
+      state: 'SP',
+      postalCode: null,
+      latitude: null,
+      longitude: null,
+      rating: 4.5,
+      reviewCount: 10,
+      source: 'GOOGLE_PLACES',
+      externalId: 'places/1',
+      websitePresence: 'NO_WEBSITE_REPORTED',
+    },
+  };
+
+  it('clears a soft-deleted importedLeadId and allows a fresh save attempt', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue({
+      ...candidateBase,
+      importedLeadId: 'lead-deleted',
+    });
+    harness.prisma.lead.findFirst.mockResolvedValue(null);
+    harness.leadIngestion.ingest.mockResolvedValue({
+      status: 'IMPORTED',
+      lead: { id: 'lead-new' },
+    });
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).resolves.toEqual({ status: 'IMPORTED', leadId: 'lead-new' });
+
+    expect(harness.prisma.opportunityCandidate.update).toHaveBeenCalledWith({
+      where: { id: 'cand-1' },
+      data: { importedLeadId: null },
+    });
+    expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
+    expect(harness.billing.refundSaveLeadCredit).not.toHaveBeenCalled();
+  });
+
+  it('refunds the save-lead credit when ingest returns DUPLICATE', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidateBase);
+    harness.leadIngestion.ingest.mockResolvedValue({
+      status: 'DUPLICATE',
+      lead: { id: 'lead-existing', companyName: 'Loja X' },
+    });
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).resolves.toEqual({ status: 'DUPLICATE', leadId: 'lead-existing' });
+
+    expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
+    expect(harness.billing.refundSaveLeadCredit).toHaveBeenCalledWith('org-1', 'cand-1');
+    expect(harness.prisma.opportunityCandidate.updateMany).not.toHaveBeenCalled();
+  });
+});

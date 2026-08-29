@@ -8,7 +8,7 @@ export type CheckoutResult =
     }
   | {
       mode: 'pix';
-      provider: 'ABACATE';
+      provider: 'ABACATE' | 'ASAAS';
       brCode: string;
       brCodeBase64: string;
       externalPaymentId: string;

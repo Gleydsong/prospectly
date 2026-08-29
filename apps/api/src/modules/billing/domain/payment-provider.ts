@@ -1,4 +1,5 @@
 export type PaymentProviderId = 'ABACATE' | 'ASAAS';
+export type PixProviderId = PaymentProviderId | 'DISABLED';
 
 /** Brazil-only billing currency. */
 export type BillingCurrency = 'BRL';
@@ -41,7 +42,7 @@ export type CheckoutResult =
     }
   | {
       mode: 'pix';
-      provider: 'ABACATE';
+      provider: PaymentProviderId;
       brCode: string;
       brCodeBase64: string;
       externalPaymentId: string;
@@ -77,7 +78,6 @@ export interface PaymentProviderAdapter {
   verifyAndParseWebhook(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-    query?: Record<string, string | string[] | undefined>,
   ): Promise<ParsedWebhookEvent>;
   applyWebhookEvent(payload: unknown, type: string): Promise<WebhookApplyResult>;
 }

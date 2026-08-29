@@ -59,6 +59,25 @@ export function runOnTransactionClient(
   return fn.call(table, args);
 }
 
+export function runRawOnTransactionClient(
+  tx: Prisma.TransactionClient,
+  operation: string,
+  args: unknown,
+): Promise<unknown> {
+  const client = tx as unknown as Record<
+    string,
+    ((...rawArgs: unknown[]) => Promise<unknown>) | undefined
+  >;
+  const fn = client[operation];
+  if (typeof fn !== 'function') {
+    throw new Error(`Unsupported tenant raw operation ${operation}`);
+  }
+  if (Array.isArray(args)) {
+    return fn.apply(tx, args);
+  }
+  return fn.call(tx, args);
+}
+
 export function extendPrismaClient<T extends PrismaClient>(client: T): T {
   const interactive: { run: InteractiveTransaction | null } = { run: null };
 
@@ -66,10 +85,8 @@ export function extendPrismaClient<T extends PrismaClient>(client: T): T {
     name: 'tenant-rls',
     query: {
       async $allOperations({ model, operation, args, query }) {
-        if (RAW_OPERATIONS.has(operation)) {
-          return query(args);
-        }
-        if (model) {
+        const isRaw = RAW_OPERATIONS.has(operation);
+        if (!isRaw && model) {
           assertTenantOperation(model, operation, args);
         }
 
@@ -91,6 +108,9 @@ export function extendPrismaClient<T extends PrismaClient>(client: T): T {
           }
           return interactive.run(async (tx) => {
             await applyTenantGuc(tx, ctx);
+            if (isRaw) {
+              return runRawOnTransactionClient(tx, operation, args);
+            }
             if (!model) {
               throw new Error(`Tenant-scoped query is missing a Prisma model for ${operation}`);
             }

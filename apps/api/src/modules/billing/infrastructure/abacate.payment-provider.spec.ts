@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
@@ -308,6 +308,7 @@ describe('AbacatePaymentProvider', () => {
       expect.objectContaining({
         organizationId: 'org1',
         provider: PaymentProvider.ABACATE,
+        abacateSubscriptionId: null,
       }),
     );
   });
@@ -392,6 +393,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_1',
     });
     await provider.applyWebhookEvent(
       {
@@ -413,6 +415,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_1',
     });
     await provider.applyWebhookEvent(
       {
@@ -435,6 +438,7 @@ describe('AbacatePaymentProvider', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       paymentProvider: PaymentProvider.STRIPE,
+      abacateSubscriptionId: 'subs_old',
     });
     await provider.applyWebhookEvent(
       {
@@ -442,6 +446,46 @@ describe('AbacatePaymentProvider', () => {
         event: 'subscription.cancelled',
         data: {
           subscription: { id: 'subs_old', status: 'CANCELLED' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('ignores subscription.cancelled for a replaced Abacate card subscription', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: 'subs_live',
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel_replaced',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_old', status: 'CANCELLED' },
+          checkout: { metadata: { organizationId: 'org1' } },
+        },
+      },
+      'subscription.cancelled',
+    );
+    expect(activation.syncMonthlyStatus).not.toHaveBeenCalled();
+  });
+
+  it('ignores subscription.cancelled when org is on PIX-only monthly (no card subscription id)', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      paymentProvider: PaymentProvider.ABACATE,
+      abacateSubscriptionId: null,
+    });
+    await provider.applyWebhookEvent(
+      {
+        id: 'log_cancel_pix_only',
+        event: 'subscription.cancelled',
+        data: {
+          subscription: { id: 'subs_stale_card', status: 'CANCELLED' },
           checkout: { metadata: { organizationId: 'org1' } },
         },
       },
@@ -466,11 +510,10 @@ describe('AbacatePaymentProvider', () => {
     );
     const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
 
-    const parsed = await provider.verifyAndParseWebhook(
-      raw,
-      { 'x-webhook-signature': signature },
-      { webhookSecret: 'whsec_test' },
-    );
+    const parsed = await provider.verifyAndParseWebhook(raw, {
+      'x-webhook-signature': signature,
+      'x-abacate-webhook-secret': 'whsec_test',
+    });
     expect(parsed.eventId).toBe('log_1');
   });
 
@@ -491,22 +534,20 @@ describe('AbacatePaymentProvider', () => {
       'utf8',
     );
     const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
-    const parsed = await provider.verifyAndParseWebhook(
-      raw,
-      { 'x-webhook-signature': signature },
-      { webhookSecret: 'whsec_test' },
-    );
+    const parsed = await provider.verifyAndParseWebhook(raw, {
+      'x-webhook-signature': signature,
+      'x-abacate-webhook-secret': 'whsec_test',
+    });
     expect(parsed.eventId).toBe('log_blank');
   });
 
   it('rejects bad webhook signature', async () => {
     const raw = Buffer.from(JSON.stringify({ id: 'log_1', event: 'x', data: {} }), 'utf8');
     await expect(
-      provider.verifyAndParseWebhook(
-        raw,
-        { 'x-webhook-signature': 'bad' },
-        { webhookSecret: 'whsec_test' },
-      ),
+      provider.verifyAndParseWebhook(raw, {
+        'x-webhook-signature': 'bad',
+        'x-abacate-webhook-secret': 'whsec_test',
+      }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -514,11 +555,18 @@ describe('AbacatePaymentProvider', () => {
     const raw = Buffer.from(JSON.stringify({ id: 'log_1', event: 'x', data: {} }), 'utf8');
     const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
     await expect(
-      provider.verifyAndParseWebhook(
-        raw,
-        { 'x-webhook-signature': signature },
-        { webhookSecret: 'wrong' },
-      ),
+      provider.verifyAndParseWebhook(raw, {
+        'x-webhook-signature': signature,
+        'x-abacate-webhook-secret': 'wrong',
+      }),
     ).rejects.toBeInstanceOf(Error);
+  });
+
+  it('rejects a webhook secret supplied only in the query string', async () => {
+    const raw = Buffer.from(JSON.stringify({ id: 'log_1', event: 'x', data: {} }), 'utf8');
+    const signature = createHmac('sha256', HMAC_KEY).update(raw).digest('base64');
+    await expect(
+      provider.verifyAndParseWebhook(raw, { 'x-webhook-signature': signature }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 });

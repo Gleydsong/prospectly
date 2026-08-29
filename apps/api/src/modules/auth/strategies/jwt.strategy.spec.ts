@@ -12,10 +12,13 @@ const payload = {
   role: 'OWNER' as Role,
 };
 
-const makeStrategy = (findUnique: jest.Mock) =>
+const makeStrategy = (memberFindUnique: jest.Mock, anonymizedAt: Date | null = null) =>
   new JwtStrategy(
     { getOrThrow: () => 'access-secret-min-32-characters!!' } as unknown as ConfigService,
-    { organizationMember: { findUnique } } as unknown as PrismaService,
+    {
+      organizationMember: { findUnique: memberFindUnique },
+      user: { findUnique: jest.fn().mockResolvedValue({ anonymizedAt }) },
+    } as unknown as PrismaService,
   );
 
 describe('JwtStrategy', () => {
@@ -30,6 +33,13 @@ describe('JwtStrategy', () => {
     expect(findUnique).toHaveBeenCalledWith({
       where: { userId_organizationId: { userId: 'user-1', organizationId: 'org-1' } },
     });
+  });
+
+  it('rejects an anonymized account', async () => {
+    const findUnique = jest.fn().mockResolvedValue({ role: 'ADMIN' });
+    await expect(makeStrategy(findUnique, new Date()).validate(payload)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects a missing membership without trusting the JWT role', async () => {

@@ -1,12 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
 import { LeadSource, Prisma } from '@prisma/client';
 
+import { escapeCsvCell } from '../../common/csv/escape-csv-cell';
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EntitlementService } from '../billing/entitlement.service';
@@ -97,6 +99,11 @@ export class LeadsService {
       websiteCheckSource: undefined,
       status: dto.status ?? 'NEW',
     });
+    if (result.status === 'SUPPRESSED') {
+      throw new ForbiddenException(
+        'This contact is on the organization suppression list and cannot be imported',
+      );
+    }
     if (result.status !== 'IMPORTED') {
       const duplicate = result.lead;
       throw new ConflictException(
@@ -167,10 +174,9 @@ export class LeadsService {
     if (lead.deletedAt) {
       return;
     }
-    await this.prisma.$transaction([
-      this.prisma.task.deleteMany({ where: { organizationId, leadId: id } }),
-      this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } }),
-    ]);
+    // Soft-delete only. Keep tasks so restore can bring the lead back intact;
+    // TasksService.list already hides rows whose lead has deletedAt set.
+    await this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
   async restore(organizationId: string, id: string) {
@@ -354,14 +360,14 @@ export class LeadsService {
     columns: ExportableLeadColumn[],
     rows: Array<Record<string, unknown>>,
   ): string {
-    const header = columns.map(escapeCsv).join(',');
+    const header = columns.map(escapeCsvCell).join(',');
     const lines = rows.map((row) =>
       columns
         .map((column) => {
           const value = row[column];
           if (value == null) return '';
-          if (value instanceof Date) return escapeCsv(value.toISOString());
-          return escapeCsv(String(value));
+          if (value instanceof Date) return escapeCsvCell(value.toISOString());
+          return escapeCsvCell(String(value));
         })
         .join(','),
     );
@@ -497,11 +503,4 @@ export function collectMissingLeadFields(lead: Record<string, unknown>): string[
     if (typeof value === 'string' && value.trim() === '') return true;
     return false;
   });
-}
-
-function escapeCsv(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }

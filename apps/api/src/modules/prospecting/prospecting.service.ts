@@ -224,6 +224,9 @@ export class ProspectingService {
   async process(searchId: string): Promise<void> {
     const search = await this.prisma.search.findUnique({ where: { id: searchId } });
     if (!search) return;
+    // BullMQ can retry after a successful run if the ack is lost. Never re-enter
+    // a completed search — a later empty provider response would wipe results.
+    if (search.status === SearchStatus.COMPLETED) return;
 
     await this.prisma.search.update({
       where: { id: searchId },
@@ -362,13 +365,23 @@ export class ProspectingService {
     };
     for (const result of results) {
       if (result.importedLeadId) {
-        summary.skipped += 1;
-        summary.items.push({
-          resultId: result.id,
-          status: 'SKIPPED',
-          leadId: result.importedLeadId,
+        const activeLead = await this.prisma.lead.findFirst({
+          where: { id: result.importedLeadId, organizationId, deletedAt: null },
+          select: { id: true },
         });
-        continue;
+        if (activeLead) {
+          summary.skipped += 1;
+          summary.items.push({
+            resultId: result.id,
+            status: 'SKIPPED',
+            leadId: activeLead.id,
+          });
+          continue;
+        }
+        await this.prisma.searchResult.updateMany({
+          where: { id: result.id, importedLeadId: result.importedLeadId },
+          data: { importedLeadId: null },
+        });
       }
       const business = this.readNormalizedBusiness(result.normalizedData);
       if (!business) {
@@ -403,6 +416,13 @@ export class ProspectingService {
           resultId: result.id,
           status: 'CONFLICT',
           leadId: outcome.lead?.id,
+          companyName,
+        });
+      } else if (outcome.status === 'SUPPRESSED') {
+        summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
           companyName,
         });
       } else {
@@ -465,12 +485,16 @@ export class ProspectingService {
           update: data,
         });
       }
-      await transaction.searchResult.deleteMany({
-        where: {
-          searchId,
-          ...(externalIds.length ? { externalId: { notIn: externalIds } } : {}),
-        },
-      });
+      // Empty provider payloads must not delete existing rows. Without a `notIn`
+      // filter, `{ searchId }` alone would wipe every result for this search.
+      if (externalIds.length > 0) {
+        await transaction.searchResult.deleteMany({
+          where: {
+            searchId,
+            externalId: { notIn: externalIds },
+          },
+        });
+      }
     });
   }
 

@@ -56,6 +56,9 @@ export const configuration = () => ({
   waitlist: {
     notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
   },
+  billing: {
+    pixProvider: process.env.PIX_PROVIDER ?? 'ASAAS',
+  },
   abacate: {
     apiKey: process.env.ABACATE_API_KEY ?? '',
     webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
@@ -72,6 +75,9 @@ export const configuration = () => ({
     webhookToken: process.env.ASAAS_WEBHOOK_TOKEN?.trim() ?? '',
     apiBaseUrl: process.env.ASAAS_API_BASE_URL ?? 'https://api-sandbox.asaas.com/v3',
     httpTimeoutMs: parseInt(process.env.ASAAS_HTTP_TIMEOUT_MS ?? '15000', 10),
+  },
+  ops: {
+    metricsToken: process.env.OPS_METRICS_TOKEN ?? '',
   },
   sentryDsn: process.env.SENTRY_DSN,
   whatsappAi: {

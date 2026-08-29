@@ -20,7 +20,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
-import { CREDIT_COSTS, FREE_SEARCH_LIMIT } from './billing.constants';
+import { CREDIT_COSTS, FREE_SEARCH_LIMIT, MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
 import { EntitlementService } from './entitlement.service';
 import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
@@ -30,7 +30,9 @@ import type {
   CreditOffer,
   CheckoutResult,
   PaymentMethod,
+  PixProviderId,
 } from './domain/payment-provider';
+import { resolvePaymentProviderId } from './domain/payment-router';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { AsaasClient, AsaasRequestError } from './infrastructure/asaas.client';
 
@@ -235,7 +237,7 @@ export class BillingService {
         'Lifetime checkout is no longer available. Buy credits or subscribe monthly.',
       );
     }
-    const org = await this.requireOrg(organizationId);
+    const org = await this.hydrateOrg(organizationId);
     if (org.plan === OrgPlan.LIFETIME && org.planStatus === PlanStatus.ACTIVE) {
       throw new BadRequestException(
         'Organization already has an active lifetime plan. Further checkouts are not allowed.',
@@ -262,10 +264,77 @@ export class BillingService {
       existingCustomerId: org.abacateCustomerId,
     } as const;
 
+    const provider = resolvePaymentProviderId(paymentMethod, this.pixProvider());
+    if (provider === 'DISABLED') {
+      throw new ServiceUnavailableException('PIX payments are temporarily unavailable');
+    }
     if (paymentMethod === 'card') {
       return this.createAsaasMonthlyCheckout(org, successUrl, cancelUrl);
     }
+    if (provider === 'ASAAS') {
+      return this.createAsaasMonthlyPixCheckout(org);
+    }
     return this.abacateProvider.createCheckout(checkoutInput);
+  }
+
+  private async createAsaasMonthlyPixCheckout(org: Organization): Promise<CheckoutResult> {
+    if (this.config.get<boolean>('asaas.enabled') !== true) {
+      throw new ServiceUnavailableException('PIX payments are temporarily unavailable');
+    }
+    if (
+      org.paymentProvider === PaymentProvider.ASAAS &&
+      org.plan === OrgPlan.STARTER_MONTHLY &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      throw new BadRequestException('Organization already has active monthly access');
+    }
+    if (
+      org.paymentProvider &&
+      org.paymentProvider !== PaymentProvider.ASAAS &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
+    ) {
+      throw new ForbiddenException(
+        'A historical subscription is still active. Contact support before starting another plan.',
+      );
+    }
+    const profile = await this.prisma.billingProfile.findUnique({
+      where: { organizationId: org.id },
+    });
+    if (!profile?.asaasCustomerId) {
+      throw new BadRequestException('Complete o perfil de cobrança antes de pagar com PIX');
+    }
+    const begin = await this.monthlyAttempts.beginPix(org.id);
+    if (begin.state === 'ready') {
+      return this.getAsaasPixCheckout(begin.paymentId, MONTHLY_PLAN_AMOUNT_CENTAVOS);
+    }
+
+    let payment: { id: string };
+    try {
+      payment = await this.asaasClient.createPixPayment({
+        customerId: profile.asaasCustomerId,
+        amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
+        externalReference: begin.claim.externalId,
+        description: 'Prospectly Ilimitado (30 dias)',
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
+        throw error;
+      }
+      if (error instanceof AsaasRequestError && !error.ambiguous) {
+        await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
+      } else {
+        await this.monthlyAttempts.markReviewRequired(org.id, begin.claim, error);
+      }
+      throw this.asaasCheckoutError(error, 'PIX payments are temporarily unavailable');
+    }
+    await this.monthlyAttempts.markPixReady(
+      org.id,
+      begin.claim,
+      payment.id,
+      profile.asaasCustomerId,
+    );
+    return this.getAsaasPixCheckout(payment.id, MONTHLY_PLAN_AMOUNT_CENTAVOS);
   }
 
   private async createAsaasMonthlyCheckout(
@@ -303,7 +372,7 @@ export class BillingService {
     try {
       const checkout = await this.asaasClient.createRecurringCheckout({
         externalReference: begin.claim.externalId,
-        amountCentavos: 4999,
+        amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
         customer: {
           name: profile.name,
           cpfCnpj: profile.cpfCnpj,
@@ -345,8 +414,12 @@ export class BillingService {
     await this.assertNoAsaasReviewRequired(organizationId);
     const pack = CREDIT_PACKAGES[offer];
     if (!pack) throw new BadRequestException('Invalid credit offer');
-    if (paymentMethod === 'card') {
-      return this.createAsaasCreditCheckout(organizationId, offer, pack);
+    const provider = resolvePaymentProviderId(paymentMethod, this.pixProvider());
+    if (provider === 'DISABLED') {
+      throw new ServiceUnavailableException('PIX payments are temporarily unavailable');
+    }
+    if (provider === 'ASAAS') {
+      return this.createAsaasCreditCheckout(organizationId, offer, pack, paymentMethod);
     }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
@@ -383,13 +456,22 @@ export class BillingService {
     organizationId: string,
     offer: CreditOffer,
     pack: { credits: number; amountCentavos: number },
+    paymentMethod: PaymentMethod,
   ): Promise<CheckoutResult> {
+    const methodUnavailable =
+      paymentMethod === 'pix'
+        ? 'PIX payments are temporarily unavailable'
+        : 'Card payments are temporarily unavailable';
     if (this.config.get<boolean>('asaas.enabled') !== true) {
-      throw new ServiceUnavailableException('Card payments are temporarily unavailable');
+      throw new ServiceUnavailableException(methodUnavailable);
     }
     const profile = await this.prisma.billingProfile.findUnique({ where: { organizationId } });
     if (!profile?.asaasCustomerId) {
-      throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
+      throw new BadRequestException(
+        paymentMethod === 'pix'
+          ? 'Complete o perfil de cobrança antes de pagar com PIX'
+          : 'Complete o perfil de cobrança antes de pagar com cartão',
+      );
     }
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
@@ -397,15 +479,22 @@ export class BillingService {
       organizationId,
       offer,
       externalId,
+      paymentMethod,
     });
     const purchase = begin.purchase;
     if (!begin.created) {
       if (
         purchase.status === 'PENDING' &&
         purchase.offer === offer &&
-        purchase.externalPaymentId &&
-        purchase.checkoutUrl
+        purchase.paymentMethod === (paymentMethod === 'pix' ? 'PIX' : 'CARD') &&
+        purchase.externalPaymentId
       ) {
+        if (paymentMethod === 'pix') {
+          return this.getAsaasPixCheckout(purchase.externalPaymentId, pack.amountCentavos);
+        }
+        if (!purchase.checkoutUrl) {
+          throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+        }
         return {
           mode: 'redirect',
           provider: 'ASAAS',
@@ -416,6 +505,23 @@ export class BillingService {
       throw new ServiceUnavailableException('Estamos confirmando seu checkout');
     }
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
+    if (paymentMethod === 'pix') {
+      let payment: { id: string };
+      try {
+        payment = await this.asaasClient.createPixPayment({
+          customerId: profile.asaasCustomerId,
+          amountCentavos: pack.amountCentavos,
+          externalReference: externalId,
+          description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
+        });
+      } catch (error) {
+        await this.markAsaasPurchaseCreationFailure(purchase.id, error);
+        if (error instanceof BadRequestException) throw error;
+        throw this.asaasCheckoutError(error, 'PIX payments are temporarily unavailable');
+      }
+      await this.creditPurchases.attachPayment(purchase.id, payment.id);
+      return this.getAsaasPixCheckout(payment.id, pack.amountCentavos);
+    }
     try {
       const payment = await this.asaasClient.createHostedPayment({
         customerId: profile.asaasCustomerId,
@@ -454,6 +560,60 @@ export class BillingService {
     }
   }
 
+  private async getAsaasPixCheckout(
+    paymentId: string,
+    amountCentavos: number,
+  ): Promise<CheckoutResult> {
+    const qr = await this.asaasClient.getPixQrCode(paymentId);
+    return {
+      mode: 'pix',
+      provider: 'ASAAS',
+      brCode: qr.payload,
+      brCodeBase64: qr.encodedImage,
+      externalPaymentId: paymentId,
+      amountCentavos,
+      ...(qr.expirationDate ? { expiresAt: qr.expirationDate } : {}),
+    };
+  }
+
+  private async markAsaasPurchaseCreationFailure(
+    purchaseId: string,
+    error: unknown,
+  ): Promise<void> {
+    await this.prisma.creditPurchase.update({
+      where: { id: purchaseId },
+      data: {
+        status: this.isDeterministicAsaasCheckoutFailure(error) ? 'FAILED' : 'REVIEW_REQUIRED',
+      },
+    });
+  }
+
+  private isDeterministicAsaasCheckoutFailure(error: unknown): boolean {
+    return (
+      error instanceof BadRequestException ||
+      (error instanceof AsaasRequestError && !error.ambiguous)
+    );
+  }
+
+  private asaasCheckoutError(
+    error: unknown,
+    unavailableMessage: string,
+  ): ServiceUnavailableException {
+    return new ServiceUnavailableException(
+      this.isDeterministicAsaasCheckoutFailure(error)
+        ? unavailableMessage
+        : 'Estamos confirmando seu checkout',
+    );
+  }
+
+  private pixProvider(): PixProviderId {
+    const configured = this.config.get<string>('billing.pixProvider') ?? 'ASAAS';
+    if (configured === 'ABACATE' || configured === 'ASAAS' || configured === 'DISABLED') {
+      return configured;
+    }
+    throw new ServiceUnavailableException('PIX payments are temporarily unavailable');
+  }
+
   async cancelSubscription(organizationId: string): Promise<{ canceled: true }> {
     const org = await this.requireOrg(organizationId);
     if (org.plan !== OrgPlan.STARTER_MONTHLY) {
@@ -478,9 +638,11 @@ export class BillingService {
 
     if (org.paymentProvider === PaymentProvider.ASAAS && org.asaasSubscriptionId) {
       await this.asaasClient.cancelSubscription(org.asaasSubscriptionId);
-      await this.prisma.organization.update({
-        where: { id: organizationId },
-        data: { asaasSubscriptionId: null },
+      await this.activation.syncMonthlyStatus({
+        organizationId,
+        status: PlanStatus.CANCELED,
+        provider: PaymentProvider.ASAAS,
+        asaasSubscriptionId: null,
       });
       return { canceled: true };
     }
@@ -519,9 +681,8 @@ export class BillingService {
   async handleAbacateWebhook(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-    query: Record<string, string | string[] | undefined>,
   ): Promise<{ received: true }> {
-    const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers, query);
+    const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers);
     const claimed = await this.claimWebhookEvent('ABACATE', parsed.eventId, parsed.type);
     if (!claimed) {
       return { received: true };

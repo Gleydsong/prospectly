@@ -13,12 +13,15 @@ export const CREDITS_BY_AMOUNT: Record<number, number> = {
 
 export function isPlanConfirmed(
   status: Pick<BillingStatus, 'plan' | 'planStatus' | 'paymentProvider'>,
+  expectedProvider?: 'ABACATE' | 'ASAAS',
 ): boolean {
-  return (
-    status.plan === 'STARTER_MONTHLY' &&
-    status.planStatus === 'ACTIVE' &&
-    status.paymentProvider === 'ABACATE'
-  );
+  if (status.plan !== 'STARTER_MONTHLY' || status.planStatus !== 'ACTIVE') {
+    return false;
+  }
+  if (expectedProvider) {
+    return status.paymentProvider === expectedProvider;
+  }
+  return status.paymentProvider === 'ABACATE' || status.paymentProvider === 'ASAAS';
 }
 
 export function isCreditsConfirmed(
@@ -34,6 +37,6 @@ export function isCreditsConfirmed(
 }
 
 export function isCheckoutConfirmed(intent: CheckoutIntent, status: BillingStatus): boolean {
-  if (intent.purpose === 'plan') return isPlanConfirmed(status);
+  if (intent.purpose === 'plan') return isPlanConfirmed(status, intent.provider);
   return isCreditsConfirmed(intent, status);
 }
