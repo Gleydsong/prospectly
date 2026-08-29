@@ -8,12 +8,26 @@ import { getApiErrorMessage } from '@/lib/api';
 import { getBillingProfile, updateBillingProfile } from './api';
 
 const KEY = ['billing-profile'] as const;
+const BILLING_PHONE_DIGITS = /^\d{10,11}$/;
+
+function billingPhoneDigits(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
+function isCompleteBillingPhone(value: string): boolean {
+  return BILLING_PHONE_DIGITS.test(billingPhoneDigits(value));
+}
+
+function isBillingPhoneValidationMessage(message: string): boolean {
+  return /phone must match/i.test(message) || /telefone com DDD/i.test(message);
+}
 
 export function BillingProfileForm() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: KEY, queryFn: getBillingProfile });
   const [form, setForm] = useState({ name: '', cpfCnpj: '', phone: '', email: '' });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile.data) {
@@ -28,11 +42,27 @@ export function BillingProfileForm() {
 
   const save = useMutation({
     mutationFn: updateBillingProfile,
-    onSuccess: (data) => queryClient.setQueryData(KEY, data),
+    onSuccess: (data) => {
+      setPhoneError(null);
+      queryClient.setQueryData(KEY, data);
+    },
   });
+
+  const apiMessage = save.isError ? getApiErrorMessage(save.error) : '';
+  const phoneFieldError =
+    phoneError ??
+    (apiMessage && isBillingPhoneValidationMessage(apiMessage)
+      ? t('settings.billingPhoneInvalid')
+      : null);
+  const formError = apiMessage && !phoneFieldError ? apiMessage : null;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!isCompleteBillingPhone(form.phone)) {
+      setPhoneError(t('settings.billingPhoneInvalid'));
+      return;
+    }
+    setPhoneError(null);
     save.mutate(form);
   };
 
@@ -63,7 +93,13 @@ export function BillingProfileForm() {
           name="billingPhone"
           label={t('settings.billingPhone')}
           value={form.phone}
-          onChange={(event) => setForm((value) => ({ ...value, phone: event.target.value }))}
+          inputMode="tel"
+          autoComplete="tel"
+          error={phoneFieldError ?? undefined}
+          onChange={(event) => {
+            setPhoneError(null);
+            setForm((value) => ({ ...value, phone: event.target.value }));
+          }}
           required
         />
         <Input
@@ -75,9 +111,9 @@ export function BillingProfileForm() {
           required
         />
       </div>
-      {save.isError ? (
+      {formError ? (
         <p className="mt-3 text-sm text-red-500" role="alert">
-          {getApiErrorMessage(save.error)}
+          {formError}
         </p>
       ) : null}
       {save.isSuccess ? (

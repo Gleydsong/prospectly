@@ -410,6 +410,7 @@
     "billingName": "Name or legal name",
     "billingDocument": "CPF or CNPJ",
     "billingPhone": "Phone",
+    "billingPhoneInvalid": "Enter a phone number with area code, using 10 or 11 digits.",
     "billingContactEmail": "Billing email",
     "billingProfileSave": "Save billing profile",
     "billingProfileSaved": "Billing profile saved.",

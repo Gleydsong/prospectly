@@ -33,4 +33,16 @@ describe('UpdateBillingProfileDto', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('rejects an incomplete phone with a payer-facing message', async () => {
+    const error = await pipe
+      .transform({ ...valid, phone: '1199' }, { type: 'body', metatype: UpdateBillingProfileDto })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    const body = (error as BadRequestException).getResponse() as { message: string | string[] };
+    const messages = Array.isArray(body.message) ? body.message : [body.message];
+    expect(messages).toContain('Informe um telefone com DDD, com 10 ou 11 dígitos.');
+    expect(messages.join(' ')).not.toMatch(/regular expression/i);
+  });
 });
