@@ -405,6 +405,13 @@ export class ProspectingService {
           leadId: outcome.lead?.id,
           companyName,
         });
+      } else if (outcome.status === 'SUPPRESSED') {
+        summary.skipped += 1;
+        summary.items.push({
+          resultId: result.id,
+          status: 'SKIPPED',
+          companyName,
+        });
       } else {
         if (outcome.lead) {
           await this.linkResultIfUnlinked(result.id, outcome.lead.id);

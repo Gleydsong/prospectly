@@ -85,6 +85,52 @@ describe('LeadsService.exportCsv', () => {
     expect(JSON.stringify(metadata)).not.toContain('a@b.com');
   });
 
+  it('neutralizes CSV formula injection in exported cells', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findMany.mockResolvedValue([
+      {
+        id: '1',
+        companyName: '=CMD()',
+        email: '+1+1',
+        phone: null,
+        website: null,
+        city: null,
+        status: 'NEW',
+        source: 'MANUAL',
+        score: 0,
+        tradeName: null,
+        category: null,
+        segment: null,
+        whatsapp: null,
+        domain: null,
+        state: null,
+        country: null,
+        rating: null,
+        reviewCount: null,
+        ownerId: null,
+        notes: '@SUM(A1)',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-02T00:00:00.000Z'),
+        lastContactAt: null,
+        nextContactAt: null,
+      },
+    ]);
+    prisma.auditLog.create.mockResolvedValue({});
+    const entitlements = { assertFeature: jest.fn().mockResolvedValue(undefined) };
+    const service = new LeadsService(
+      prisma,
+      { ingest: jest.fn() } as unknown as LeadIngestionService,
+      entitlements as never,
+    );
+
+    const result = await service.exportCsv('org-1', 'user-1', {
+      columns: ['companyName', 'email', 'notes'],
+    });
+    expect(result.csv).toContain("'=CMD()");
+    expect(result.csv).toContain("'+1+1");
+    expect(result.csv).not.toMatch(/(^|,)=CMD/m);
+  });
+
   it('blocks CSV export when csv_export entitlement is missing', async () => {
     const prisma = makePrisma();
     const entitlements = {

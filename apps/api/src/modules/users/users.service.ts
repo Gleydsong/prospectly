@@ -3,12 +3,14 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { AppLocale } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
+import { AccountErasureService } from '../privacy/account-erasure.service';
 
 export const DSR_STATUS = {
   PENDING: 'PENDING',
@@ -17,7 +19,13 @@ export const DSR_STATUS = {
   REJECTED: 'REJECTED',
 } as const;
 
-export type DataSubjectRequestType = 'DELETE' | 'EXPORT';
+export type DataSubjectRequestType =
+  | 'DELETE'
+  | 'EXPORT'
+  | 'ACCESS'
+  | 'CORRECTION'
+  | 'CONSENT_WITHDRAWAL'
+  | 'OTHER';
 
 const DSR_PUBLIC_SELECT = {
   id: true,
@@ -44,6 +52,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    @Optional() private readonly erasure?: AccountErasureService,
   ) {}
 
   async getProfile(userId: string) {
@@ -167,7 +176,7 @@ export class UsersService {
       metadata: { type: updated.type, subjectUserId: updated.userId },
     });
 
-    void this.processApprovedRequestStub(organizationId, requestId, reviewerId);
+    void this.processApprovedRequest(organizationId, requestId, reviewerId);
 
     return updated;
   }
@@ -196,31 +205,44 @@ export class UsersService {
   }
 
   /**
-   * Async stub: after approval, mark the request completed with confirmation fields.
-   * Real export/delete execution lands in a later phase.
+   * After OWNER approval: EXPORT is available via GET /privacy/export;
+   * DELETE anonymizes the subject account when it is safe to do so.
    */
-  private async processApprovedRequestStub(
+  private async processApprovedRequest(
     organizationId: string,
     requestId: string,
     reviewerId: string,
   ): Promise<void> {
     try {
-      await Promise.resolve();
       const current = await this.prisma.dataSubjectRequest.findUnique({
         where: { id: requestId },
-        select: { status: true, type: true },
+        select: { status: true, type: true, userId: true },
       });
       if (!current || current.status !== DSR_STATUS.APPROVED) {
         return;
       }
 
+      if (current.type === 'DELETE') {
+        if (!this.erasure) {
+          this.logger.warn({ message: 'DSR DELETE approved without erasure service', requestId });
+          return;
+        }
+        await this.erasure.eraseAccount(current.userId, organizationId);
+        await this.markCompleted(organizationId, requestId, reviewerId, {
+          confirmationChannel: 'account_anonymization',
+          confirmationNote: 'Conta do titular anonimizada; sessões revogadas.',
+        });
+        return;
+      }
+
       await this.markCompleted(organizationId, requestId, reviewerId, {
-        confirmationChannel: 'email_stub',
-        confirmationNote: `Stub ${current.type}: processamento assíncrono registrado; execução real pendente.`,
+        confirmationChannel: 'privacy_export',
+        confirmationNote:
+          'Exportação disponível para o titular em GET /api/v1/privacy/export. Nenhum pacote extra foi persistido.',
       });
     } catch (error) {
       this.logger.warn({
-        message: 'DSR async stub failed',
+        message: 'DSR processing failed; request remains APPROVED',
         requestId,
         error: error instanceof Error ? error.message : 'unknown',
       });
@@ -243,7 +265,7 @@ export class UsersService {
         confirmationChannel: options?.confirmationChannel?.trim() || 'manual',
         confirmationNote:
           options?.confirmationNote?.trim() ||
-          'Confirmação registrada (MVP stub).',
+          'Confirmação registrada.',
         reviewedById: reviewerId,
         reviewedAt: now,
       },

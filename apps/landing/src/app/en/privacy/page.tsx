@@ -33,8 +33,8 @@ export default function EnPrivacyPage() {
           Your rights
         </h2>
         <p>
-          Request access, correction, portability or deletion via privacy@prospectly.dev. A full
-          in-app DELETE /me flow is planned for phase 2.
+          Request access, correction, portability or deletion via privacy@prospectly.dev or in the
+          app under Settings → Privacy (GET /api/v1/privacy/export and DELETE /api/v1/privacy/account).
         </p>
       </div>
     </article>

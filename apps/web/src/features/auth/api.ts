@@ -108,6 +108,23 @@ export async function requestDataExport(notes?: string): Promise<{ id: string; s
   return data;
 }
 
+export async function downloadPrivacyExport(): Promise<void> {
+  const { data } = await api.get<Blob>('/privacy/export', { responseType: 'blob' });
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'prospectly-data-export.json';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function deletePrivacyAccount(): Promise<{ status: string }> {
+  const { data } = await api.delete<{ status: string }>('/privacy/account');
+  return data;
+}
+
 export async function logout(): Promise<void> {
   await api.post('/auth/logout', {}, authRequestConfig);
 }

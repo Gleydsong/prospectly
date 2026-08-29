@@ -39,6 +39,8 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
 import { WorkersModule } from './modules/workers/workers.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-redact-paths';
 
 @Module({
   imports: [
@@ -53,24 +55,8 @@ import { WorkersModule } from './modules/workers/workers.module';
         pinoHttp: {
           level: config.get<string>('LOG_LEVEL') ?? 'info',
           redact: {
-            paths: [
-              'req.headers.authorization',
-              'req.headers.cookie',
-              'res.headers["set-cookie"]',
-              'req.body.password',
-              'req.body.newPassword',
-              'req.body.currentPassword',
-              'req.body.temporaryPassword',
-              'req.body.refreshToken',
-              'req.body.token',
-              'req.body.cardToken',
-              'req.body.client_secret',
-              'req.body.documentNumber',
-              'req.body.phone',
-              'req.body.ip',
-              'req.query.token',
-            ],
-            censor: '[REDACTED]',
+            paths: [...PINO_REDACT_PATHS],
+            censor: PINO_REDACT_CENSOR,
           },
           genReqId: (req, res) => {
             const header = req.headers['x-correlation-id'];
@@ -123,6 +109,7 @@ import { WorkersModule } from './modules/workers/workers.module';
     IntegrationsModule,
     AgentsModule,
     OpportunityFinderModule,
+    PrivacyModule,
     // Production Render currently has no dedicated worker service. Process
     // BullMQ jobs in the API so searches/checkout side-effects do not stall.
     WorkersModule,

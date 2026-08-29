@@ -53,6 +53,7 @@ import {
   resolveOpportunityNiche,
 } from './domain/opportunity-profile';
 import { buildOpportunitySignals, scoreOpportunity } from './domain/opportunity-scoring';
+import { sanitizeCompanyForLlm } from '../privacy/llm-privacy.sanitizer';
 import type { CreateOpportunityRunDto } from './dto/create-opportunity-run.dto';
 import type { QueryOpportunityCandidatesDto } from './dto/query-opportunity-candidates.dto';
 
@@ -254,7 +255,7 @@ export class OpportunityFinderService {
         notes: `Opportunity Finder: score ${candidate.overallScore}/100, confiança ${candidate.confidenceScore}%.`,
         tags: ['opportunity-finder'],
       });
-      const lead = outcome.lead;
+      const lead = 'lead' in outcome ? outcome.lead : null;
       if (lead) {
         await this.prisma.opportunityCandidate.updateMany({ where: { id: candidate.id, importedLeadId: null }, data: { importedLeadId: lead.id } });
       }
@@ -425,15 +426,7 @@ export class OpportunityFinderService {
 
   private async generateExplanation(run: { id: string; organizationId: string; userId: string; service: string }, candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue }, userId: string): Promise<OpportunityExplanation> {
     const rawCompany = candidate.company as unknown as OpportunityCompany;
-    const company: Record<string, unknown> = {
-      companyName: rawCompany.companyName,
-      category: rawCompany.category,
-      city: rawCompany.city,
-      state: rawCompany.state,
-      rating: rawCompany.rating,
-      reviewCount: rawCompany.reviewCount,
-      websitePresence: rawCompany.websitePresence,
-    };
+    const company = sanitizeCompanyForLlm(rawCompany as unknown as Record<string, unknown>);
     const signals = candidate.signals as unknown as OpportunityCandidateView['signals'];
     const scoreBreakdown = candidate.scoreBreakdown as unknown as OpportunityCandidateView['scoreBreakdown'];
     const ai = await this.ai.explainOpportunity({ organizationId: run.organizationId, userId, opportunityRunId: run.id, candidateId: candidate.id }, { service: run.service, company, signals, scoreBreakdown });

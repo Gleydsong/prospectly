@@ -70,9 +70,50 @@ describe('UsersService data-subject workflow', () => {
     );
   });
 
-  it('approves PENDING and schedules completion stub', async () => {
+  it('approves PENDING EXPORT and completes with export pointer', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
+    prisma.dataSubjectRequest.findFirst.mockResolvedValueOnce({
+      id: 'dsr1',
+      userId: 'u1',
+      status: DSR_STATUS.PENDING,
+      type: 'EXPORT',
+    });
+    prisma.dataSubjectRequest.findUnique.mockResolvedValueOnce({
+      status: DSR_STATUS.APPROVED,
+      type: 'EXPORT',
+      userId: 'u1',
+    });
+    prisma.dataSubjectRequest.update.mockResolvedValue({
+      id: 'dsr1',
+      userId: 'u1',
+      type: 'EXPORT',
+      status: DSR_STATUS.APPROVED,
+    });
+    prisma.dataSubjectRequest.updateMany.mockResolvedValue({ count: 1 });
+    prisma.dataSubjectRequest.findUniqueOrThrow.mockResolvedValue({
+      id: 'dsr1',
+      userId: 'u1',
+      type: 'EXPORT',
+      status: DSR_STATUS.COMPLETED,
+      confirmationChannel: 'privacy_export',
+    });
+    const service = new UsersService(prisma, audit);
+
+    const approved = await service.approveDataSubjectRequest('org1', 'dsr1', 'owner1');
+    expect(approved.status).toBe(DSR_STATUS.APPROVED);
+
+    await new Promise((r) => setImmediate(r));
+    expect(prisma.dataSubjectRequest.updateMany).toHaveBeenCalled();
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: expect.stringContaining('approved') }),
+    );
+  });
+
+  it('anonymizes the subject when DELETE is approved', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    const erasure = { eraseAccount: jest.fn().mockResolvedValue(undefined) };
     prisma.dataSubjectRequest.findFirst.mockResolvedValueOnce({
       id: 'dsr1',
       userId: 'u1',
@@ -82,6 +123,7 @@ describe('UsersService data-subject workflow', () => {
     prisma.dataSubjectRequest.findUnique.mockResolvedValueOnce({
       status: DSR_STATUS.APPROVED,
       type: 'DELETE',
+      userId: 'u1',
     });
     prisma.dataSubjectRequest.update.mockResolvedValue({
       id: 'dsr1',
@@ -95,18 +137,12 @@ describe('UsersService data-subject workflow', () => {
       userId: 'u1',
       type: 'DELETE',
       status: DSR_STATUS.COMPLETED,
-      confirmationChannel: 'email_stub',
     });
-    const service = new UsersService(prisma, audit);
+    const service = new UsersService(prisma, audit, erasure as never);
 
-    const approved = await service.approveDataSubjectRequest('org1', 'dsr1', 'owner1');
-    expect(approved.status).toBe(DSR_STATUS.APPROVED);
-
+    await service.approveDataSubjectRequest('org1', 'dsr1', 'owner1');
     await new Promise((r) => setImmediate(r));
-    expect(prisma.dataSubjectRequest.updateMany).toHaveBeenCalled();
-    expect(audit.log).toHaveBeenCalledWith(
-      expect.objectContaining({ action: expect.stringContaining('approved') }),
-    );
+    expect(erasure.eraseAccount).toHaveBeenCalledWith('u1', 'org1');
   });
 
   it('rejects complete while still PENDING', async () => {

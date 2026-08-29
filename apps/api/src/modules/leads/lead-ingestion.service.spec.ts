@@ -286,4 +286,18 @@ describe('LeadIngestionService', () => {
       }),
     );
   });
+
+  it('does not import identifiers present on the suppression list', async () => {
+    const prisma = makePrisma();
+    const suppression = { isSuppressed: jest.fn().mockResolvedValue(true) };
+    const service = new LeadIngestionService(prisma, undefined, suppression as never);
+
+    const result = await service.ingest('org-1', 'user-1', {
+      companyName: 'Opt Out Ltda',
+      email: 'optout@example.com',
+    });
+
+    expect(result.status).toBe('SUPPRESSED');
+    expect(prisma.lead.create).not.toHaveBeenCalled();
+  });
 });

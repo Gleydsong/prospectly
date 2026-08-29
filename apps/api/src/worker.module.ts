@@ -10,6 +10,8 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { OpsModule } from './modules/ops/ops.module';
 import { WorkersModule } from './modules/workers/workers.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-redact-paths';
 
 @Module({
   imports: [
@@ -24,14 +26,8 @@ import { WorkersModule } from './modules/workers/workers.module';
         pinoHttp: {
           level: config.get<string>('LOG_LEVEL') ?? 'info',
           redact: {
-            paths: [
-              'req.headers.authorization',
-              'req.headers.cookie',
-              'req.body.password',
-              'req.body.refreshToken',
-              'req.body.token',
-            ],
-            censor: '[REDACTED]',
+            paths: [...PINO_REDACT_PATHS],
+            censor: PINO_REDACT_CENSOR,
           },
           transport:
             config.get<string>('NODE_ENV') !== 'production'
@@ -49,6 +45,7 @@ import { WorkersModule } from './modules/workers/workers.module';
     PrismaModule,
     AuditModule,
     OpsModule,
+    PrivacyModule,
     WorkersModule,
   ],
 })

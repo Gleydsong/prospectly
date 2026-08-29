@@ -14,7 +14,13 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   app.useLogger(app.get(Logger));
 
-  app.use(helmet());
+  const nodeEnv = config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
+  app.use(
+    helmet({
+      hsts: nodeEnv === 'production' ? { maxAge: 15552000, includeSubDomains: true } : false,
+      referrerPolicy: { policy: 'no-referrer' },
+    }),
+  );
 
   const corsOrigins = (
     config.get<string>('corsOrigins') ??
@@ -52,7 +58,6 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const nodeEnv = config.get<string>('nodeEnv') ?? process.env.NODE_ENV ?? 'development';
   if (nodeEnv !== 'production') {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('Prospectly API')
