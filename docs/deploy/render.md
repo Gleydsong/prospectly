@@ -80,7 +80,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 
 5. Redeploy **web** and **landing** after setting `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: set `GOOGLE_CLIENT_ID` (API) and `VITE_GOOGLE_CLIENT_ID` (web, same value). In Google Cloud Console, add authorized JavaScript origins for the web URL and authorized redirect URIs if using GIS.
-7. Keep the historical AbacatePay webhook at `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>` (query `?webhookSecret=` still accepted for one release). Point the Asaas webhook to `https://<api>/api/v1/billing/webhook/asaas` with the same dedicated token stored as `ASAAS_WEBHOOK_TOKEN` and sent in `asaas-access-token`.
+7. Keep the historical AbacatePay webhook at `https://<api>/api/v1/billing/webhook/abacate` with header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>`. Query-string secrets are not accepted. Point the Asaas webhook to `https://<api>/api/v1/billing/webhook/asaas` with the same dedicated token stored as `ASAAS_WEBHOOK_TOKEN` and sent in `asaas-access-token`.
 8. If the release includes schema changes, run the **single** migrate job/step before the API rolls — see [`migrations.md`](./migrations.md). The API image does **not** run migrate on start (`CMD` is `node dist/main.js` only).
 
 ## Local Dockerfiles (optional)
@@ -92,6 +92,7 @@ API health check: `GET /health/ready` (Postgres + Redis).
 ## Ops notes
 
 - **JWT secrets** are `generateValue` on first create; rotate via Dashboard if needed. Production/staging refuse `change-me-*` placeholders.
+- **Ops metrics:** set `OPS_METRICS_TOKEN` (≥ 32 chars) on the API service and call `GET /api/v1/ops/metrics` with `X-Prospectly-Ops-Token`. Tenant JWT roles cannot read instance telemetry. Unset token → 404.
 - **Redis** must stay `noeviction` for BullMQ (also used for distributed rate limiting).
 - **Free web spin-down** does not apply to `starter` plans used here; free Postgres expiry still matters if you downgrade DB plan.
 - Custom domains: attach in Dashboard, then update CORS / frontend URLs / webhook endpoints.

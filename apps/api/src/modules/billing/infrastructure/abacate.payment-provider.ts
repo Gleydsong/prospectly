@@ -100,7 +100,6 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
   async verifyAndParseWebhook(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-    query?: Record<string, string | string[] | undefined>,
   ): Promise<ParsedWebhookEvent> {
     const expectedSecret = this.config.get<string>('abacate.webhookSecret');
     if (!expectedSecret) {
@@ -112,11 +111,7 @@ export class AbacatePaymentProvider implements PaymentProviderAdapter {
       headers['X-Abacate-Webhook-Secret'] ??
       headers['x-webhook-secret'];
     const headerSecret = Array.isArray(headerSecretRaw) ? headerSecretRaw[0] : headerSecretRaw;
-
-    const querySecretRaw = query?.webhookSecret ?? query?.secret;
-    const querySecret = Array.isArray(querySecretRaw) ? querySecretRaw[0] : querySecretRaw;
-    const providedSecret = headerSecret ?? querySecret;
-    if (!providedSecret || !equalSecrets(providedSecret, expectedSecret)) {
+    if (!headerSecret || !equalSecrets(headerSecret, expectedSecret)) {
       throw new UnauthorizedException('Invalid Abacate webhook secret');
     }
 

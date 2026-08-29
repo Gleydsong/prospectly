@@ -1,15 +1,16 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiTags } from '@nestjs/swagger';
 import type { Queue } from 'bullmq';
 
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { IMPORTS_QUEUE } from '../imports/imports.constants';
 import { PROSPECTING_QUEUE } from '../prospecting/prospecting.constants';
 import { SCORING_QUEUE } from '../scoring/scoring.constants';
 import { WEBSITE_ANALYSIS_QUEUE } from '../website-analysis/website-analysis.constants';
 import { OPPORTUNITY_FINDER_QUEUE } from '../opportunity-finder/opportunity-finder.constants';
 import { MetricsService } from './metrics.service';
+import { OpsMetricsGuard } from './ops-metrics.guard';
 
 const OPS_QUEUES = [
   PROSPECTING_QUEUE,
@@ -20,7 +21,7 @@ const OPS_QUEUES = [
 ] as const;
 
 @ApiTags('ops')
-@ApiBearerAuth()
+@ApiHeader({ name: 'X-Prospectly-Ops-Token', required: true })
 @Controller({ path: 'ops/metrics', version: '1' })
 export class OpsMetricsController {
   constructor(
@@ -33,7 +34,8 @@ export class OpsMetricsController {
   ) {}
 
   @Get()
-  @Roles('OWNER', 'ADMIN')
+  @Public()
+  @UseGuards(OpsMetricsGuard)
   async getMetrics() {
     const queues = await this.collectQueueDepths();
     const redis = await this.probeRedis();

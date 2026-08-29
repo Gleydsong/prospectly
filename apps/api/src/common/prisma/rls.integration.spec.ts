@@ -205,6 +205,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       );
       expect(tenantRows).toEqual([{ id: leadA }]);
 
+      const tenantRawRows = await runWithTenant(orgA, () =>
+        runtimePrisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Lead" ORDER BY id`,
+      );
+      expect(tenantRawRows).toEqual([{ id: leadA }]);
+
       const ownerMembers = await prisma!.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
         return tx.$queryRaw<Array<{ id: string; userId: string; organizationId: string }>>`
