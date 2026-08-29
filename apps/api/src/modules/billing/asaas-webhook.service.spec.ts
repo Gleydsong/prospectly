@@ -21,7 +21,7 @@ describe('AsaasWebhookService', () => {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
     },
-    creditPurchase: { findUnique: jest.fn(), findMany: jest.fn() },
+    creditPurchase: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
     billingProfile: { findUnique: jest.fn() },
     monthlyCheckoutAttempt: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
     organization: { findUnique: jest.fn() },
@@ -40,6 +40,7 @@ describe('AsaasWebhookService', () => {
     jest.clearAllMocks();
     prisma.billingWebhookEvent.findMany.mockResolvedValue([]);
     prisma.creditPurchase.findMany.mockResolvedValue([]);
+    prisma.creditPurchase.updateMany.mockResolvedValue({ count: 1 });
     prisma.monthlyCheckoutAttempt.findMany.mockResolvedValue([]);
     prisma.organization.findUnique.mockResolvedValue(null);
     const module: TestingModule = await Test.createTestingModule({
@@ -548,6 +549,50 @@ describe('AsaasWebhookService', () => {
       externalReference: 'org:org-1:credits:review',
     });
     expect(purchases.completeById).toHaveBeenCalledWith('purchase-review', 'pay_recovered');
+  });
+
+  it('expires a stale review-required package when Asaas has no payment', async () => {
+    prisma.creditPurchase.findMany.mockResolvedValue([
+      {
+        id: 'purchase-stale-review',
+        organizationId: 'org-1',
+        externalId: 'org:org-1:credits:stale-review',
+        externalPaymentId: null,
+        status: 'REVIEW_REQUIRED',
+        updatedAt: new Date(Date.now() - 3 * 60 * 1000),
+      },
+    ]);
+    client.findPayment.mockResolvedValue(null);
+
+    await service.processPending();
+
+    expect(prisma.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: { id: 'purchase-stale-review', status: { in: ['PENDING', 'REVIEW_REQUIRED'] } },
+      data: { status: 'FAILED' },
+    });
+  });
+
+  it('expires a stale review-required monthly checkout when Asaas has no payment', async () => {
+    const staleReview = {
+      id: 'attempt-stale-review',
+      organizationId: 'org-1',
+      externalId: 'org:org-1:monthly-pix:stale-review',
+      externalCheckoutId: null,
+      paymentMethod: 'PIX',
+      status: 'REVIEW_REQUIRED',
+      updatedAt: new Date(Date.now() - 3 * 60 * 1000),
+    };
+    prisma.monthlyCheckoutAttempt.findMany.mockImplementation(async ({ where }) =>
+      JSON.stringify(where).includes('REVIEW_REQUIRED') ? [staleReview] : [],
+    );
+    client.findPayment.mockResolvedValue(null);
+
+    await service.processPending();
+
+    expect(monthlyAttempts.markPaymentFailed).toHaveBeenCalledWith(
+      staleReview.externalId,
+      'Asaas checkout was not found after review window',
+    );
   });
 
   it('reconciles a monthly checkout whose processing lease expired', async () => {

@@ -11,6 +11,7 @@ import { BillingWebhookEventStatus, PaymentProvider, PlanStatus, Prisma } from '
 import crypto from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { runWithBypass } from '../../common/prisma/tenant-context';
 import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
@@ -78,6 +79,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
 
   async processPending(): Promise<void> {
     if (!this.isEnabled()) return;
+    return runWithBypass(() => this.processPendingWork());
+  }
+
+  private async processPendingWork(): Promise<void> {
     const staleBefore = new Date(Date.now() - 2 * 60 * 1000);
     const reviewBefore = new Date(Date.now() - 60 * 60 * 1000);
     const events = await this.prisma.billingWebhookEvent.findMany({
@@ -339,11 +344,11 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
             });
           }
         } else if (
-          purchase.status === 'PENDING' &&
+          !purchase.externalPaymentId &&
           purchase.updatedAt.getTime() < Date.now() - 2 * 60 * 1000
         ) {
           await this.prisma.creditPurchase.updateMany({
-            where: { id: purchase.id, status: 'PENDING' },
+            where: { id: purchase.id, status: { in: ['PENDING', 'REVIEW_REQUIRED'] } },
             data: { status: 'FAILED' },
           });
         }
@@ -397,6 +402,15 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
               `Asaas payment ${payment.status ?? 'deleted'}`,
             );
           }
+        } else if (
+          attempt.status === 'REVIEW_REQUIRED' &&
+          !attempt.externalCheckoutId &&
+          attempt.updatedAt.getTime() < Date.now() - MONTHLY_CHECKOUT_PROCESSING_LEASE_MS
+        ) {
+          await this.monthlyAttempts.markPaymentFailed(
+            attempt.externalId,
+            'Asaas checkout was not found after review window',
+          );
         }
       } catch (error) {
         this.logger.warn(
