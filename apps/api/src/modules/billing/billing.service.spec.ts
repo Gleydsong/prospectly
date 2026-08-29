@@ -485,6 +485,29 @@ describe('BillingService', () => {
     });
   });
 
+  it('returns the Asaas payer validation error instead of marking the package as uncertain', async () => {
+    prisma.organization.findFirst.mockResolvedValue({ id: 'org1', deletedAt: null });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-invalid' },
+    });
+    asaasClient.createHostedPayment.mockRejectedValue(
+      new BadRequestException('O CPF informado é inválido'),
+    );
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'O CPF informado é inválido',
+    });
+    expect(prisma.creditPurchase.update).toHaveBeenCalledWith({
+      where: { id: 'purchase-invalid' },
+      data: { status: 'FAILED' },
+    });
+  });
+
   it('creates a recurring hosted Asaas checkout for the monthly plan', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
