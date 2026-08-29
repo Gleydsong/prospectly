@@ -2,6 +2,7 @@ import {
   applyTenantGuc,
   modelDelegateName,
   runOnTransactionClient,
+  runRawOnTransactionClient,
 } from './tenant-prisma';
 
 describe('tenant Prisma helpers', () => {
@@ -39,5 +40,32 @@ describe('tenant Prisma helpers', () => {
     expect(() =>
       runOnTransactionClient({} as never, 'OrganizationMember', 'findUnique', {}),
     ).toThrow('Unsupported tenant operation OrganizationMember.findUnique');
+  });
+
+  it('re-issues tagged raw queries on the transaction client', async () => {
+    const $queryRaw = jest.fn().mockResolvedValue([{ id: 'lead-1' }]);
+    const sql = { sql: 'SELECT id FROM "Lead"', values: [] };
+
+    await expect(
+      runRawOnTransactionClient({ $queryRaw } as never, '$queryRaw', sql),
+    ).resolves.toEqual([{ id: 'lead-1' }]);
+    expect($queryRaw).toHaveBeenCalledWith(sql);
+  });
+
+  it('re-issues unsafe raw queries with spread arguments', async () => {
+    const $queryRawUnsafe = jest.fn().mockResolvedValue([]);
+
+    await runRawOnTransactionClient({ $queryRawUnsafe } as never, '$queryRawUnsafe', [
+      'SELECT id FROM "Lead" WHERE id = $1',
+      'lead-1',
+    ]);
+
+    expect($queryRawUnsafe).toHaveBeenCalledWith('SELECT id FROM "Lead" WHERE id = $1', 'lead-1');
+  });
+
+  it('rejects unsupported raw operations instead of falling back', () => {
+    expect(() => runRawOnTransactionClient({} as never, '$queryRaw', {})).toThrow(
+      'Unsupported tenant raw operation $queryRaw',
+    );
   });
 });

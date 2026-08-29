@@ -20,6 +20,7 @@ export class IntegrationsController {
   ) {}
 
   @Get()
+  @Roles('OWNER', 'ADMIN')
   list(@CurrentOrg() organizationId: string) {
     return this.integrations.list(organizationId);
   }

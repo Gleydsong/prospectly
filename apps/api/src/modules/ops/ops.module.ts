@@ -10,6 +10,7 @@ import { OPPORTUNITY_FINDER_QUEUE } from '../opportunity-finder/opportunity-find
 import { MetricsInterceptor } from './metrics.interceptor';
 import { MetricsService } from './metrics.service';
 import { OpsMetricsController } from './ops-metrics.controller';
+import { OpsMetricsGuard } from './ops-metrics.guard';
 
 @Global()
 @Module({
@@ -25,6 +26,7 @@ import { OpsMetricsController } from './ops-metrics.controller';
   controllers: [OpsMetricsController],
   providers: [
     MetricsService,
+    OpsMetricsGuard,
     { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },
   ],
   exports: [MetricsService],

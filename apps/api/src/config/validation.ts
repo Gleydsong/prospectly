@@ -63,6 +63,13 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
+  const opsMetricsToken = config.OPS_METRICS_TOKEN;
+  if (opsMetricsToken !== undefined && opsMetricsToken !== '') {
+    if (typeof opsMetricsToken !== 'string' || opsMetricsToken.length < 32) {
+      throw new Error('OPS_METRICS_TOKEN must have at least 32 characters');
+    }
+  }
+
   const redisUrl = config.REDIS_URL;
   if (redisUrl !== undefined) {
     if (typeof redisUrl !== 'string') {

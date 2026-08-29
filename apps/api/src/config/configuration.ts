@@ -73,6 +73,9 @@ export const configuration = () => ({
     apiBaseUrl: process.env.ASAAS_API_BASE_URL ?? 'https://api-sandbox.asaas.com/v3',
     httpTimeoutMs: parseInt(process.env.ASAAS_HTTP_TIMEOUT_MS ?? '15000', 10),
   },
+  ops: {
+    metricsToken: process.env.OPS_METRICS_TOKEN ?? '',
+  },
   sentryDsn: process.env.SENTRY_DSN,
   whatsappAi: {
     enabled: process.env.WHATSAPP_AI_ENABLED !== 'false',

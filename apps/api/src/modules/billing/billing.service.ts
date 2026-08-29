@@ -508,9 +508,8 @@ export class BillingService {
   async handleAbacateWebhook(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-    query: Record<string, string | string[] | undefined>,
   ): Promise<{ received: true }> {
-    const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers, query);
+    const parsed = await this.abacateProvider.verifyAndParseWebhook(rawBody, headers);
     const claimed = await this.claimWebhookEvent('ABACATE', parsed.eventId, parsed.type);
     if (!claimed) {
       return { received: true };

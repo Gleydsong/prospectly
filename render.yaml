@@ -123,6 +123,8 @@ projects:
                 sync: false
               - key: GOOGLE_CLIENT_ID
                 sync: false
+              - key: OPS_METRICS_TOKEN
+                sync: false
 
           - type: web
             name: prospectly-web

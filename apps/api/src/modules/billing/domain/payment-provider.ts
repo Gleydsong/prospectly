@@ -77,7 +77,6 @@ export interface PaymentProviderAdapter {
   verifyAndParseWebhook(
     rawBody: Buffer,
     headers: Record<string, string | string[] | undefined>,
-    query?: Record<string, string | string[] | undefined>,
   ): Promise<ParsedWebhookEvent>;
   applyWebhookEvent(payload: unknown, type: string): Promise<WebhookApplyResult>;
 }

@@ -75,4 +75,20 @@ describe('Redis configuration', () => {
       }),
     ).not.toThrow();
   });
+
+  it('allows omitting OPS_METRICS_TOKEN', () => {
+    expect(() => validateEnv(baseConfig)).not.toThrow();
+  });
+
+  it('rejects a short OPS_METRICS_TOKEN', () => {
+    expect(() => validateEnv({ ...baseConfig, OPS_METRICS_TOKEN: 'too-short' })).toThrow(
+      'OPS_METRICS_TOKEN',
+    );
+  });
+
+  it('accepts OPS_METRICS_TOKEN of at least 32 characters', () => {
+    expect(() =>
+      validateEnv({ ...baseConfig, OPS_METRICS_TOKEN: 'ops-metrics-token-min-32-chars!!' }),
+    ).not.toThrow();
+  });
 });
