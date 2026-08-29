@@ -366,6 +366,39 @@ describe('AsaasWebhookService', () => {
     expect(purchases.refundById).not.toHaveBeenCalled();
   });
 
+  it('rejects a monthly card payment whose Asaas customer differs from the billing profile', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      type: 'PAYMENT_CONFIRMED',
+      payload,
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.creditPurchase.findUnique.mockResolvedValue(null);
+    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue({
+      organizationId: 'org-1',
+      externalId: 'org:org-1:monthly-card:attempt-1',
+      product: 'MONTHLY_ACCESS',
+      amountCentavos: 4999,
+      currency: 'BRL',
+      paymentMethod: 'CARD',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_profile' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_from_customerData_duplicate',
+      value: 49.99,
+      externalReference: 'org:org-1:monthly-card:attempt-1',
+      billingType: 'CREDIT_CARD',
+      status: 'CONFIRMED',
+      subscription: 'sub_1',
+      dueDate: '2026-08-25',
+    });
+
+    await expect(service.processEvent('evt_1')).rejects.toThrow(
+      'Asaas payment does not match the Prospectly checkout',
+    );
+    expect(activation.activateMonthly).not.toHaveBeenCalled();
+  });
+
   it('resolves the monthly review lock after authoritative confirmation', async () => {
     prisma.billingWebhookEvent.findUnique.mockResolvedValue({
       type: 'PAYMENT_CONFIRMED',

@@ -153,7 +153,8 @@ export class AsaasClient {
   async createRecurringCheckout(input: {
     externalReference: string;
     amountCentavos: number;
-    customer: { name: string; cpfCnpj: string; phone: string; email: string };
+    /** Existing Asaas customer id from BillingProfile — must match webhook assertPaymentMatches. */
+    customerId: string;
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ id: string; url: string; status?: string }> {
@@ -178,7 +179,10 @@ export class AsaasClient {
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
         },
       ],
-      customerData: input.customer,
+      // Use registered customer id, not customerData. Asaas allows duplicate customers;
+      // customerData can mint a new cus_* so payment.customer ≠ BillingProfile.asaasCustomerId
+      // and assertPaymentMatches rejects a paid subscription (no entitlement).
+      customer: input.customerId,
       subscription: { cycle: 'MONTHLY' },
     });
     const id = readString(response, 'id');

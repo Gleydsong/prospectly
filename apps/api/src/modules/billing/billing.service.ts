@@ -369,12 +369,7 @@ export class BillingService {
       const checkout = await this.asaasClient.createRecurringCheckout({
         externalReference: begin.claim.externalId,
         amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
-        customer: {
-          name: profile.name,
-          cpfCnpj: profile.cpfCnpj,
-          phone: profile.phone,
-          email: profile.email,
-        },
+        customerId: profile.asaasCustomerId,
         successUrl,
         cancelUrl,
       });
