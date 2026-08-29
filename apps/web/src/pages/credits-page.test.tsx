@@ -82,6 +82,34 @@ describe('CreditsPage', () => {
     });
   });
 
+  it('lets the payer switch from PIX to card without a checkout lock toast', async () => {
+    const user = userEvent.setup();
+    createCreditCheckout
+      .mockResolvedValueOnce({
+        mode: 'pix',
+        provider: 'ASAAS',
+        brCode: '000201',
+        brCodeBase64: 'cG5n',
+        externalPaymentId: 'pay_pix_1',
+        amountCentavos: 1499,
+      })
+      .mockResolvedValueOnce({
+        mode: 'redirect',
+        provider: 'ASAAS',
+        url: 'https://sandbox.asaas.com/i/pay_card_1',
+      });
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+    await user.click((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]!);
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Cartão de crédito ou débito' }))[0]!,
+    );
+    expect(createCreditCheckout).toHaveBeenNthCalledWith(2, {
+      offer: 'credits-2000',
+      paymentMethod: 'card',
+    });
+    expect(screen.queryByText(/Estamos confirmando seu checkout/)).not.toBeInTheDocument();
+  });
+
   it('offers the Asaas hosted card method for credit packages', async () => {
     const user = userEvent.setup();
     createCreditCheckout.mockResolvedValue({

@@ -344,6 +344,46 @@ describe('AsaasClient', () => {
     );
   });
 
+  it('deletes an unpaid Asaas payment', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ deleted: true, id: 'pay_1' }),
+    } as Response);
+
+    await expect(client.deletePayment('pay_1')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api-sandbox.asaas.com/v3/payments/pay_1',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('treats a missing payment as already deleted', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({
+        errors: [{ code: 'invalid_object', description: 'Cobrança não encontrada' }],
+      }),
+    } as Response);
+
+    await expect(client.deletePayment('pay_gone')).resolves.toBeUndefined();
+  });
+
+  it('cancels a hosted checkout session', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 'checkout-1', status: 'EXPIRED' }),
+    } as Response);
+
+    await expect(client.cancelCheckout('checkout-1')).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api-sandbox.asaas.com/v3/checkouts/checkout-1/cancel',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
   it('sends landline numbers as phone instead of mobilePhone', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')

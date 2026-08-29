@@ -60,6 +60,10 @@ _Avoid_: Assinatura Asaas, migração automática
 O registro durável de uma intenção de compra antes de qualquer criação no provedor externo.
 _Avoid_: Clique no botão, sessão do navegador
 
+**Abandono de tentativa**:
+O encerramento de uma tentativa ainda não confirmada porque o pagador iniciou outro checkout; a cobrança correspondente deixa de ser pagável no provedor.
+_Avoid_: Estorno, cancelar assinatura, revisão necessária
+
 **Revisão necessária**:
 O estado de uma tentativa cujo resultado externo não pode ser determinado com segurança e que bloqueia nova criação até confirmação ou intervenção.
 _Avoid_: Falha definitiva, retry automático
