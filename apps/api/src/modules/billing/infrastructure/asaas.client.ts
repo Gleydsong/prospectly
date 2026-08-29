@@ -228,6 +228,24 @@ export class AsaasClient {
     await this.request('DELETE', `/subscriptions/${encodeURIComponent(subscriptionId)}`);
   }
 
+  async deletePayment(paymentId: string): Promise<void> {
+    try {
+      await this.request('DELETE', `/payments/${encodeURIComponent(paymentId)}`);
+    } catch (error) {
+      if (isAsaasNotFound(error)) return;
+      throw error;
+    }
+  }
+
+  async cancelCheckout(checkoutId: string): Promise<void> {
+    try {
+      await this.request('POST', `/checkouts/${encodeURIComponent(checkoutId)}/cancel`);
+    } catch (error) {
+      if (isAsaasNotFound(error)) return;
+      throw error;
+    }
+  }
+
   private async findResourceId(
     path: string,
     filters: Record<string, string>,
@@ -329,6 +347,10 @@ function asaasPhoneFields(phone: string): { phone?: string; mobilePhone?: string
 }
 
 function isMissingAsaasCustomer(error: unknown): boolean {
+  return isAsaasNotFound(error);
+}
+
+export function isAsaasNotFound(error: unknown): boolean {
   return error instanceof AsaasRequestError && error.httpStatus === 404;
 }
 

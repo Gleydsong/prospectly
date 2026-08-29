@@ -51,6 +51,18 @@ describe('CreditPurchaseService', () => {
     expect(PaymentProvider.ABACATE).toBeDefined();
   });
 
+  it('does not complete a purchase already marked failed after abandonment', async () => {
+    const prisma = {
+      creditPurchase: {
+        findUnique: jest.fn().mockResolvedValue({ status: CreditPurchaseStatus.FAILED }),
+      },
+      $transaction: jest.fn(),
+    };
+    const service = new CreditPurchaseService(prisma as never);
+    await service.completeById('purchase_abandoned', 'pay_pix_1');
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('does not add balance for an already completed purchase', async () => {
     const prisma = {
       creditPurchase: {

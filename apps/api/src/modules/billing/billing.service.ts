@@ -23,6 +23,7 @@ import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import { CREDIT_COSTS, FREE_SEARCH_LIMIT, MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import { hasUnlimitedAccess, isMonthlyPeriodExpired } from './domain/plan-access';
 import { EntitlementService } from './entitlement.service';
+import { AsaasCheckoutSwitchService } from './asaas-checkout-switch.service';
 import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import type {
   BillingCurrency,
@@ -57,6 +58,7 @@ export class BillingService {
     private readonly creditPurchases: CreditPurchaseService,
     private readonly entitlements: EntitlementService,
     private readonly monthlyAttempts: MonthlyCheckoutAttemptService,
+    private readonly checkoutSwitch: AsaasCheckoutSwitchService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
@@ -303,6 +305,12 @@ export class BillingService {
     if (!profile?.asaasCustomerId) {
       throw new BadRequestException('Complete o perfil de cobrança antes de pagar com PIX');
     }
+    const switched = await this.checkoutSwitch.prepare({
+      organizationId: org.id,
+      product: 'monthly',
+      paymentMethod: 'pix',
+    });
+    if (switched.outcome === 'alreadyPaid') return switched.result;
     const begin = await this.monthlyAttempts.beginPix(org.id);
     if (begin.state === 'ready') {
       return this.getAsaasPixCheckout(begin.paymentId, MONTHLY_PLAN_AMOUNT_CENTAVOS);
@@ -367,6 +375,12 @@ export class BillingService {
     if (!profile?.asaasCustomerId) {
       throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
     }
+    const switched = await this.checkoutSwitch.prepare({
+      organizationId: org.id,
+      product: 'monthly',
+      paymentMethod: 'card',
+    });
+    if (switched.outcome === 'alreadyPaid') return switched.result;
     const begin = await this.monthlyAttempts.beginCard(org.id);
     if (begin.state === 'ready') return begin.checkout;
     try {
@@ -473,6 +487,12 @@ export class BillingService {
           : 'Complete o perfil de cobrança antes de pagar com cartão',
       );
     }
+    const switched = await this.checkoutSwitch.prepare({
+      organizationId,
+      product: offer,
+      paymentMethod,
+    });
+    if (switched.outcome === 'alreadyPaid') return switched.result;
 
     const externalId = `org:${organizationId}:credits:${crypto.randomUUID()}`;
     const begin = await this.creditPurchases.beginAsaasPackage({
