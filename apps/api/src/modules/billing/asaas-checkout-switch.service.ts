@@ -105,13 +105,18 @@ export class AsaasCheckoutSwitchService {
 
   private async abandonPurchase(purchase: CreditPurchase): Promise<boolean> {
     const isPix = purchase.paymentMethod === BillingPaymentMethod.PIX;
+    // No provider charge yet — another request may still be creating it. Do not
+    // mark FAILED or a concurrent attachPayment can leave a payable charge
+    // tied to a row the webhook will refuse to fulfill.
+    if (!purchase.externalPaymentId) {
+      await this.markPurchaseReview(purchase);
+      this.failUncertain(new Error('Checkout still being created on Asaas'));
+    }
     try {
-      if (purchase.externalPaymentId) {
-        const paid = await this.settleOrDeletePayment(purchase.externalPaymentId, isPix);
-        if (paid) {
-          await this.creditPurchases.completeById(purchase.id, paid.id);
-          return true;
-        }
+      const paid = await this.settleOrDeletePayment(purchase.externalPaymentId, isPix);
+      if (paid) {
+        await this.creditPurchases.completeById(purchase.id, paid.id);
+        return true;
       }
     } catch (error) {
       await this.markPurchaseReview(purchase);
@@ -131,20 +136,22 @@ export class AsaasCheckoutSwitchService {
   private async abandonMonthly(attempt: MonthlyCheckoutAttempt): Promise<boolean> {
     const isPix = attempt.paymentMethod === BillingPaymentMethod.PIX;
     const externalId = attempt.externalCheckoutId;
+    if (!externalId) {
+      await this.markMonthlyReview(attempt, 'Checkout still being created on Asaas');
+      this.failUncertain(new Error('Checkout still being created on Asaas'));
+    }
     try {
-      if (externalId) {
-        if (isPix) {
-          const paid = await this.settleOrDeletePayment(externalId, true);
-          if (paid) {
-            await this.grantMonthlyPix(attempt, paid);
-            return true;
-          }
-        } else {
-          const paid = await this.settleOrCancelCheckout(externalId);
-          if (paid) {
-            await this.grantMonthlyCard(attempt, paid);
-            return true;
-          }
+      if (isPix) {
+        const paid = await this.settleOrDeletePayment(externalId, true);
+        if (paid) {
+          await this.grantMonthlyPix(attempt, paid);
+          return true;
+        }
+      } else {
+        const paid = await this.settleOrCancelCheckout(externalId);
+        if (paid) {
+          await this.grantMonthlyCard(attempt, paid);
+          return true;
         }
       }
     } catch (error) {

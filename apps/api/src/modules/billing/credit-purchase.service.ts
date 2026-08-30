@@ -61,15 +61,21 @@ export class CreditPurchaseService {
     }
   }
 
+  /**
+   * Bind an Asaas charge only while the local row is still PENDING.
+   * Returns false when a concurrent abandon/review already moved the row —
+   * callers must cancel the orphan provider charge.
+   */
   async attachPayment(
     purchaseId: string,
     externalPaymentId: string,
     checkoutUrl?: string,
-  ): Promise<void> {
-    await this.prisma.creditPurchase.update({
-      where: { id: purchaseId },
+  ): Promise<boolean> {
+    const updated = await this.prisma.creditPurchase.updateMany({
+      where: { id: purchaseId, status: CreditPurchaseStatus.PENDING },
       data: { externalPaymentId, ...(checkoutUrl ? { checkoutUrl } : {}) },
     });
+    return updated.count === 1;
   }
 
   private findActiveAsaasPackage(organizationId: string) {
@@ -114,22 +120,13 @@ export class CreditPurchaseService {
       this.logger.warn('Credit payment completed without a matching purchase');
       return;
     }
-    if (
-      purchase.status !== CreditPurchaseStatus.PENDING &&
-      purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED
-    )
-      return;
+    if (!this.isFulfillableStatus(purchase.status)) return;
     await this.completePurchase(purchase.id, paymentId);
   }
 
   async completeById(purchaseId: string, externalPaymentId: string): Promise<void> {
     const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
-    if (
-      !purchase ||
-      (purchase.status !== CreditPurchaseStatus.PENDING &&
-        purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
-    )
-      return;
+    if (!purchase || !this.isFulfillableStatus(purchase.status)) return;
     await this.completePurchase(purchase.id, externalPaymentId);
   }
 
@@ -179,12 +176,9 @@ export class CreditPurchaseService {
   private async completePurchase(purchaseId: string, externalPaymentId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
-      if (
-        !current ||
-        (current.status !== CreditPurchaseStatus.PENDING &&
-          current.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
-      )
-        return;
+      // FAILED is fulfillable: checkout may have been abandoned locally after the
+      // provider already created (or received) a payable charge.
+      if (!current || !this.isFulfillableStatus(current.status)) return;
       const claimed = await tx.creditPurchase.updateMany({
         where: { id: current.id, status: current.status },
         data: {
@@ -211,6 +205,14 @@ export class CreditPurchaseService {
         },
       });
     });
+  }
+
+  private isFulfillableStatus(status: CreditPurchaseStatus): boolean {
+    return (
+      status === CreditPurchaseStatus.PENDING ||
+      status === CreditPurchaseStatus.REVIEW_REQUIRED ||
+      status === CreditPurchaseStatus.FAILED
+    );
   }
 
   private readMetadata(data: Record<string, unknown>): Record<string, string> {

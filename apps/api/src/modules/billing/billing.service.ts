@@ -539,24 +539,23 @@ export class BillingService {
         if (error instanceof BadRequestException) throw error;
         throw this.asaasCheckoutError(error, 'PIX payments are temporarily unavailable');
       }
-      await this.creditPurchases.attachPayment(purchase.id, payment.id);
+      const attached = await this.creditPurchases.attachPayment(purchase.id, payment.id);
+      if (!attached) {
+        await this.asaasClient.deletePayment(payment.id).catch(() => undefined);
+        throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+      }
       return this.getAsaasPixCheckout(payment.id, pack.amountCentavos);
     }
+
+    let hosted: { id: string; url: string };
     try {
-      const payment = await this.asaasClient.createHostedPayment({
+      hosted = await this.asaasClient.createHostedPayment({
         customerId: profile.asaasCustomerId,
         amountCentavos: pack.amountCentavos,
         externalReference: externalId,
         description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
         successUrl: `${frontendUrl}/billing/success`,
       });
-      await this.creditPurchases.attachPayment(purchase.id, payment.id, payment.url);
-      return {
-        mode: 'redirect',
-        provider: 'ASAAS',
-        url: payment.url,
-        externalCheckoutId: payment.id,
-      };
     } catch (error) {
       if (error instanceof BadRequestException) {
         await this.prisma.creditPurchase.update({
@@ -578,6 +577,21 @@ export class BillingService {
       });
       throw new ServiceUnavailableException('Estamos confirmando seu checkout');
     }
+    const attached = await this.creditPurchases.attachPayment(
+      purchase.id,
+      hosted.id,
+      hosted.url,
+    );
+    if (!attached) {
+      await this.asaasClient.deletePayment(hosted.id).catch(() => undefined);
+      throw new ServiceUnavailableException('Estamos confirmando seu checkout');
+    }
+    return {
+      mode: 'redirect',
+      provider: 'ASAAS',
+      url: hosted.url,
+      externalCheckoutId: hosted.id,
+    };
   }
 
   private async getAsaasPixCheckout(

@@ -214,4 +214,58 @@ describe('AsaasCheckoutSwitchService', () => {
     ).resolves.toEqual({ outcome: 'continue' });
     expect(asaasClient.deletePayment).toHaveBeenCalledWith('pay_pix_1');
   });
+
+  it('locks instead of failing a purchase that has no Asaas charge yet', async () => {
+    prisma.creditPurchase.findFirst.mockResolvedValue({
+      ...pendingPix,
+      externalPaymentId: null,
+    });
+
+    await expect(
+      service.prepare({ organizationId: 'org1', product: 'credits-2000', paymentMethod: 'card' }),
+    ).rejects.toMatchObject({
+      status: 503,
+      message: 'Estamos confirmando seu checkout',
+    });
+    expect(asaasClient.deletePayment).not.toHaveBeenCalled();
+    expect(prisma.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'purchase-pix',
+        organizationId: 'org1',
+        status: CreditPurchaseStatus.PENDING,
+      },
+      data: { status: CreditPurchaseStatus.REVIEW_REQUIRED },
+    });
+  });
+
+  it('locks a monthly attempt that is still being created on Asaas', async () => {
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue({
+      id: 'attempt-pix',
+      organizationId: 'org1',
+      paymentMethod: BillingPaymentMethod.PIX,
+      status: BillingCheckoutAttemptStatus.PROCESSING,
+      externalId: 'org:org1:monthly-pix:1',
+      externalCheckoutId: null,
+    });
+
+    await expect(
+      service.prepare({ organizationId: 'org1', product: 'monthly', paymentMethod: 'card' }),
+    ).rejects.toMatchObject({
+      status: 503,
+      message: 'Estamos confirmando seu checkout',
+    });
+    expect(prisma.monthlyCheckoutAttempt.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'attempt-pix',
+        organizationId: 'org1',
+        status: {
+          in: [BillingCheckoutAttemptStatus.PROCESSING, BillingCheckoutAttemptStatus.READY],
+        },
+      },
+      data: {
+        status: BillingCheckoutAttemptStatus.REVIEW_REQUIRED,
+        lastError: 'Checkout still being created on Asaas',
+      },
+    });
+  });
 });
