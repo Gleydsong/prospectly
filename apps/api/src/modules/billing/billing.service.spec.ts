@@ -123,6 +123,8 @@ describe('BillingService', () => {
     prisma.creditPurchase.updateMany.mockResolvedValue({ count: 1 });
     prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue(null);
     prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValue({ count: 1 });
+    creditPurchases.attachPayment.mockResolvedValue(true);
+    asaasClient.deletePayment.mockResolvedValue(undefined);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -352,6 +354,34 @@ describe('BillingService', () => {
       'pay_1',
       'https://sandbox.asaas.com/i/pay_1',
     );
+  });
+
+  it('cancels the Asaas charge when attach loses the pending purchase race', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    creditPurchases.beginAsaasPackage.mockResolvedValue({
+      created: true,
+      purchase: { id: 'purchase-1' },
+    });
+    creditPurchases.attachPayment.mockResolvedValue(false);
+    asaasClient.createHostedPayment.mockResolvedValue({
+      id: 'pay_race',
+      url: 'https://sandbox.asaas.com/i/pay_race',
+    });
+
+    await expect(
+      service.createCreditCheckoutSession('org1', 'credits-2000', 'card'),
+    ).rejects.toMatchObject({
+      status: 503,
+      message: 'Estamos confirmando seu checkout',
+    });
+    expect(asaasClient.deletePayment).toHaveBeenCalledWith('pay_race');
   });
 
   it('creates an Asaas PIX charge for a credit package after persisting the attempt', async () => {

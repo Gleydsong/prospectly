@@ -51,16 +51,57 @@ describe('CreditPurchaseService', () => {
     expect(PaymentProvider.ABACATE).toBeDefined();
   });
 
-  it('does not complete a purchase already marked failed after abandonment', async () => {
-    const prisma = {
+  it('fulfills credits when local purchase was marked FAILED after a payable charge existed', async () => {
+    const purchase = {
+      id: 'purchase_abandoned',
+      organizationId: 'org_1',
+      credits: 2000,
+      status: CreditPurchaseStatus.FAILED,
+      provider: PaymentProvider.ASAAS,
+      paymentMethod: 'PIX',
+    };
+    const tx = {
       creditPurchase: {
-        findUnique: jest.fn().mockResolvedValue({ status: CreditPurchaseStatus.FAILED }),
+        findUnique: jest.fn().mockResolvedValue(purchase),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      $transaction: jest.fn(),
+      organization: { update: jest.fn().mockResolvedValue({ creditBalance: 2000 }) },
+      creditLedgerEntry: { create: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
     const service = new CreditPurchaseService(prisma as never);
+
     await service.completeById('purchase_abandoned', 'pay_pix_1');
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+
+    expect(tx.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: { id: 'purchase_abandoned', status: CreditPurchaseStatus.FAILED },
+      data: expect.objectContaining({
+        status: CreditPurchaseStatus.COMPLETED,
+        externalPaymentId: 'pay_pix_1',
+      }),
+    });
+    expect(tx.organization.update).toHaveBeenCalledWith({
+      where: { id: 'org_1' },
+      data: { creditBalance: { increment: 2000 } },
+      select: { creditBalance: true },
+    });
+  });
+
+  it('attachPayment refuses to bind a charge onto a non-pending purchase', async () => {
+    const prisma = {
+      creditPurchase: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+    };
+    const service = new CreditPurchaseService(prisma as never);
+    await expect(service.attachPayment('purchase_failed', 'pay_1')).resolves.toBe(false);
+    expect(prisma.creditPurchase.updateMany).toHaveBeenCalledWith({
+      where: { id: 'purchase_failed', status: CreditPurchaseStatus.PENDING },
+      data: { externalPaymentId: 'pay_1' },
+    });
   });
 
   it('does not add balance for an already completed purchase', async () => {
