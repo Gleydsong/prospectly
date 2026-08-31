@@ -180,6 +180,14 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     if (missingAsaas.length > 0) {
       throw new Error(`Missing Asaas configuration: ${missingAsaas.join(', ')}`);
     }
+    const asaasApiKey = config.ASAAS_API_KEY;
+    const asaasApiBaseUrl = config.ASAAS_API_BASE_URL;
+    if (typeof asaasApiKey === 'string') {
+      assertAsaasApiEnvironment(
+        asaasApiKey,
+        typeof asaasApiBaseUrl === 'string' ? asaasApiBaseUrl : undefined,
+      );
+    }
   }
 
   if (isProdLike) {
@@ -229,4 +237,18 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   }
 
   return config;
+}
+
+function assertAsaasApiEnvironment(apiKey: string, apiBaseUrl: string | undefined): void {
+  const url = (apiBaseUrl ?? 'https://api-sandbox.asaas.com/v3').toLowerCase();
+  const isSandboxUrl = url.includes('sandbox');
+  const isProductionUrl = url.includes('api.asaas.com') && !isSandboxUrl;
+  const isProductionKey = apiKey.includes('$aact_prod_') || /(?:^|_)prod(?:_|$)/.test(apiKey);
+  const isSandboxKey = apiKey.includes('$aact_hmlg_') || /(?:^|_)hmlg(?:_|$)/.test(apiKey);
+  if (isProductionKey && isSandboxUrl) {
+    throw new Error('ASAAS_API_KEY is a production key but ASAAS_API_BASE_URL points to sandbox');
+  }
+  if (isSandboxKey && isProductionUrl) {
+    throw new Error('ASAAS_API_KEY is a sandbox key but ASAAS_API_BASE_URL points to production');
+  }
 }

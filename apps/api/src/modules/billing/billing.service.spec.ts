@@ -11,7 +11,7 @@ import { EntitlementService } from './entitlement.service';
 import { AsaasCheckoutSwitchService } from './asaas-checkout-switch.service';
 import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { AsaasClient, AsaasRequestError } from './infrastructure/asaas.client';
+import { AsaasClient, AsaasRequestError, AsaasStaleCustomerError } from './infrastructure/asaas.client';
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -42,6 +42,7 @@ describe('BillingService', () => {
     },
     billingProfile: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     creditPurchase: {
       update: jest.fn(),
@@ -71,6 +72,7 @@ describe('BillingService', () => {
   };
 
   const asaasClient = {
+    ensureCustomer: jest.fn(),
     createHostedPayment: jest.fn(),
     createPixPayment: jest.fn(),
     getPixQrCode: jest.fn(),
@@ -123,6 +125,10 @@ describe('BillingService', () => {
     prisma.creditPurchase.updateMany.mockResolvedValue({ count: 1 });
     prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue(null);
     prisma.monthlyCheckoutAttempt.updateMany.mockResolvedValue({ count: 1 });
+    prisma.billingProfile.update.mockResolvedValue({});
+    asaasClient.ensureCustomer.mockImplementation(
+      async (input: { existingCustomerId?: string | null }) => input.existingCustomerId ?? 'cus_1',
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -645,6 +651,10 @@ describe('BillingService', () => {
       cpfCnpj: '11222333000181',
       phone: '11999999999',
       email: 'financeiro@acme.test',
+      address: 'Rua das Flores',
+      addressNumber: '100',
+      province: 'Centro',
+      postalCode: '01310100',
       asaasCustomerId: 'cus_1',
     });
     monthlyAttempts.beginCard.mockResolvedValue({
@@ -664,6 +674,42 @@ describe('BillingService', () => {
       externalCheckoutId: 'checkout-1',
     });
     expect(monthlyAttempts.markReady).toHaveBeenCalled();
+    expect(asaasClient.createRecurringCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: expect.objectContaining({
+          address: 'Rua das Flores',
+          addressNumber: '100',
+          province: 'Centro',
+          postalCode: '01310100',
+        }),
+      }),
+    );
+  });
+
+  it('rejects monthly card checkout when the billing address is incomplete', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      asaasCustomerId: 'cus_1',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'card'),
+    ).rejects.toMatchObject({
+      status: 400,
+      message: 'Complete o endereço no perfil de cobrança antes de pagar com cartão',
+    });
+    expect(asaasClient.createRecurringCheckout).not.toHaveBeenCalled();
   });
 
   it('abandons a ready monthly PIX before starting monthly card', async () => {
@@ -680,6 +726,10 @@ describe('BillingService', () => {
       cpfCnpj: '11222333000181',
       phone: '11999999999',
       email: 'financeiro@acme.test',
+      address: 'Rua das Flores',
+      addressNumber: '100',
+      province: 'Centro',
+      postalCode: '01310100',
       asaasCustomerId: 'cus_1',
     });
     prisma.monthlyCheckoutAttempt.findFirst.mockImplementation(
@@ -764,6 +814,102 @@ describe('BillingService', () => {
       'cus_1',
     );
     expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it('replaces a stale Asaas customer before creating monthly PIX', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      asaasCustomerId: 'cus_stale',
+    });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-pix-stale', externalId: 'org:org1:monthly-pix:stale' },
+    });
+    asaasClient.ensureCustomer.mockResolvedValue('cus_new');
+    asaasClient.createPixPayment.mockResolvedValue({ id: 'pay_pix_recovered' });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: 'monthly-pix-copy-paste',
+      encodedImage: 'cG5n',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).resolves.toMatchObject({
+      externalPaymentId: 'pay_pix_recovered',
+    });
+    expect(asaasClient.ensureCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        existingCustomerId: 'cus_stale',
+      }),
+    );
+    expect(prisma.billingProfile.update).toHaveBeenCalledWith({
+      where: { organizationId: 'org1' },
+      data: { asaasCustomerId: 'cus_new' },
+    });
+    expect(asaasClient.createPixPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: 'cus_new' }),
+    );
+  });
+
+  it('retries monthly PIX once after Asaas rejects the stored customer', async () => {
+    configGet.mockImplementation((key: string) =>
+      key === 'billing.pixProvider' ? 'ASAAS' : readConfig(key),
+    );
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      name: 'Acme',
+      plan: OrgPlan.FREE,
+      paymentProvider: null,
+      planStatus: PlanStatus.INACTIVE,
+      deletedAt: null,
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({
+      name: 'Acme Ltda',
+      cpfCnpj: '11222333000181',
+      phone: '11999999999',
+      email: 'financeiro@acme.test',
+      asaasCustomerId: 'cus_stale',
+    });
+    monthlyAttempts.beginPix.mockResolvedValue({
+      state: 'acquired',
+      claim: { id: 'attempt-pix-retry', externalId: 'org:org1:monthly-pix:retry' },
+    });
+    asaasClient.ensureCustomer
+      .mockResolvedValueOnce('cus_stale')
+      .mockResolvedValueOnce('cus_new');
+    asaasClient.createPixPayment
+      .mockRejectedValueOnce(new AsaasStaleCustomerError('Customer inválido ou não informado.'))
+      .mockResolvedValueOnce({ id: 'pay_pix_retry' });
+    asaasClient.getPixQrCode.mockResolvedValue({
+      payload: 'monthly-pix-copy-paste',
+      encodedImage: 'cG5n',
+    });
+
+    await expect(
+      service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
+    ).resolves.toMatchObject({
+      externalPaymentId: 'pay_pix_retry',
+    });
+    expect(asaasClient.createPixPayment).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ customerId: 'cus_new' }),
+    );
+    expect(monthlyAttempts.markFailed).not.toHaveBeenCalled();
   });
 
   it('returns the Asaas monthly PIX rejection instead of locking the organization in review', async () => {

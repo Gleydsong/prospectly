@@ -9,6 +9,19 @@ import { getBillingProfile, updateBillingProfile } from './api';
 
 const KEY = ['billing-profile'] as const;
 const BILLING_PHONE_DIGITS = /^\d{10,11}$/;
+const BILLING_POSTAL_CODE_DIGITS = /^\d{8}$/;
+
+const emptyForm = {
+  name: '',
+  cpfCnpj: '',
+  phone: '',
+  email: '',
+  address: '',
+  addressNumber: '',
+  complement: '',
+  province: '',
+  postalCode: '',
+};
 
 function billingPhoneDigits(value: string): string {
   return value.replace(/\D/g, '');
@@ -16,6 +29,10 @@ function billingPhoneDigits(value: string): string {
 
 function isCompleteBillingPhone(value: string): boolean {
   return BILLING_PHONE_DIGITS.test(billingPhoneDigits(value));
+}
+
+function isCompleteBillingPostalCode(value: string): boolean {
+  return BILLING_POSTAL_CODE_DIGITS.test(value.replace(/\D/g, ''));
 }
 
 function isBillingPhoneValidationMessage(message: string): boolean {
@@ -26,8 +43,9 @@ export function BillingProfileForm() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: KEY, queryFn: getBillingProfile });
-  const [form, setForm] = useState({ name: '', cpfCnpj: '', phone: '', email: '' });
+  const [form, setForm] = useState(emptyForm);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [postalCodeError, setPostalCodeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile.data) {
@@ -36,6 +54,11 @@ export function BillingProfileForm() {
         cpfCnpj: profile.data.cpfCnpj,
         phone: profile.data.phone,
         email: profile.data.email,
+        address: profile.data.address ?? '',
+        addressNumber: profile.data.addressNumber ?? '',
+        complement: profile.data.complement ?? '',
+        province: profile.data.province ?? '',
+        postalCode: profile.data.postalCode ?? '',
       });
     }
   }, [profile.data]);
@@ -44,6 +67,7 @@ export function BillingProfileForm() {
     mutationFn: updateBillingProfile,
     onSuccess: (data) => {
       setPhoneError(null);
+      setPostalCodeError(null);
       queryClient.setQueryData(KEY, data);
     },
   });
@@ -62,8 +86,16 @@ export function BillingProfileForm() {
       setPhoneError(t('settings.billingPhoneInvalid'));
       return;
     }
+    if (!isCompleteBillingPostalCode(form.postalCode)) {
+      setPostalCodeError(t('settings.billingPostalCodeInvalid'));
+      return;
+    }
     setPhoneError(null);
-    save.mutate(form);
+    setPostalCodeError(null);
+    save.mutate({
+      ...form,
+      complement: form.complement.trim() ? form.complement.trim() : undefined,
+    });
   };
 
   return (
@@ -108,6 +140,51 @@ export function BillingProfileForm() {
           label={t('settings.billingContactEmail')}
           value={form.email}
           onChange={(event) => setForm((value) => ({ ...value, email: event.target.value }))}
+          required
+        />
+        <div className="md:col-span-2">
+          <Input
+            name="billingAddress"
+            label={t('settings.billingAddress')}
+            value={form.address}
+            autoComplete="street-address"
+            onChange={(event) => setForm((value) => ({ ...value, address: event.target.value }))}
+            required
+          />
+        </div>
+        <Input
+          name="billingAddressNumber"
+          label={t('settings.billingAddressNumber')}
+          value={form.addressNumber}
+          onChange={(event) =>
+            setForm((value) => ({ ...value, addressNumber: event.target.value }))
+          }
+          required
+        />
+        <Input
+          name="billingComplement"
+          label={t('settings.billingComplement')}
+          value={form.complement}
+          onChange={(event) => setForm((value) => ({ ...value, complement: event.target.value }))}
+        />
+        <Input
+          name="billingProvince"
+          label={t('settings.billingProvince')}
+          value={form.province}
+          onChange={(event) => setForm((value) => ({ ...value, province: event.target.value }))}
+          required
+        />
+        <Input
+          name="billingPostalCode"
+          label={t('settings.billingPostalCode')}
+          value={form.postalCode}
+          inputMode="numeric"
+          autoComplete="postal-code"
+          error={postalCodeError ?? undefined}
+          onChange={(event) => {
+            setPostalCodeError(null);
+            setForm((value) => ({ ...value, postalCode: event.target.value }));
+          }}
           required
         />
       </div>

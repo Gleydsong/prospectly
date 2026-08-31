@@ -40,4 +40,28 @@ describe('Billing environment configuration', () => {
       validateEnv({ ...baseConfig, PIX_PROVIDER: 'ASAAS', ASAAS_ENABLED: 'true' }),
     ).toThrow('Missing Asaas configuration: ASAAS_API_KEY, ASAAS_WEBHOOK_TOKEN');
   });
+
+  it('rejects a production Asaas key pointed at the sandbox API', () => {
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        ASAAS_ENABLED: 'true',
+        ASAAS_API_KEY: '$aact_prod_Y2xhcmU=',
+        ASAAS_WEBHOOK_TOKEN: 'a-secure-webhook-token-with-32-chars',
+        ASAAS_API_BASE_URL: 'https://api-sandbox.asaas.com/v3',
+      }),
+    ).toThrow('ASAAS_API_KEY is a production key but ASAAS_API_BASE_URL points to sandbox');
+  });
+
+  it('rejects a sandbox Asaas key pointed at the production API', () => {
+    expect(() =>
+      validateEnv({
+        ...baseConfig,
+        ASAAS_ENABLED: 'true',
+        ASAAS_API_KEY: '$aact_hmlg_Y2xhcmU=',
+        ASAAS_WEBHOOK_TOKEN: 'a-secure-webhook-token-with-32-chars',
+        ASAAS_API_BASE_URL: 'https://api.asaas.com/v3',
+      }),
+    ).toThrow('ASAAS_API_KEY is a sandbox key but ASAAS_API_BASE_URL points to production');
+  });
 });

@@ -1089,6 +1089,11 @@ model BillingProfile {
   cpfCnpj         String
   phone           String
   email           String
+  address         String?
+  addressNumber   String?
+  complement      String?
+  province        String?
+  postalCode      String?
   asaasCustomerId String?  @unique
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

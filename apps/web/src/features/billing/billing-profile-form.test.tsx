@@ -15,6 +15,20 @@ vi.mock('./api', () => ({
   updateBillingProfile: (...args: unknown[]) => updateBillingProfile(...args),
 }));
 
+async function fillRequiredProfile(
+  user: ReturnType<typeof userEvent.setup>,
+  overrides?: { phone?: string },
+) {
+  await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
+  await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
+  await user.type(screen.getByLabelText(/Telefone/i), overrides?.phone ?? '11999999999');
+  await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+  await user.type(screen.getByLabelText(/^Endereço$/i), 'Rua das Flores');
+  await user.type(screen.getByLabelText(/Número do endereço/i), '100');
+  await user.type(screen.getByLabelText(/Bairro/i), 'Centro');
+  await user.type(screen.getByLabelText(/CEP/i), '01310100');
+}
+
 describe('BillingProfileForm', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('pt');
@@ -36,11 +50,7 @@ describe('BillingProfileForm', () => {
     updateBillingProfile.mockRejectedValue(error);
 
     renderWithProviders(<BillingProfileForm />);
-
-    await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
-    await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
-    await user.type(screen.getByLabelText(/Telefone/i), '11999999999');
-    await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+    await fillRequiredProfile(user);
     await user.click(screen.getByRole('button', { name: /Salvar perfil de cobrança/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('O CPF informado é inválido');
@@ -50,10 +60,7 @@ describe('BillingProfileForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<BillingProfileForm />);
 
-    await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
-    await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
-    await user.type(screen.getByLabelText(/Telefone/i), '1199');
-    await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+    await fillRequiredProfile(user, { phone: '1199' });
     await user.click(screen.getByRole('button', { name: /Salvar perfil de cobrança/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -76,11 +83,7 @@ describe('BillingProfileForm', () => {
     updateBillingProfile.mockRejectedValue(error);
 
     renderWithProviders(<BillingProfileForm />);
-
-    await user.type(await screen.findByLabelText(/Nome ou razão social/i), 'Acme Ltda');
-    await user.type(screen.getByLabelText(/CPF ou CNPJ/i), '24971563792');
-    await user.type(screen.getByLabelText(/Telefone/i), '11999999999');
-    await user.type(screen.getByLabelText(/E-mail de cobrança/i), 'financeiro@acme.test');
+    await fillRequiredProfile(user);
     await user.click(screen.getByRole('button', { name: /Salvar perfil de cobrança/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(

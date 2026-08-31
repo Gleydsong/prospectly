@@ -60,6 +60,9 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
   ): Promise<{ received: true }> {
     this.authenticate(headers['asaas-access-token']);
     const payload = this.parseEnvelope(rawBody);
+    if (!payload) {
+      return { received: true };
+    }
     try {
       await this.prisma.billingWebhookEvent.create({
         data: {
@@ -510,9 +513,17 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     return this.config.get<boolean>('asaas.enabled') === true;
   }
 
-  private parseEnvelope(rawBody: Buffer): AsaasEnvelope {
+  private parseEnvelope(rawBody: Buffer): AsaasEnvelope | null {
     try {
-      return this.parseStoredEnvelope(JSON.parse(rawBody.toString('utf8')));
+      const value = JSON.parse(rawBody.toString('utf8')) as unknown;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('invalid');
+      }
+      const event = (value as Record<string, unknown>).event;
+      if (typeof event === 'string' && !event.startsWith('PAYMENT_')) {
+        return null;
+      }
+      return this.parseStoredEnvelope(value);
     } catch {
       throw new BadRequestException('Invalid Asaas webhook payload');
     }
