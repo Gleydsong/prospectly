@@ -3,9 +3,9 @@
 Última revisão técnica: 2026-08-28  
 Contratos, SCCs e DPA: `LEGAL_REVIEW_REQUIRED` / `EXTERNAL_REVIEW_REQUIRED`.
 
-| Provider | Dados enviados | Finalidade | País/região | Retenção do fornecedor | Tipo | Risco |
+| Provedor | Dados enviados | Finalidade | País/região | Retenção do fornecedor | Tipo | Risco |
 | --- | --- | --- | --- | --- | --- | --- |
-| Render (API, web, landing, Postgres, Redis) | App data, logs, IP | Hosting | EUA típico (Render) | Política Render | Infra | HIGH — transferência internacional |
+| Render (API, web, landing, Postgres, Redis) | Dados do app, logs, IP | Hospedagem | EUA típico (Render) | Política Render | Infra | ALTO — transferência internacional |
 | PostgreSQL (Render) | Inventário completo | Persistência | Idem | Snapshots | Infra | HIGH |
 | Redis (Render) | Job IDs, throttle | Fila / rate limit | Idem | AOF | Infra | MEDIUM |
 | OpenStreetMap Nominatim / Overpass | Query cidade/categoria; recebe POIs | Descoberta | Instâncias públicas (UE/outros) | Cache do provedor | Dados públicos | HIGH — PII possível em POI |

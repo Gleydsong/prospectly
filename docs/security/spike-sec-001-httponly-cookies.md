@@ -1,6 +1,6 @@
 # Spike SEC-001 — Sessão com cookies HttpOnly
 
-**Status:** implemented on `feat/security-hardening-fixes` (Option A)  
+**Status:** implementado em `feat/security-hardening-fixes` (Opção A)  
 **Data:** 2026-07-26  
 **Branch:** `feat/security-hardening-fixes`
 
@@ -67,7 +67,7 @@ Hoje o web app persiste `accessToken` + `refreshToken` em `localStorage` via Zus
 
 ## SEC-017 — Email verification gate
 
-Implemented on the same branch: login allowed without verify; `@RequireEmailVerified()` on critical mutations; full verify/resend/change-email flow. See `docs/superpowers/specs/2026-07-26-security-hardening-design.md`.
+Implementado na mesma branch: login permitido sem verificar; `@RequireEmailVerified()` nas mutações críticas; fluxo completo de verify/resend/change-email. Ver `docs/superpowers/specs/2026-07-26-security-hardening-design.md`.
 
 ## Critério de pronto (quando implementar)
 

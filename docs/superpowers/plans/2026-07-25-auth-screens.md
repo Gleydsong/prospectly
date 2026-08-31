@@ -1,55 +1,55 @@
-# Auth Screens Redesign Implementation Plan
+# Plano de implementação redesign das telas de Auth
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Para agentes:** SUB-SKILL OBRIGATÓRIA: Use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para implementar este plano tarefa a tarefa. Passos usam sintaxe de checkbox (`- [ ]`) para rastreamento.
 
-**Goal:** Redesign login and register as a shared split-screen AuthShell aligned with Prospectly landing/app brand.
+**Objetivo:** Redesenhar login e register como AuthShell split-screen compartilhado alinhado com a marca Prospectly landing/app.
 
-**Architecture:** Shared `AuthShell` (brand panel + form slot + trust strip). Pages keep form/API logic. New copy via i18n.
+**Arquitetura:** `AuthShell` compartilhado (painel de marca + slot de formulário + faixa de confiança). Páginas mantêm lógica de form/API. Novo copy via i18n.
 
-**Tech Stack:** React, Vite, Tailwind, react-i18next, lucide-react, vitest
+**Stack:** React, Vite, Tailwind, react-i18next, lucide-react, vitest
 
-## Global Constraints
+## Restrições globais
 
-- Preserve existing auth fields and API contracts
-- Visual: zinc + emerald, Outfit, `rounded-control`, light surfaces
-- No fake social proof numbers
-- `min-h-[100dvh]` (not `h-screen`)
-- Zero em-dashes in visible copy
-- PT + EN keys required for all new strings
+- Preservar campos de auth e contratos de API existentes
+- Visual: zinc + emerald, Outfit, `rounded-control`, superfícies claras
+- Sem números falsos de prova social
+- `min-h-[100dvh]` (não `h-screen`)
+- Zero em-dashes em copy visível
+- Chaves PT + EN obrigatórias para todas as strings novas
 
 ---
 
-### Task 1: i18n strings
+### Task 1: Strings i18n
 
-**Files:**
-- Modify: `apps/web/src/i18n/locales/pt.json`
-- Modify: `apps/web/src/i18n/locales/en.json`
+**Arquivos:**
+- Modificar: `apps/web/src/i18n/locales/pt.json`
+- Modificar: `apps/web/src/i18n/locales/en.json`
 
-- [x] Add `auth.brandManifesto`, benefit titles/bodies (3), trust labels, refined titles/subtitles for form column
-- [x] Keep existing field/error keys unchanged
+- [x] Adicionar `auth.brandManifesto`, títulos/corpos de benefícios (3), labels de confiança, títulos/subtítulos refinados para coluna do form
+- [x] Manter chaves de campo/erro existentes inalteradas
 
-### Task 2: AuthShell component
+### Task 2: Componente AuthShell
 
-**Files:**
-- Create: `apps/web/src/components/layout/auth-shell.tsx`
-- Create: `apps/web/src/components/layout/auth-shell.spec.tsx`
+**Arquivos:**
+- Criar: `apps/web/src/components/layout/auth-shell.tsx`
+- Criar: `apps/web/src/components/layout/auth-shell.spec.tsx`
 
-- [x] Implement split layout + mobile stack
+- [x] Implementar layout split + stack mobile
 - [x] Props: `title`, `subtitle`, `children`
-- [x] Brand panel + trust strip from i18n
-- [x] Spec: renders title and trust text
+- [x] Painel de marca + faixa de confiança do i18n
+- [x] Spec: renderiza título e texto de confiança
 
-### Task 3: Wire login + register
+### Task 3: Conectar login + register
 
-**Files:**
-- Modify: `apps/web/src/pages/auth/login-page.tsx`
-- Modify: `apps/web/src/pages/auth/register-page.tsx`
+**Arquivos:**
+- Modificar: `apps/web/src/pages/auth/login-page.tsx`
+- Modificar: `apps/web/src/pages/auth/register-page.tsx`
 
-- [x] Wrap forms in `AuthShell`
-- [x] Remove old centered-card chrome
-- [x] Preserve submit/checkout behavior
+- [x] Envolver forms em `AuthShell`
+- [x] Remover chrome antigo de card centralizado
+- [x] Preservar comportamento de submit/checkout
 
-### Task 4: Verify
+### Task 4: Verificação
 
 - [x] `pnpm --filter @prospectly/web test`
 - [x] `pnpm --filter @prospectly/web typecheck`

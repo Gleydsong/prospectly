@@ -8,13 +8,13 @@ A Prospectly usará o Asaas para todos os novos pagamentos PIX. Pacotes de créd
 
 AbacatePay continua aceitando webhooks e reconciliação de registros históricos, mas não recebe novos checkouts depois do cutover. Contratos existentes não são migrados, cancelados ou reclassificados automaticamente.
 
-## Considered Options
+## Opções consideradas
 
 - Manter novos PIX no AbacatePay foi rejeitado porque a conta ainda não foi aprovada para produção.
 - Fazer fallback automático para AbacatePay foi rejeitado porque poderia gerar cobranças duplicadas e ocultar falhas do provedor selecionado.
 - PIX Automático foi deixado fora do escopo; o produto atual é pagamento avulso.
 
-## Consequences
+## Consequências
 
 - `PIX_PROVIDER` controla a criação de novos checkouts. O cutover autorizado usa `PIX_PROVIDER=ASAAS` com `ASAAS_ENABLED=true`.
 - `PIX_PROVIDER=ASAAS` exige `ASAAS_ENABLED=true`. `ABACATE` permanece disponível só para rollback operacional.

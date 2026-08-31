@@ -1,32 +1,31 @@
-# Landing art-direction reference
+# Referência de direção de arte da landing
 
-## Choose a direction
+## Escolha uma direção
 
-| Signal in the brief | Direction | Use | Avoid |
+| Sinal no brief | Direção | Use | Evite |
 | --- | --- | --- | --- |
-| Craft, food, wellness, hospitality | Editorial warm | Large photography, tactile surfaces, generous whitespace | SaaS metrics/cards and neon effects |
-| Professional service, B2B, legal, health | Quiet authority | Strong grid, measured contrast, proof close to CTA | Playful bounce, vague claims, excessive gradients |
-| Digital product, studio, technology | Product precision | Interface/product visual, clear flows, restrained glow | Fake dashboards and decorative charts |
-| Culture, event, creative brand | Expressive poster | Bold type, asymmetric crop, controlled colour | Unreadable overlap or motion competing with copy |
+| Craft, comida, wellness, hospitalidade | Editorial quente | Fotografia grande, superfícies táteis, whitespace generoso | Cards/métricas de SaaS e efeitos neon |
+| Serviço profissional, B2B, jurídico, saúde | Autoridade quieta | Grid forte, contraste medido, prova perto do CTA | Bounce brincalhão, claims vagos, gradientes em excesso |
+| Produto digital, estúdio, tecnologia | Precisão de produto | Visual de interface/produto, fluxos claros, glow contido | Dashboards falsos e charts decorativos |
+| Cultura, evento, marca criativa | Pôster expressivo | Tipo bold, crop assimétrico, cor controlada | Sobreposição ilegível ou motion competindo com o texto |
 
-Choose one direction. A page can have contrast but must not look like four templates combined.
+Escolha uma direção. A página pode ter contraste, mas não pode parecer quatro templates misturados.
 
-## Responsive composition
+## Composição responsiva
 
-- 320–479px: one column; CTA width is easy to tap; hero content remains above the fold without hiding the subject.
-- 480–767px: allow two-up proof or gallery items only when each stays legible.
-- 768–1023px: introduce split hero and denser editorial rhythm.
-- 1024px+: use a 12-column max-width grid, but preserve the reading order from mobile.
-- Use `clamp()` for type and spacing. Define image `aspect-ratio`; use `object-fit: cover` with intentional `object-position`.
-- Never depend on hover for an essential action. Keep keyboard and touch paths equivalent.
+- 320–479px: uma coluna; largura do CTA fácil de tocar; conteúdo do hero permanece above the fold sem esconder o assunto.
+- 480–767px: permita prova ou itens de galeria em duas colunas só quando cada um permanecer legível.
+- 768–1023px: introduza hero partido e ritmo editorial mais denso.
+- 1024px+: use grid de 12 colunas com max-width, mas preserve a ordem de leitura do mobile.
+- Use `clamp()` para tipo e espaçamento. Defina `aspect-ratio` da imagem; use `object-fit: cover` com `object-position` intencional.
+- Nunca dependa de hover para uma ação essencial. Mantenha caminhos de teclado e toque equivalentes.
 
-## Design quality gate
+## Gate de qualidade de design
 
-- Is the company identifiable without reading the footer?
-- Does the first viewport state an outcome and show a credible visual?
-- Is there one obvious primary action at every major scroll depth?
-- Do proof and contact appear before the user must hunt for them?
-- Do real inputs remain truthful, including reviews, prices, locations, and contact data?
-- At 320px, 768px, and 1440px, is there no horizontal overflow, clipped text, or overlapping CTA?
-- Does the page still work with images slow, absent, or cropped differently?
-
+- A empresa é identificável sem ler o rodapé?
+- O primeiro viewport declara um resultado e mostra um visual crível?
+- Existe uma ação primária óbvia em cada profundidade maior de scroll?
+- Prova e contato aparecem antes de o usuário ter de caçá-los?
+- Inputs reais continuam verdadeiros, inclusive reviews, preços, locais e dados de contato?
+- Em 320px, 768px e 1440px, não há overflow horizontal, texto cortado ou CTA sobreposto?
+- A página ainda funciona com imagens lentas, ausentes ou recortadas de outro jeito?

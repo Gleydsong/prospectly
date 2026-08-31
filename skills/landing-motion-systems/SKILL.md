@@ -1,35 +1,34 @@
 ---
 name: landing-motion-systems
-description: Design accessible, performant landing-page motion and scroll systems. Use when a landing needs CSS animation, GSAP timelines or ScrollTrigger, Three.js or React Three Fiber scenes, interaction choreography, reduced-motion support, or motion performance review.
+description: Projetar motion e sistemas de scroll acessíveis e performáticos em landing. Use quando a página precisar de animação CSS, timelines GSAP ou ScrollTrigger, cenas Three.js ou React Three Fiber, coreografia de interação, suporte a reduced-motion ou revisão de performance de motion.
 ---
 
-# Landing Motion Systems
+# Sistemas de motion da landing
 
-Make motion clarify hierarchy, progress, and feedback. Motion is not decoration to apply everywhere.
+Faça o motion esclarecer hierarquia, progresso e feedback. Motion não é decoração para aplicar em tudo.
 
-## Select the motion engine
+## Escolha o motor de motion
 
-- Use CSS for hover, focus, simple entrance, and small progressive reveals.
-- Use GSAP plus ScrollTrigger only for sequenced narratives, pinned panels, horizontal storytelling, or distributed stagger that CSS cannot express clearly.
-- Use Three.js only when a 3D object communicates product value better than image, SVG, Canvas, or `transform3d`.
-- In a React host, use `@gsap/react` with scoped cleanup; use React Three Fiber for a declarative scene.
-- In a sandboxed generated HTML renderer, use CSS only. Never emit script tags or remote library imports from an LLM.
+- Use CSS para hover, foco, entrada simples e reveals progressivos pequenos.
+- Use GSAP + ScrollTrigger só para narrativas sequenciadas, painéis pinned, storytelling horizontal ou stagger distribuído que o CSS não expressa com clareza.
+- Use Three.js só quando um objeto 3D comunica valor de produto melhor que imagem, SVG, Canvas ou `transform3d`.
+- Num host React, use `@gsap/react` com cleanup no escopo; use React Three Fiber para cena declarativa.
+- Num renderer HTML gerado em sandbox, use só CSS. Nunca emita tags script ou imports remotos de biblioteca a partir de um LLM.
 
-## Motion contract
+## Contrato de motion
 
-1. Name the user purpose for every animation: orient, reveal, confirm, connect, or delight.
-2. Animate only `transform` and `opacity` for routine UI. Use 100–150ms for hover/focus and 200–500ms for UI transitions.
-3. Make scroll-synced movement linear; use `ease: 'none'` on GSAP container animations.
-4. Implement `prefers-reduced-motion`; render the final state without scroll pinning, autoplay, parallax, or looping motion.
-5. Keep decorative Canvas/WebGL inaccessible to screen readers and provide a static fallback for unsupported or low-power devices.
-6. Clean up every ScrollTrigger, timeline, observer, WebGL resource, and listener on unmount.
+1. Nomeie o propósito do usuário em cada animação: orientar, revelar, confirmar, conectar ou deleitar.
+2. Anime só `transform` e `opacity` em UI rotineira. Use 100–150ms para hover/foco e 200–500ms para transições de UI.
+3. Movimento sincronizado com scroll deve ser linear; use `ease: 'none'` nas animações de container GSAP.
+4. Implemente `prefers-reduced-motion`; renderize o estado final sem pin de scroll, autoplay, parallax ou motion em loop.
+5. Mantenha Canvas/WebGL decorativo inacessível a leitores de tela e ofereça fallback estático em devices sem suporte ou de baixa potência.
+6. Limpe todo ScrollTrigger, timeline, observer, recurso WebGL e listener no unmount.
 
-## Review before shipping
+## Revisar antes de publicar
 
-- Motion never delays the primary message or CTA.
-- Scroll remains usable with keyboard, touch, reduced motion, and a slow device.
-- No layout property is animated and no state update runs every frame.
-- The mobile page does not depend on pinned scenes, heavy textures, or a large JS bundle.
+- Motion nunca atrasa a mensagem primária ou o CTA.
+- Scroll continua usável com teclado, toque, reduced motion e device lento.
+- Nenhuma propriedade de layout é animada e nenhum update de estado roda a cada frame.
+- A página mobile não depende de cenas pinned, texturas pesadas ou bundle JS grande.
 
-Read [references/gsap-and-webgl.md](references/gsap-and-webgl.md) when the chosen output is a trusted React/JavaScript template. Read [references/css-safe-motion.md](references/css-safe-motion.md) for standalone generated HTML.
-
+Leia [references/gsap-and-webgl.md](references/gsap-and-webgl.md) quando a saída escolhida for um template React/JavaScript confiável. Leia [references/css-safe-motion.md](references/css-safe-motion.md) para HTML gerado standalone.

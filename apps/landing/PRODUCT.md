@@ -1,27 +1,27 @@
-# Prospectly Landing
+# Landing do Prospectly
 
-## Register
+## Registro
 
-brand
+marca
 
-## Product
+## Produto
 
-Prospectly helps digital agencies and freelancers find local businesses without a website (OSM + Google Places), filter them, and move them into a pipeline — instead of copying leads from Google Maps into spreadsheets.
+O Prospectly ajuda agências digitais e freelancers a encontrar negócios locais sem site (OSM + Google Places), filtrá-los e levá-los para um pipeline — em vez de copiar leads do Google Maps para planilhas.
 
-## Users
+## Usuários
 
-- Digital agency owners and freelancers selling websites, SEO, and local presence
-- Context: prospecting / sales outreach for local B2B clients
-- Job to be done: go from niche + city → qualified no-website leads → organized pipeline
+- Donos de agência digital e freelancers que vendem sites, SEO e presença local
+- Contexto: prospecção / outreach comercial para clientes B2B locais
+- Job to be done: ir de nicho + cidade → leads qualificados sem site → pipeline organizado
 
-## Brand personality
+## Personalidade da marca
 
-Direct, practical, confident. Cobalt accent on light/dark surfaces. Outfit + JetBrains Mono already ship on the landing.
+Direta, prática, confiante. Acento cobalt em superfícies claras/escuras. Outfit + JetBrains Mono já vão na landing.
 
-## Anti-references
+## Anti-referências
 
-Generic purple SaaS gradients, cream+serif terracotta “AI landing” templates, dashboard clutter in the marketing hero.
+Gradientes roxos genéricos de SaaS, templates “AI landing” cream+serif terracota, poluição de dashboard no hero de marketing.
 
-## Accessibility
+## Acessibilidade
 
-Respect `prefers-reduced-motion`. Body text contrast ≥ 4.5:1. Focus rings on interactive controls.
+Respeitar `prefers-reduced-motion`. Contraste do texto de corpo ≥ 4,5:1. Anéis de foco nos controles interativos.

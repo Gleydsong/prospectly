@@ -1,43 +1,43 @@
-# Settings Complete Implementation Plan
+# Plano de implementação completa de Settings
 
-> **For agentic workers:** Implement task-by-task on branch `feat/settings-complete-ui`.
+> **Para agentes:** Implementar tarefa a tarefa na branch `feat/settings-complete-ui`.
 
-**Goal:** Complete settings hub (profile, org, billing, members invite, LGPD page, scoring polish) using existing APIs plus avatar validation.
+**Objetivo:** Completar o hub de configurações (perfil, org, billing, convite de membros, página LGPD, polish de scoring) usando APIs existentes mais validação de avatar.
 
-**Architecture:** Thin API change for avatar data URLs; web feature modules for org/members; settings page composed of focused cards; new privacy route.
+**Arquitetura:** Mudança fina na API para data URLs de avatar; módulos web de feature para org/members; página de settings composta por cards focados; nova rota de privacidade.
 
-**Tech Stack:** NestJS + class-validator, React + TanStack Query + i18next, Tailwind dark zinc/cobalt
+**Stack:** NestJS + class-validator, React + TanStack Query + i18next, Tailwind dark zinc/cobalt
 
-## Global Constraints
+## Restrições globais
 
-- Dark theme classes only (zinc-950/900, brand cobalt)
-- No new storage provider
-- Invite uses existing `POST /organizations/members` with client-generated temp password
-- DSR remains stub (PENDING)
+- Apenas classes de tema escuro (zinc-950/900, brand cobalt)
+- Sem novo storage provider
+- Convite usa `POST /organizations/members` existente com senha temporária gerada no client
+- DSR permanece stub (PENDING)
 
 ---
 
-### Task 1: API avatar validation
+### Task 1: Validação de avatar na API
 
-- Modify: `apps/api/src/modules/users/dto/update-profile.dto.ts`
-- Optional unit test for validator helper
-- Accept https URL or data image URL ≤120KB decoded
+- Modificar: `apps/api/src/modules/users/dto/update-profile.dto.ts`
+- Teste unitário opcional para helper de validação
+- Aceitar URL https ou data image URL ≤120KB decodificado
 
-### Task 2: Web org + DSR API helpers
+### Task 2: Helpers web org + DSR API
 
-- Add/extend: `apps/web/src/features/organizations/api.ts` (or auth api)
+- Adicionar/estender: `apps/web/src/features/organizations/api.ts` (ou auth api)
 - `getCurrentOrg`, `updateOrg`, `inviteMember`, `updateMemberRole`, `removeMember`
-- `requestDataExport` alongside deletion
+- `requestDataExport` junto com deletion
 
-### Task 3: Settings UI rewrite + privacy page + i18n
+### Task 3: Reescrita da UI de Settings + página de privacidade + i18n
 
-- Rewrite `settings-page.tsx` (split cards if file grows)
-- Add `settings-privacy-page.tsx` + route in `App.tsx`
-- Update `pt.json` / `en.json`
-- Avatar compress helper in `lib/`
-- Invite modal with generated password
+- Reescrever `settings-page.tsx` (dividir cards se o arquivo crescer)
+- Adicionar `settings-privacy-page.tsx` + rota em `App.tsx`
+- Atualizar `pt.json` / `en.json`
+- Helper de compressão de avatar em `lib/`
+- Modal de convite com senha gerada
 
-### Task 4: Verify
+### Task 4: Verificação
 
-- `pnpm --filter @prospectly/api exec tsc --noEmit` (or project script)
+- `pnpm --filter @prospectly/api exec tsc --noEmit` (ou script do projeto)
 - `pnpm --filter @prospectly/web exec tsc -b --noEmit`

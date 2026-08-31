@@ -6,7 +6,7 @@ status: accepted
 
 Benefícios de billing pertencem à organização e só são concedidos depois que um pagamento `CONFIRMED` é validado por consulta autenticada ao provedor. O perfil de cobrança também pertence à organização; o pagador apenas inicia a compra em seu nome.
 
-## Consequences
+## Consequências
 
 - A Prospectly envia as notificações de cobrança e evita notificações automáticas duplicadas do provedor.
 - Uma assinatura cancelada mantém o acesso até o fim do período pago; uma renovação recusada não cria tolerância adicional no MVP.

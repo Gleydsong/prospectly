@@ -1,22 +1,21 @@
-# Target selection reference
+# Referência de escolha de alvo
 
 ## Trade-offs
 
-| Target | Strength | Cost | Appropriate now |
+| Alvo | Força | Custo | Adequado agora |
 | --- | --- | --- | --- |
-| HTML + CSS | Secure publishing, instant iframe preview, tiny runtime, no build | Limited to CSS motion; no arbitrary JS | Yes, Conversion Studio default |
-| React + shadcn + GSAP | Rich stateful UI, reusable template components, advanced scroll choreography | Client JavaScript, component build/deploy, lifecycle management | Build as a curated template catalog |
-| Astro + islands | Excellent content performance, static publishing, choose hydration per component | New build/deploy pipeline; interactive islands still need a framework | Best for Prospectly marketing pages and future static exports |
+| HTML + CSS | Publicação segura, preview imediato em iframe, runtime mínimo, sem build | Limitado a motion CSS; sem JS arbitrário | Sim, default do Conversion Studio |
+| React + shadcn + GSAP | UI stateful rica, componentes de template reutilizáveis, coreografia avançada de scroll | JavaScript no client, build/deploy de componentes, gestão de lifecycle | Construir como catálogo curado de templates |
+| Astro + islands | Performance excelente de conteúdo, publicação estática, hidratação por componente | Novo pipeline de build/deploy; islands interativas ainda precisam de um framework | Melhor para páginas de marketing do Prospectly e exports estáticos futuros |
 
-## Safe architecture for future templates
+## Arquitetura segura para templates futuros
 
-1. Store a `templateId`, verified content model, visual tokens, and approved motion flags — never raw JSX, Astro, script, package names, or arbitrary URLs from the LLM.
-2. Resolve `templateId` on the server to a repository-owned template.
-3. Validate images, links, text length, and CTA data before rendering.
-4. Build and publish in an isolated worker. Capture desktop/mobile screenshots and run accessibility checks before release.
-5. Fall back to static HTML when JavaScript, WebGL, assets, or build output fail.
+1. Guarde um `templateId`, modelo de conteúdo verificado, tokens visuais e flags de motion aprovadas — nunca JSX cru, Astro, script, nomes de pacote ou URLs arbitrárias vindas do LLM.
+2. Resolva `templateId` no servidor para um template de propriedade do repositório.
+3. Valide imagens, links, tamanho de texto e dados de CTA antes de renderizar.
+4. Faça build e publicação num worker isolado. Capture screenshots desktop/mobile e rode checagens de acessibilidade antes do release.
+5. Caia para HTML estático quando JavaScript, WebGL, assets ou output de build falharem.
 
-## shadcn clarification
+## Esclarecimento shadcn
 
-shadcn is not a runtime CDN and not a framework for generated HTML. It is copied, maintained component source for a React application. Use it in trusted React templates for accessible buttons, dialogs, forms, menus, and tokens; do not request it in a standalone HTML document.
-
+shadcn não é um CDN de runtime nem um framework para HTML gerado. É source de componentes copiado e mantido para uma aplicação React. Use-o em templates React confiáveis para botões, dialogs, forms, menus e tokens acessíveis; não o peça num documento HTML standalone.

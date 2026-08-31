@@ -1,57 +1,57 @@
-# Asaas PIX migration handoff
+# Handoff: migração PIX para Asaas
 
-## Objective
+## Objetivo
 
-Route every new Prospectly PIX checkout to Asaas while keeping AbacatePay available only for historical payment events and reconciliation. Preserve Asaas card checkout behavior.
+Encaminhar todo checkout PIX novo do Prospectly para o Asaas, mantendo o AbacatePay só para eventos históricos de pagamento e reconciliação. Preservar o comportamento do checkout de cartão Asaas.
 
-## Approved product contract
+## Contrato de produto aprovado
 
-| Product           | Payment method | Provider | Benefit                                   |
+| Produto | Meio de pagamento | Provedor | Benefício |
 | ----------------- | -------------- | -------- | ----------------------------------------- |
-| 2,000 credits     | PIX            | Asaas    | 2,000 credits after authoritative receipt |
-| 5,000 credits     | PIX            | Asaas    | 5,000 credits after authoritative receipt |
-| Monthly unlimited | PIX            | Asaas    | 30 paid days, no automatic renewal        |
-| Credit packages   | Card           | Asaas    | Existing hosted payment behavior          |
-| Monthly unlimited | Credit card    | Asaas    | Existing recurring checkout behavior      |
+| 2.000 créditos | PIX | Asaas | 2.000 créditos após recibo autoritativo |
+| 5.000 créditos | PIX | Asaas | 5.000 créditos após recibo autoritativo |
+| Acesso mensal ilimitado | PIX | Asaas | 30 dias pagos, sem renovação automática |
+| Pacotes de crédito | Cartão | Asaas | Comportamento atual de pagamento hospedado |
+| Acesso mensal ilimitado | Cartão de crédito | Asaas | Comportamento atual de checkout recorrente |
 
-Pix Automatic is outside this change. Existing AbacatePay and Stripe contracts are historical records and must not be migrated, canceled, or reclassified automatically.
+Pix Automático fica fora desta mudança. Contratos existentes AbacatePay e Stripe são registros históricos e **não** devem ser migrados, cancelados ou reclassificados automaticamente.
 
-## Required invariants
+## Invariantes obrigatórias
 
-1. Persist a local checkout attempt before creating an external payment.
-2. Use a stable `externalReference` and recover uncertain results through authoritative Asaas lookup.
-3. Never retry an ambiguous provider `POST` blindly.
-4. Persist authenticated webhook events before returning success.
-5. Process duplicate webhook events idempotently.
-6. Verify customer, amount, external reference, and `billingType=PIX` using an authenticated Asaas read before granting a benefit. Enforce BRL in the persisted checkout contract and reject a non-BRL provider currency when Asaas returns that optional field; the documented charge response does not expose a mandatory currency field.
-7. PIX grants benefits only from the definitive received state. Browser redirects and QR rendering never grant benefits.
-8. Reversals remain auditable and may produce a negative credit balance when purchased credits were already consumed.
-9. New-provider failure never falls back silently to another provider.
-10. AbacatePay webhooks remain operational for historical records.
+1. Persistir uma tentativa de checkout local antes de criar o pagamento externo.
+2. Usar `externalReference` estável e recuperar resultados incertos com lookup autoritativo no Asaas.
+3. Nunca retentar às cegas um `POST` ambíguo do provedor.
+4. Persistir eventos de webhook autenticados antes de devolver sucesso.
+5. Processar eventos de webhook duplicados de forma idempotente.
+6. Verificar cliente, valor, referência externa e `billingType=PIX` com leitura autenticada no Asaas antes de conceder benefício. Forçar BRL no contrato persistido do checkout e rejeitar moeda não-BRL do provedor quando o Asaas devolver esse campo opcional; a resposta documentada da cobrança não expõe campo de moeda obrigatório.
+7. PIX só concede benefício no estado definitivo de recebido. Redirects do browser e renderização de QR nunca concedem benefício.
+8. Reversões continuam auditáveis e podem gerar saldo de créditos negativo quando os créditos comprados já foram consumidos.
+9. Falha do provedor novo nunca cai em silêncio para outro provedor.
+10. Webhooks AbacatePay continuam operacionais para registros históricos.
 
-## Implementation shape
+## Forma da implementação
 
-Keep provider complexity local to the Billing module. Extend the existing Asaas client and webhook inbox instead of adding a parallel billing architecture.
+Manter a complexidade do provedor local ao módulo de Billing. Estender o client Asaas e a inbox de webhook existentes em vez de criar uma arquitetura paralela de billing.
 
-- Add `PIX_PROVIDER=ABACATE|ASAAS|DISABLED`, explicitly validated.
-- Route new PIX checkout creation through Asaas when configured.
-- Extend the discriminated PIX checkout result to allow `provider: ASAAS`.
-- Add Asaas payment creation with `billingType=PIX` and QR retrieval through `/payments/{id}/pixQrCode`.
-- Reuse durable `CreditPurchase` and `MonthlyCheckoutAttempt` records; add schema only when existing persisted identifiers cannot support safe replay.
-- Generalize Asaas package and monthly-attempt claims across PIX and card without weakening the partial unique indexes that prevent concurrent unresolved charges.
-- Extend webhook matching and reconciliation so PIX does not require a subscription ID and monthly PIX activates exactly 30 paid days.
-- Preserve card-only subscription rules.
+- Adicionar `PIX_PROVIDER=ABACATE|ASAAS|DISABLED`, validado de forma explícita.
+- Encaminhar a criação de checkout PIX novo pelo Asaas quando configurado.
+- Estender o resultado discriminado de checkout PIX para permitir `provider: ASAAS`.
+- Adicionar criação de pagamento Asaas com `billingType=PIX` e obtenção de QR via `/payments/{id}/pixQrCode`.
+- Reutilizar registros duráveis `CreditPurchase` e `MonthlyCheckoutAttempt`; só adicionar schema quando os identificadores persistidos atuais não suportarem replay seguro.
+- Generalizar claims de pacote e tentativa mensal Asaas entre PIX e cartão sem enfraquecer os índices unique parciais que impedem cobranças concorrentes não resolvidas.
+- Estender matching de webhook e reconciliação para PIX não exigir ID de assinatura e para PIX mensal ativar exatamente 30 dias pagos.
+- Preservar regras de assinatura só-cartão.
 
-## TDD seams
+## Costuras de TDD
 
-- `POST /api/v1/billing/credits/checkout` and `POST /api/v1/billing/checkout` behavior through `BillingService`.
-- Asaas HTTP adapter behavior through `AsaasClient` with mocked external responses.
-- `POST /api/v1/billing/webhook/asaas` behavior through `AsaasWebhookService`.
-- Web checkout handling through the public `CheckoutResult` contract.
+- Comportamento de `POST /api/v1/billing/credits/checkout` e `POST /api/v1/billing/checkout` via `BillingService`.
+- Comportamento do adapter HTTP Asaas via `AsaasClient` com respostas externas mockadas.
+- Comportamento de `POST /api/v1/billing/webhook/asaas` via `AsaasWebhookService`.
+- Tratamento de checkout na web via contrato público `CheckoutResult`.
 
-## Verification
+## Verificação
 
-Run focused tests after every vertical slice, then:
+Rode testes focados depois de cada fatia vertical e depois:
 
 ```bash
 pnpm --filter @prospectly/shared-types build
@@ -64,28 +64,28 @@ pnpm lint
 pnpm build
 ```
 
-Run RLS tests against real PostgreSQL with `RUN_RLS_TEST=true` when credentials are available. Sandbox acceptance must prove QR creation, duplicate-click reuse, webhook authentication, duplicate delivery, payment receipt, 30-day activation, package crediting, refund reversal, and card non-regression.
+Rode testes RLS contra PostgreSQL real com `RUN_RLS_TEST=true` quando as credenciais existirem. A aceitação no Sandbox deve provar criação de QR, reuso de clique duplicado, autenticação de webhook, entrega duplicada, recibo de pagamento, ativação de 30 dias, crédito de pacote, reversão de estorno e não-regressão de cartão.
 
-## External gates
+## Gates externos
 
-Before production:
+Antes de produção:
 
-- Asaas account is fully approved and production API access is enabled.
-- A stable PIX key is registered after proof of life.
-- Production and Sandbox use different API keys and webhook tokens.
-- Production webhook is public, authenticated, active, and returns HTTP 200 after durable persistence.
-- Historical AbacatePay pending and reversible records are inventoried.
-- A separate Render staging API, web, PostgreSQL, and Redis use only Asaas Sandbox credentials.
-- A controlled financial smoke proves settlement, webhook delivery, entitlement, reversal handling, and monitoring.
+- Conta Asaas totalmente aprovada e acesso à API de produção habilitado.
+- Chave PIX estável registrada após prova de vida.
+- Produção e Sandbox usam API keys e tokens de webhook diferentes.
+- Webhook de produção é público, autenticado, ativo e devolve HTTP 200 depois da persistência durável.
+- Registros AbacatePay históricos pendentes e reversíveis estão inventariados.
+- Uma API/web/PostgreSQL/Redis de staging separados na Render usam **somente** credenciais Sandbox Asaas.
+- Um smoke financeiro controlado prova liquidação, entrega de webhook, entitlement, tratamento de reversão e monitoramento.
 
-## Operational boundaries
+## Limites operacionais
 
-Implementation and local commits do not authorize push, merge, Render mutation, webhook mutation, payment creation, or production activation. Never place credentials in Git, chat, memory, logs, or documentation.
+Implementação e commits locais **não** autorizam push, merge, mutação na Render, mutação de webhook, criação de pagamento ou ativação em produção. Nunca coloque credenciais em Git, chat, memória, logs ou documentação.
 
-## Continuation state
+## Estado de continuação
 
-- Branch `Gleydsong/integracao_asaas` contains the Asaas PIX implementation plus the authorized cutover defaults: `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true` in `render.yaml` / `.env.example`. Card subscriptions stay open-ended until canceled; `/billing/success` confirms Asaas plans; Asaas card cancel syncs entitlement.
-- `ASAAS_API_BASE_URL` remains Sandbox until a separate production authorization. Render Dashboard was not mutated from this worktree (MCP unauthorized).
-- Local `.env` is not committed. Copying `.env.example` will refuse API boot until Asaas secrets are filled, or until `ASAAS_ENABLED=false` / `PIX_PROVIDER=DISABLED` for non-billing local work.
-- Rollback remains explicit: `PIX_PROVIDER=ABACATE`. No silent fallback.
-- Remaining work is still external: set Render secrets, Sandbox homologation smoke, inventory of historical AbacatePay records, then production Asaas (`api.asaas.com`) with a separate authorization. Do not merge to `main`, mutate Render, or create live payments unless the operator asks.
+- A branch `Gleydsong/integracao_asaas` contém a implementação PIX Asaas mais os defaults autorizados do cutover: `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true` em `render.yaml` / `.env.example`. Assinaturas de cartão ficam em aberto até cancelamento; `/billing/success` confirma planos Asaas; cancelamento de cartão Asaas sincroniza entitlement.
+- `ASAAS_API_BASE_URL` permanece Sandbox até autorização de produção separada. O Dashboard da Render não foi mutado neste worktree (MCP unauthorized).
+- O `.env` local não é commitado. Copiar `.env.example` recusa o boot da API até preencher secrets Asaas, ou até `ASAAS_ENABLED=false` / `PIX_PROVIDER=DISABLED` para trabalho local sem billing.
+- Rollback continua explícito: `PIX_PROVIDER=ABACATE`. Sem fallback silencioso.
+- O restante ainda é externo: setar secrets na Render, smoke de homologação Sandbox, inventário de registros históricos AbacatePay e depois Asaas de produção (`api.asaas.com`) com autorização separada. Não faça merge em `main`, não mute a Render e não crie pagamentos reais a menos que o operador peça.

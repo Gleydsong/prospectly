@@ -1,48 +1,48 @@
-# Landing Premium Globe Implementation Plan
+# Plano de implementação Landing Premium Globe
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **Para Claude:** SUB-SKILL OBRIGATÓRIA: Use superpowers:executing-plans para implementar este plano tarefa a tarefa.
 
-**Goal:** Redesign `apps/landing` home with cobalt palette, split hero + COBE globe, sharper Maps-pain VP.
+**Objetivo:** Redesenhar a home de `apps/landing` com paleta cobalt, hero split + globo COBE, VP mais afiada na dor Maps.
 
-**Architecture:** CSS tokens drive accent; `ProspectlyGlobe` is a client island wrapping `cobe`; `ConversionBand` becomes asymmetric split; problem section drops stock photo.
+**Arquitetura:** Tokens CSS definem accent; `ProspectlyGlobe` é uma ilha client envolvendo `cobe`; `ConversionBand` vira split assimétrico; seção de problema remove foto stock.
 
-**Tech Stack:** Next.js 15, React 18, Tailwind 3, Motion, `cobe`, Phosphor icons.
+**Stack:** Next.js 15, React 18, Tailwind 3, Motion, `cobe`, ícones Phosphor.
 
 ---
 
-### Task 1: Palette tokens
+### Task 1: Tokens de paleta
 
-**Files:** `apps/landing/src/app/globals.css`, `apps/landing/tailwind.config.ts`
+**Arquivos:** `apps/landing/src/app/globals.css`, `apps/landing/tailwind.config.ts`
 
-- Replace emerald accent with cobalt (`#2563EB` / hover `#1D4ED8`; dark `#60A5FA` / `#93C5FD`)
-- Update `--hero-wash` and `::selection` to cobalt tints
-- Align Tailwind `accent.*` soft/ink to blue scale
+- Substituir accent emerald por cobalt (`#2563EB` / hover `#1D4ED8`; dark `#60A5FA` / `#93C5FD`)
+- Atualizar `--hero-wash` e `::selection` para tintas cobalt
+- Alinhar Tailwind `accent.*` soft/ink à escala blue
 
-### Task 2: Globe component
+### Task 2: Componente Globe
 
-**Files:** `apps/landing/src/components/prospectly-globe.tsx` (create), `package.json` (+ `cobe`)
+**Arquivos:** `apps/landing/src/components/prospectly-globe.tsx` (criar), `package.json` (+ `cobe`)
 
 - Client component: canvas + `createGlobe`, auto-rotate, resize observer
-- Cobalt markers/arcs; light/dark via `matchMedia`
-- `useReducedMotion` → no phi increment
-- Cleanup `destroy()` on unmount
+- Marcadores/arcos cobalt; light/dark via `matchMedia`
+- `useReducedMotion` → sem incremento de phi
+- Cleanup `destroy()` no unmount
 
 ### Task 3: Hero + i18n
 
-**Files:** `conversion-band.tsx`, `i18n.ts`
+**Arquivos:** `conversion-band.tsx`, `i18n.ts`
 
-- Split layout; remove street image and signal grid
-- Wire Globe on the right (stack below copy on mobile)
-- New CTA band copy PT/EN
+- Layout split; remover imagem de rua e signal grid
+- Conectar Globe à direita (empilhar abaixo do copy no mobile)
+- Novo copy da banda CTA PT/EN
 
-### Task 4: Problem section
+### Task 4: Seção de problema
 
-**Files:** `home-landing.tsx`
+**Arquivos:** `home-landing.tsx`
 
-- Remove `no-website-shop.jpg` Reveal
-- Single-column / text-forward problem block; keep filter section image
+- Remover Reveal `no-website-shop.jpg`
+- Bloco de problema single-column / text-forward; manter imagem da seção de filtros
 
-### Task 5: Verify
+### Task 5: Verificação
 
-- `pnpm --filter @prospectly/landing typecheck` (or cwd equivalent)
-- Visual sanity: hero fits viewport, accent consistent
+- `pnpm --filter @prospectly/landing typecheck` (ou equivalente no cwd)
+- Sanity visual: hero cabe no viewport, accent consistente

@@ -1,4 +1,4 @@
-# Prospectly Web — Design
+# Design da web Prospectly
 
 ## Theme
 - Dark: grafite existente (produção)

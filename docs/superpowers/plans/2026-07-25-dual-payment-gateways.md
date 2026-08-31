@@ -1,16 +1,16 @@
-# Dual Payment Gateways (AbacatePay BR + Stripe EU) Implementation Plan
+# Plano de implementação: dois gateways de pagamento (AbacatePay BR + Stripe UE)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Para agentes:** SUB-SKILL OBRIGATÓRIA: Use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para implementar este plano tarefa a tarefa. Passos usam sintaxe de checkbox (`- [ ]`) para rastreamento.
 >
-> **Status:** IMPLEMENTED on branch `feat/dual-payment-gateways-abacate-stripe` (staging checklist pending)
+> **Status:** IMPLEMENTADO na branch `feat/dual-payment-gateways-abacate-stripe` (checklist de staging pendente)
 
-**Goal:** Permitir checkout com **AbacatePay para BRL (Brasil)** e **Stripe para EUR/USD (Europa e demais)**, mantendo um único domínio de billing no Prospectly — com **PIX de verdade (QR na tela) no vitalício** e **cartão/recorrência no mensal**.
+**Objetivo:** Permitir checkout com **AbacatePay para BRL (Brasil)** e **Stripe para EUR/USD (Europa e demais)**, mantendo um único domínio de billing no Prospectly — com **PIX de verdade (QR na tela) no vitalício** e **cartão/recorrência no mensal**.
 
-**Architecture:** Extrair uma interface `PaymentProvider` com dois adapters (`StripePaymentProvider`, `AbacatePaymentProvider`). `BillingService` resolve o provider pela moeda e o **modo de cobrança pelo `interval`**: BRL+lifetime → Checkout Transparente PIX (QR); BRL+monthly → assinatura Abacate priorizando cartão (PIX só como complemento no hosted, nunca como único meio); EUR/USD → Stripe. Frontend trata resposta discriminada: `redirect` (URL) ou `pix` (QR + copia-e-cola).
+**Arquitetura:** Extrair uma interface `PaymentProvider` com dois adapters (`StripePaymentProvider`, `AbacatePaymentProvider`). `BillingService` resolve o provider pela moeda e o **modo de cobrança pelo `interval`**: BRL+lifetime → Checkout Transparente PIX (QR); BRL+monthly → assinatura Abacate priorizando cartão (PIX só como complemento no hosted, nunca como único meio); EUR/USD → Stripe. Frontend trata resposta discriminada: `redirect` (URL) ou `pix` (QR + copia-e-cola).
 
-**Tech Stack:** NestJS, Prisma/PostgreSQL, Stripe SDK, AbacatePay REST API v2 (`/transparents`, `/subscriptions`, `/checkouts`), webhooks HMAC, React (tela PIX), Jest/Vitest.
+**Stack:** NestJS, Prisma/PostgreSQL, Stripe SDK, AbacatePay REST API v2 (`/transparents`, `/subscriptions`, `/checkouts`), webhooks HMAC, React (tela PIX), Jest/Vitest.
 
-## Global Constraints
+## Restrições globais
 
 - Roteamento **somente por moeda** (não por IP): `BRL → ABACATE`, `EUR|USD → STRIPE`
 - **BRL + lifetime:** Checkout Transparente PIX (`POST /transparents/create`, `method: "PIX"`) — QR + `brCode` na UI do app; ativação via webhook `transparent.completed`
@@ -199,7 +199,7 @@ HMAC: confirmar em https://docs.abacatepay.com/pages/webhooks/reference na Task 
 
 ### Task 1: Migration + enums Prisma
 
-**Files:** `apps/api/prisma/schema.prisma`, nova migration
+**Arquivos:** `apps/api/prisma/schema.prisma`, nova migration
 
 - [x] Enum/campos/`BillingWebhookEvent` / `abacatePaymentId`
 - [x] Migrar eventos Stripe existentes
@@ -209,30 +209,30 @@ HMAC: confirmar em https://docs.abacatepay.com/pages/webhooks/reference na Task 
 
 ### Task 2: Domain — router + activation
 
-**Files:** `domain/payment-provider.ts`, `payment-router.ts` + specs, `billing-activation.service.ts` + spec
+**Arquivos:** `domain/payment-provider.ts`, `payment-router.ts` + specs, `billing-activation.service.ts` + spec
 
 - [x] Testes router BRL/EUR/USD
 - [x] Activation para monthly, lifetime, cancel
 - [x] Tipos `CheckoutResult` discriminados exportados
 
-**Test:** `pnpm --filter @prospectly/api test -- payment-router billing-activation`
+**Teste:** `pnpm --filter @prospectly/api test -- payment-router billing-activation`
 
 ---
 
 ### Task 3: Refatorar Stripe para adapter
 
-**Files:** `stripe.payment-provider.ts`, `billing.service.ts`, module, specs, controller alias
+**Arquivos:** `stripe.payment-provider.ts`, `billing.service.ts`, module, specs, controller alias
 
 - [x] Stripe retorna sempre `{ mode: 'redirect', url }`
 - [x] EUR/USD verdes; webhook compat
 
-**Test:** `pnpm --filter @prospectly/api test -- billing.service`
+**Teste:** `pnpm --filter @prospectly/api test -- billing.service`
 
 ---
 
 ### Task 4: Cliente + adapter AbacatePay (PIX + assinatura)
 
-**Files:** `abacate.client.ts`, `abacate.payment-provider.ts`, specs, config/env
+**Arquivos:** `abacate.client.ts`, `abacate.payment-provider.ts`, specs, config/env
 
 **Fluxos:**
 1. **Lifetime BRL** → `POST /transparents/create` (`method: "PIX"`, amount centavos) → `{ mode: 'pix', brCode, brCodeBase64, externalPaymentId }`
@@ -244,14 +244,14 @@ HMAC: confirmar em https://docs.abacatepay.com/pages/webhooks/reference na Task 
 - [x] Garantir que monthly **não** chama `/transparents` como caminho único
 - [x] Falhar se amount/product env ausente
 
-**Test:** `pnpm --filter @prospectly/api test -- abacate`  
+**Teste:** `pnpm --filter @prospectly/api test -- abacate`  
 **Ref:** https://docs.abacatepay.com/llms.txt (transparents + subscriptions)
 
 ---
 
 ### Task 5: Controller + UI (redirect + tela PIX)
 
-**Files:** billing controller/service; web PIX page/modal; settings; i18n
+**Arquivos:** billing controller/service; web PIX page/modal; settings; i18n
 
 | Rota | Comportamento |
 |------|----------------|
@@ -275,7 +275,7 @@ HMAC: confirmar em https://docs.abacatepay.com/pages/webhooks/reference na Task 
 
 ### Task 6: Runbook
 
-**Files:** `docs/billing/payments.md` + link README
+**Arquivos:** `docs/billing/payments.md` + link README
 
 - [x] Produto monthly CARD, amount lifetime, webhook (`transparent.*`, `subscription.*`)
 - [x] Testes sandbox: PIX lifetime + subscription monthly + Stripe EUR
@@ -328,6 +328,6 @@ Task 1 → Task 2 → Task 3 → Task 4 → Task 5 → Task 6 → Task 7
 ## Self-review
 
 - D1 e D10 alinhados à recomendação PIX vitalício + cartão mensal  
-- Global constraints, D2–D4, Tasks 4–5, aceite e riscos atualizados  
+- Restrições globais, D2–D4, Tasks 4–5, aceite e riscos atualizados  
 - `CheckoutResult` discriminado cobre QR e redirect  
-- Transparent PIX **entro** no escopo; **sai** de D10  
+- Transparent PIX **entra** no escopo; **sai** de D10  

@@ -6,7 +6,7 @@ status: accepted
 
 Eventos de pagamento serão persistidos no PostgreSQL antes da resposta ao provedor e processados de forma assíncrona com lease e reclaim. Uma reconciliação periódica consultará estados financeiros pendentes; não será adicionada outra infraestrutura ao MVP.
 
-## Consequences
+## Consequências
 
 - Toda criação externa começa por uma tentativa local durável e não oferece parcelamento no MVP.
 - Uma resposta perdida do Checkout hospedado Asaas entra em `REVIEW_REQUIRED`, bloqueia nova criação para a organização e nunca sofre retry cego, pois não existe busca pública de Checkout por `externalReference`.

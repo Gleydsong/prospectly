@@ -1,57 +1,57 @@
-# Landing Premium Globe Redesign
+# Redesign da landing premium com globo
 
-**Date:** 2026-07-25  
-**Status:** Approved  
-**Scope:** `apps/landing` only
+**Data:** 2026-07-25  
+**Status:** Aprovado  
+**Escopo:** somente `apps/landing`
 
-## Goal
+## Objetivo
 
-Elevate the MVP landing from a simple photo/CTA band to a modern Minimal Spatial SaaS surface: zinc neutrals + cobalt accent, COBE WebGL globe as the hero visual, and a sharper operational-pain VP (Maps copy is not prospecting).
+Elevar a landing MVP de uma faixa simples foto/CTA para uma superfície Minimal Spatial SaaS moderna: neutros zinc + acento cobalt, globo WebGL COBE como visual hero e VP mais incisiva sobre dor operacional (copiar do Maps não é prospecção).
 
-## Decisions
+## Decisões
 
-| Decision | Choice |
-|----------|--------|
-| Palette | **A** — Globe dictates: zinc/off-white + cobalt; emerald removed |
-| Hero layout | Split 50/50: copy left, Globe right |
-| VP angle | **1** — Operational pain (Maps manual is slow), sharper |
-| Globe placement | Hero (replaces `hero-street.jpg`) |
-| Problem image | Remove `no-website-shop.jpg`; text-led section |
-| Tech | `cobe` WebGL particle globe, client island |
+| Decisão | Escolha |
+|---------|---------|
+| Paleta | **A** — Globo manda: zinc/off-white + cobalt; emerald removido |
+| Layout hero | Split 50/50: copy à esquerda, globo à direita |
+| Ângulo VP | **1** — Dor operacional (Maps manual é lento), mais incisivo |
+| Posição do globo | Hero (substitui `hero-street.jpg`) |
+| Imagem do problema | Remover `no-website-shop.jpg`; seção só com texto |
+| Tech | Globo de partículas WebGL `cobe`, client island |
 
-## Visual system
+## Sistema visual
 
-- **Aesthetic:** Minimal Spatial SaaS / soft data-viz (COBE family)
-- **Tokens:** `--accent` cobalt `#2563EB` (light) / `#60A5FA` (dark); zinc surfaces
-- **Typography:** Keep Outfit + JetBrains Mono
-- **Motion:** Subtle hero fade-in; globe auto-rotate; respect `prefers-reduced-motion` (static frame / no rotate)
+- **Estética:** Minimal Spatial SaaS / soft data-viz (família COBE)
+- **Tokens:** `--accent` cobalt `#2563EB` (light) / `#60A5FA` (dark); superfícies zinc
+- **Tipografia:** manter Outfit + JetBrains Mono
+- **Motion:** fade-in sutil no hero; auto-rotação do globo; respeitar `prefers-reduced-motion` (frame estático / sem rotação)
 
 ## Copy (PT)
 
 - Headline: `Copiar lead do Maps` + highlight `não é prospecção.`
 - Body: `Prospectly busca o nicho, corta quem já tem site e joga no pipeline. Sem manhã perdida no Maps.`
-- EN mirror with the same intent
+- Espelho EN com a mesma intenção
 
-## Hero stack (max 4)
+## Stack do hero (máx. 4)
 
-1. Brand wordmark (small)
-2. Headline (≤2 lines)
-3. Subtext (≤20 words)
-4. Primary + secondary CTAs
+1. Wordmark da marca (pequeno)
+2. Headline (≤2 linhas)
+3. Subtexto (≤20 palavras)
+4. CTAs primário + secundário
 
-No signal bullets inside the hero. Trust strip stays below.
+Sem bullets de sinal dentro do hero. Faixa de confiança fica abaixo.
 
-## Out of scope
+## Fora de escopo
 
-- Promo video / Remotion theme sync
-- `apps/web` emerald alignment (follow-up)
-- Full FAQ/pricing content rewrite
-- Product.md / Design.md init (separate)
+- Vídeo promo / sync de tema Remotion
+- Alinhamento emerald em `apps/web` (follow-up)
+- Reescrita completa de FAQ/pricing
+- Init Product.md / Design.md (separado)
 
-## Success criteria
+## Critérios de sucesso
 
-- First viewport reads premium and product-led
-- One accent color (cobalt) across landing
-- Globe works on desktop; degrades gracefully on reduced motion / WebGL failure
-- PT + EN strings updated
-- `next build` / typecheck pass for `@prospectly/landing`
+- Primeiro viewport transmite premium e product-led
+- Uma cor de acento (cobalt) em toda a landing
+- Globo funciona no desktop; degrada com graça em reduced motion / falha WebGL
+- Strings PT + EN atualizadas
+- `next build` / typecheck passam para `@prospectly/landing`

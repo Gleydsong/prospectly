@@ -1,12 +1,12 @@
-# GSAP and WebGL reference
+# Referência GSAP e WebGL
 
-## GSAP guardrails
+## Guardrails GSAP
 
-- Register `ScrollTrigger` once. In React, create animations with `useGSAP(..., { scope })` so they revert on unmount.
-- Use one scroll owner per timeline. Do not nest child `ScrollTrigger`s inside a timeline controlled by another trigger.
-- Batch repeated reveals instead of creating a trigger for each card.
-- Use `gsap.matchMedia()` to disable complex motion below the chosen breakpoint and for reduced motion.
-- Use `ScrollTrigger.refresh()` after a meaningful layout change, not on every render.
+- Registre `ScrollTrigger` uma vez. No React, crie animações com `useGSAP(..., { scope })` para reverter no unmount.
+- Use um dono de scroll por timeline. Não aninhe `ScrollTrigger`s filhos dentro de uma timeline controlada por outro trigger.
+- Agrupe reveals repetidos em vez de criar um trigger por card.
+- Use `gsap.matchMedia()` para desligar motion complexo abaixo do breakpoint escolhido e para reduced motion.
+- Use `ScrollTrigger.refresh()` depois de uma mudança significativa de layout, não a cada render.
 
 ```ts
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -19,11 +19,10 @@ if (!reduceMotion) {
 }
 ```
 
-## Three.js guardrails
+## Guardrails Three.js
 
-- Prefer a CSS or image alternative first. A decorative scene must not be required to understand content or complete a conversion.
-- Lazy-load the scene. Clamp DPR to `[1, 2]`, target fewer than 100 draw calls and fewer than one million triangles.
-- Do not set React state in `useFrame`; mutate refs with delta time. Do not allocate vectors in the render loop.
-- Respect reduced motion by stopping the loop or switching to `frameloop='demand'`. Release textures, materials, and geometry.
-- Provide a poster/fallback in the same aspect ratio to prevent layout shift.
-
+- Prefira primeiro uma alternativa CSS ou imagem. Uma cena decorativa não pode ser exigida para entender o conteúdo ou completar uma conversão.
+- Faça lazy-load da cena. Limite DPR a `[1, 2]`, vise menos de 100 draw calls e menos de um milhão de triângulos.
+- Não sete estado React em `useFrame`; mute refs com delta time. Não aloque vetores no loop de render.
+- Respeite reduced motion parando o loop ou trocando para `frameloop='demand'`. Libere texturas, materiais e geometria.
+- Ofereça poster/fallback no mesmo aspect ratio para evitar layout shift.

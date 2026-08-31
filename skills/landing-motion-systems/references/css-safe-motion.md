@@ -1,8 +1,8 @@
-# CSS-safe motion for generated HTML
+# Motion CSS seguro para HTML gerado
 
-- Use CSS keyframes, transitions, and `@supports (animation-timeline: view())` for progressive enhancement.
-- Keep content visible by default. A reveal enhancement must never hide content in browsers that do not support it.
-- Use `scroll-behavior: smooth` only when it is disabled by reduced motion.
+- Use keyframes CSS, transitions e `@supports (animation-timeline: view())` para progressive enhancement.
+- Mantenha o conteúdo visível por padrão. Um enhancement de reveal nunca deve esconder conteúdo em browsers sem suporte.
+- Use `scroll-behavior: smooth` só quando reduced motion o desligar.
 
 ```css
 .reveal { opacity: 1; transform: none; }
@@ -19,4 +19,3 @@
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 ```
-
