@@ -4,6 +4,8 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Post,
   Put,
   Req,
@@ -43,6 +45,7 @@ export class BillingController {
   }
 
   @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('webhook/asaas')
   handleAsaasWebhook(
     @Req() req: RawBodyRequest<Request>,

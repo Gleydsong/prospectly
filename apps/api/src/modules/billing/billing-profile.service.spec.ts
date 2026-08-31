@@ -6,6 +6,13 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingProfileService } from './billing-profile.service';
 import { AsaasClient } from './infrastructure/asaas.client';
 
+const payerAddress = {
+  address: 'Rua das Flores',
+  addressNumber: '100',
+  province: 'Centro',
+  postalCode: '01310100',
+};
+
 describe('BillingProfileService', () => {
   const prisma = {
     billingProfile: {
@@ -48,6 +55,7 @@ describe('BillingProfileService', () => {
         cpfCnpj: '11.222.333/0001-81',
         phone: '(11) 99999-9999',
         email: 'financeiro@acme.test',
+        ...payerAddress,
       }),
     ).resolves.toMatchObject({
       organizationId: 'org-1',
@@ -64,12 +72,16 @@ describe('BillingProfileService', () => {
         cpfCnpj: '11222333000181',
         phone: '11999999999',
         email: 'financeiro@acme.test',
+        complement: null,
+        ...payerAddress,
       },
       update: {
         name: 'Acme Ltda',
         cpfCnpj: '11222333000181',
         phone: '11999999999',
         email: 'financeiro@acme.test',
+        complement: null,
+        ...payerAddress,
       },
     });
     expect(asaasClient.ensureCustomer).not.toHaveBeenCalled();
@@ -97,6 +109,7 @@ describe('BillingProfileService', () => {
         cpfCnpj: '11.222.333/0001-81',
         phone: '(11) 99999-9999',
         email: 'financeiro@acme.test',
+        ...payerAddress,
       }),
     ).resolves.toMatchObject({ asaasCustomerId: 'cus_1' });
     expect(asaasClient.ensureCustomer).toHaveBeenCalledWith({
@@ -105,7 +118,9 @@ describe('BillingProfileService', () => {
       cpfCnpj: '11222333000181',
       phone: '11999999999',
       email: 'financeiro@acme.test',
+      complement: null,
       existingCustomerId: null,
+      ...payerAddress,
     });
   });
 
@@ -125,6 +140,7 @@ describe('BillingProfileService', () => {
         cpfCnpj: '11111111111',
         phone: '11999999999',
         email: 'financeiro@acme.test',
+        ...payerAddress,
       }),
     ).rejects.toMatchObject({
       status: 400,

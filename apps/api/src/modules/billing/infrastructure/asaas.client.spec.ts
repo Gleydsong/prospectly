@@ -1,7 +1,7 @@
 import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { AsaasClient, AsaasRequestError } from './asaas.client';
+import { AsaasClient, AsaasRequestError, AsaasStaleCustomerError } from './asaas.client';
 
 describe('AsaasClient', () => {
   const config = {
@@ -176,6 +176,45 @@ describe('AsaasClient', () => {
     expect(fetchMock.mock.calls[1]?.[1]).not.toHaveProperty('body');
   });
 
+  it('includes the payer address when syncing an Asaas customer', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'cus_addr' }),
+      } as Response);
+
+    await expect(
+      client.ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+        address: 'Rua das Flores',
+        addressNumber: '100',
+        province: 'Centro',
+        postalCode: '01310100',
+      }),
+    ).resolves.toBe('cus_addr');
+
+    const [, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual(
+      expect.objectContaining({
+        address: 'Rua das Flores',
+        addressNumber: 100,
+        province: 'Centro',
+        postalCode: '01310-100',
+      }),
+    );
+  });
+
   it('classifies a successful POST with an unreadable body as ambiguous', async () => {
     jest.spyOn(global, 'fetch').mockResolvedValue({
       ok: true,
@@ -217,6 +256,10 @@ describe('AsaasClient', () => {
           cpfCnpj: '11222333000181',
           phone: '11999999999',
           email: 'financeiro@acme.test',
+          address: 'Rua das Flores',
+          addressNumber: '100',
+          province: 'Centro',
+          postalCode: '01310100',
         },
         successUrl: 'https://app.test/billing/success',
         cancelUrl: 'https://app.test/billing/cancel',
@@ -230,6 +273,16 @@ describe('AsaasClient', () => {
         chargeTypes: ['RECURRENT'],
         externalReference: 'org:org-1:monthly-card:attempt-1',
         subscription: { cycle: 'MONTHLY' },
+        customerData: {
+          name: 'Acme Ltda',
+          cpfCnpj: '11222333000181',
+          phone: '11999999999',
+          email: 'financeiro@acme.test',
+          address: 'Rua das Flores',
+          addressNumber: 100,
+          province: 'Centro',
+          postalCode: '01310-100',
+        },
       }),
     );
   });
@@ -342,6 +395,96 @@ describe('AsaasClient', () => {
       'https://api-sandbox.asaas.com/v3/customers',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('recreates the Asaas customer when the stored id is invalid in this environment', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          errors: [{ code: 'invalid_customer', description: 'Customer inválido ou não informado.' }],
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: [] }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'cus_prod' }),
+      } as Response);
+
+    await expect(
+      client.ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+        existingCustomerId: 'cus_sandbox',
+      }),
+    ).resolves.toBe('cus_prod');
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api-sandbox.asaas.com/v3/customers/cus_sandbox',
+      expect.objectContaining({ method: 'PUT' }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      'https://api-sandbox.asaas.com/v3/customers',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('does not recreate the customer when Asaas rejects missing address fields', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        errors: [{ code: 'invalid_object', description: 'O campo address deve ser informado.' }],
+      }),
+    } as Response);
+
+    const error = await client
+      .ensureCustomer({
+        organizationId: 'org-1',
+        name: 'Acme Ltda',
+        cpfCnpj: '11222333000181',
+        phone: '11999999999',
+        email: 'financeiro@acme.test',
+        existingCustomerId: 'cus_1',
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).message).toBe('O campo address deve ser informado.');
+  });
+
+  it('classifies an invalid customer on payment create as stale', async () => {
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        errors: [{ code: 'invalid_customer', description: 'Customer inválido ou não informado.' }],
+      }),
+    } as Response);
+
+    const error = await client
+      .createPixPayment({
+        customerId: 'cus_stale',
+        amountCentavos: 1499,
+        externalReference: 'org:org-1:credits:stale',
+        description: 'Prospectly credits',
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(AsaasStaleCustomerError);
+    expect((error as AsaasStaleCustomerError).getStatus()).toBe(400);
   });
 
   it('deletes an unpaid Asaas payment', async () => {

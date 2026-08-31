@@ -8,6 +8,11 @@ export type BillingProfile = {
   cpfCnpj: string;
   phone: string;
   email: string;
+  address: string | null;
+  addressNumber: string | null;
+  complement: string | null;
+  province: string | null;
+  postalCode: string | null;
   asaasCustomerId: string | null;
 };
 
@@ -16,9 +21,17 @@ export async function getBillingProfile(): Promise<BillingProfile | null> {
   return data;
 }
 
-export async function updateBillingProfile(
-  input: Pick<BillingProfile, 'name' | 'cpfCnpj' | 'phone' | 'email'>,
-): Promise<BillingProfile> {
+export async function updateBillingProfile(input: {
+  name: string;
+  cpfCnpj: string;
+  phone: string;
+  email: string;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  province: string;
+  postalCode: string;
+}): Promise<BillingProfile> {
   const { data } = await api.put<BillingProfile>('/billing/profile', input);
   return data;
 }

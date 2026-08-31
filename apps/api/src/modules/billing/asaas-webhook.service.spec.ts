@@ -82,6 +82,22 @@ describe('AsaasWebhookService', () => {
     expect(client.getPayment).not.toHaveBeenCalled();
   });
 
+  it('acknowledges checkout and subscription events without queuing payment work', async () => {
+    await expect(
+      service.ingest(
+        Buffer.from(
+          JSON.stringify({
+            id: 'evt_checkout',
+            event: 'CHECKOUT_PAID',
+            checkout: { id: 'checkout-1' },
+          }),
+        ),
+        { 'asaas-access-token': 'webhook-secret' },
+      ),
+    ).resolves.toEqual({ received: true });
+    expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
+  });
+
   it('confirms a matching package only after the authoritative payment read', async () => {
     prisma.billingWebhookEvent.findUnique.mockResolvedValue({
       id: 'inbox-1',

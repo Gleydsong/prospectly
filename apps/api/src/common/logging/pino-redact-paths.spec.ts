@@ -8,6 +8,8 @@ describe('PINO_REDACT_PATHS', () => {
     expect(joined).toMatch(/refreshToken/);
     expect(joined).toMatch(/authorization/);
     expect(joined).toMatch(/cpfCnpj/);
+    expect(joined).toMatch(/address/);
+    expect(joined).toMatch(/postalCode/);
     expect(joined).toMatch(/cookie/);
   });
 

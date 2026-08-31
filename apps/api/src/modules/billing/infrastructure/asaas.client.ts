@@ -6,6 +6,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+export type AsaasPayerAddress = {
+  address: string;
+  addressNumber: string;
+  complement?: string | null;
+  province: string;
+  postalCode: string;
+};
+
 export type AsaasCustomerInput = {
   organizationId: string;
   name: string;
@@ -13,7 +21,14 @@ export type AsaasCustomerInput = {
   phone: string;
   email: string;
   existingCustomerId?: string | null;
-};
+} & Partial<AsaasPayerAddress>;
+
+export type AsaasCheckoutCustomer = {
+  name: string;
+  cpfCnpj: string;
+  phone: string;
+  email: string;
+} & AsaasPayerAddress;
 
 export type AsaasPayment = {
   id: string;
@@ -41,6 +56,12 @@ export class AsaasRequestError extends ServiceUnavailableException {
     readonly httpStatus?: number,
     message = 'Não foi possível comunicar com o provedor de pagamento. Tente novamente.',
   ) {
+    super(message);
+  }
+}
+
+export class AsaasStaleCustomerError extends BadRequestException {
+  constructor(message = 'Customer inválido ou não informado.') {
     super(message);
   }
 }
@@ -153,7 +174,7 @@ export class AsaasClient {
   async createRecurringCheckout(input: {
     externalReference: string;
     amountCentavos: number;
-    customer: { name: string; cpfCnpj: string; phone: string; email: string };
+    customer: AsaasCheckoutCustomer;
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ id: string; url: string; status?: string }> {
@@ -178,7 +199,7 @@ export class AsaasClient {
             'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
         },
       ],
-      customerData: input.customer,
+      customerData: toAsaasCheckoutCustomerData(input.customer),
       subscription: { cycle: 'MONTHLY' },
     });
     const id = readString(response, 'id');
@@ -311,6 +332,11 @@ export class AsaasClient {
     );
 
     if (status === 400) {
+      if (isStaleAsaasCustomer(json)) {
+        throw new AsaasStaleCustomerError(
+          descriptions.length > 0 ? descriptions.join(' ') : 'Customer inválido ou não informado.',
+        );
+      }
       throw new BadRequestException(
         descriptions.length > 0
           ? descriptions.join(' ')
@@ -326,16 +352,68 @@ export class AsaasClient {
   }
 }
 
-function asaasCustomerBody(
-  input: Pick<AsaasCustomerInput, 'name' | 'cpfCnpj' | 'phone' | 'email'>,
-) {
+function asaasCustomerBody(input: AsaasCustomerInput) {
   return {
     name: input.name,
     cpfCnpj: input.cpfCnpj,
     email: input.email,
     notificationDisabled: true,
     ...asaasPhoneFields(input.phone),
+    ...optionalAsaasAddressBody(input),
   };
+}
+
+export function hasCompleteAsaasPayerAddress<
+  T extends {
+    address?: string | null;
+    addressNumber?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+  },
+>(input: T | null | undefined): input is T & AsaasPayerAddress {
+  return Boolean(
+    input?.address?.trim() &&
+      input.addressNumber?.trim() &&
+      input.province?.trim() &&
+      input.postalCode?.replace(/\D/g, '').length === 8,
+  );
+}
+
+export function toAsaasCheckoutCustomerData(input: AsaasCheckoutCustomer) {
+  return {
+    name: input.name,
+    cpfCnpj: input.cpfCnpj,
+    phone: input.phone,
+    email: input.email,
+    ...requiredAsaasAddressBody(input),
+  };
+}
+
+function optionalAsaasAddressBody(input: Partial<AsaasPayerAddress>) {
+  if (!hasCompleteAsaasPayerAddress(input)) return {};
+  return requiredAsaasAddressBody(input);
+}
+
+function requiredAsaasAddressBody(input: AsaasPayerAddress) {
+  const complement = input.complement?.trim();
+  return {
+    address: input.address.trim(),
+    addressNumber: toAsaasAddressNumber(input.addressNumber),
+    province: input.province.trim(),
+    postalCode: formatAsaasPostalCode(input.postalCode),
+    ...(complement ? { complement } : {}),
+  };
+}
+
+function toAsaasAddressNumber(value: string): number | string {
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+}
+
+function formatAsaasPostalCode(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 8) return value.trim();
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
 }
 
 function asaasPhoneFields(phone: string): { phone?: string; mobilePhone?: string } {
@@ -347,7 +425,14 @@ function asaasPhoneFields(phone: string): { phone?: string; mobilePhone?: string
 }
 
 function isMissingAsaasCustomer(error: unknown): boolean {
-  return isAsaasNotFound(error);
+  return isAsaasNotFound(error) || error instanceof AsaasStaleCustomerError;
+}
+
+function isStaleAsaasCustomer(json: unknown): boolean {
+  const codes = readAsaasErrorCodes(json);
+  if (codes.includes('invalid_customer')) return true;
+  const descriptions = readAsaasErrorDescriptions(json).join(' ');
+  return /customer inválido|cliente não encontrado|customer invalid/i.test(descriptions);
 }
 
 export function isAsaasNotFound(error: unknown): boolean {
@@ -358,6 +443,13 @@ function readAsaasErrorDescriptions(value: unknown): string[] {
   return readArray(value, 'errors').flatMap((item) => {
     const description = readString(item, 'description');
     return description ? [description] : [];
+  });
+}
+
+function readAsaasErrorCodes(value: unknown): string[] {
+  return readArray(value, 'errors').flatMap((item) => {
+    const code = readString(item, 'code');
+    return code ? [code] : [];
   });
 }
 

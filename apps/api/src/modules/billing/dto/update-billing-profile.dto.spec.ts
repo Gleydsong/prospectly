@@ -14,6 +14,10 @@ describe('UpdateBillingProfileDto', () => {
     cpfCnpj: '24.971.563.792',
     phone: '(11) 99999-9999',
     email: 'financeiro@acme.test',
+    address: 'Rua das Flores',
+    addressNumber: '100',
+    province: 'Centro',
+    postalCode: '01310-100',
   };
 
   it('accepts a formatted CPF and strips non-digits', async () => {
@@ -22,6 +26,7 @@ describe('UpdateBillingProfileDto', () => {
     ).resolves.toMatchObject({
       cpfCnpj: '24971563792',
       phone: '11999999999',
+      postalCode: '01310100',
     });
   });
 
@@ -44,5 +49,19 @@ describe('UpdateBillingProfileDto', () => {
     const messages = Array.isArray(body.message) ? body.message : [body.message];
     expect(messages).toContain('Informe um telefone com DDD, com 10 ou 11 dígitos.');
     expect(messages.join(' ')).not.toMatch(/regular expression/i);
+  });
+
+  it('rejects a CEP without 8 digits', async () => {
+    const error = await pipe
+      .transform(
+        { ...valid, postalCode: '01310' },
+        { type: 'body', metatype: UpdateBillingProfileDto },
+      )
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    const body = (error as BadRequestException).getResponse() as { message: string | string[] };
+    const messages = Array.isArray(body.message) ? body.message : [body.message];
+    expect(messages).toContain('Informe um CEP com 8 dígitos.');
   });
 });

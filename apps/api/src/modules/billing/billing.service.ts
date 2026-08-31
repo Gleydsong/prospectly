@@ -35,7 +35,25 @@ import type {
 } from './domain/payment-provider';
 import { resolvePaymentProviderId } from './domain/payment-router';
 import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
-import { AsaasClient, AsaasRequestError } from './infrastructure/asaas.client';
+import {
+  AsaasClient,
+  AsaasRequestError,
+  AsaasStaleCustomerError,
+  hasCompleteAsaasPayerAddress,
+} from './infrastructure/asaas.client';
+
+type AsaasPayerSnapshot = {
+  asaasCustomerId: string | null;
+  name?: string | null;
+  cpfCnpj?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  addressNumber?: string | null;
+  complement?: string | null;
+  province?: string | null;
+  postalCode?: string | null;
+};
 
 export interface SearchUsageSnapshot {
   used: number;
@@ -316,14 +334,16 @@ export class BillingService {
       return this.getAsaasPixCheckout(begin.paymentId, MONTHLY_PLAN_AMOUNT_CENTAVOS);
     }
 
-    let payment: { id: string };
+    let charged: { result: { id: string }; customerId: string };
     try {
-      payment = await this.asaasClient.createPixPayment({
-        customerId: profile.asaasCustomerId,
-        amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
-        externalReference: begin.claim.externalId,
-        description: 'Prospectly Ilimitado (30 dias)',
-      });
+      charged = await this.chargeAsaasCustomer(org.id, profile, (customerId) =>
+        this.asaasClient.createPixPayment({
+          customerId,
+          amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
+          externalReference: begin.claim.externalId,
+          description: 'Prospectly Ilimitado (30 dias)',
+        }),
+      );
     } catch (error) {
       if (error instanceof BadRequestException) {
         await this.monthlyAttempts.markFailed(org.id, begin.claim, error);
@@ -339,10 +359,10 @@ export class BillingService {
     await this.monthlyAttempts.markPixReady(
       org.id,
       begin.claim,
-      payment.id,
-      profile.asaasCustomerId,
+      charged.result.id,
+      charged.customerId,
     );
-    return this.getAsaasPixCheckout(payment.id, MONTHLY_PLAN_AMOUNT_CENTAVOS);
+    return this.getAsaasPixCheckout(charged.result.id, MONTHLY_PLAN_AMOUNT_CENTAVOS);
   }
 
   private async createAsaasMonthlyCheckout(
@@ -375,6 +395,11 @@ export class BillingService {
     if (!profile?.asaasCustomerId) {
       throw new BadRequestException('Complete o perfil de cobrança antes de pagar com cartão');
     }
+    if (!hasCompleteAsaasPayerAddress(profile)) {
+      throw new BadRequestException(
+        'Complete o endereço no perfil de cobrança antes de pagar com cartão',
+      );
+    }
     const switched = await this.checkoutSwitch.prepare({
       organizationId: org.id,
       product: 'monthly',
@@ -384,6 +409,7 @@ export class BillingService {
     const begin = await this.monthlyAttempts.beginCard(org.id);
     if (begin.state === 'ready') return begin.checkout;
     try {
+      const customerId = await this.resolveAsaasCustomerId(org.id, profile);
       const checkout = await this.asaasClient.createRecurringCheckout({
         externalReference: begin.claim.externalId,
         amountCentavos: MONTHLY_PLAN_AMOUNT_CENTAVOS,
@@ -392,6 +418,11 @@ export class BillingService {
           cpfCnpj: profile.cpfCnpj,
           phone: profile.phone,
           email: profile.email,
+          address: profile.address,
+          addressNumber: profile.addressNumber,
+          complement: profile.complement,
+          province: profile.province,
+          postalCode: profile.postalCode,
         },
         successUrl,
         cancelUrl,
@@ -401,7 +432,7 @@ export class BillingService {
         provider: 'ASAAS' as const,
         url: checkout.url,
         externalCheckoutId: checkout.id,
-        externalCustomerId: profile.asaasCustomerId,
+        externalCustomerId: customerId,
       };
       await this.monthlyAttempts.markReady(org.id, begin.claim, result);
       return result;
@@ -526,36 +557,44 @@ export class BillingService {
     }
     const frontendUrl = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
     if (paymentMethod === 'pix') {
-      let payment: { id: string };
+      let charged: { result: { id: string }; customerId: string };
       try {
-        payment = await this.asaasClient.createPixPayment({
-          customerId: profile.asaasCustomerId,
-          amountCentavos: pack.amountCentavos,
-          externalReference: externalId,
-          description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
-        });
+        charged = await this.chargeAsaasCustomer(organizationId, profile, (customerId) =>
+          this.asaasClient.createPixPayment({
+            customerId,
+            amountCentavos: pack.amountCentavos,
+            externalReference: externalId,
+            description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
+          }),
+        );
       } catch (error) {
         await this.markAsaasPurchaseCreationFailure(purchase.id, error);
         if (error instanceof BadRequestException) throw error;
         throw this.asaasCheckoutError(error, 'PIX payments are temporarily unavailable');
       }
-      await this.creditPurchases.attachPayment(purchase.id, payment.id);
-      return this.getAsaasPixCheckout(payment.id, pack.amountCentavos);
+      await this.creditPurchases.attachPayment(purchase.id, charged.result.id);
+      return this.getAsaasPixCheckout(charged.result.id, pack.amountCentavos);
     }
     try {
-      const payment = await this.asaasClient.createHostedPayment({
-        customerId: profile.asaasCustomerId,
-        amountCentavos: pack.amountCentavos,
-        externalReference: externalId,
-        description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
-        successUrl: `${frontendUrl}/billing/success`,
-      });
-      await this.creditPurchases.attachPayment(purchase.id, payment.id, payment.url);
+      const charged = await this.chargeAsaasCustomer(organizationId, profile, (customerId) =>
+        this.asaasClient.createHostedPayment({
+          customerId,
+          amountCentavos: pack.amountCentavos,
+          externalReference: externalId,
+          description: `Prospectly - ${pack.credits.toLocaleString('pt-BR')} créditos`,
+          successUrl: `${frontendUrl}/billing/success`,
+        }),
+      );
+      await this.creditPurchases.attachPayment(
+        purchase.id,
+        charged.result.id,
+        charged.result.url,
+      );
       return {
         mode: 'redirect',
         provider: 'ASAAS',
-        url: payment.url,
-        externalCheckoutId: payment.id,
+        url: charged.result.url,
+        externalCheckoutId: charged.result.id,
       };
     } catch (error) {
       if (error instanceof BadRequestException) {
@@ -980,6 +1019,54 @@ export class BillingService {
       status: PlanStatus.CANCELED,
     });
     return this.requireOrg(organizationId);
+  }
+
+  private async chargeAsaasCustomer<T>(
+    organizationId: string,
+    profile: AsaasPayerSnapshot,
+    run: (customerId: string) => Promise<T>,
+  ): Promise<{ result: T; customerId: string }> {
+    try {
+      const customerId = await this.resolveAsaasCustomerId(organizationId, profile);
+      return { result: await run(customerId), customerId };
+    } catch (error) {
+      if (!(error instanceof AsaasStaleCustomerError)) throw error;
+      const customerId = await this.resolveAsaasCustomerId(organizationId, {
+        ...profile,
+        asaasCustomerId: null,
+      });
+      return { result: await run(customerId), customerId };
+    }
+  }
+
+  private async resolveAsaasCustomerId(
+    organizationId: string,
+    profile: AsaasPayerSnapshot,
+  ): Promise<string> {
+    if (profile.name && profile.cpfCnpj && profile.phone && profile.email) {
+      const customerId = await this.asaasClient.ensureCustomer({
+        organizationId,
+        name: profile.name,
+        cpfCnpj: profile.cpfCnpj,
+        phone: profile.phone,
+        email: profile.email,
+        address: profile.address ?? undefined,
+        addressNumber: profile.addressNumber ?? undefined,
+        complement: profile.complement,
+        province: profile.province ?? undefined,
+        postalCode: profile.postalCode ?? undefined,
+        existingCustomerId: profile.asaasCustomerId,
+      });
+      if (customerId !== profile.asaasCustomerId) {
+        await this.prisma.billingProfile.update({
+          where: { organizationId },
+          data: { asaasCustomerId: customerId },
+        });
+      }
+      return customerId;
+    }
+    if (profile.asaasCustomerId) return profile.asaasCustomerId;
+    throw new BadRequestException('Complete o perfil de cobrança antes de pagar');
   }
 
   private async requireOrg(organizationId: string): Promise<Organization> {

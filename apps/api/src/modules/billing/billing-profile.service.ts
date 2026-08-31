@@ -9,6 +9,11 @@ export type BillingProfileInput = {
   cpfCnpj: string;
   phone: string;
   email: string;
+  address: string;
+  addressNumber: string;
+  complement?: string;
+  province: string;
+  postalCode: string;
 };
 
 @Injectable()
@@ -29,6 +34,11 @@ export class BillingProfileService {
       cpfCnpj: input.cpfCnpj.replace(/\D/g, ''),
       phone: input.phone.replace(/\D/g, ''),
       email: input.email.trim().toLowerCase(),
+      address: input.address.trim(),
+      addressNumber: input.addressNumber.trim(),
+      complement: input.complement?.trim() ? input.complement.trim() : null,
+      province: input.province.trim(),
+      postalCode: input.postalCode.replace(/\D/g, ''),
     };
     const profile = await this.prisma.billingProfile.upsert({
       where: { organizationId },
@@ -42,7 +52,15 @@ export class BillingProfileService {
 
     const asaasCustomerId = await this.asaasClient.ensureCustomer({
       organizationId,
-      ...normalized,
+      name: normalized.name,
+      cpfCnpj: normalized.cpfCnpj,
+      phone: normalized.phone,
+      email: normalized.email,
+      address: normalized.address,
+      addressNumber: normalized.addressNumber,
+      complement: normalized.complement,
+      province: normalized.province,
+      postalCode: normalized.postalCode,
       existingCustomerId: profile.asaasCustomerId,
     });
     if (asaasCustomerId === profile.asaasCustomerId) {
