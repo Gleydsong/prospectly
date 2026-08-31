@@ -1,20 +1,20 @@
-# Integration outbox pattern (Prospectly)
+# Padrão outbox de integração (Prospectly)
 
-Outbound CRM/webhook sync must never block the product UX. Use an **outbox** so domain writes stay local and delivery is eventually consistent.
+Sync de saída CRM/webhook nunca deve bloquear a UX do produto. Use um **outbox** para as escritas de domínio ficarem locais e a entrega ser eventually consistent.
 
-## Flow
+## Fluxo
 
-1. **Same DB transaction** as the business change (e.g. lead stage update): insert an `OutboxEvent` row (`id`, `organizationId`, `type`, `payload`, `idempotencyKey`, `status=PENDING`).
-2. **Worker** polls or listens (`FOR UPDATE SKIP LOCKED` / queue) and delivers to the configured webhook/CRM.
-3. Mark `PROCESSED` (or `FAILED` with retry/backoff). Deduplicate with `idempotencyKey` so reprocessing is safe.
-4. HTTP handlers only enqueue; they do not `await` the third-party call.
+1. **Na mesma transação de DB** da mudança de negócio (ex.: atualização de estágio do lead): inserir uma linha `OutboxEvent` (`id`, `organizationId`, `type`, `payload`, `idempotencyKey`, `status=PENDING`).
+2. O **worker** faz poll ou escuta (`FOR UPDATE SKIP LOCKED` / fila) e entrega no webhook/CRM configurado.
+3. Marcar `PROCESSED` (ou `FAILED` com retry/backoff). Deduplicar com `idempotencyKey` para o reprocessamento ser seguro.
+4. Handlers HTTP só enfileiram; eles **não** fazem `await` da chamada de terceiro.
 
-## Why
+## Por quê
 
-- Protects latency and availability when HubSpot/Pipedrive/webhooks are slow or down.
-- Gives a clear retry surface without double-sending (idempotency).
-- Keeps secrets and full payloads out of AuditLog; audit only action + host + counts.
+- Protege latência e disponibilidade quando HubSpot/Pipedrive/webhooks estão lentos ou fora.
+- Dá uma superfície clara de retry sem envio duplo (idempotência).
+- Mantém secrets e payloads completos fora do AuditLog; auditar só action + host + contagens.
 
-## Current MVP stub
+## Stub atual do MVP
 
-`Integration` with `provider=WEBHOOK` stores the destination URL. Delivery workers and a physical `OutboxEvent` table can land in a later phase; until then, treat this doc as the contract for any sync implementation.
+`Integration` com `provider=WEBHOOK` guarda a URL de destino. Workers de entrega e uma tabela física `OutboxEvent` podem entrar numa fase posterior; até lá, trate este doc como o contrato de qualquer implementação de sync.

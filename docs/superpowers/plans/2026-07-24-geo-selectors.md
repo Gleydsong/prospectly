@@ -1,14 +1,14 @@
-# Geo Selectors Implementation Plan
+# Plano de implementação Geo Selectors
 
-> **For agentic workers:** Implement task-by-task. Steps use checkbox syntax for tracking.
+> **Para agentes:** Implementar tarefa a tarefa. Passos usam sintaxe de checkbox para rastreamento.
 
-**Goal:** Encadear selects País → Região → Cidade no SearchPage, com dados servidos pela API para todos os países de prospecting.
+**Objetivo:** Encadear selects País → Região → Cidade no SearchPage, com dados servidos pela API para todos os países de prospecting.
 
-**Architecture:** Novo módulo Nest `geo` encapsula `country-state-city`. Endpoints `GET /geo/regions` e `GET /geo/cities`. Web consome via React Query e liga os selects no formulário existente.
+**Arquitetura:** Novo módulo Nest `geo` encapsula `country-state-city`. Endpoints `GET /geo/regions` e `GET /geo/cities`. Web consome via React Query e liga os selects no formulário existente.
 
-**Tech Stack:** NestJS, class-validator, country-state-city, Jest (API), React Hook Form + Vitest (web)
+**Stack:** NestJS, class-validator, country-state-city, Jest (API), React Hook Form + Vitest (web)
 
-## Global Constraints
+## Restrições globais
 
 - País deve estar em `PROSPECTING_COUNTRY_CODES`
 - Sem texto livre para cidade/região no formulário de search
@@ -18,49 +18,49 @@
 
 ---
 
-### Task 1: GeoService + unit tests
+### Task 1: GeoService + testes unitários
 
-**Files:**
-- Create: `apps/api/src/modules/geo/geo.service.ts`
-- Create: `apps/api/src/modules/geo/geo.service.spec.ts`
-- Create: `apps/api/src/modules/geo/geo.module.ts`
-- Modify: `apps/api/package.json` (dependência `country-state-city`)
+**Arquivos:**
+- Criar: `apps/api/src/modules/geo/geo.service.ts`
+- Criar: `apps/api/src/modules/geo/geo.service.spec.ts`
+- Criar: `apps/api/src/modules/geo/geo.module.ts`
+- Modificar: `apps/api/package.json` (dependência `country-state-city`)
 
-- [ ] Install `country-state-city`
-- [ ] Implement `listRegions(country)` / `listCities(country, regionCode)`
-- [ ] Reject unsupported countries
-- [ ] Unit tests BR + PT + invalid
-- [ ] Update `.superpowers/sdd/progress.md`
+- [ ] Instalar `country-state-city`
+- [ ] Implementar `listRegions(country)` / `listCities(country, regionCode)`
+- [ ] Rejeitar países não suportados
+- [ ] Testes unitários BR + PT + inválido
+- [ ] Atualizar `.superpowers/sdd/progress.md`
 
-### Task 2: GeoController + HTTP integration
+### Task 2: GeoController + integração HTTP
 
-**Files:**
-- Create: `apps/api/src/modules/geo/geo.controller.ts`
-- Create: `apps/api/src/modules/geo/dto/query-regions.dto.ts`
-- Create: `apps/api/src/modules/geo/dto/query-cities.dto.ts`
-- Create: `apps/api/src/modules/geo/geo.integration.spec.ts`
-- Modify: `apps/api/src/app.module.ts`
+**Arquivos:**
+- Criar: `apps/api/src/modules/geo/geo.controller.ts`
+- Criar: `apps/api/src/modules/geo/dto/query-regions.dto.ts`
+- Criar: `apps/api/src/modules/geo/dto/query-cities.dto.ts`
+- Criar: `apps/api/src/modules/geo/geo.integration.spec.ts`
+- Modificar: `apps/api/src/app.module.ts`
 
-- [ ] Wire module
-- [ ] Integration tests 200/400
-- [ ] Update progress docs
+- [ ] Conectar módulo
+- [ ] Testes de integração 200/400
+- [ ] Atualizar docs de progresso
 
-### Task 3: Web hooks + SearchPage cascade
+### Task 3: Hooks web + cascata SearchPage
 
-**Files:**
-- Modify: `apps/web/src/features/prospecting/api.ts`
-- Modify: `apps/web/src/features/prospecting/hooks.ts`
-- Modify: `apps/web/src/pages/search-page.tsx`
-- Modify: `apps/web/src/pages/search-page.test.tsx`
-- Create/Modify: hooks tests
+**Arquivos:**
+- Modificar: `apps/web/src/features/prospecting/api.ts`
+- Modificar: `apps/web/src/features/prospecting/hooks.ts`
+- Modificar: `apps/web/src/pages/search-page.tsx`
+- Modificar: `apps/web/src/pages/search-page.test.tsx`
+- Criar/Modificar: testes de hooks
 
-- [ ] Fetch regions/cities
-- [ ] Replace city Input and free region Input with Selects
-- [ ] Tests for cascade PT
-- [ ] Update progress docs
+- [ ] Buscar regiões/cidades
+- [ ] Substituir Input de cidade e Input livre de região por Selects
+- [ ] Testes de cascata PT
+- [ ] Atualizar docs de progresso
 
-### Task 4: Verify + final docs
+### Task 4: Verificação + docs finais
 
-- [ ] Run API + web tests for geo/search
-- [ ] Write `.superpowers/sdd/task-geo-selectors-report.md`
-- [ ] Commit if requested
+- [ ] Executar testes API + web para geo/search
+- [ ] Escrever `.superpowers/sdd/task-geo-selectors-report.md`
+- [ ] Commit se solicitado

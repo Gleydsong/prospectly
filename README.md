@@ -15,7 +15,8 @@ SaaS B2B para freelancers, desenvolvedores e agências digitais prospectarem neg
 ```
 prospectly/
 ├── apps/
-│   ├── web/                # Front-end React
+│   ├── landing/            # Site de marketing Next.js
+│   ├── web/                # Front-end React (SPA autenticada)
 │   └── api/                # API NestJS
 ├── packages/
 │   ├── shared-types/       # Tipos e enums compartilhados
@@ -219,7 +220,7 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 ### Operação e rollout
 
 - Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
-- Billing (AbacatePay PIX; Asaas hospedado sob feature flag; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
+- Billing (PIX e cartão novos pelo Asaas; AbacatePay só histórico; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
 - Estado operacional do billing, rollback Appmax ou continuação Asaas: [`docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md`](docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md).
 - `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
   obrigatória retorna `503`.

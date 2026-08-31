@@ -1,28 +1,28 @@
 ---
 name: landing-output-architecture
-description: "Select and implement the safest landing-page delivery target: standalone HTML/CSS, trusted React with shadcn and GSAP, or Astro with islands. Use when an AI-generated landing needs framework selection, publishing architecture, component boundaries, security constraints, or performance trade-offs."
+description: "Selecionar e implementar o alvo mais seguro de entrega de landing: HTML/CSS standalone, React confiável com shadcn e GSAP, ou Astro com islands. Use quando uma landing gerada por IA precisar de escolha de framework, arquitetura de publicação, fronteiras de componente, restrições de segurança ou trade-offs de performance."
 ---
 
-# Landing Output Architecture
+# Arquitetura de saída da landing
 
-Choose the output target before generating code. Do not ask an untrusted model to return executable framework code into a public page.
+Escolha o alvo de saída antes de gerar código. Não peça a um modelo não confiável que devolva código de framework executável numa página pública.
 
-## Decision rule
+## Regra de decisão
 
-| Need | Target |
+| Necessidade | Alvo |
 | --- | --- |
-| Tenant-generated page, immediate preview/publish, untrusted content | Sanitized standalone HTML and CSS |
-| Reusable product template with rich trusted interactions | React template with shadcn, GSAP, and optional R3F island |
-| Marketing site with content-first routes and minimal JavaScript | Astro template with static output and selective islands |
+| Página gerada pelo tenant, preview/publicação imediata, conteúdo não confiável | HTML e CSS standalone sanitizados |
+| Template de produto reutilizável com interações ricas e confiáveis | Template React com shadcn, GSAP e island R3F opcional |
+| Site de marketing com rotas content-first e JavaScript mínimo | Template Astro com output estático e islands seletivas |
 
-## Current secure path
+## Caminho seguro atual
 
-Generate a full HTML document with inline CSS. Sanitize it, serve it in a sandboxed iframe, and disallow scripts, event handlers, iframes, and arbitrary remote imports. Use progressive CSS motion only. This is the default for Conversion Studio because page content comes from an LLM.
+Gere um documento HTML completo com CSS inline. Sanitize, sirva num iframe sandbox e proíba scripts, event handlers, iframes e imports remotos arbitrários. Use só motion CSS progressivo. Este é o default do Conversion Studio porque o conteúdo da página vem de um LLM.
 
-## Trusted-template path
+## Caminho de template confiável
 
-Treat React/Astro source as repository-owned code, never as arbitrary LLM output. Let the LLM select a registered template and provide structured content, design tokens, asset IDs, and motion options. The server validates that data; the build uses only approved components and dependencies.
+Trate source React/Astro como código do repositório, nunca como output arbitrário de LLM. Deixe o LLM escolher um template registrado e fornecer conteúdo estruturado, tokens de design, IDs de asset e opções de motion. O servidor valida esses dados; o build usa só componentes e dependências aprovados.
 
-For React, use shadcn as source-owned accessible primitives, GSAP only inside lifecycle-safe client components, and isolate R3F scenes behind lazy boundaries. For Astro, keep the page static by default and hydrate only the interactive island that needs JavaScript.
+No React, use shadcn como primitivas acessíveis de propriedade do source, GSAP só dentro de client components com lifecycle seguro, e isole cenas R3F atrás de frontiers lazy. No Astro, mantenha a página estática por padrão e hidrate só a island interativa que precisa de JavaScript.
 
-Read [references/target-selection.md](references/target-selection.md) before proposing a framework or a migration.
+Leia [references/target-selection.md](references/target-selection.md) antes de propor um framework ou uma migração.

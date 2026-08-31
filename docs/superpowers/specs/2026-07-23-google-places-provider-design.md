@@ -1,22 +1,22 @@
-# Google Places Provider Design
+# Design: provider Google Places
 
-**Date:** 2026-07-23  
-**Status:** Approved
+**Data:** 2026-07-23  
+**Status:** Aprovado
 
-## Goal
+## Objetivo
 
-Add Google Places as optional search provider without breaking OpenStreetMap default flow.
+Adicionar Google Places como provider de busca opcional sem quebrar o fluxo padrão OpenStreetMap.
 
-## Decisions
+## Decisões
 
-- User picks provider per search (`provider` optional on create; default `OPENSTREETMAP`)
-- Without `GOOGLE_PLACES_API_KEY`, Google is hidden from `GET /searches/providers` and rejected with 400 if requested
-- Registry of `SearchProvider` adapters; OSM path unchanged
-- Places API (New) Text Search; map to `NormalizedBusiness` with `source: GOOGLE_PLACES`
-- Import uses `LeadSource.GOOGLE_PLACES` + place id as `externalId`
+- Usuário escolhe provider por busca (`provider` opcional na criação; default `OPENSTREETMAP`)
+- Sem `GOOGLE_PLACES_API_KEY`, Google fica oculto em `GET /searches/providers` e rejeitado com 400 se solicitado
+- Registry de adapters `SearchProvider`; caminho OSM inalterado
+- Places API (New) Text Search; mapear para `NormalizedBusiness` com `source: GOOGLE_PLACES`
+- Import usa `LeadSource.GOOGLE_PLACES` + place id como `externalId`
 
-## Non-goals
+## Não-objetivos
 
-- Dual-provider merge in one search
-- Replacing OSM
-- Caching Google responses beyond existing SearchResult persistence
+- Merge dual-provider em uma busca
+- Substituir OSM
+- Cache de respostas Google além da persistência existente em SearchResult

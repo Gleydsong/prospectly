@@ -1,52 +1,52 @@
-# Billing payments
+# Pagamentos (billing)
 
-## Current routing
+## Roteamento atual
 
-Prospectly routes new PIX and hosted card checkout through Asaas. `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true` are the authorized cutover defaults on this branch. AbacatePay remains active only for historical events and reconciliation. Existing AbacatePay and Stripe contracts are not migrated or canceled automatically.
+O Prospectly encaminha PIX novo e checkout de cartão hospedado pelo **Asaas**. `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true` são os defaults autorizados do cutover nesta branch. O AbacatePay permanece ativo só para eventos históricos e reconciliação. Contratos existentes AbacatePay e Stripe **não** são migrados nem cancelados automaticamente.
 
-| Product           |    Price | Method                | Provider              |
+| Produto | Preço | Método | Provedor |
 | ----------------- | -------: | --------------------- | --------------------- |
-| 2,000 credits     | R$ 14.99 | PIX                   | Asaas                 |
-| 2,000 credits     | R$ 14.99 | Credit or debit card  | Asaas hosted invoice  |
-| 5,000 credits     | R$ 23.99 | PIX                   | Asaas                 |
-| 5,000 credits     | R$ 23.99 | Credit or debit card  | Asaas hosted invoice  |
-| Monthly unlimited | R$ 49.99 | PIX                   | Asaas                 |
-| Monthly unlimited | R$ 49.99 | Recurring credit card | Asaas hosted checkout |
+| 2.000 créditos | R$ 14,99 | PIX | Asaas |
+| 2.000 créditos | R$ 14,99 | Cartão de crédito ou débito | Fatura hospedada Asaas |
+| 5.000 créditos | R$ 23,99 | PIX | Asaas |
+| 5.000 créditos | R$ 23,99 | Cartão de crédito ou débito | Fatura hospedada Asaas |
+| Acesso mensal ilimitado | R$ 49,99 | PIX | Asaas |
+| Acesso mensal ilimitado | R$ 49,99 | Cartão de crédito recorrente | Checkout hospedado Asaas |
 
-The API keeps historical Stripe and AbacatePay identifiers. Existing contracts are not migrated or canceled automatically. There is no Stripe checkout runtime. After cutover, new PIX/card payments must not be routed to Stripe or AbacatePay.
+A API guarda identificadores históricos de Stripe e AbacatePay. Contratos existentes não são migrados nem cancelados automaticamente. Não há runtime de checkout Stripe. Depois do cutover, PIX/cartão novos **não** podem ir para Stripe nem AbacatePay.
 
-## Safety properties
+## Propriedades de segurança
 
-- Benefits are granted only after an authenticated provider webhook and an authoritative provider read.
-- Asaas webhooks are persisted in PostgreSQL before acknowledgment and processed with an atomic lease/reclaim flow.
-- Ambiguous Asaas checkout creation becomes `REVIEW_REQUIRED`; the organization cannot create another checkout and no blind retry is made.
-- A persisted Asaas payment ID is reused to recover its QR code after a transient response failure.
-- PIX grants a benefit only after an authoritative Asaas payment read reports `RECEIVED`; `CONFIRMED` remains insufficient for PIX.
-- Prospectly stores a minimal organization billing profile but never receives card number, expiry date or CVV.
-- Refund and chargeback of packages create an auditable full reversal and may leave a negative credit balance.
-- Partial refunds are not converted into partial credits in this MVP. The inbox retains the event as failed for support review instead of silently changing the benefit.
-- `ASAAS_ENABLED` defaults to true and `PIX_PROVIDER` defaults to `ASAAS` after the authorized cutover. Sandbox and production credentials stay outside the repository. Rollback is `PIX_PROVIDER=ABACATE` without silent fallback.
+- Benefícios só são concedidos depois de webhook autenticado do provedor **e** leitura autoritativa no provedor.
+- Webhooks Asaas são persistidos no PostgreSQL antes do acknowledgment e processados com fluxo atômico de lease/reclaim.
+- Criação de checkout Asaas ambígua vira `REVIEW_REQUIRED`; a organização não cria outro checkout e não há retry cego.
+- O ID de pagamento Asaas persistido é reutilizado para recuperar o QR depois de falha transitória de resposta.
+- PIX só concede benefício depois que a leitura autoritativa do pagamento Asaas reporta `RECEIVED`; `CONFIRMED` **não** basta para PIX.
+- O Prospectly guarda um perfil de cobrança mínimo da organização e **nunca** recebe número, validade ou CVV do cartão.
+- Estorno e chargeback de pacotes geram reversão total auditável e podem deixar saldo de créditos negativo.
+- Estornos parciais **não** viram créditos parciais neste MVP. A inbox mantém o evento como falho para revisão de suporte, em vez de alterar o benefício em silêncio.
+- Depois do cutover autorizado, `ASAAS_ENABLED` default é true e `PIX_PROVIDER` default é `ASAAS`. Credenciais de sandbox e produção ficam fora do repositório. Rollback é `PIX_PROVIDER=ABACATE` **sem** fallback silencioso.
 
-## Sandbox wizard
+## Assistente de sandbox
 
-1. Create or select the Asaas Sandbox account.
-2. Store the Sandbox API key in the external secret manager as `ASAAS_API_KEY`.
-3. Generate a dedicated webhook token and store the same value as `ASAAS_WEBHOOK_TOKEN`.
-4. Configure the Asaas webhook URL as `/api/v1/billing/webhook/asaas` and send the token in `asaas-access-token`.
-5. Keep `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. This branch uses `PIX_PROVIDER=ASAAS` and `ASAAS_ENABLED=true`. The API will not boot with those flags if `ASAAS_API_KEY` or `ASAAS_WEBHOOK_TOKEN` is empty.
-6. Homologate PIX QR creation and reuse, duplicate click, webhook authentication and duplicate delivery, package crediting, monthly activation for exactly 30 days, refund/chargeback, hosted credit, hosted debit, monthly card recurrence, and ambiguous timeout recovery.
-7. Production Asaas (`https://api.asaas.com/v3`) needs account approval, a PIX key after proof of life, separate production secrets, and a controlled financial smoke. Rollback is `PIX_PROVIDER=ABACATE` without silent fallback. Historical AbacatePay webhooks stay active.
+1. Crie ou selecione a conta Sandbox do Asaas.
+2. Guarde a API key de Sandbox no gerenciador externo de secrets como `ASAAS_API_KEY`.
+3. Gere um token dedicado de webhook e grave o mesmo valor em `ASAAS_WEBHOOK_TOKEN`.
+4. Configure a URL de webhook Asaas como `/api/v1/billing/webhook/asaas` e envie o token em `asaas-access-token`.
+5. Mantenha `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. Esta branch usa `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true`. A API **não** sobe com essas flags se `ASAAS_API_KEY` ou `ASAAS_WEBHOOK_TOKEN` estiverem vazios.
+6. Homologue: criação e reuso de QR PIX, clique duplicado, autenticação de webhook e entrega duplicada, crédito de pacote, ativação mensal de exatamente 30 dias, estorno/chargeback, crédito hospedado, débito hospedado, recorrência mensal no cartão e recuperação de timeout ambíguo.
+7. Produção Asaas (`https://api.asaas.com/v3`) exige aprovação de conta, chave PIX após prova de vida, secrets de produção separados e um smoke financeiro controlado. Rollback é `PIX_PROVIDER=ABACATE` sem fallback silencioso. Webhooks históricos do AbacatePay continuam ativos.
 
-See [Render deployment](../deploy/render.md) for environment and webhook setup.
+Ver [deploy na Render](../deploy/render.md) para ambiente e webhook.
 
-## `REVIEW_REQUIRED` support runbook
+## Runbook de suporte `REVIEW_REQUIRED`
 
-Support must never create another provider request to resolve an uncertain checkout.
+O suporte **nunca** deve criar outra requisição no provedor para resolver um checkout incerto.
 
-1. Locate the local purchase or monthly attempt by organization and copy its `externalId`.
-2. Search the Asaas Sandbox/dashboard and payment API using that exact reference. For a monthly PIX checkout, use the persisted payment ID when available; for recurring card, use the checkout session ID.
-3. If exactly one matching payment exists, verify customer, amount, method and status, then replay the original authenticated Asaas webhook. The normal inbox processor performs the authoritative GET and resolves the lock.
-4. If Asaas confirms that no checkout/payment exists, an authorized operator may change the local attempt to `FAILED` in a tenant-bypassed support transaction and must insert an `AuditLog` row with action `billing.asaas_review_resolved`, the affected entity ID, operator ID and Asaas evidence reference.
-5. If there is more than one match, conflicting data or a partial refund, leave the record blocked and escalate to Finance/Engineering. Do not edit credit balance or entitlement directly.
+1. Localize a compra local ou a tentativa mensal pela organização e copie o `externalId`.
+2. Busque no Sandbox/dashboard Asaas e na API de pagamentos com essa referência exata. No checkout PIX mensal, use o ID de pagamento persistido quando existir; no cartão recorrente, use o ID da sessão de checkout.
+3. Se existir exatamente um pagamento correspondente, confira cliente, valor, método e status e reenvie o webhook Asaas autenticado original. O processador normal da inbox faz o GET autoritativo e resolve o lock.
+4. Se o Asaas confirmar que não existe checkout/pagamento, um operador autorizado pode mudar a tentativa local para `FAILED` numa transação de suporte com bypass de tenant e **deve** inserir uma linha em `AuditLog` com action `billing.asaas_review_resolved`, o ID da entidade afetada, o ID do operador e a referência de evidência Asaas.
+5. Se houver mais de um match, dados conflitantes ou estorno parcial, deixe o registro bloqueado e escale para Finanças/Engenharia. Não edite saldo de créditos nem entitlement direto.
 
-The package and monthly PIX reconcilers can resolve a lost create response through `externalReference`; when a payment ID was persisted, monthly PIX reconciliation reads it directly. A monthly card checkout with no persisted checkout ID may still require the Asaas dashboard or webhook replay. This runbook is the authorized fallback and does not add a refund/dispute UI or API.
+Os reconciliadores de pacote e PIX mensal podem resolver um create perdido via `externalReference`; quando o ID de pagamento foi persistido, a reconciliação PIX mensal lê esse ID direto. Checkout mensal no cartão sem ID de checkout persistido ainda pode exigir dashboard Asaas ou replay de webhook. Este runbook é o fallback autorizado e **não** adiciona UI/API de estorno/disputa.

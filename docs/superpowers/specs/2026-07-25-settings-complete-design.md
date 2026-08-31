@@ -1,43 +1,43 @@
-# Settings page complete (UI over existing APIs)
+# Página de configurações completa (UI sobre APIs existentes)
 
-**Date:** 2026-07-25  
-**Status:** Approved — implementing on `feat/settings-complete-ui`  
-**Approach:** UI over existing APIs (no S3, no magic-link invites)
+**Data:** 2026-07-25  
+**Status:** Aprovado — implementação em `feat/settings-complete-ui`  
+**Abordagem:** UI sobre APIs existentes (sem S3, sem convites por magic link)
 
-## Goal
+## Objetivo
 
-Make `/settings` a complete account hub aligned with the dark zinc + cobalt app: profile (name + photo), organization rename, polished billing, invite members into the org (shared pipeline/activities), LGPD page + account deletion (DSR), cleaner scoring.
+Tornar `/settings` um hub completo de conta alinhado ao app dark zinc + cobalt: perfil (nome + foto), renomear organização, billing polido, convidar membros para a org (pipeline/atividades compartilhados), página LGPD + exclusão de conta (DSR), scoring mais limpo.
 
-## Scope
+## Escopo
 
-### In
+### Dentro
 
-1. **Profile card** — avatar (upload compressed client-side → `avatarUrl` data URL or https), editable name, read-only email, locale
-2. **Organization card** — rename via `PATCH /organizations/current` (OWNER/ADMIN)
-3. **Billing card** — status row + currency/interval selects when not ACTIVE; portal/cancel when available
-4. **Members card** — list; invite modal (name, email, role, generated temp password + copy); role change + remove for OWNER/ADMIN
-5. **Privacy card** — link to `/settings/privacy`; export DSR; delete account modal → DSR DELETE
-6. **Privacy page** — in-app LGPD summary + link to landing `/privacy`
-7. **Scoring** — remove technical keys under labels
+1. **Card de perfil** — avatar (upload comprimido no client → `avatarUrl` data URL ou https), nome editável, e-mail somente leitura, locale
+2. **Card de organização** — renomear via `PATCH /organizations/current` (OWNER/ADMIN)
+3. **Card de billing** — linha de status + selects de moeda/intervalo quando não ACTIVE; portal/cancel quando disponível
+4. **Card de membros** — listagem; modal de convite (nome, e-mail, role, senha temporária gerada + copiar); alteração de role + remoção para OWNER/ADMIN
+5. **Card de privacidade** — link para `/settings/privacy`; export DSR; modal de exclusão de conta → DSR DELETE
+6. **Página de privacidade** — resumo LGPD in-app + link para landing `/privacy`
+7. **Scoring** — remover chaves técnicas abaixo dos rótulos
 
-### Out
+### Fora
 
-- Magic-link / email invites
-- Object storage for avatars
-- Automated hard-delete of accounts
-- Cross-org pipeline sharing
+- Convites por magic link / e-mail
+- Object storage para avatares
+- Hard-delete automatizado de contas
+- Compartilhamento de pipeline entre orgs
 
-## API changes
+## Alterações na API
 
-- `UpdateProfileDto.avatarUrl`: accept `https://…` **or** `data:image/(jpeg|png|webp);base64,…` with max decoded size ~120KB; increase max string length accordingly
+- `UpdateProfileDto.avatarUrl`: aceitar `https://…` **ou** `data:image/(jpeg|png|webp);base64,…` com tamanho decodificado máx. ~120KB; aumentar max string length conforme necessário
 
-## Web routes
+## Rotas web
 
 - `/settings` — hub
-- `/settings/privacy` — LGPD summary (protected, AppLayout)
+- `/settings/privacy` — resumo LGPD (protegida, AppLayout)
 
-## Security / UX notes
+## Segurança / UX
 
-- Invite temp password shown once with copy; warn to share via secure channel
-- Account deletion requires typed confirmation (`EXCLUIR` / `DELETE`)
-- RBAC: invite/update/remove members and rename org only for OWNER/ADMIN; UI hides actions otherwise
+- Senha temporária do convite exibida uma vez com copiar; avisar para compartilhar por canal seguro
+- Exclusão de conta exige confirmação digitada (`EXCLUIR` / `DELETE`)
+- RBAC: convidar/atualizar/remover membros e renomear org somente para OWNER/ADMIN; UI oculta ações caso contrário

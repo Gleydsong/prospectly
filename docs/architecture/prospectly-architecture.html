@@ -785,7 +785,7 @@
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">P</div>
         <div>
-          <div class="eyebrow">Architecture atlas</div>
+          <div class="eyebrow">Atlas de arquitetura</div>
           <h1>Prospectly · mapa do codebase</h1>
         </div>
       </div>
@@ -1036,7 +1036,7 @@
         ),
         ci: n(
           'GitHub Actions',
-          'Quality gate',
+          'Gate de qualidade',
           'delivery',
           'Executa install, Prisma generate, lint, typecheck, tests, build e audit.',
           ['.github/workflows/ci.yml'],
@@ -1829,14 +1829,14 @@
         {
           id: 'delivery',
           icon: '07',
-          name: 'Deploy',
+          name: 'Entrega',
           title: 'Entrega · monorepo, CI, imagens e Render',
           description:
             'O pipeline valida o monorepo; Render faz deploy seletivo das três superfícies e dados gerenciados.',
           note: 'A API e os processors são uma única unidade de deploy. A landing não participa do Docker Compose local.',
           lanes: [
-            ['Source', ['repo', 'shared', 'promo']],
-            ['Quality gate', ['ci']],
+            ['Fonte', ['repo', 'shared', 'promo']],
+            ['Gate de qualidade', ['ci']],
             ['Build units', ['apiImage', 'webImage', 'landingService']],
             ['Production', ['apiService', 'webService', 'landing']],
             ['Managed state', ['managedData']],

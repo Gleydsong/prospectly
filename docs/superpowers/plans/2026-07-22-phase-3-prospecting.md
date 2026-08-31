@@ -1,14 +1,14 @@
-# Fase 3 Prospecting Implementation Plan
+# Plano de implementação Fase 3 Prospecting
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Para agentes:** SUB-SKILL OBRIGATÓRIA: Use superpowers:subagent-driven-development (recomendado) ou superpowers:executing-plans para implementar este plano tarefa a tarefa. Passos usam sintaxe de checkbox (`- [ ]`) para rastreamento.
 
-**Goal:** Encontrar empresas brasileiras sem website via OpenStreetMap, importar resultados selecionados e importar CSV de leads com jobs BullMQ persistidos.
+**Objetivo:** Encontrar empresas brasileiras sem website via OpenStreetMap, importar resultados selecionados e importar CSV de leads com jobs BullMQ persistidos.
 
-**Architecture:** Novos módulos NestJS `prospecting` e `imports` usam BullMQ/Redis e um serviço compartilhado de ingestão de leads. Nominatim resolve município/UF e Overpass busca estabelecimentos; provider fica atrás de interface testável. React acompanha pesquisas e importações via polling, sem WebSocket.
+**Arquitetura:** Novos módulos NestJS `prospecting` e `imports` usam BullMQ/Redis e um serviço compartilhado de ingestão de leads. Nominatim resolve município/UF e Overpass busca estabelecimentos; provider fica atrás de interface testável. React acompanha pesquisas e importações via polling, sem WebSocket.
 
-**Tech Stack:** NestJS 10, TypeScript, Prisma 6, PostgreSQL, BullMQ, Redis, React 18, TanStack Query, React Hook Form, Zod, Jest, Testing Library.
+**Stack:** NestJS 10, TypeScript, Prisma 6, PostgreSQL, BullMQ, Redis, React 18, TanStack Query, React Hook Form, Zod, Jest, Testing Library.
 
-## Global Constraints
+## Restrições globais
 
 - Brasil inteiro; entrada obrigatória `category`, `city` e uma das 27 UFs.
 - OpenStreetMap é único provider desta fase; endpoints Nominatim e Overpass configuráveis.
@@ -23,7 +23,7 @@
 
 ---
 
-## File Map
+## Mapa de arquivos
 
 - `apps/api/prisma/schema.prisma`: estados e campos persistidos da Fase 3.
 - `apps/api/src/modules/leads/lead-ingestion.service.ts`: normalização, deduplicação e criação compartilhada.
@@ -36,180 +36,180 @@
 
 ### Task 1: Persistência e ingestão compartilhada de leads
 
-**Files:**
-- Modify: `apps/api/prisma/schema.prisma`
-- Create: `apps/api/prisma/migrations/<timestamp>_phase_3_prospecting/migration.sql`
-- Create: `apps/api/src/modules/leads/lead-ingestion.service.ts`
-- Create: `apps/api/src/modules/leads/lead-ingestion.service.spec.ts`
-- Modify: `apps/api/src/modules/leads/leads.module.ts`
-- Modify: `apps/api/src/modules/leads/leads.service.ts`
-- Modify: `apps/api/src/modules/leads/dto/create-lead.dto.ts`
+**Arquivos:**
+- Modificar: `apps/api/prisma/schema.prisma`
+- Criar: `apps/api/prisma/migrations/<timestamp>_phase_3_prospecting/migration.sql`
+- Criar: `apps/api/src/modules/leads/lead-ingestion.service.ts`
+- Criar: `apps/api/src/modules/leads/lead-ingestion.service.spec.ts`
+- Modificar: `apps/api/src/modules/leads/leads.module.ts`
+- Modificar: `apps/api/src/modules/leads/leads.service.ts`
+- Modificar: `apps/api/src/modules/leads/dto/create-lead.dto.ts`
 
 **Interfaces:**
-- Produces: `WebsitePresence`, `SearchStatus.PROCESSING`, unique external identities.
-- Produces: `LeadIngestionService.ingest(organizationId, actorId, candidate): Promise<LeadIngestionResult>`.
-- `LeadIngestionResult.status` is `IMPORTED | DUPLICATE | POSSIBLE_DUPLICATE`.
+- Produz: `WebsitePresence`, `SearchStatus.PROCESSING`, identidades externas únicas.
+- Produz: `LeadIngestionService.ingest(organizationId, actorId, candidate): Promise<LeadIngestionResult>`.
+- `LeadIngestionResult.status` é `IMPORTED | DUPLICATE | POSSIBLE_DUPLICATE`.
 
-- [ ] Write failing tests for Brazilian phone normalization, external-ID duplicate, email/domain duplicate, probable name-city-UF duplicate, tag creation and `TO_REVIEW` defaults.
-- [ ] Run `pnpm --filter @prospectly/api test -- lead-ingestion.service.spec.ts --runInBand`; confirm failures come from missing service.
-- [ ] Add Prisma enum/fields/constraints and migration SQL matching the schema exactly.
-- [ ] Implement `LeadIngestionService`; keep normalization helpers deterministic and exported only when tests need direct access.
-- [ ] Route existing single-lead creation through shared ingestion without changing manual-create response behavior.
-- [ ] Run focused tests, Prisma generate, API typecheck and existing lead tests.
+- [ ] Escrever testes falhando para normalização de telefone BR, duplicata por external-ID, duplicata email/domínio, duplicata provável nome-cidade-UF, criação de tag e defaults `TO_REVIEW`.
+- [ ] Executar `pnpm --filter @prospectly/api test -- lead-ingestion.service.spec.ts --runInBand`; confirmar falhas por service ausente.
+- [ ] Adicionar enum/campos/constraints Prisma e SQL de migration alinhados ao schema exato.
+- [ ] Implementar `LeadIngestionService`; manter helpers de normalização determinísticos e exportados só quando testes precisarem de acesso direto.
+- [ ] Rotear criação single-lead existente pela ingestão compartilhada sem alterar comportamento de resposta do create manual.
+- [ ] Executar testes focados, Prisma generate, typecheck API e testes de leads existentes.
 
-### Task 2: OpenStreetMap provider
+### Task 2: Provider OpenStreetMap
 
-**Files:**
-- Create: `apps/api/src/modules/prospecting/domain/search-provider.ts`
-- Create: `apps/api/src/modules/prospecting/domain/normalized-business.ts`
-- Create: `apps/api/src/modules/prospecting/infrastructure/osm-category-map.ts`
-- Create: `apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.ts`
-- Create: `apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.spec.ts`
-- Modify: `apps/api/src/config/configuration.ts`
-- Modify: `apps/api/src/config/validation.ts`
-- Modify: `apps/api/.env.example`
+**Arquivos:**
+- Criar: `apps/api/src/modules/prospecting/domain/search-provider.ts`
+- Criar: `apps/api/src/modules/prospecting/domain/normalized-business.ts`
+- Criar: `apps/api/src/modules/prospecting/infrastructure/osm-category-map.ts`
+- Criar: `apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.ts`
+- Criar: `apps/api/src/modules/prospecting/infrastructure/openstreetmap.provider.spec.ts`
+- Modificar: `apps/api/src/config/configuration.ts`
+- Modificar: `apps/api/src/config/validation.ts`
+- Modificar: `apps/api/.env.example`
 
 **Interfaces:**
-- Consumes: `WebsitePresence` from Prisma.
-- Produces: `SearchProvider.search(input): Promise<NormalizedBusiness[]>`.
-- Provider token: `OPENSTREETMAP_SEARCH_PROVIDER`.
+- Consome: `WebsitePresence` do Prisma.
+- Produz: `SearchProvider.search(input): Promise<NormalizedBusiness[]>`.
+- Token do provider: `OPENSTREETMAP_SEARCH_PROVIDER`.
 
-- [ ] Write failing tests for UF validation, category-to-OSM tag mapping, Nominatim municipality selection, Overpass query escaping, website tag precedence and normalized Brazilian output.
-- [ ] Run focused provider test and confirm expected failures.
-- [ ] Implement typed HTTP client with native `fetch`, abort timeout and sanitized provider errors.
-- [ ] Implement category mapping across `amenity`, `shop`, `craft`, `office`, `tourism`; reject unsupported empty category.
-- [ ] Implement Nominatim lookup restricted to `countrycodes=br`, validate returned UF, then Overpass area query.
-- [ ] Prefer `website`, then `contact:website`, then `url`; set presence accordingly.
-- [ ] Add configurable URLs, user agent, timeout and result cap to config/env validation.
-- [ ] Run focused tests and API typecheck.
+- [ ] Escrever testes falhando para validação de UF, mapeamento categoria→tag OSM, seleção de município Nominatim, escape de query Overpass, precedência de tag website e saída BR normalizada.
+- [ ] Executar teste focado do provider e confirmar falhas esperadas.
+- [ ] Implementar client HTTP tipado com `fetch` nativo, timeout abort e erros de provider sanitizados.
+- [ ] Implementar mapeamento de categoria em `amenity`, `shop`, `craft`, `office`, `tourism`; rejeitar categoria vazia não suportada.
+- [ ] Implementar lookup Nominatim restrito a `countrycodes=br`, validar UF retornada, depois query de área Overpass.
+- [ ] Preferir `website`, depois `contact:website`, depois `url`; definir presence conforme.
+- [ ] Adicionar URLs configuráveis, user agent, timeout e cap de resultados em config/validação env.
+- [ ] Executar testes focados e typecheck API.
 
 ### Task 3: Pesquisa assíncrona e importação seletiva
 
-**Files:**
-- Create: `apps/api/src/modules/prospecting/dto/create-search.dto.ts`
-- Create: `apps/api/src/modules/prospecting/dto/query-searches.dto.ts`
-- Create: `apps/api/src/modules/prospecting/dto/import-search-results.dto.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.constants.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.service.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.service.spec.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.processor.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.controller.ts`
-- Create: `apps/api/src/modules/prospecting/prospecting.module.ts`
-- Modify: `apps/api/src/app.module.ts`
-- Modify: `apps/api/package.json`
+**Arquivos:**
+- Criar: `apps/api/src/modules/prospecting/dto/create-search.dto.ts`
+- Criar: `apps/api/src/modules/prospecting/dto/query-searches.dto.ts`
+- Criar: `apps/api/src/modules/prospecting/dto/import-search-results.dto.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.constants.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.service.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.service.spec.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.processor.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.controller.ts`
+- Criar: `apps/api/src/modules/prospecting/prospecting.module.ts`
+- Modificar: `apps/api/src/app.module.ts`
+- Modificar: `apps/api/package.json`
 
 **Interfaces:**
 - Endpoints: `POST /searches`, `GET /searches`, `GET /searches/:id`, `GET /searches/:id/results`, `POST /searches/:id/import`.
-- Queue: `prospecting`; job: `run-search`; `jobId = search.id`.
-- Consumes `SearchProvider` and `LeadIngestionService`.
+- Fila: `prospecting`; job: `run-search`; `jobId = search.id`.
+- Consome `SearchProvider` e `LeadIngestionService`.
 
-- [ ] Write failing service tests for `PENDING` creation, queue payload, ownership filtering, state transitions, idempotent result persistence and selective import.
-- [ ] Run focused test and confirm expected failures.
-- [ ] Add BullMQ dependencies and root Redis connection from `REDIS_URL`.
-- [ ] Implement validated DTOs, service, processor and controller with roles `OWNER`, `ADMIN`, `SALES`, `MEMBER` for writes.
-- [ ] Processor changes `PENDING` to `PROCESSING`, replaces/upserts results, then completes or records sanitized failure.
-- [ ] Selective import validates all IDs belong to search and organization, calls ingestion, links imported leads and returns counters/conflicts.
-- [ ] Add pagination using existing `PaginationQueryDto` conventions.
-- [ ] Run focused tests, API typecheck and API build.
+- [ ] Escrever testes falhando de service para criação `PENDING`, payload de fila, filtro de ownership, transições de estado, persistência idempotente de resultados e importação seletiva.
+- [ ] Executar teste focado e confirmar falhas esperadas.
+- [ ] Adicionar deps BullMQ e conexão Redis root a partir de `REDIS_URL`.
+- [ ] Implementar DTOs validados, service, processor e controller com roles `OWNER`, `ADMIN`, `SALES`, `MEMBER` para writes.
+- [ ] Processor muda `PENDING` para `PROCESSING`, substitui/upserta resultados, depois completa ou registra falha sanitizada.
+- [ ] Importação seletiva valida que todos IDs pertencem à search e organização, chama ingestão, liga leads importados e retorna contadores/conflitos.
+- [ ] Adicionar paginação usando convenções existentes de `PaginationQueryDto`.
+- [ ] Executar testes focados, typecheck API e build API.
 
-### Task 4: CSV preview and asynchronous import
+### Task 4: Preview CSV e importação assíncrona
 
-**Files:**
-- Create: `apps/api/src/modules/imports/csv-parser.service.ts`
-- Create: `apps/api/src/modules/imports/csv-parser.service.spec.ts`
-- Create: `apps/api/src/modules/imports/dto/create-csv-import.dto.ts`
-- Create: `apps/api/src/modules/imports/dto/query-imports.dto.ts`
-- Create: `apps/api/src/modules/imports/imports.constants.ts`
-- Create: `apps/api/src/modules/imports/imports.service.ts`
-- Create: `apps/api/src/modules/imports/imports.service.spec.ts`
-- Create: `apps/api/src/modules/imports/imports.processor.ts`
-- Create: `apps/api/src/modules/imports/imports.controller.ts`
-- Create: `apps/api/src/modules/imports/imports.module.ts`
-- Modify: `apps/api/src/app.module.ts`
-- Modify: `apps/api/package.json`
+**Arquivos:**
+- Criar: `apps/api/src/modules/imports/csv-parser.service.ts`
+- Criar: `apps/api/src/modules/imports/csv-parser.service.spec.ts`
+- Criar: `apps/api/src/modules/imports/dto/create-csv-import.dto.ts`
+- Criar: `apps/api/src/modules/imports/dto/query-imports.dto.ts`
+- Criar: `apps/api/src/modules/imports/imports.constants.ts`
+- Criar: `apps/api/src/modules/imports/imports.service.ts`
+- Criar: `apps/api/src/modules/imports/imports.service.spec.ts`
+- Criar: `apps/api/src/modules/imports/imports.processor.ts`
+- Criar: `apps/api/src/modules/imports/imports.controller.ts`
+- Criar: `apps/api/src/modules/imports/imports.module.ts`
+- Modificar: `apps/api/src/app.module.ts`
+- Modificar: `apps/api/package.json`
 
 **Interfaces:**
 - Endpoints: `POST /imports/csv/preview`, `POST /imports/csv`, `GET /imports`, `GET /imports/:id`, `GET /imports/:id/errors`.
-- Queue: `imports`; job: `process-csv-import`; payload stores import ID plus safe staged content needed by worker.
-- Consumes `LeadIngestionService`.
+- Fila: `imports`; job: `process-csv-import`; payload armazena import ID mais conteúdo staged seguro necessário ao worker.
+- Consome `LeadIngestionService`.
 
-- [ ] Write failing parser tests for comma, semicolon, quoted delimiter, escaped quotes, BOM, headers, blank lines and malformed rows.
-- [ ] Run parser test and confirm expected failures.
-- [ ] Add a maintained CSV parser dependency rather than hand-writing RFC parsing; configure upload memory limits.
-- [ ] Implement preview returning headers, first five rows and deterministic mapping suggestions.
-- [ ] Write failing service tests for tenant isolation, counters, partial success, `ImportError`, duplicates and failed status.
-- [ ] Implement import record, queue job, processor and paginated endpoints.
-- [ ] Validate mapping keys against an allowlist and require `companyName` mapping.
-- [ ] Run import tests, API typecheck and API build.
+- [ ] Escrever testes falhando do parser para vírgula, ponto-e-vírgula, delimitador entre aspas, aspas escapadas, BOM, headers, linhas em branco e linhas malformadas.
+- [ ] Executar teste do parser e confirmar falhas esperadas.
+- [ ] Adicionar dependência de parser CSV mantida em vez de RFC manual; configurar limites de memória de upload.
+- [ ] Implementar preview retornando headers, primeiras cinco linhas e sugestões de mapeamento determinísticas.
+- [ ] Escrever testes falhando de service para isolamento de tenant, contadores, sucesso parcial, `ImportError`, duplicatas e status failed.
+- [ ] Implementar registro de import, job de fila, processor e endpoints paginados.
+- [ ] Validar chaves de mapeamento contra allowlist e exigir mapeamento `companyName`.
+- [ ] Executar testes de import, typecheck API e build API.
 
-### Task 5: Web research workflow
+### Task 5: Fluxo web de pesquisa
 
-**Files:**
-- Create: `apps/web/src/features/prospecting/api.ts`
-- Create: `apps/web/src/features/prospecting/hooks.ts`
-- Create: `apps/web/src/features/prospecting/hooks.test.tsx`
-- Rewrite: `apps/web/src/pages/search-page.tsx`
-- Create: `apps/web/src/pages/search-page.test.tsx`
-- Modify: `apps/web/src/types/index.ts`
-
-**Interfaces:**
-- Consumes Task 3 endpoints and paginated contracts.
-- Poll every 2 seconds only for `PENDING | PROCESSING`; stop for terminal states.
-
-- [ ] Write failing tests for required category/city/UF, default no-site filter, search submission and API errors.
-- [ ] Write failing hook test proving polling starts/stops by status.
-- [ ] Implement typed API and hooks.
-- [ ] Implement form, history/status, result table, pagination, individual/select-all controls and import summary.
-- [ ] Disable already-imported rows and preserve selection only for current result page.
-- [ ] Add accessible labels, keyboard behavior and loading/error/empty states.
-- [ ] Run focused web tests, web typecheck and web build.
-
-### Task 6: Web CSV workflow
-
-**Files:**
-- Create: `apps/web/src/features/imports/api.ts`
-- Create: `apps/web/src/features/imports/hooks.ts`
-- Create: `apps/web/src/pages/imports-page.tsx`
-- Create: `apps/web/src/pages/imports-page.test.tsx`
-- Modify: `apps/web/src/App.tsx`
-- Modify: `apps/web/src/components/layout/sidebar.tsx`
-- Modify: `apps/web/src/types/index.ts`
+**Arquivos:**
+- Criar: `apps/web/src/features/prospecting/api.ts`
+- Criar: `apps/web/src/features/prospecting/hooks.ts`
+- Criar: `apps/web/src/features/prospecting/hooks.test.tsx`
+- Reescrever: `apps/web/src/pages/search-page.tsx`
+- Criar: `apps/web/src/pages/search-page.test.tsx`
+- Modificar: `apps/web/src/types/index.ts`
 
 **Interfaces:**
-- Consumes Task 4 endpoints.
-- Poll every 2 seconds for `PENDING | PROCESSING` and stop at terminal status.
+- Consome endpoints da Task 3 e contratos paginados.
+- Poll a cada 2 segundos só para `PENDING | PROCESSING`; parar em estados terminais.
 
-- [ ] Write failing UI tests for CSV-only selection, preview, required company mapping, confirmation, progress and row errors.
-- [ ] Implement multipart preview/create APIs and typed hooks.
-- [ ] Implement upload, five-row preview, mapping selects, confirmation and progress summary.
-- [ ] Add imports route and sidebar entry.
-- [ ] Ensure file input resets only after successful job creation.
-- [ ] Run focused web tests, web typecheck and web build.
+- [ ] Escrever testes falhando para category/city/UF obrigatórios, filtro default sem site, submissão de search e erros de API.
+- [ ] Escrever teste falhando de hook provando polling start/stop por status.
+- [ ] Implementar API e hooks tipados.
+- [ ] Implementar form, histórico/status, tabela de resultados, paginação, controles individual/select-all e resumo de importação.
+- [ ] Desabilitar linhas já importadas e preservar seleção só na página de resultados atual.
+- [ ] Adicionar labels acessíveis, comportamento de teclado e estados loading/error/empty.
+- [ ] Executar testes web focados, typecheck web e build web.
 
-### Task 7: Cross-module security and integration verification
+### Task 6: Fluxo web CSV
 
-**Files:**
-- Create: `apps/api/src/modules/prospecting/prospecting.integration.spec.ts`
-- Create: `apps/api/src/modules/imports/imports.integration.spec.ts`
-- Modify: `README.md`
-- Modify: `docker-compose.yml` only if worker configuration requires it.
+**Arquivos:**
+- Criar: `apps/web/src/features/imports/api.ts`
+- Criar: `apps/web/src/features/imports/hooks.ts`
+- Criar: `apps/web/src/pages/imports-page.tsx`
+- Criar: `apps/web/src/pages/imports-page.test.tsx`
+- Modificar: `apps/web/src/App.tsx`
+- Modificar: `apps/web/src/components/layout/sidebar.tsx`
+- Modificar: `apps/web/src/types/index.ts`
 
 **Interfaces:**
-- Validates Tasks 1–6 as one release.
+- Consome endpoints da Task 4.
+- Poll a cada 2 segundos para `PENDING | PROCESSING` e parar em status terminal.
 
-- [ ] Write integration tests with mocked provider/queues for organization isolation, forbidden roles, invalid UUIDs, duplicate imports and sanitized provider failures.
-- [ ] Run tests and confirm failures expose missing integration behavior, not test setup errors.
-- [ ] Fix only integration defects uncovered by tests.
-- [ ] Document OpenStreetMap setup, Redis requirement, env vars, API flow, CSV format and public-service usage limitations.
-- [ ] Run Prisma validation and generate.
-- [ ] Run `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build`; record exact totals and failures.
-- [ ] Inspect final diff/file list for secrets, generated build output and unrelated changes.
+- [ ] Escrever testes falhando de UI para seleção só CSV, preview, mapeamento company obrigatório, confirmação, progresso e erros por linha.
+- [ ] Implementar APIs multipart preview/create e hooks tipados.
+- [ ] Implementar upload, preview de cinco linhas, selects de mapeamento, confirmação e resumo de progresso.
+- [ ] Adicionar rota imports e entrada na sidebar.
+- [ ] Garantir reset do file input só após criação bem-sucedida do job.
+- [ ] Executar testes web focados, typecheck web e build web.
 
-## Execution Order
+### Task 7: Segurança cross-module e verificação de integração
 
-1. Task 1 establishes schema and shared ingestion.
-2. Tasks 2 and 4 parser work can proceed in parallel after Task 1 interfaces settle.
-3. Task 3 integrates provider, queue and ingestion.
-4. Task 4 completes CSV backend.
-5. Tasks 5 and 6 can proceed in parallel after their API contracts exist.
-6. Task 7 performs broad security and release verification.
+**Arquivos:**
+- Criar: `apps/api/src/modules/prospecting/prospecting.integration.spec.ts`
+- Criar: `apps/api/src/modules/imports/imports.integration.spec.ts`
+- Modificar: `README.md`
+- Modificar: `docker-compose.yml` somente se configuração de worker exigir.
+
+**Interfaces:**
+- Valida Tasks 1–6 como um release.
+
+- [ ] Escrever testes de integração com provider/filas mockados para isolamento de organização, roles proibidas, UUIDs inválidos, importações duplicadas e falhas de provider sanitizadas.
+- [ ] Executar testes e confirmar que falhas expõem comportamento de integração ausente, não erros de setup de teste.
+- [ ] Corrigir apenas defeitos de integração descobertos pelos testes.
+- [ ] Documentar setup OpenStreetMap, requisito Redis, env vars, fluxo API, formato CSV e limitações de uso de serviços públicos.
+- [ ] Executar validação e generate Prisma.
+- [ ] Executar `pnpm test`, `pnpm typecheck`, `pnpm lint` e `pnpm build`; registrar totais e falhas exatos.
+- [ ] Inspecionar diff/lista final de arquivos por secrets, build output gerado e mudanças não relacionadas.
+
+## Ordem de execução
+
+1. Task 1 estabelece schema e ingestão compartilhada.
+2. Tasks 2 e trabalho de parser da 4 podem seguir em paralelo após interfaces da Task 1 estabilizarem.
+3. Task 3 integra provider, fila e ingestão.
+4. Task 4 completa backend CSV.
+5. Tasks 5 e 6 podem seguir em paralelo após contratos de API existirem.
+6. Task 7 faz verificação ampla de segurança e release.

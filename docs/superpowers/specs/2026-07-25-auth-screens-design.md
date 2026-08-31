@@ -1,72 +1,72 @@
-# Design: Auth screens (login + register)
+# Design: telas de auth (login + register)
 
-**Date:** 2026-07-25  
-**Status:** Approved  
-**Surface:** `apps/web` auth routes (`/login`, `/register`)
+**Data:** 2026-07-25  
+**Status:** Aprovado  
+**Superfície:** rotas de auth em `apps/web` (`/login`, `/register`)
 
-## Problem
+## Problema
 
-Login and register are functional centered cards. They under-sell Prospectly at the conversion moment compared to marketing-grade auth (e.g. MedahLeads), while the landing already has a clear brand voice.
+Login e register são cards centralizados funcionais. Sub-vendem o Prospectly no momento de conversão comparado a auth de nível marketing (ex.: MedahLeads), enquanto a landing já tem voz de marca clara.
 
-## Goals
+## Objetivos
 
-- Redesign login and register as an inspirational, conversion-oriented experience.
-- Keep Prospectly concepts: local B2B prospecting, no-website filter, OSM + Places, pipeline, LGPD, free searches.
-- Align visuals with landing + app (zinc neutrals, emerald accent, Outfit).
-- Preserve existing fields, validation, checkout `plan`/`currency` query flow, and i18n (`pt` / `en`).
+- Redesenhar login e register como experiência inspiradora e orientada à conversão.
+- Manter conceitos Prospectly: prospecção B2B local, filtro sem site, OSM + Places, pipeline, LGPD, buscas grátis.
+- Alinhar visual com landing + app (neutros zinc, acento emerald, Outfit).
+- Preservar campos existentes, validação, fluxo de checkout com query `plan`/`currency` e i18n (`pt` / `en`).
 
-## Non-goals
+## Não-objetivos
 
-- Adding WhatsApp, CPF/CNPJ, or other MedahLeads-only fields
-- Changing auth API contracts
-- Dark-mode-only brand panel
-- Heavy motion / product screenshot theater
+- Adicionar WhatsApp, CPF/CNPJ ou outros campos exclusivos do MedahLeads
+- Alterar contratos da API de auth
+- Painel de marca só dark mode
+- Motion pesada / teatro de screenshot do produto
 
-## Decisions
+## Decisões
 
-| Topic | Choice |
-|-------|--------|
-| Layout | Split-screen (`AuthShell`): brand panel left, form right |
-| Brand panel | Short manifesto + 3 Prospectly benefits |
-| Trust | Trust strip below CTA on **both** login and register |
-| Visual | Light, aligned to landing/app (`hero-wash` style + emerald) |
-| Structure | Shared `AuthShell`; pages own only form logic |
-| Mobile | Stack: compact brand block on top, form below |
-| Copy | New i18n keys under `auth.*`; no hardcoded PT/EN |
+| Tema | Escolha |
+|------|---------|
+| Layout | Split-screen (`AuthShell`): painel de marca à esquerda, formulário à direita |
+| Painel de marca | Manifesto curto + 3 benefícios Prospectly |
+| Confiança | Faixa de confiança abaixo do CTA em **login e register** |
+| Visual | Claro, alinhado a landing/app (estilo `hero-wash` + emerald) |
+| Estrutura | `AuthShell` compartilhado; páginas só com lógica do form |
+| Mobile | Stack: bloco de marca compacto em cima, form embaixo |
+| Copy | Novas chaves i18n em `auth.*`; sem PT/EN hardcoded |
 
-## Architecture
+## Arquitetura
 
 ```
 AuthShell
-├── BrandPanel (manifesto + 3 benefits)
+├── BrandPanel (manifesto + 3 benefícios)
 └── FormColumn
-    ├── title / subtitle (slot or props)
+    ├── title / subtitle (slot ou props)
     ├── children (form)
     └── TrustStrip
 ```
 
-- `login-page.tsx` / `register-page.tsx` keep react-hook-form, zod, API calls.
-- No API / Prisma changes.
+- `login-page.tsx` / `register-page.tsx` mantêm react-hook-form, zod, chamadas API.
+- Sem alterações em API / Prisma.
 
-## Content (concepts)
+## Conteúdo (conceitos)
 
-**Manifesto:** map → qualified local leads → pipeline (same promise as landing).
+**Manifesto:** mapa → leads locais qualificados → pipeline (mesma promessa da landing).
 
-**Benefits (3):**
+**Benefícios (3):**
 
-1. No-website filter  
+1. Filtro sem site  
 2. OpenStreetMap + Google Places  
-3. 3 free searches to validate  
+3. 3 buscas grátis para validar  
 
-**Trust strip:** SSL, LGPD-minded flow, free start (no invented ratings/company counts).
+**Faixa de confiança:** SSL, fluxo mindful de LGPD, início grátis (sem ratings/contagens de empresas inventados).
 
-## Testing
+## Testes
 
-- Unit: `AuthShell` renders brand + trust keys (i18n mock).  
-- Manual: desktop split, mobile stack, login/register flows, plan query params.
+- Unit: `AuthShell` renderiza chaves de marca + confiança (mock i18n).  
+- Manual: split desktop, stack mobile, fluxos login/register, query params de plano.
 
-## Out of scope follow-ups
+## Follow-ups fora de escopo
 
-- Language switcher on auth  
-- Social login  
-- Password visibility toggle (optional later)
+- Seletor de idioma na auth  
+- Login social  
+- Toggle de visibilidade de senha (opcional depois)

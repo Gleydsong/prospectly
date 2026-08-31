@@ -4,57 +4,57 @@ Data: 2026-08-28
 Âmbito: código neste repositório (`apps/api`, `apps/web`, `apps/landing`, infra Docker/Render/CI).  
 **Não é parecer jurídico nem certificação de conformidade.**
 
-## Executive Summary
+## Sumário executivo
 
 Prospectly é SaaS B2B multi-tenant de prospecção local. Já havia fundação sólida de segurança (Argon2, refresh HttpOnly, RLS, tenant guard, DNC parcial, DSR stub). A auditoria encontrou desalinhamento grave entre política (“exclusão”) e código (DSR marcava `COMPLETED` sem apagar), ausência de export real, retenção indefinida, CSV formula injection, e o tratamento de leads (possível PF/MEI) como área de alto risco jurídico.
 
 Correções técnicas desta entrega reduzem a superfície de risco. A conformidade jurídica **depende** de DPO/advogado, RIPD, bases legais de prospecção e contratos com subprocessadores.
 
-## Architecture Overview
+## Visão da arquitetura
 
 Ver `SYSTEM_DATA_FLOW.md`. NestJS + Prisma + Postgres RLS + Redis/BullMQ + React + landing Next.js. IA via Ollama. Billing Abacate/Asaas.
 
-## Personal Data Inventory
+## Inventário de dados pessoais
 
 Ver `DATA_INVENTORY.md`.
 
-## Data Flow
+## Fluxo de dados
 
 Ver `DATA_FLOW.md`.
 
-## Third Parties
+## Terceiros
 
 Ver `THIRD_PARTY_PROCESSORS.md`.
 
-## AI/LLM Analysis
+## Análise de IA/LLM
 
 Ollama local (configurável). Opportunity explanation e WhatsApp **não** enviam e-mail/telefone/endereço/senha. Camada `sanitizeCompanyForLlm` / `sanitizeLlmPayload` + testes. `AiRun` persiste metadados, não o prompt. Sem RAG/embeddings. Se `*_AI_BASE_URL` apontar para cloud: `EXTERNAL_REVIEW_REQUIRED`.
 
-## Authentication
+## Autenticação
 
 JWT Bearer + refresh cookie HttpOnly; lockout 5/15min; rotação refresh; Argon2; Google GIS; reset token na **query string** (risco residual). Contas anonimizadas não autenticam.
 
-## Authorization / Multi-Tenancy
+## Autorização / multi-tenant
 
 `organizationId` só do JWT. RLS FORCE + Prisma guard. Cross-tenant → 404. Testes RLS no CI. Suppression/Consent cobertos no guard/policies.
 
-## Logging / Analytics
+## Logs / analytics
 
 Pino redact compartilhado. Sem GA/PostHog/replay. Sentry stub sem SDK/`beforeSend`.
 
-## Retention / Deletion / Consent / Cookies / Rights
+## Retenção / exclusão / consentimento / cookies / direitos
 
 Ver `DATA_RETENTION_POLICY.md`, `PRIVACY_ENGINEERING.md`. Cookies: só essenciais; analytics off.
 
-## Security / Infrastructure
+## Segurança / infraestrutura
 
 Helmet + HSTS em produção, CORS allowlist, throttle Redis, secret-scan heurístico no CI, `pnpm audit`. Render Postgres/Redis. Backups: dashboard Render.
 
-## Incident Response
+## Resposta a incidentes
 
 `docs/security/INCIDENT_RESPONSE.md`.
 
-## Findings
+## Achados
 
 ### LGPD-001 — DSR COMPLETED sem erasure
 **Severity:** HIGH  
@@ -167,7 +167,7 @@ Helmet + HSTS em produção, CORS allowlist, throttle Redis, secret-scan heurís
 **Severity:** CRITICAL se existisse  
 **Status:** Verificado existente (RLS+CI). Sem regressão intencional.
 
-## Risk Matrix
+## Matriz de risco
 
 | ID | Sev | Status |
 | --- | --- | --- |
@@ -177,7 +177,7 @@ Helmet + HSTS em produção, CORS allowlist, throttle Redis, secret-scan heurís
 | 018–019, 022–023 | HIGH/MED | LEGAL_REVIEW_REQUIRED |
 | 025 | CRITICAL (hipótese) | controlado |
 
-## Legal Review Items
+## Itens de revisão jurídica
 
 1. Base legal de prospecção (LI vs consentimento) e RIPD.
 2. Papel operador vs controlador na política e contrato com clientes.
@@ -190,10 +190,10 @@ Helmet + HSTS em produção, CORS allowlist, throttle Redis, secret-scan heurís
 9. DPA subprocessadores.
 10. Alinhamento contínuo política ↔ produto (Asaas, Ollama, Places).
 
-## Implemented Fixes
+## Correções implementadas
 
 Ver `REMEDIATION_REPORT.md`.
 
-## Remaining Risks
+## Riscos restantes
 
 Prospecção de contactos, CPF em claro, tokens em URL, webhooks em query, retenção de leads/audit/waitlist, backups, transferência internacional, RIPD.

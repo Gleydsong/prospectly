@@ -1,17 +1,17 @@
-# Prospectly workers (BullMQ)
+# Workers Prospectly (BullMQ)
 
-After the Phase 1 metric gate (queue depth, HTTP latency, CPU/memory, Postgres connections, per-job concurrency), split BullMQ processing out of the HTTP API.
+Depois do gate de métricas da Fase 1 (profundidade de fila, latência HTTP, CPU/memória, conexões Postgres, concorrência por job), separe o processamento BullMQ da API HTTP.
 
-## Roles
+## Papéis
 
-| Process | Entrypoint | Responsibility |
+| Processo | Entrypoint | Responsabilidade |
 |---------|------------|----------------|
-| API | `apps/api/src/main.ts` → `dist/main.js` | HTTP + queue **producers** (and dispatch reconcilers). Does **not** register BullMQ processors. |
-| Worker | `apps/api/src/worker.ts` → `dist/worker.js` | Nest application context **without** HTTP listen. Loads `WorkersModule` processors only. |
+| API | `apps/api/src/main.ts` → `dist/main.js` | HTTP + **produtores** de fila (e reconciliadores de dispatch). **Não** registra processors BullMQ. |
+| Worker | `apps/api/src/worker.ts` → `dist/worker.js` | Contexto Nest **sem** `listen` HTTP. Carrega só os processors do `WorkersModule`. |
 
-Queues (shared Redis): prospecting, imports, scoring, website-analysis.
+Filas (Redis compartilhado): prospecting, imports, scoring, website-analysis.
 
-## Local development
+## Desenvolvimento local
 
 ```bash
 # API HTTP + worker BullMQ (mesmo comando)
@@ -22,7 +22,7 @@ pnpm --filter @prospectly/api run dev:api
 pnpm --filter @prospectly/api run dev:worker
 ```
 
-Production-like:
+Parecido com produção:
 
 ```bash
 pnpm --filter @prospectly/api run build
@@ -32,40 +32,40 @@ pnpm --filter @prospectly/api run start:worker  # Worker
 
 ## Docker
 
-Same image, different target/CMD:
+Mesma imagem, target/CMD diferentes:
 
 ```bash
-# API (default final stage — matches current Render blueprint)
+# API (estágio final default — bate com o Blueprint atual da Render)
 docker build -f apps/api/Dockerfile -t prospectly-api --target api .
 
-# Worker (no migrate, no HTTP)
+# Worker (sem migrate, sem HTTP)
 docker build -f apps/api/Dockerfile -t prospectly-worker --target worker .
 ```
 
-Alternative without a second image build: reuse the API image and override the command to `node dist/worker.js` (do **not** run `prisma migrate deploy` on the worker).
+Alternativa sem segundo build: reutilize a imagem da API e sobrescreva o comando para `node dist/worker.js` (**não** rode `prisma migrate deploy` no worker).
 
-## Graceful shutdown
+## Encerramento gracioso
 
-On `SIGTERM` / `SIGINT` the worker:
+Em `SIGTERM` / `SIGINT` o worker:
 
-1. Stops accepting new jobs (BullMQ worker `close` via Nest shutdown hooks).
-2. Waits for in-flight jobs up to `WORKER_SHUTDOWN_TIMEOUT_MS` (default `30000`).
-3. Closes Redis connections and Prisma (`OnModuleDestroy`).
-4. Logs `Worker shutdown complete` (or forces exit on timeout/failure).
+1. Para de aceitar jobs novos (`close` do worker BullMQ via hooks de shutdown do Nest).
+2. Espera jobs em voo até `WORKER_SHUTDOWN_TIMEOUT_MS` (default `30000`).
+3. Fecha conexões Redis e Prisma (`OnModuleDestroy`).
+4. Loga `Worker shutdown complete` (ou força exit em timeout/falha).
 
 ## Migrations
 
-Run **once** per release on the API (or a dedicated migrate job). Workers must **not** run `prisma migrate deploy`.
+Rode **uma vez** por release na API (ou num job dedicado de migrate). Workers **não** devem executar `prisma migrate deploy`.
 
-## Render (proposal — needs approval)
+## Render (proposta — precisa de aprovação)
 
-**Do not apply this to `render.yaml` until approved.** Keep API and worker in the **same region** (`frankfurt`) on the **private network** so both use private `DATABASE_URL` / `REDIS_URL`.
+**Não aplique isto no `render.yaml` até aprovação.** Mantenha API e worker na **mesma região** (`frankfurt`) na **rede privada** para os dois usarem `DATABASE_URL` / `REDIS_URL` privados.
 
-Suggested Blueprint fragment (worker as Render **background worker**, same Dockerfile, `--target worker`):
+Fragmento sugerido de Blueprint (worker como **background worker** da Render, mesmo Dockerfile, `--target worker`):
 
 ```yaml
-# PROPOSED — append under projects[0].environments[0].services
-# Approval required before merging into render.yaml.
+# PROPOSTO — anexar em projects[0].environments[0].services
+# Aprovação obrigatória antes de merge no render.yaml.
 
           - type: worker
             name: prospectly-worker
@@ -76,7 +76,7 @@ Suggested Blueprint fragment (worker as Render **background worker**, same Docke
             dockerfilePath: ./apps/api/Dockerfile
             dockerContext: .
             dockerCommand: node dist/worker.js
-            # If using BuildKit target instead of CMD override:
+            # Se usar target BuildKit em vez de override de CMD:
             # dockerBuildTarget: worker
             autoDeployTrigger: checksPass
             buildFilter:
@@ -122,19 +122,19 @@ Suggested Blueprint fragment (worker as Render **background worker**, same Docke
                 sync: false
 ```
 
-Also update the API service description/docs so it is **HTTP + producers only** (no in-process processors). Scale workers independently of HTTP replicas.
+Atualize também a descrição/docs do serviço da API para ficar **HTTP + produtores apenas** (sem processors in-process). Escale workers independentes das réplicas HTTP.
 
-> Note: confirm the exact Render Blueprint keys (`type: worker` vs `type: background_worker`, and `dockerBuildTarget` support) against the current [render.yaml schema](https://render.com/schema/render.yaml.json) before applying.
+> Nota: confirme as chaves exatas do Blueprint (`type: worker` vs `type: background_worker`, e suporte a `dockerBuildTarget`) no [schema do render.yaml](https://render.com/schema/render.yaml.json) antes de aplicar.
 
-## Acceptance criteria
+## Critérios de aceite
 
-- Scaling workers does not add HTTP replicas.
-- Shutdown does not lose in-flight jobs (within timeout; jobs retry via BullMQ attempts).
-- Worker failure does not take the API down (separate process/service).
-- API remains available if the worker is stopped (jobs queue in Redis).
+- Escalar workers **não** adiciona réplicas HTTP.
+- O shutdown não perde jobs em voo (dentro do timeout; jobs retentam via attempts do BullMQ).
+- Falha do worker não derruba a API (processo/serviço separado).
+- A API continua disponível se o worker parar (jobs ficam na fila Redis).
 
 ## Rollout
 
-1. Deploy worker service first (or together with API that no longer hosts processors).
-2. Confirm queue depth drains and `WorkerBootstrap` logs appear.
-3. Only then remove any temporary inline-worker fallback (none shipped in this change).
+1. Implante o serviço worker primeiro (ou junto com a API que já não hospeda processors).
+2. Confirme que a profundidade da fila drena e que logs `WorkerBootstrap` aparecem.
+3. Só então remova qualquer fallback temporário de worker inline (nenhum enviado nesta mudança).

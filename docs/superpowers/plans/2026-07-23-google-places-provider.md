@@ -1,37 +1,37 @@
-# Google Places Provider Implementation Plan
+# Plano de implementação Google Places Provider
 
-> **For agentic workers:** Inline execution (user requested immediate).
+> **Para agentes:** Execução inline (usuário pediu imediato).
 
-**Goal:** Optional Google Places provider beside OSM, default OSM, hide Google when key missing.
+**Objetivo:** Provider Google Places opcional ao lado do OSM, OSM como default, ocultar Google quando key ausente.
 
-**Architecture:** `SearchProviderRegistry` resolves provider by id; new `GooglePlacesProvider`; `GET /searches/providers`; UI select.
+**Arquitetura:** `SearchProviderRegistry` resolve provider por id; novo `GooglePlacesProvider`; `GET /searches/providers`; select na UI.
 
-**Tech Stack:** NestJS, Places API (New) Text Search, React Query, Zod
+**Stack:** NestJS, Places API (New) Text Search, React Query, Zod
 
-## Global Constraints
+## Restrições globais
 
-- Do not break OSM tests or default create path
-- Never log/expose API key
-- Sanitize provider errors like OSM
+- Não quebrar testes OSM nem caminho default de create
+- Nunca logar/expor API key
+- Sanitizar erros de provider como OSM
 
 ---
 
-### Task 1: Domain + Google provider
+### Task 1: Domain + provider Google
 
-**Files:**
-- Modify: `apps/api/src/modules/prospecting/domain/search-provider.ts`
-- Modify: `apps/api/src/modules/prospecting/domain/normalized-business.ts`
-- Create: `apps/api/src/modules/prospecting/infrastructure/google-places.provider.ts`
-- Create: `apps/api/src/modules/prospecting/infrastructure/google-places.provider.spec.ts`
-- Modify: `apps/api/src/config/configuration.ts`, `validation.ts`, `.env.example`
+**Arquivos:**
+- Modificar: `apps/api/src/modules/prospecting/domain/search-provider.ts`
+- Modificar: `apps/api/src/modules/prospecting/domain/normalized-business.ts`
+- Criar: `apps/api/src/modules/prospecting/infrastructure/google-places.provider.ts`
+- Criar: `apps/api/src/modules/prospecting/infrastructure/google-places.provider.spec.ts`
+- Modificar: `apps/api/src/config/configuration.ts`, `validation.ts`, `.env.example`
 
-### Task 2: Service/controller wiring
+### Task 2: Conexão service/controller
 
-**Files:**
-- Modify: `prospecting.module.ts`, `prospecting.service.ts`, `create-search.dto.ts`, `prospecting.controller.ts`
-- Modify: `prospecting.service.spec.ts`
+**Arquivos:**
+- Modificar: `prospecting.module.ts`, `prospecting.service.ts`, `create-search.dto.ts`, `prospecting.controller.ts`
+- Modificar: `prospecting.service.spec.ts`
 
-### Task 3: Web UI
+### Task 3: UI Web
 
-**Files:**
-- Modify: `apps/web/src/types/index.ts`, `features/prospecting/api.ts`, `hooks.ts`, `pages/search-page.tsx`, `search-page.test.tsx`
+**Arquivos:**
+- Modificar: `apps/web/src/types/index.ts`, `features/prospecting/api.ts`, `hooks.ts`, `pages/search-page.tsx`, `search-page.test.tsx`

@@ -1,82 +1,82 @@
-# Prospectly ops runbook
+# Runbook operacional do Prospectly
 
-Private operational metrics: `GET /api/v1/ops/metrics` (header `X-Prospectly-Ops-Token` matching `OPS_METRICS_TOKEN`, ≥ 32 characters). Tenant JWT roles are not accepted. If the token is unset, the route returns 404. Never expose this route publicly and never put stack traces, lead payloads, or secrets in public health responses.
+Métricas operacionais privadas: `GET /api/v1/ops/metrics` (header `X-Prospectly-Ops-Token` igual a `OPS_METRICS_TOKEN`, ≥ 32 caracteres). Papéis JWT de tenant **não** são aceitos. Se o token não estiver definido, a rota devolve 404. Nunca exponha esta rota publicamente e nunca coloque stack traces, payloads de lead ou secrets nas respostas públicas de health.
 
-Queues in scope: `prospecting`, `imports`, `scoring`, `website-analysis`.
+Filas no escopo: `prospecting`, `imports`, `scoring`, `website-analysis`.
 
-## Stuck queue
+## Fila travada
 
-Symptoms:
+Sintomas:
 
-- `queues.<name>.waiting` or `delayed` grows while `active` stays at 0
-- User actions stay in `PENDING`/`RUNNING` longer than usual
-- `jobs.<name>.retries` climbs without `completed`
+- `queues.<name>.waiting` ou `delayed` cresce enquanto `active` fica em 0
+- Ações do usuário permanecem em `PENDING`/`RUNNING` mais tempo que o usual
+- `jobs.<name>.retries` sobe sem `completed`
 
-Actions:
+Ações:
 
-1. Confirm API process is up: `GET /health/live` and `GET /health/ready`.
-2. Call `GET /api/v1/ops/metrics` with `X-Prospectly-Ops-Token` and note queue depths + recent fail/retry counters.
-3. Check API logs filtered by `correlationId` from the originating HTTP request (`x-correlation-id`).
-4. If Redis is healthy but workers appear idle, restart the API service (workers currently run in-process with HTTP).
-5. For a single stuck search/import, inspect the entity status in the app/DB. Prefer a controlled retry from the product UI over manual Redis edits.
-6. Avoid deleting Redis keys blindly — BullMQ stores job state under queue prefixes.
+1. Confirme que o processo da API está no ar: `GET /health/live` e `GET /health/ready`.
+2. Chame `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` e anote profundidades de fila + contadores recentes de fail/retry.
+3. Filtre os logs da API por `correlationId` da requisição HTTP de origem (`x-correlation-id`).
+4. Se o Redis estiver saudável mas os workers parecerem ociosos, reinicie o serviço da API (hoje os workers rodam in-process com o HTTP).
+5. Para uma pesquisa/importação travada isolada, inspecione o status da entidade no app/DB. Prefira retry controlado pela UI do produto em vez de editar Redis na mão.
+6. Evite apagar chaves Redis às cegas — o BullMQ guarda estado de job sob prefixos de fila.
 
-Escalate if depths keep rising after restart or if failed jobs accumulate with permanent provider errors.
+Escale se as profundidades continuarem subindo depois do restart ou se jobs failed acumularem com erros permanentes de provedor.
 
-## Redis down
+## Redis fora
 
-Symptoms:
+Sintomas:
 
-- `GET /health/ready` returns `503` with `{ "status": "not_ready" }`
-- `ops/metrics` reports `redis.status: "down"` (when the process can still serve the ops token)
-- Enqueue/rate-limit paths fail; jobs stop progressing
+- `GET /health/ready` devolve `503` com `{ "status": "not_ready" }`
+- `ops/metrics` reporta `redis.status: "down"` (quando o processo ainda consegue servir o token de ops)
+- Caminhos de enqueue/rate-limit falham; jobs param de avançar
 
-Actions:
+Ações:
 
-1. Verify the Render Key Value (`prospectly-redis`) instance is running and not exhausted.
-2. Confirm `REDIS_URL` on the API service and that the policy remains `noeviction` (required for BullMQ).
-3. From the API host/network path, test connectivity to Redis (private network only).
-4. Restore Redis before forcing job retries. When Redis returns, re-check `health/ready` and queue depths.
-5. If data loss occurred on an ephemeral/recreated Redis, expect in-flight jobs to be gone — reconcile pending searches/imports from Postgres state and re-dispatch from the app if needed.
+1. Verifique se a instância Key Value da Render (`prospectly-redis`) está no ar e não esgotada.
+2. Confirme `REDIS_URL` no serviço da API e que a política continua `noeviction` (obrigatório para BullMQ).
+3. A partir do host/rede da API, teste conectividade com o Redis (somente rede privada).
+4. Restaure o Redis antes de forçar retries de job. Quando o Redis voltar, reconfira `health/ready` e as profundidades de fila.
+5. Se houve perda de dados num Redis efêmero/recriado, jobs em voo terão sumido — reconcilie pesquisas/importações pendentes a partir do estado no Postgres e redispare pelo app se preciso.
 
-Do not switch Redis to volatile eviction policies.
+Não troque o Redis para políticas de eviction voláteis.
 
-## Provider failure
+## Falha de provedor
 
-Symptoms:
+Sintomas:
 
-- Prospecting jobs fail with sanitized public messages
-- Logs include `provider`, `statusCode`, `reason`, `retryable`, and `correlationId`
-- Permanent failures (e.g. Google Places `SERVICE_DISABLED`) stop retrying (`UnrecoverableError`)
+- Jobs de prospecção falham com mensagens públicas sanitizadas
+- Logs incluem `provider`, `statusCode`, `reason`, `retryable` e `correlationId`
+- Falhas permanentes (ex.: Google Places `SERVICE_DISABLED`) param de retentar (`UnrecoverableError`)
 
-Actions:
+Ações:
 
-1. Pull the `correlationId` from the client response header or API error body and find matching processor logs.
-2. For retryable provider/network errors: wait for BullMQ backoff; confirm retries in `ops/metrics`.
-3. For non-retryable Google Places errors: fix API enablement/key IAM in Google Cloud, then create a new search.
-4. For OpenStreetMap/Nominatim rate limits: reduce concurrency/search volume; confirm Redis rate-limiter keys are available.
-5. Website analysis SSRF/timeouts are expected for blocked/unreachable URLs — treat as lead-level failures, not platform outages.
+1. Pegue o `correlationId` no header da resposta do cliente ou no body de erro da API e ache os logs do processor correspondentes.
+2. Erros retryable de provedor/rede: espere o backoff do BullMQ; confirme retries em `ops/metrics`.
+3. Erros não retryable do Google Places: corrija enablement/IAM da chave no Google Cloud e crie uma pesquisa nova.
+4. Rate limits OpenStreetMap/Nominatim: reduza concorrência/volume de busca; confirme que as chaves do rate-limiter no Redis existem.
+5. SSRF/timeouts de análise de website são esperados para URLs bloqueadas/inatingíveis — trate como falha no nível do lead, não como outage da plataforma.
 
-Never paste raw provider payloads, API keys, or lead PII into tickets/public channels.
+Nunca cole payloads crus de provedor, API keys ou PII de lead em tickets/canais públicos.
 
 ## Rollback
 
-Use when a deploy introduces error spikes, stuck queues, or auth/ops regressions.
+Use quando um deploy introduzir pico de erros, filas travadas ou regressão de auth/ops.
 
-1. Identify the bad deploy in Render (API service `prospectly-api`) and the preceding healthy deploy.
-2. Roll back the API service to the last known-good deploy. Prefer rolling API + web together when the change crossed the auth cookie/`withCredentials` boundary.
-3. Confirm `GET /health/ready` is ready and `GET /api/v1/ops/metrics` (ops token) shows recovering queue depths.
-4. Watch `http.errors5xx`, job `failed`/`retries`, and Redis status for 10–15 minutes.
-5. If migrations were applied in the bad release, do **not** assume a simple image rollback undoes schema changes — follow Prisma migrate guidance / deploy docs before reprocessing jobs.
-6. Communicate impact window and whether users should retry searches/imports.
+1. Identifique o deploy ruim na Render (serviço API `prospectly-api`) e o deploy saudável anterior.
+2. Faça rollback do serviço da API para o último deploy conhecido como bom. Prefira rolar API + web juntos quando a mudança cruzou a fronteira do cookie de refresh / `withCredentials`.
+3. Confirme `GET /health/ready` ready e `GET /api/v1/ops/metrics` (token de ops) com profundidades de fila se recuperando.
+4. Observe `http.errors5xx`, job `failed`/`retries` e status do Redis por 10–15 minutos.
+5. Se migrations foram aplicadas no release ruim, **não** assuma que rollback de imagem desfaz o schema — siga o guia Prisma / docs de deploy antes de reprocessar jobs.
+6. Comunique a janela de impacto e se os usuários devem retentar pesquisas/importações.
 
-## Quick checks
+## Checagens rápidas
 
-| Check | Expected |
+| Checagem | Esperado |
 |-------|----------|
-| `GET /health` | public liveness-style OK, no internals |
-| `GET /health/ready` | ready only when Postgres + Redis respond |
-| `GET /api/v1/ops/metrics` without `OPS_METRICS_TOKEN` configured | 404 |
-| `GET /api/v1/ops/metrics` with missing/wrong `X-Prospectly-Ops-Token` | 401 |
-| `GET /api/v1/ops/metrics` with tenant JWT only | 401 (or 404 if token unset) |
-| `GET /api/v1/ops/metrics` with matching ops token | JSON with `http`, `jobs`, `queues`, `redis` |
+| `GET /health` | OK estilo liveness público, sem internos |
+| `GET /health/ready` | ready só quando Postgres + Redis respondem |
+| `GET /api/v1/ops/metrics` sem `OPS_METRICS_TOKEN` configurado | 404 |
+| `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` ausente/errado | 401 |
+| `GET /api/v1/ops/metrics` só com JWT de tenant | 401 (ou 404 se o token não estiver definido) |
+| `GET /api/v1/ops/metrics` com token de ops correto | JSON com `http`, `jobs`, `queues`, `redis` |

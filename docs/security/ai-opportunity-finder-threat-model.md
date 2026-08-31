@@ -1,4 +1,4 @@
-# Threat model — AI Opportunity Finder
+# Modelo de ameaças — AI Opportunity Finder
 
 ## Fronteiras e dados
 

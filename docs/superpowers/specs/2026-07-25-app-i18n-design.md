@@ -1,41 +1,41 @@
-# Design: App locale (PT / EN)
+# Design: locale do app (PT / EN)
 
-**Date:** 2026-07-25  
-**Status:** Approved  
-**Branch:** `cursor/align-web-ui-mvp` (or follow-up `cursor/app-i18n`)
+**Data:** 2026-07-25  
+**Status:** Aprovado  
+**Branch:** `cursor/align-web-ui-mvp` (ou follow-up `cursor/app-i18n`)
 
-## Problem
+## Problema
 
-The web app UI is hardcoded in Portuguese. Prospectly targets multiple countries; users need the product in their language. Chart and enum labels must also follow the active locale.
+A UI do app web está hardcoded em português. O Prospectly atende vários países; usuários precisam do produto no idioma deles. Rótulos de gráficos e enums também devem seguir o locale ativo.
 
-## Goals
+## Objetivos
 
-- Support **`pt`** and **`en`** in the MVP.
-- Choose locale at **account registration** (pre-selected from browser language).
-- Allow change later in **Settings**.
-- Persist preference on the **User** and apply it after every login.
-- Translate authenticated shell + main pages + lead status / score labels + auth screens.
+- Suportar **`pt`** e **`en`** no MVP.
+- Escolher locale no **cadastro** (pré-selecionado pelo idioma do browser).
+- Permitir alteração depois em **Settings**.
+- Persistir preferência no **User** e aplicá-la após todo login.
+- Traduzir shell autenticado + páginas principais + status de lead / rótulos de score + telas de auth.
 
-## Non-goals (MVP)
+## Não-objetivos (MVP)
 
-- Spanish or extra locales
-- Language switcher in the header
-- Translating transactional emails
-- Translating the marketing landing (separate product surface)
-- Organization-wide forced locale
+- Espanhol ou locales extras
+- Seletor de idioma no header
+- Traduzir e-mails transacionais
+- Traduzir landing de marketing (superfície de produto separada)
+- Locale forçado por organização
 
-## Decisions
+## Decisões
 
-| Topic | Choice |
-|-------|--------|
-| Approach | i18next + `User.locale` |
+| Tema | Escolha |
+|------|---------|
+| Abordagem | i18next + `User.locale` |
 | Locales | `pt`, `en` |
-| Register default | `navigator.language` → `pt*` ⇒ `pt`, else `en` |
-| Change later | Settings only |
-| Date formatting | `pt` → `pt-PT`, `en` → `en-GB` |
-| Ownership | Per user, not per organization |
+| Default no register | `navigator.language` → `pt*` ⇒ `pt`, senão `en` |
+| Alteração depois | Somente Settings |
+| Formatação de data | `pt` → `pt-PT`, `en` → `en-GB` |
+| Ownership | Por usuário, não por organização |
 
-## Data model
+## Modelo de dados
 
 ```prisma
 enum AppLocale {
@@ -49,34 +49,34 @@ model User {
 }
 ```
 
-- Existing users get `pt` via default / migration.
-- `RegisterDto.locale` required (`IsIn(['pt','en'])`).
-- `UpdateProfileDto.locale` optional.
-- `AuthUser` / auth response include `locale`.
-- `GET /users/me` and `PATCH /users/me` expose `locale`.
+- Usuários existentes recebem `pt` via default / migration.
+- `RegisterDto.locale` obrigatório (`IsIn(['pt','en'])`).
+- `UpdateProfileDto.locale` opcional.
+- `AuthUser` / resposta de auth incluem `locale`.
+- `GET /users/me` e `PATCH /users/me` expõem `locale`.
 
-## Frontend architecture
+## Arquitetura frontend
 
-- Dependencies: `i18next`, `react-i18next`.
+- Dependências: `i18next`, `react-i18next`.
 - Resources: `apps/web/src/i18n/locales/{pt,en}.json`.
-- Bootstrap: init i18n in `main.tsx`; sync `i18n.language` when auth user loads / locale updates.
+- Bootstrap: init i18n em `main.tsx`; sincronizar `i18n.language` quando user auth carrega / locale atualiza.
 - Helpers: `detectBrowserLocale()`, `toDateLocale(appLocale)`.
-- `lead-status` labels move into translation keys (`status.NEW`, etc.).
-- Register: select PT/EN with browser-detected default.
-- Settings: card “Language / Idioma” calling `PATCH /users/me`.
+- Rótulos de `lead-status` migram para chaves de tradução (`status.NEW`, etc.).
+- Register: select PT/EN com default detectado do browser.
+- Settings: card “Language / Idioma” chamando `PATCH /users/me`.
 
-## UX copy rules
+## Regras de copy UX
 
-- Keys organized by namespace: `common`, `nav`, `auth`, `dashboard`, `leads`, `settings`, …
-- No mixed languages in one session after preference is set.
-- Fallback language: `en` if a key is missing in `pt` (and vice-versa only if needed; primary fallback `en`).
+- Chaves organizadas por namespace: `common`, `nav`, `auth`, `dashboard`, `leads`, `settings`, …
+- Sem idiomas misturados na mesma sessão após preferência definida.
+- Idioma fallback: `en` se faltar chave em `pt` (e vice-versa só se necessário; fallback primário `en`).
 
-## Testing
+## Testes
 
-- API: register persists locale; patch updates locale; auth payload includes locale.
-- Web: browser detect helper unit tests; settings update syncs i18n; dashboard status chart uses translated labels.
+- API: register persiste locale; patch atualiza locale; payload auth inclui locale.
+- Web: unit tests do helper de detect browser; update settings sincroniza i18n; gráfico de status no dashboard usa rótulos traduzidos.
 
-## Risks
+## Riscos
 
-- Large string surface — ship shell + main flows first; leftover PT strings are follow-ups.
-- Auth store persistence must update `user.locale` after settings change without full re-login.
+- Superfície grande de strings — entregar shell + fluxos principais primeiro; strings PT restantes são follow-ups.
+- Persistência do auth store deve atualizar `user.locale` após mudança em settings sem re-login completo.

@@ -1,18 +1,18 @@
 # Especificação: integração Asaas para cartões
 
-## Problem Statement
+## Problema
 
 O Prospectly oferece compras de pacotes de créditos e acesso mensal, mas o fluxo atual aceita somente Pix pelo AbacatePay. A organização precisa poder pagar com cartão sem que o Prospectly capture ou processe dados do cartão, preservando o Pix existente, os contratos históricos e a ativação de benefícios somente após confirmação financeira confiável.
 
 A integração também precisa suportar falhas ambíguas, reenvios de webhook, estornos e chargebacks sem conceder benefícios em duplicidade, sem perder eventos e sem permitir que uma tentativa incerta gere cobranças repetidas.
 
-## Solution
+## Solução
 
 Adicionar o Asaas como provedor de cartão, mantendo o AbacatePay como provedor exclusivo de Pix. Compras avulsas aceitarão crédito ou débito em página hospedada pelo Asaas; o acesso mensal aceitará crédito recorrente pelo checkout hospedado do Asaas ou Pix avulso por 30 dias pelo AbacatePay.
 
 O Prospectly armazenará apenas o perfil mínimo de cobrança e os identificadores externos necessários. A ativação, renovação, revogação ou reversão de benefícios ocorrerá a partir de eventos autenticados, persistidos em uma inbox PostgreSQL e confirmados por consulta autoritativa ao Asaas. Toda a entrega ficará protegida por `ASAAS_ENABLED=false` até homologação e autorização explícita.
 
-## User Stories
+## Histórias de usuário
 
 1. Como membro de uma organização, quero comprar um pacote de 2.000 créditos por R$ 14,99, para ampliar meu uso do Prospectly.
 2. Como membro de uma organização, quero comprar um pacote de 5.000 créditos por R$ 23,99, para ampliar meu uso com melhor volume.
@@ -54,7 +54,7 @@ O Prospectly armazenará apenas o perfil mínimo de cobrança e os identificador
 38. Como responsável pelo produto, quero autorizar explicitamente a habilitação em produção, para controlar o início das cobranças reais.
 39. Como responsável financeiro, quero executar um smoke financeiro controlado após a autorização, para confirmar o fluxo real com risco limitado.
 
-## Implementation Decisions
+## Decisões de implementação
 
 - O AbacatePay permanece como provedor exclusivo de Pix; o Asaas será adicionado como provedor de cartões.
 - O checkout avulso de pacote usará cobrança hospedada Asaas compatível com crédito ou débito. O acesso mensal recorrente usará checkout hospedado Asaas com cartão de crédito.
@@ -86,7 +86,7 @@ O Prospectly armazenará apenas o perfil mínimo de cobrança e os identificador
 - Credenciais e segredo de webhook serão configurados fora do repositório. Nenhum segredo será incluído em código, migração, fixture, documentação ou log.
 - A ativação em produção, o smoke financeiro e qualquer ação real no Asaas exigem autorização explícita e não fazem parte da execução automatizada desta especificação.
 
-## Testing Decisions
+## Decisões de teste
 
 - Bons testes observarão comportamento por interfaces públicas e limites estáveis; não verificarão funções privadas, ordem interna de chamadas ou detalhes incidentais de implementação.
 - A API de Billing será o principal seam de comportamento para checkout, perfil de cobrança, autorização, bloqueio `REVIEW_REQUIRED`, cancelamento e consulta de status.
@@ -98,7 +98,7 @@ O Prospectly armazenará apenas o perfil mínimo de cobrança e os identificador
 - Nenhum teste automatizado usará credenciais reais nem criará pagamento no Asaas.
 - A homologação Sandbox será executada separadamente por wizard para crédito, débito hospedado, recorrência, timeout, refund e chargeback.
 
-## Out of Scope
+## Fora de escopo
 
 - Parcelamento.
 - Captura transparente de dados de cartão no Prospectly.
@@ -110,7 +110,7 @@ O Prospectly armazenará apenas o perfil mínimo de cobrança e os identificador
 - Habilitação em produção, smoke financeiro real ou alteração de credenciais de produção.
 - Introdução de nova infraestrutura externa ou nova fila apenas para esta integração.
 
-## Further Notes
+## Notas adicionais
 
 - A documentação técnica do Asaas deverá ser consultada pelo MCP oficial durante a implementação, especialmente para contratos de criação, consulta, webhooks, cancelamento e recorrência.
 - A configuração de conta, credenciais e webhook Sandbox será conduzida pelo workflow `wizard`, pois depende de ações humanas e segredos.
