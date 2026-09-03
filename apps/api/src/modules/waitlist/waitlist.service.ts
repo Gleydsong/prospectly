@@ -5,7 +5,7 @@ import { AppLocale } from '@prisma/client';
 import { MailService } from '../../common/mail/mail.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { JoinWaitlistDto } from './dto/join-waitlist.dto';
-import { buildWaitlistConfirmationEmail, escapeHtml } from './waitlist-email';
+import { buildWaitlistConfirmationEmail, buildWaitlistNotifyEmail } from './waitlist-email';
 
 export type JoinWaitlistResult = { message: string };
 
@@ -56,29 +56,34 @@ export class WaitlistService {
     }
 
     try {
-      await this.mail.send(this.confirmationMail(email, locale));
+      const confirmation = this.confirmationMail(email, locale);
+      await this.mail.send(confirmation);
       await this.prisma.waitlistEntry.update({
         where: { id: entry.id },
         data: { notifiedAt: new Date() },
       });
     } catch (err) {
       this.logger.error(
-        `Failed to send waitlist confirmation to ${email}: ${err instanceof Error ? err.message : String(err)}`,
+        { template: 'waitlist-confirmation', outcome: 'failed' },
+        `Failed to send waitlist confirmation: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
 
     const notifyTo = this.config.get<string>('waitlist.notifyTo')?.trim();
     if (notifyTo) {
       try {
+        const notify = buildWaitlistNotifyEmail({ email, locale, source });
         await this.mail.send({
           to: notifyTo,
-          subject: `Novo waitlist: ${email}`,
-          text: `Novo cadastro na lista de espera.\n\nE-mail: ${email}\nLocale: ${locale}\nSource: ${source}\n`,
-          html: `<p>Novo cadastro na lista de espera.</p><p><strong>E-mail:</strong> ${escapeHtml(email)}<br/><strong>Locale:</strong> ${escapeHtml(locale)}<br/><strong>Source:</strong> ${escapeHtml(source)}</p>`,
+          subject: notify.subject,
+          text: notify.text,
+          html: notify.html,
+          template: notify.template,
         });
       } catch (err) {
         this.logger.error(
-          `Failed to notify team about waitlist ${email}: ${err instanceof Error ? err.message : String(err)}`,
+          { template: 'waitlist-notify', outcome: 'failed' },
+          `Failed to notify team about waitlist: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }
@@ -87,12 +92,16 @@ export class WaitlistService {
   }
 
   private confirmationMail(email: string, locale: AppLocale) {
-    const content = buildWaitlistConfirmationEmail(locale);
+    const content = buildWaitlistConfirmationEmail(
+      locale,
+      this.config.get<string>('landingUrl'),
+    );
     return {
       to: email,
       subject: content.subject,
       text: content.text,
       html: content.html,
+      template: 'waitlist-confirmation',
     };
   }
 

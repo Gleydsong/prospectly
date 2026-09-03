@@ -12,6 +12,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantContextInterceptor } from './common/prisma/tenant-context.interceptor';
 import { HealthModule } from './common/health/health.module';
 import { MailModule } from './common/mail/mail.module';
+import { EmailPreviewModule, shouldEnableEmailPreview } from './common/mail/preview/email-preview.module';
 import { RateLimitGuard } from './common/throttler/rate-limit.guard';
 import { RedisThrottlerModule } from './common/throttler/redis-throttler.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
@@ -112,6 +113,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     AgentsModule,
     OpportunityFinderModule,
     PrivacyModule,
+    ...(shouldEnableEmailPreview() ? [EmailPreviewModule] : []),
     // Production Render currently has no dedicated worker service. Process
     // BullMQ jobs in the API so searches/checkout side-effects do not stall.
     WorkersModule,

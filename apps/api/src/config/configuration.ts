@@ -14,6 +14,8 @@ export const configuration = () => ({
     sameSite: process.env.REFRESH_COOKIE_SAME_SITE,
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  landingUrl:
+    process.env.FRONTEND_LANDING_URL ?? process.env.LANDING_URL ?? 'https://prospectlyonboard.com',
   corsOrigins:
     process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001',
   google: {

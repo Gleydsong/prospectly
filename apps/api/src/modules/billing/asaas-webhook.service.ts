@@ -17,7 +17,7 @@ import { MetricsService } from '../ops/metrics.service';
 import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import type { BillingDb } from './billing-db';
 import { BillingActivationService } from './billing-activation.service';
-import { CreditPurchaseService } from './credit-purchase.service';
+import { CreditPurchaseService, type CompletedCreditPurchase } from './credit-purchase.service';
 import { AsaasClient, type AsaasPayment } from './infrastructure/asaas.client';
 import {
   MONTHLY_CHECKOUT_PROCESSING_LEASE_MS,
@@ -186,8 +186,9 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     try {
       const envelope = this.parseStoredEnvelope(event.payload);
       const payment = await this.client.getPayment(envelope.payment.id);
+      let granted: CompletedCreditPurchase | null = null;
       await this.prisma.$transaction(async (tx) => {
-        await this.applyPayment(tx, event.type, payment);
+        granted = await this.applyPayment(tx, event.type, payment);
         await tx.billingWebhookEvent.updateMany({
           where: { provider: PaymentProvider.ASAAS, eventId },
           data: {
@@ -198,6 +199,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
           },
         });
       });
+      if (granted) await this.purchases.notifyCreditsPurchased(granted);
       this.metrics?.recordWebhookProcessed();
       this.logger.log({
         event: 'webhook_processed',
@@ -232,7 +234,11 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async applyPayment(db: BillingDb, type: string, payment: AsaasPayment): Promise<void> {
+  private async applyPayment(
+    db: BillingDb,
+    type: string,
+    payment: AsaasPayment,
+  ): Promise<CompletedCreditPurchase | null> {
     const tx = '$transaction' in db ? undefined : db;
     const purchase = payment.externalReference
       ? await db.creditPurchase.findUnique({
@@ -257,13 +263,14 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       this.assertSupportedReversal(type);
       this.assertChargebackTerminal(type, payment);
       if (this.isBenefitReceived(type, payment, isPix)) {
-        await this.purchases.completeById(purchase.id, payment.id, tx);
-      } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
+        return this.purchases.completeById(purchase.id, payment.id, tx);
+      }
+      if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
         await this.purchases.refundById(purchase.id, tx);
       } else if (type.startsWith('PAYMENT_CHARGEBACK') && this.isConfirmedChargeback(payment)) {
         await this.purchases.refundById(purchase.id, tx);
       }
-      return;
+      return null;
     }
 
     const monthly = await this.resolveMonthlyCheckout(db, payment);
@@ -326,6 +333,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer, tx);
       }
     }
+    return null;
   }
 
   /**
@@ -494,7 +502,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
               ? 'PAYMENT_CHARGEBACK_REQUESTED'
               : null;
     if (eventType) {
-      await this.prisma.$transaction((tx) => this.applyPayment(tx, eventType, payment));
+      const granted = await this.prisma.$transaction((tx) =>
+        this.applyPayment(tx, eventType, payment),
+      );
+      if (granted) await this.purchases.notifyCreditsPurchased(granted);
     }
   }
 

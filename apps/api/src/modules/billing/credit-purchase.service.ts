@@ -1,21 +1,39 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   BillingPaymentMethod,
   CreditPurchaseStatus,
   PaymentProvider,
   Prisma,
+  Role,
 } from '@prisma/client';
 
+import { MailService } from '../../common/mail/mail.service';
+import { buildCreditsPurchasedEmail } from '../../common/mail/templates/credits-purchased-email';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { BillingDb } from './billing-db';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import type { CreditOffer, PaymentMethod } from './domain/payment-provider';
 
+export type CompletedCreditPurchase = {
+  id: string;
+  organizationId: string;
+  credits: number;
+  amountCentavos: number;
+  currency: string;
+  completedAt: Date;
+  balanceAfter: number;
+};
+
 @Injectable()
 export class CreditPurchaseService {
   private readonly logger = new Logger(CreditPurchaseService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
+  ) {}
 
   async createPending(input: {
     organizationId: string;
@@ -127,10 +145,9 @@ export class CreditPurchaseService {
     purchaseId: string,
     externalPaymentId: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<void> {
+  ): Promise<CompletedCreditPurchase | null> {
     if (tx) {
-      await this.completePurchase(tx, purchaseId, externalPaymentId);
-      return;
+      return this.completePurchase(tx, purchaseId, externalPaymentId);
     }
     const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
     if (
@@ -138,10 +155,8 @@ export class CreditPurchaseService {
       (purchase.status !== CreditPurchaseStatus.PENDING &&
         purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
     )
-      return;
-    await this.prisma.$transaction((inner) =>
-      this.completePurchase(inner, purchase.id, externalPaymentId),
-    );
+      return null;
+    return this.completePurchase(this.prisma, purchase.id, externalPaymentId);
   }
 
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
@@ -201,15 +216,15 @@ export class CreditPurchaseService {
     db: BillingDb,
     purchaseId: string,
     externalPaymentId?: string,
-  ): Promise<void> {
-    const run = async (tx: BillingDb) => {
+  ): Promise<CompletedCreditPurchase | null> {
+    const run = async (tx: BillingDb): Promise<CompletedCreditPurchase | null> => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (
         !current ||
         (current.status !== CreditPurchaseStatus.PENDING &&
           current.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
       )
-        return;
+        return null;
       const claimed = await tx.creditPurchase.updateMany({
         where: { id: current.id, status: current.status },
         data: {
@@ -218,7 +233,7 @@ export class CreditPurchaseService {
           ...(externalPaymentId ? { externalPaymentId } : {}),
         },
       });
-      if (claimed.count !== 1) return;
+      if (claimed.count !== 1) return null;
       const organization = await tx.organization.update({
         where: { id: current.organizationId },
         data: { creditBalance: { increment: current.credits } },
@@ -235,13 +250,87 @@ export class CreditPurchaseService {
           metadata: { provider: current.provider, paymentMethod: current.paymentMethod },
         },
       });
+      return {
+        id: current.id,
+        organizationId: current.organizationId,
+        credits: current.credits,
+        amountCentavos: current.amountCentavos,
+        currency: current.currency,
+        completedAt: new Date(),
+        balanceAfter: organization.creditBalance,
+      } satisfies CompletedCreditPurchase;
     };
 
     if ('$transaction' in db) {
-      await this.prisma.$transaction((inner) => run(inner));
-      return;
+      const completed = await this.prisma.$transaction((inner) => run(inner));
+      if (completed) await this.notifyCreditsPurchased(completed);
+      return completed ?? null;
     }
-    await run(db);
+
+    return run(db);
+  }
+
+  async notifyCreditsPurchased(purchase: CompletedCreditPurchase): Promise<void> {
+    try {
+      const recipients = await this.prisma.organizationMember.findMany({
+        where: {
+          organizationId: purchase.organizationId,
+          role: { in: [Role.OWNER, Role.ADMIN] },
+        },
+        select: {
+          user: {
+            select: { email: true, name: true, locale: true, anonymizedAt: true },
+          },
+        },
+      });
+      const appUrl = (this.config.get<string>('frontendUrl') ?? 'http://localhost:5173').replace(
+        /\/$/,
+        '',
+      );
+
+      for (const member of recipients) {
+        const user = member.user;
+        if (!user?.email || user.anonymizedAt) continue;
+        const content = buildCreditsPurchasedEmail({
+          locale: user.locale === 'en' ? 'en' : 'pt',
+          fullName: user.name,
+          credits: purchase.credits,
+          amountCentavos: purchase.amountCentavos,
+          currency: purchase.currency,
+          purchasedAt: purchase.completedAt,
+          balanceAfter: purchase.balanceAfter,
+          appUrl,
+        });
+        await this.mail.send({
+          to: user.email,
+          subject: content.subject,
+          text: content.text,
+          html: content.html,
+          template: content.template,
+        });
+      }
+
+      this.logger.log(
+        {
+          template: 'credits-purchased',
+          purchaseId: purchase.id,
+          organizationId: purchase.organizationId,
+          outcome: 'notified',
+        },
+        'credit purchase email dispatched',
+      );
+    } catch (err) {
+      this.logger.error(
+        {
+          template: 'credits-purchased',
+          purchaseId: purchase.id,
+          organizationId: purchase.organizationId,
+          outcome: 'failed',
+          reason: err instanceof Error ? err.message : String(err),
+        },
+        'credit purchase email failed',
+      );
+    }
   }
 
   private readMetadata(data: Record<string, unknown>): Record<string, string> {

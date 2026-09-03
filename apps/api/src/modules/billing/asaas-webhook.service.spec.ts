@@ -37,7 +37,7 @@ describe('AsaasWebhookService', () => {
     organization: prisma.organization,
   };
   const client = { getPayment: jest.fn(), findPayment: jest.fn() };
-  const purchases = { completeById: jest.fn(), refundById: jest.fn() };
+  const purchases = { completeById: jest.fn(), refundById: jest.fn(), notifyCreditsPurchased: jest.fn() };
   const activation = { activateMonthly: jest.fn(), syncMonthlyStatus: jest.fn() };
   const monthlyAttempts = {
     markResolved: jest.fn(),
