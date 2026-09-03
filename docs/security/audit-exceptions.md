@@ -1,6 +1,6 @@
 # Dependências — exceções e política de audit
 
-Atualizado: **2026-08-20**.
+Atualizado: **2026-09-03**.
 
 ## Política de CI
 
@@ -25,6 +25,7 @@ Atualizado: **2026-08-20**.
 | `tmp` | `pnpm.overrides` `>=0.2.6` | GHSA-ph9p-34f9-6g65 — via Nest CLI / inquirer | external-editor pinar tmp ≥0.2.6 |
 | `postcss` | `pnpm.overrides` `>=8.5.18` | GHSA-r28c-9q8g-f849 — transitiva via Next | Next pinar postcss seguro |
 | `deepmerge-ts` | `pnpm.overrides` `8.0.0` | GHSA-ggr8-5vv4-36mx — via `prisma` / `@prisma/config` | Prisma pinar `deepmerge-ts` ≥8 |
+| `fast-uri` | `pnpm.overrides` `>=3.0.0 <3.1.6` → `3.1.6` | GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp — via ajv / Nest CLI / commitlint | ajv pinar fast-uri ≥3.1.6 |
 | `brace-expansion` | overrides por major | tooling (eslint/nest-cli) | ESLint 9 / Nest CLI atualizado |
 | `react-router` / `react-router-dom` | Direto `^7.18.2` + `auditConfig.ignoreGhsas` | Ver seção abaixo | Quando o advisory DB do npm listar `>=7.18.2` como patched **ou** existir `react-router-dom@8` compatível com React 18 SPA |
 
