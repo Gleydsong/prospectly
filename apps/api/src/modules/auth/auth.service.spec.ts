@@ -294,6 +294,102 @@ describe('AuthService', () => {
     expect(result.user.emailVerifiedAt).toBeNull();
   });
 
+  it('register sends an HTML activation email with a 24h expiry', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const createdUser = {
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt' as const,
+      emailVerifiedAt: null,
+    };
+    prisma.user.update.mockResolvedValue(createdUser);
+    (prisma.organization as unknown as { findUnique: jest.Mock }).findUnique = jest
+      .fn()
+      .mockResolvedValue(null);
+    (prisma.organization as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ id: 'org1', name: 'Agency', slug: 'agency' });
+    (prisma.user as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue(createdUser);
+    (prisma.organizationMember as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ userId: 'u1', organizationId: 'org1', role: 'OWNER' });
+    (prisma.pipeline as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({ id: 'p1' });
+    (prisma.pipelineStage as unknown as { createMany: jest.Mock }).createMany = jest
+      .fn()
+      .mockResolvedValue({ count: 10 });
+    prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+      fn(prisma),
+    );
+    (prisma.organization as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'org1', name: 'Agency' });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue(createdUser);
+    (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
+
+    const mail = makeMail();
+    const service = new AuthService(
+      prisma,
+      makeJwt(),
+      makeConfig({ frontendUrl: 'https://app.prospectlyonboard.com' }),
+      mail,
+    );
+    await service.register({
+      name: 'Ana',
+      email: 'ana@agency.dev',
+      password: 'Passw0rd!',
+      organizationName: 'Agency',
+      locale: 'pt',
+      acceptTerms: true,
+    });
+
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'ana@agency.dev',
+        template: 'account-activation',
+        subject: 'Ative sua conta na Prospectly',
+        html: expect.stringContaining('/verify-email?token='),
+      }),
+    );
+    const payload = (mail.send as jest.Mock).mock.calls[0][0] as { html: string; text: string };
+    expect(payload.html).toContain('Ativar minha conta');
+    expect(payload.text).toContain('24 horas');
+  });
+
+  it('verifyEmail sends a welcome email after the first confirmation', async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt',
+      pendingEmail: null,
+      emailVerifyTokenHash: 'hash',
+      emailVerifyTokenExpiresAt: new Date(Date.now() + 60_000),
+    });
+    prisma.user.update.mockResolvedValue({});
+    const mail = makeMail();
+    const service = new AuthService(
+      prisma,
+      makeJwt(),
+      makeConfig({ frontendUrl: 'https://app.prospectlyonboard.com' }),
+      mail,
+    );
+
+    await service.verifyEmail('raw-token');
+
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'ana@agency.dev',
+        template: 'welcome',
+        subject: 'Bem-vindo à Prospectly',
+      }),
+    );
+  });
+
   it('login fails with unknown email using generic message', async () => {
     const prisma = makePrisma();
     prisma.user.findUnique.mockResolvedValue(null);
