@@ -1,140 +1,114 @@
 # Workers Prospectly (BullMQ)
 
-Depois do gate de métricas da Fase 1 (profundidade de fila, latência HTTP, CPU/memória, conexões Postgres, concorrência por job), separe o processamento BullMQ da API HTTP.
+API HTTP e worker BullMQ são processos distintos. PostgreSQL é a fonte da verdade; Redis/BullMQ é só transporte recuperável. ADR: [`docs/adr/0006-separate-bullmq-worker.md`](../adr/0006-separate-bullmq-worker.md).
 
 ## Papéis
 
 | Processo | Entrypoint | Responsabilidade |
 |---------|------------|----------------|
-| API | `apps/api/src/main.ts` → `dist/main.js` | HTTP + **produtores** de fila (e reconciliadores de dispatch). **Não** registra processors BullMQ. |
-| Worker | `apps/api/src/worker.ts` → `dist/worker.js` | Contexto Nest **sem** `listen` HTTP. Carrega só os processors do `WorkersModule`. |
+| API | `apps/api/src/main.ts` → `node apps/api/dist/main.js` (produção Node) | HTTP, produtores de fila, reconciliadores de dispatch, `RetentionScheduler`, polling de webhook Asaas. **Zero** `@Processor`. |
+| Worker | `apps/api/src/worker.ts` → `node apps/api/dist/worker.js` | Application context Nest **sem** `listen`. Processors BullMQ. **Zero** HTTP, migrations, schedulers, reconciliadores ou webhook polling. |
 
-Filas (Redis compartilhado): prospecting, imports, scoring, website-analysis.
+`main.ts` força `ROLE=api`. `worker.ts` força `ROLE=worker`. `validateEnv` é role-aware: worker exige `DATABASE_URL`, `REDIS_URL` e `DATABASE_APP_URL` em produção; não exige JWT/billing.
+
+Filas: prospecting, imports, scoring, website-analysis, opportunity-finder, privacy-retention.
+
+Composição:
+
+- `WorkersModule` — os seis processors (incluindo `RetentionProcessor`).
+- `ApiDispatchModule` — reconciliadores de prospecting, imports, website-analysis e opportunity-finder. Só no `AppModule`.
+- `PrivacyModule` — scheduler + HTTP de privacidade. Só na API.
+- `PrivacyRetentionModule` — `RetentionService` + fila. API e worker.
+- `BillingCoreModule` — serviços de crédito/entitlement. `BillingModule` (API) adiciona controller + `AsaasWebhookService`.
 
 ## Desenvolvimento local
 
 ```bash
-# API HTTP + worker BullMQ (mesmo comando)
-pnpm --filter @prospectly/api run dev
-
-# Opcional: processos isolados
+pnpm --filter @prospectly/api run dev          # API + worker
 pnpm --filter @prospectly/api run dev:api
 pnpm --filter @prospectly/api run dev:worker
-```
-
-Parecido com produção:
-
-```bash
 pnpm --filter @prospectly/api run build
-pnpm --filter @prospectly/api run start          # API
-pnpm --filter @prospectly/api run start:worker  # Worker
+pnpm --filter @prospectly/api run start        # API
+pnpm --filter @prospectly/api run start:worker
 ```
 
-## Docker
+## Docker (imagem, não o runtime live da API)
 
-Mesma imagem, target/CMD diferentes:
+A API **live** na Render é runtime **Node**, não Docker. O Dockerfile ainda tem targets `api` / `worker` para builds locais e um eventual corte Docker.
 
 ```bash
-# API (estágio final default — bate com o Blueprint atual da Render)
 docker build -f apps/api/Dockerfile -t prospectly-api --target api .
-
-# Worker (sem migrate, sem HTTP)
 docker build -f apps/api/Dockerfile -t prospectly-worker --target worker .
 ```
 
-Alternativa sem segundo build: reutilize a imagem da API e sobrescreva o comando para `node dist/worker.js` (**não** rode `prisma migrate deploy` no worker).
+Não rode `prisma migrate deploy` no worker.
 
 ## Encerramento gracioso
 
-Em `SIGTERM` / `SIGINT` o worker:
+`SIGTERM` / `SIGINT`:
 
-1. Para de aceitar jobs novos (`close` do worker BullMQ via hooks de shutdown do Nest).
+1. Para intake BullMQ via `app.close()`.
 2. Espera jobs em voo até `WORKER_SHUTDOWN_TIMEOUT_MS` (default `30000`).
-3. Fecha conexões Redis e Prisma (`OnModuleDestroy`).
-4. Loga `Worker shutdown complete` (ou força exit em timeout/falha).
+3. Fecha Redis/Prisma.
+4. Loga `Worker shutdown complete` (ou force exit).
 
 ## Migrations
 
-Rode **uma vez** por release na API (ou num job dedicado de migrate). Workers **não** devem executar `prisma migrate deploy`.
+Uma vez por release, fora do worker. Ver [`migrations.md`](./migrations.md).
 
-## Render (proposta — precisa de aprovação)
+## Render — não sincronize o Blueprint
 
-**Não aplique isto no `render.yaml` até aprovação.** Mantenha API e worker na **mesma região** (`frankfurt`) na **rede privada** para os dois usarem `DATABASE_URL` / `REDIS_URL` privados.
+Produção observada (2026-09-03), **não** igual ao `render.yaml`:
 
-Fragmento sugerido de Blueprint (worker como **background worker** da Render, mesmo Dockerfile, `--target worker`):
+| Recurso | Live | `render.yaml` | Ação |
+| --- | --- | --- | --- |
+| `prospectly-api` | Node, `0.5c-512mb`, frankfurt, commit `03e4f60` | Docker starter | não sync |
+| `prospectly-web` | static starter | static | não sync |
+| landing `prospectly` | **free** | landing starter | não sync |
+| `prospectly-db` | `0.1c-256mb`, disk 1GB | `basic-256mb`, disk 5GB | não sync |
+| `prospectly-redis` | **free**, noeviction | starter | não sync |
+| `prospectly-worker` | ausente | não declarado | criar **só** este serviço |
 
-```yaml
-# PROPOSTO — anexar em projects[0].environments[0].services
-# Aprovação obrigatória antes de merge no render.yaml.
+Custo de tabela do worker Starter / `0.5c-512mb`: **US$7/mês**. Workspace Hobby sem taxa extra. Qualquer preview de Blueprint que mude Redis/DB/landing/API: **parar**.
 
-          - type: worker
-            name: prospectly-worker
-            runtime: docker
-            region: frankfurt
-            plan: starter
-            branch: main
-            dockerfilePath: ./apps/api/Dockerfile
-            dockerContext: .
-            dockerCommand: node dist/worker.js
-            # Se usar target BuildKit em vez de override de CMD:
-            # dockerBuildTarget: worker
-            autoDeployTrigger: checksPass
-            buildFilter:
-              paths:
-                - apps/api/**
-                - packages/**
-                - pnpm-lock.yaml
-                - pnpm-workspace.yaml
-                - package.json
-            envVars:
-              - key: NODE_ENV
-                value: production
-              - key: ROLE
-                value: worker
-              - key: WORKER_SHUTDOWN_TIMEOUT_MS
-                value: "30000"
-              - key: DATABASE_URL
-                fromDatabase:
-                  name: prospectly-db
-                  property: connectionString
-              - key: REDIS_URL
-                fromService:
-                  type: keyvalue
-                  name: prospectly-redis
-                  property: connectionString
-              - key: JWT_ACCESS_SECRET
-                fromService:
-                  type: web
-                  name: prospectly-api
-                  envVarKey: JWT_ACCESS_SECRET
-              - key: JWT_REFRESH_SECRET
-                fromService:
-                  type: web
-                  name: prospectly-api
-                  envVarKey: JWT_REFRESH_SECRET
-              - key: OSM_USER_AGENT
-                value: Prospectly/1.0 (https://prospectly.dev)
-              - key: GOOGLE_PLACES_API_KEY
-                sync: false
-              - key: LOG_LEVEL
-                value: info
-              - key: SENTRY_DSN
-                sync: false
-```
+### Serviço worker (operação dirigida)
 
-Atualize também a descrição/docs do serviço da API para ficar **HTTP + produtores apenas** (sem processors in-process). Escale workers independentes das réplicas HTTP.
+- tipo API: `background_worker` (Blueprint: `type: worker`)
+- nome: `prospectly-worker`
+- runtime: **node** (igual à API live)
+- região: `frankfurt`
+- plano: `starter` / `0.5c-512mb`
+- branch: `main` depois do rollout; no corte pode apontar para a branch do worker
+- build: o mesmo da API (`pnpm install --frozen-lockfile --filter @prospectly/api... --config.production=false && pnpm --filter @prospectly/shared-types run build && pnpm --filter @prospectly/api exec prisma generate && pnpm --filter @prospectly/api run build`)
+- start: `node apps/api/dist/worker.js`
+- `autoDeploy`: `no` até o worker estar live; depois `checksPass` se a API já estiver sem processors
+- env: `ROLE=worker`, `NODE_ENV=production`, `WORKER_SHUTDOWN_TIMEOUT_MS=30000`
+- copiar da API (valores via Dashboard/API, nunca no Git): `DATABASE_URL`, `DATABASE_APP_URL`, `REDIS_URL` (privados da mesma região), `OSM_USER_AGENT`, `GOOGLE_PLACES_API_KEY`, `OPPORTUNITY_AI_*` / `WHATSAPP_AI_*` se os jobs de opportunity usarem, `LOG_LEVEL`, `SENTRY_DSN`
+- **não** copiar JWT, Asaas, AbacatePay, SMTP, `GOOGLE_CLIENT_ID`, `OPS_METRICS_TOKEN`, CORS
 
-> Nota: confirme as chaves exatas do Blueprint (`type: worker` vs `type: background_worker`, e suporte a `dockerBuildTarget`) no [schema do render.yaml](https://render.com/schema/render.yaml.json) antes de aplicar.
+## Rollout sem perda
+
+1. Worker-capable no Git: `WorkerModule` sem reconcilers/schedulers/webhook.
+2. Manter API antiga consumindo até o worker live (janela curta com dois consumidores BullMQ é aceitável).
+3. Criar **um** worker Starter; esperar live.
+4. Log: `BullMQ worker context started (no HTTP listener)`.
+5. Confirmar consumo de job controlado. Não alterar dados de cliente.
+6. Deploy da API **sem** `WorkersModule`. `GET /health/ready` → 200.
+7. Confirmar: worker processa; API não processa; filas drenam; sem scheduler/reconciler duplicado; sem pico anómalo de conexões Postgres.
+
+Se `autoDeployTrigger=checksPass` na API impedir a ordem: pause auto-deploy da API, suba o worker, só então redesploy da API.
+
+## Rollback
+
+1. Reverter a API para a revisão que ainda importava `WorkersModule` (fallback inline).
+2. Confirmar `/health/ready` e consumo na API.
+3. **Depois** suspender `prospectly-worker` para parar a cobrança.
+4. Não apagar filas Redis nem registros Postgres.
 
 ## Critérios de aceite
 
-- Escalar workers **não** adiciona réplicas HTTP.
-- O shutdown não perde jobs em voo (dentro do timeout; jobs retentam via attempts do BullMQ).
-- Falha do worker não derruba a API (processo/serviço separado).
-- A API continua disponível se o worker parar (jobs ficam na fila Redis).
-
-## Rollout
-
-1. Implante o serviço worker primeiro (ou junto com a API que já não hospeda processors).
-2. Confirme que a profundidade da fila drena e que logs `WorkerBootstrap` aparecem.
-3. Só então remova qualquer fallback temporário de worker inline (nenhum enviado nesta mudança).
+- 1 worker Starter, zero upgrades colaterais.
+- API e worker na mesma região / rede privada.
+- API sem `@Processor`; worker sem HTTP, migrate, scheduler ou reconciler API-only.
+- Os seis grupos de processamento cobertos, incluindo retention.
+- Graceful shutdown, RLS (`DATABASE_APP_URL` + `runWithTenant`), auditoria, idempotência e retries preservados.

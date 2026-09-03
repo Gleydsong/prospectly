@@ -1,7 +1,9 @@
 import { parseRefreshCookieSameSite } from '../common/auth/refresh-cookie';
+import { parseProcessRole } from './process-role';
 import { parseRedisConnection } from './redis';
 
-const REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
+const API_REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
+const WORKER_REQUIRED_VARS = ['DATABASE_URL', 'REDIS_URL'] as const;
 
 const WEAK_JWT_PATTERNS = [
   /change-me/i,
@@ -27,7 +29,9 @@ function assertStrongJwtSecret(key: string, value: string, nodeEnv: string): voi
 }
 
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
-  const missing = REQUIRED_VARS.filter((key) => {
+  const role = parseProcessRole(config);
+  const requiredVars = role === 'worker' ? WORKER_REQUIRED_VARS : API_REQUIRED_VARS;
+  const missing = requiredVars.filter((key) => {
     const value = config[key];
     return typeof value !== 'string' || value.length === 0;
   });
@@ -49,11 +53,13 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  const sameSite = parseRefreshCookieSameSite(config.REFRESH_COOKIE_SAME_SITE);
-  if (sameSite === 'none' && !isProdLike) {
-    throw new Error(
-      'REFRESH_COOKIE_SAME_SITE=none requires NODE_ENV production or staging (Secure cookies)',
-    );
+  if (role === 'api') {
+    const sameSite = parseRefreshCookieSameSite(config.REFRESH_COOKIE_SAME_SITE);
+    if (sameSite === 'none' && !isProdLike) {
+      throw new Error(
+        'REFRESH_COOKIE_SAME_SITE=none requires NODE_ENV production or staging (Secure cookies)',
+      );
+    }
   }
 
   for (const key of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const) {
@@ -167,11 +173,11 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     throw new Error('PIX_PROVIDER must be ABACATE, ASAAS or DISABLED');
   }
 
-  if (config.PIX_PROVIDER === 'ASAAS' && config.ASAAS_ENABLED !== 'true') {
+  if (role === 'api' && config.PIX_PROVIDER === 'ASAAS' && config.ASAAS_ENABLED !== 'true') {
     throw new Error('PIX_PROVIDER=ASAAS requires ASAAS_ENABLED=true');
   }
 
-  if (config.ASAAS_ENABLED === 'true') {
+  if (role === 'api' && config.ASAAS_ENABLED === 'true') {
     const requiredAsaas = ['ASAAS_API_KEY', 'ASAAS_WEBHOOK_TOKEN'] as const;
     const missingAsaas = requiredAsaas.filter((key) => {
       const value = config[key];
@@ -190,7 +196,7 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  if (isProdLike) {
+  if (isProdLike && role === 'api') {
     const requiredAbacate = ['ABACATE_API_KEY', 'ABACATE_WEBHOOK_SECRET'] as const;
     const missingAbacate = requiredAbacate.filter((key) => {
       const value = config[key];

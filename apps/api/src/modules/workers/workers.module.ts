@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { ImportsModule } from '../imports/imports.module';
 import { ImportsProcessor } from '../imports/imports.processor';
 import { OpsModule } from '../ops/ops.module';
+import { PrivacyRetentionModule } from '../privacy/privacy-retention.module';
+import { RetentionProcessor } from '../privacy/retention.processor';
 import { ProspectingModule } from '../prospecting/prospecting.module';
 import { ProspectingProcessor } from '../prospecting/prospecting.processor';
 import { ScoringModule } from '../scoring/scoring.module';
@@ -13,8 +15,8 @@ import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finde
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 
 /**
- * Registers BullMQ processors. Imported by WorkerModule and, until a dedicated
- * Render worker exists, by AppModule as an inline fallback.
+ * Registers BullMQ processors for the dedicated worker process.
+ * AppModule must not import this module.
  */
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-fi
     WebsiteAnalysisModule,
     OpsModule,
     OpportunityFinderModule,
+    PrivacyRetentionModule,
   ],
   providers: [
     ProspectingProcessor,
@@ -31,6 +34,7 @@ import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-fi
     ScoringProcessor,
     WebsiteAnalysisProcessor,
     OpportunityFinderProcessor,
+    RetentionProcessor,
   ],
 })
 export class WorkersModule {}

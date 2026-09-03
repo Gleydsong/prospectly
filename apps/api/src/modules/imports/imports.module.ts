@@ -7,7 +7,6 @@ import { LeadsModule } from '../leads/leads.module';
 import { CsvParserService } from './csv-parser.service';
 import { IMPORTS_QUEUE } from './imports.constants';
 import { ImportsController } from './imports.controller';
-import { ImportsDispatchReconciler } from './imports-dispatch.reconciler';
 import { ImportsService } from './imports.service';
 
 @Module({
@@ -26,11 +25,6 @@ import { ImportsService } from './imports.service';
   providers: [
     CsvParserService,
     ImportsService,
-    {
-      provide: ImportsDispatchReconciler,
-      inject: [ImportsService],
-      useFactory: (service: ImportsService) => new ImportsDispatchReconciler(service),
-    },
   ],
   exports: [ImportsService],
 })

@@ -5,6 +5,8 @@ import { Logger as PinoLogger } from 'nestjs-pino';
 import { gracefulShutdown } from './common/workers/graceful-shutdown';
 import { WorkerModule } from './worker.module';
 
+process.env.ROLE = 'worker';
+
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerModule, {
     bufferLogs: true,

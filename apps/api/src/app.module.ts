@@ -40,8 +40,8 @@ import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
-import { WorkersModule } from './modules/workers/workers.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
+import { ApiDispatchModule } from './modules/api-runtime/api-dispatch.module';
 import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-redact-paths';
 
 @Module({
@@ -113,10 +113,8 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     AgentsModule,
     OpportunityFinderModule,
     PrivacyModule,
+    ApiDispatchModule,
     ...(shouldEnableEmailPreview() ? [EmailPreviewModule] : []),
-    // Production Render currently has no dedicated worker service. Process
-    // BullMQ jobs in the API so searches/checkout side-effects do not stall.
-    WorkersModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
