@@ -2,6 +2,11 @@
 # Schema: https://render.com/schema/render.yaml.json
 # Docs: docs/deploy/render.md
 #
+# DRIFT: produção live NÃO coincide com este arquivo (Redis free, landing free,
+# API Node, Postgres 0.1c-256mb/1GB). NÃO sincronize o Blueprint inteiro para
+# adicionar o worker — isso converteria recursos free em pagos. Ver
+# docs/deploy/workers.md e docs/adr/0006-separate-bullmq-worker.md.
+#
 # After first sync: fill sync:false secrets in the Dashboard, then set public URLs
 # (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Abacate webhook).
 

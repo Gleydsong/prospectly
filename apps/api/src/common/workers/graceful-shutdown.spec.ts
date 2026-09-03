@@ -38,4 +38,31 @@ describe('gracefulShutdown', () => {
   it('uses default timeout constant', () => {
     expect(DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS).toBe(30_000);
   });
+
+  it('honors WORKER_SHUTDOWN_TIMEOUT_MS when options omit timeoutMs', async () => {
+    const previous = process.env.WORKER_SHUTDOWN_TIMEOUT_MS;
+    process.env.WORKER_SHUTDOWN_TIMEOUT_MS = '25';
+    jest.useFakeTimers();
+    const close = jest.fn().mockReturnValue(new Promise(() => undefined));
+    const logger = { log: jest.fn(), error: jest.fn(), warn: jest.fn() };
+    const onForceExit = jest.fn();
+
+    try {
+      void gracefulShutdown({ close } as never, 'SIGTERM', { logger, onForceExit });
+      await jest.advanceTimersByTimeAsync(24);
+      expect(onForceExit).not.toHaveBeenCalled();
+      await jest.advanceTimersByTimeAsync(1);
+      expect(logger.error).toHaveBeenCalledWith(
+        'Graceful shutdown timed out after 25ms; forcing exit',
+      );
+      expect(onForceExit).toHaveBeenCalledWith(1);
+    } finally {
+      jest.useRealTimers();
+      if (previous === undefined) {
+        delete process.env.WORKER_SHUTDOWN_TIMEOUT_MS;
+      } else {
+        process.env.WORKER_SHUTDOWN_TIMEOUT_MS = previous;
+      }
+    }
+  });
 });

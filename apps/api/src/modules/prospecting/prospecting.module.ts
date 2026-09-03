@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
 
 import { LeadsModule } from '../leads/leads.module';
-import { BillingModule } from '../billing/billing.module';
+import { BillingCoreModule } from '../billing/billing-core.module';
 import {
   GOOGLE_PLACES_SEARCH_PROVIDER,
   InMemorySearchProviderRegistry,
@@ -21,19 +21,13 @@ import {
 } from './infrastructure/nominatim-rate-limiter';
 import { PROSPECTING_QUEUE } from './prospecting.constants';
 import { ProspectingController } from './prospecting.controller';
-import { ProspectingDispatchReconciler } from './prospecting-dispatch.reconciler';
 import { ProspectingService } from './prospecting.service';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: PROSPECTING_QUEUE }), LeadsModule, BillingModule],
+  imports: [BullModule.registerQueue({ name: PROSPECTING_QUEUE }), LeadsModule, BillingCoreModule],
   controllers: [ProspectingController],
   providers: [
     ProspectingService,
-    {
-      provide: ProspectingDispatchReconciler,
-      inject: [ProspectingService],
-      useFactory: (service: ProspectingService) => new ProspectingDispatchReconciler(service),
-    },
     {
       provide: OPENSTREETMAP_SEARCH_PROVIDER,
       inject: [ConfigService, getQueueToken(PROSPECTING_QUEUE)],

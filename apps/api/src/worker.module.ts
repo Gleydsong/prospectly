@@ -10,7 +10,6 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { OpsModule } from './modules/ops/ops.module';
 import { WorkersModule } from './modules/workers/workers.module';
-import { PrivacyModule } from './modules/privacy/privacy.module';
 import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-redact-paths';
 
 @Module({
@@ -45,7 +44,6 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     PrismaModule,
     AuditModule,
     OpsModule,
-    PrivacyModule,
     WorkersModule,
   ],
 })

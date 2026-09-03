@@ -10,8 +10,8 @@ Checklist do que ainda falta configurar (envs + webhooks): [`docs/superpowers/sp
 | ----------------- | -------------------- | ---------------------------------------------------------------------- |
 | Postgres 16 | `prospectly-db` | Banco primário (`basic-256mb`) |
 | Key Value | `prospectly-redis` | BullMQ + readiness (`noeviction`, privado) |
-| Web (Docker) | `prospectly-api` | API Nest + produtores de fila (HTTP) |
-| Worker (proposto) | `prospectly-worker` | Processors BullMQ — ver [workers.md](./workers.md) (aprovação obrigatória) |
+| Web (Node) | `prospectly-api` | API Nest + produtores de fila (HTTP). Runtime **Node** live, não Docker. |
+| Worker (Background) | `prospectly-worker` | Processors BullMQ — ver [workers.md](./workers.md). **Não** sincronize o Blueprint para criá-lo. |
 | Static | `prospectly-web` | SPA Vite |
 | Web (Node) | `prospectly-landing` | Site de marketing Next.js (substitui o antigo `prospectly-mvp`) |
 

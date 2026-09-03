@@ -21,7 +21,7 @@ let shuttingDown = false;
 function start(name, extraArgs) {
   const child = spawn(nestBin, ['start', '--watch', ...extraArgs], {
     cwd: apiRoot,
-    env: process.env,
+    env: { ...process.env, ROLE: name === 'worker' ? 'worker' : 'api' },
     stdio: 'inherit',
   });
 
