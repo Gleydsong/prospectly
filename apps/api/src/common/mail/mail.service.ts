@@ -3,11 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
+import { assertSafeRecipient, sanitizeHeaderValue } from './email-html';
+
 export interface MailMessage {
   to: string;
   subject: string;
   text: string;
   html?: string;
+  template?: string;
 }
 
 @Injectable()
@@ -29,6 +32,9 @@ export class MailService {
   }
 
   async send(message: MailMessage): Promise<void> {
+    const to = assertSafeRecipient(message.to);
+    const subject = sanitizeHeaderValue(message.subject);
+    const template = message.template ? sanitizeHeaderValue(message.template) : 'unspecified';
     const resendKey = this.config.get<string>('resend.apiKey')?.trim();
     const from =
       this.config.get<string>('resend.from') ??
@@ -38,22 +44,41 @@ export class MailService {
     if (resendKey) {
       try {
         const resend = new Resend(resendKey);
-        const { error } = await resend.emails.send({
+        const { data, error } = await resend.emails.send({
           from,
-          to: message.to,
-          subject: message.subject,
+          to,
+          subject,
           text: message.text,
           html: message.html,
+          ...(message.template
+            ? { tags: [{ name: 'template', value: template.slice(0, 40) }] }
+            : {}),
         });
         if (error) {
-          this.logger.error(`Resend failed for ${message.to}: ${error.message}`);
+          this.logger.error(
+            { template, provider: 'resend', outcome: 'failed', reason: error.message },
+            'email send failed',
+          );
           throw new ServiceUnavailableException(`Failed to send email via Resend: ${error.message}`);
         }
+        this.logger.log(
+          {
+            template,
+            provider: 'resend',
+            outcome: 'sent',
+            providerId: data?.id,
+            timestamp: new Date().toISOString(),
+          },
+          'email sent',
+        );
       } catch (err) {
-        this.logger.error(`Resend send threw for ${message.to}`, err);
         if (err instanceof ServiceUnavailableException) {
           throw err;
         }
+        this.logger.error(
+          { template, provider: 'resend', outcome: 'failed' },
+          'email send threw',
+        );
         throw new ServiceUnavailableException('Failed to send email via Resend');
       }
       return;
@@ -63,13 +88,12 @@ export class MailService {
     if (!host) {
       if (this.isProdLike()) {
         this.logger.error(
-          `Mail provider not configured — cannot send email to ${message.to} (token not logged)`,
+          { template, provider: 'none', outcome: 'failed' },
+          'mail provider not configured',
         );
         throw new ServiceUnavailableException('Email delivery is temporarily unavailable');
       }
-      this.logger.log(
-        `Mail not configured — email queued for ${message.to} (token not logged)`,
-      );
+      this.logger.log({ template, provider: 'noop', outcome: 'skipped' }, 'mail not configured');
       return;
     }
 
@@ -84,15 +108,25 @@ export class MailService {
     });
 
     try {
-      await transporter.sendMail({
+      const info = await transporter.sendMail({
         from,
-        to: message.to,
-        subject: message.subject,
+        to,
+        subject,
         text: message.text,
         html: message.html,
       });
-    } catch (err) {
-      this.logger.error(`SMTP send failed for ${message.to}`, err);
+      this.logger.log(
+        {
+          template,
+          provider: 'smtp',
+          outcome: 'sent',
+          providerId: typeof info.messageId === 'string' ? info.messageId : undefined,
+          timestamp: new Date().toISOString(),
+        },
+        'email sent',
+      );
+    } catch {
+      this.logger.error({ template, provider: 'smtp', outcome: 'failed' }, 'smtp send failed');
       throw new ServiceUnavailableException('Failed to send email via SMTP');
     }
   }

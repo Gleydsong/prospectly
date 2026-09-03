@@ -13,6 +13,7 @@
     "test": "jest --passWithNoTests",
     "test:rls": "RUN_RLS_TEST=true jest --runInBand src/common/prisma/rls.integration.spec.ts",
     "test:e2e": "jest --config test/jest-e2e.json --passWithNoTests",
+    "email:preview": "tsx scripts/render-email-previews.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",

@@ -22,6 +22,8 @@ import { ConsentService } from '../privacy/consent.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
+import { buildAccountActivationEmail } from '../../common/mail/templates/account-activation-email';
+import { buildWelcomeEmail } from '../../common/mail/templates/welcome-email';
 import { buildPasswordResetEmail } from './password-reset-email';
 import { RegisterDto } from './dto/register.dto';
 
@@ -196,6 +198,9 @@ export class AuthService {
         avatarUrl,
         emailVerifiedAt: emailVerified ? new Date() : null,
       });
+      if (emailVerified) {
+        await this.sendWelcomeEmail(user);
+      }
       return this.buildAuthResponse(user, organizationId, role);
     });
   }
@@ -342,6 +347,7 @@ export class AuthService {
         subject: content.subject,
         text: content.text,
         html: content.html,
+        template: content.template,
       });
       this.logger.log(`Password reset email dispatched for user ${user.id}`);
     } catch (err) {
@@ -405,6 +411,7 @@ export class AuthService {
       throw new BadRequestException(GENERIC_VERIFY_FAIL);
     }
 
+    const isEmailChange = Boolean(user.pendingEmail);
     if (user.pendingEmail) {
       const taken = await this.prisma.user.findFirst({
         where: {
@@ -441,6 +448,9 @@ export class AuthService {
       });
     }
     this.logger.log({ outcome: 'verify_email_ok', userId: user.id, ip: meta?.ip }, 'email verified');
+    if (!isEmailChange) {
+      await this.sendWelcomeEmail(user);
+    }
   }
 
   async resendVerification(userId: string, meta?: { ip?: string }): Promise<{ message: string }> {
@@ -453,7 +463,7 @@ export class AuthService {
       );
       return { message: 'If verification is required, an email was sent.' };
     }
-    await this.issueEmailVerification(user.id, targetEmail, user.locale);
+    await this.issueEmailVerification(user, targetEmail);
     this.logger.log(
       { outcome: 'resend_verification_sent', userId, ip: meta?.ip },
       'resend verification',
@@ -501,7 +511,7 @@ export class AuthService {
         emailVerifyTokenExpiresAt: null,
       },
     });
-    await this.issueEmailVerification(userId, email, user.locale);
+    await this.issueEmailVerification(user, email);
     this.logger.log({ outcome: 'change_email_ok', userId, ip: meta?.ip }, 'email change pending');
     return { message: 'If the change is allowed, a verification email was sent.' };
   }
@@ -702,7 +712,7 @@ export class AuthService {
     }
 
     try {
-      await this.issueEmailVerification(user.id, user.email, user.locale);
+      await this.issueEmailVerification(user, user.email);
     } catch (err) {
       this.logger.error(
         `Verification email failed for ${user.email}; account created but remains unverified`,
@@ -712,31 +722,72 @@ export class AuthService {
     return user;
   }
 
+  private async sendWelcomeEmail(user: Pick<User, 'id' | 'name' | 'email' | 'locale'>): Promise<void> {
+    if (!this.mail.isConfigured()) return;
+    const frontend = (this.config.get<string>('frontendUrl') ?? 'http://localhost:5173').replace(
+      /\/$/,
+      '',
+    );
+    const content = buildWelcomeEmail({
+      locale: user.locale === 'en' ? 'en' : 'pt',
+      fullName: user.name,
+      appUrl: frontend,
+    });
+    try {
+      await this.mail.send({
+        to: user.email,
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+        template: content.template,
+      });
+    } catch (err) {
+      this.logger.error(
+        {
+          template: 'welcome',
+          userId: user.id,
+          outcome: 'failed',
+          reason: err instanceof Error ? err.message : String(err),
+        },
+        'welcome email failed',
+      );
+    }
+  }
+
   private async issueEmailVerification(
-    userId: string,
+    user: Pick<User, 'id' | 'name' | 'locale'>,
     email: string,
-    locale: 'pt' | 'en',
   ): Promise<void> {
     const raw = randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + EMAIL_VERIFY_TTL_MS);
     await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: user.id },
       data: {
         emailVerifyTokenHash: this.sha256(raw),
         emailVerifyTokenExpiresAt: expiresAt,
       },
     });
 
-    const frontend = this.config.get<string>('frontendUrl') ?? 'http://localhost:5173';
-    const link = `${frontend.replace(/\/$/, '')}/verify-email?token=${raw}`;
-    const subject =
-      locale === 'en' ? 'Verify your Prospectly email' : 'Verifique o seu e-mail Prospectly';
-    const text =
-      locale === 'en'
-        ? `Open this link to verify your email (expires in 24h):\n\n${link}\n`
-        : `Abra este link para verificar o seu e-mail (expira em 24h):\n\n${link}\n`;
+    const frontend = (this.config.get<string>('frontendUrl') ?? 'http://localhost:5173').replace(
+      /\/$/,
+      '',
+    );
+    const activationUrl = `${frontend}/verify-email?token=${raw}`;
+    const content = buildAccountActivationEmail({
+      locale: user.locale === 'en' ? 'en' : 'pt',
+      fullName: user.name,
+      activationUrl,
+      expiresInHours: 24,
+      frontendUrl: frontend,
+    });
 
-    await this.mail.send({ to: email, subject, text });
+    await this.mail.send({
+      to: email,
+      subject: content.subject,
+      text: content.text,
+      html: content.html,
+      template: content.template,
+    });
   }
 
   private async issueTokensForStoredRefresh(

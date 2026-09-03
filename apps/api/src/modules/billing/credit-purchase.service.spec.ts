@@ -1,5 +1,21 @@
 import { CreditPurchaseStatus, PaymentProvider } from '@prisma/client';
+
+import type { MailService } from '../../common/mail/mail.service';
+import type { ConfigService } from '@nestjs/config';
 import { CreditPurchaseService } from './credit-purchase.service';
+
+const makeMail = () =>
+  ({
+    send: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as MailService & { send: jest.Mock };
+
+const makeConfig = () =>
+  ({
+    get: () => 'https://app.prospectlyonboard.com',
+  }) as unknown as ConfigService;
+
+const makeService = (prisma: unknown, mail = makeMail()) =>
+  new CreditPurchaseService(prisma as never, mail, makeConfig());
 
 describe('CreditPurchaseService', () => {
   it('credits the organization exactly once when payment is confirmed', async () => {
@@ -8,6 +24,8 @@ describe('CreditPurchaseService', () => {
       organizationId: 'org_1',
       offer: 'credits-2000',
       credits: 2000,
+      amountCentavos: 1499,
+      currency: 'BRL',
       status: CreditPurchaseStatus.PENDING,
       provider: PaymentProvider.ABACATE,
       paymentMethod: 'PIX',
@@ -20,11 +38,17 @@ describe('CreditPurchaseService', () => {
       organization: { update: jest.fn().mockResolvedValue({ creditBalance: 2000 }) },
       creditLedgerEntry: { create: jest.fn().mockResolvedValue({}) },
     };
+    const mail = makeMail();
     const prisma = {
       creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      organizationMember: {
+        findMany: jest.fn().mockResolvedValue([
+          { user: { email: 'owner@acme.test', name: 'Ana', locale: 'pt', anonymizedAt: null } },
+        ]),
+      },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma, mail);
 
     await service.completeFromWebhook({ id: 'pix_1', metadata: { purchaseId: 'purchase_1' } });
 
@@ -48,6 +72,14 @@ describe('CreditPurchaseService', () => {
         idempotencyKey: 'purchase:purchase_1',
       }),
     });
+    expect(mail.send).toHaveBeenCalledTimes(1);
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'owner@acme.test',
+        template: 'credits-purchased',
+        html: expect.stringContaining('2.000'),
+      }),
+    );
     expect(PaymentProvider.ABACATE).toBeDefined();
   });
 
@@ -58,7 +90,7 @@ describe('CreditPurchaseService', () => {
       },
       $transaction: jest.fn(),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
     await service.completeById('purchase_abandoned', 'pay_pix_1');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -70,7 +102,7 @@ describe('CreditPurchaseService', () => {
       },
       $transaction: jest.fn(),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
     await service.completeFromWebhook({ metadata: { purchaseId: 'purchase_1' } });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -94,9 +126,10 @@ describe('CreditPurchaseService', () => {
     };
     const prisma = {
       creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      organizationMember: { findMany: jest.fn().mockResolvedValue([]) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
 
     await service.completeById('purchase_review', 'pay_1');
 
@@ -127,7 +160,7 @@ describe('CreditPurchaseService', () => {
       creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
 
     await service.completeFromWebhook({ id: 'pix_1', metadata: { purchaseId: 'purchase_1' } });
 
@@ -155,7 +188,7 @@ describe('CreditPurchaseService', () => {
       creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
     await service.refundFromWebhook({ id: 'bill_1', metadata: { purchaseId: 'purchase_1' } });
     expect(tx.creditPurchase.updateMany).toHaveBeenCalledWith({
       where: { id: 'purchase_1', status: CreditPurchaseStatus.COMPLETED },
@@ -199,7 +232,7 @@ describe('CreditPurchaseService', () => {
       creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
       $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
     };
-    const service = new CreditPurchaseService(prisma as never);
+    const service = makeService(prisma);
     await service.refundFromWebhook({ id: 'bill_1', metadata: { purchaseId: 'purchase_1' } });
     expect(tx.organization.findUnique).not.toHaveBeenCalled();
     expect(tx.organization.update).not.toHaveBeenCalled();
