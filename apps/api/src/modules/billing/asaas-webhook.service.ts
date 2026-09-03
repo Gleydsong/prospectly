@@ -4,6 +4,7 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,7 +13,9 @@ import crypto from 'node:crypto';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { runWithBypass } from '../../common/prisma/tenant-context';
+import { MetricsService } from '../ops/metrics.service';
 import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
+import type { BillingDb } from './billing-db';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { AsaasClient, type AsaasPayment } from './infrastructure/asaas.client';
@@ -42,6 +45,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     private readonly purchases: CreditPurchaseService,
     private readonly activation: BillingActivationService,
     private readonly monthlyAttempts: MonthlyCheckoutAttemptService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   onModuleInit(): void {
@@ -74,8 +78,23 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
           attempts: 0,
         },
       });
+      this.logger.log({
+        event: 'webhook_received',
+        provider: 'ASAAS',
+        eventId: payload.id,
+        eventType: payload.event,
+        paymentId: payload.payment.id,
+      });
     } catch (error) {
       if (!this.isUniqueConstraintViolation(error)) throw error;
+      this.metrics?.recordWebhookDuplicate();
+      this.logger.log({
+        event: 'webhook_duplicate',
+        provider: 'ASAAS',
+        eventId: payload.id,
+        eventType: payload.event,
+        paymentId: payload.payment.id,
+      });
     }
     return { received: true };
   }
@@ -156,21 +175,49 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       where: { provider_eventId: { provider: PaymentProvider.ASAAS, eventId } },
     });
     if (!event) return;
+    this.logger.log({
+      event: 'webhook_processing_started',
+      provider: 'ASAAS',
+      eventId,
+      eventType: event.type,
+      attempt: event.attempts,
+    });
+    const started = Date.now();
     try {
       const envelope = this.parseStoredEnvelope(event.payload);
       const payment = await this.client.getPayment(envelope.payment.id);
-      await this.applyPayment(event.type, payment);
-      await this.prisma.billingWebhookEvent.updateMany({
-        where: { provider: PaymentProvider.ASAAS, eventId },
-        data: {
-          status: BillingWebhookEventStatus.PROCESSED,
-          processedAt: new Date(),
-          failedAt: null,
-          lastError: null,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await this.applyPayment(tx, event.type, payment);
+        await tx.billingWebhookEvent.updateMany({
+          where: { provider: PaymentProvider.ASAAS, eventId },
+          data: {
+            status: BillingWebhookEventStatus.PROCESSED,
+            processedAt: new Date(),
+            failedAt: null,
+            lastError: null,
+          },
+        });
+      });
+      this.metrics?.recordWebhookProcessed();
+      this.logger.log({
+        event: 'webhook_processed',
+        provider: 'ASAAS',
+        eventId,
+        eventType: event.type,
+        paymentId: envelope.payment.id,
+        durationMs: Date.now() - started,
       });
     } catch (error) {
       const needsReview = error instanceof AsaasStatePendingError;
+      this.metrics?.recordWebhookFailed();
+      this.logger.warn({
+        event: 'webhook_failed',
+        provider: 'ASAAS',
+        eventId,
+        eventType: event.type,
+        durationMs: Date.now() - started,
+        status: needsReview ? 'REVIEW_REQUIRED' : 'FAILED',
+      });
       await this.prisma.billingWebhookEvent.updateMany({
         where: { provider: PaymentProvider.ASAAS, eventId },
         data: {
@@ -185,9 +232,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async applyPayment(type: string, payment: AsaasPayment): Promise<void> {
+  private async applyPayment(db: BillingDb, type: string, payment: AsaasPayment): Promise<void> {
+    const tx = '$transaction' in db ? undefined : db;
     const purchase = payment.externalReference
-      ? await this.prisma.creditPurchase.findUnique({
+      ? await db.creditPurchase.findUnique({
           where: { externalId: payment.externalReference },
         })
       : null;
@@ -196,7 +244,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         throw new Error('Asaas payment has invalid Prospectly currency metadata');
       }
       const isPix = purchase.paymentMethod === 'PIX';
-      const profile = await this.prisma.billingProfile.findUnique({
+      const profile = await db.billingProfile.findUnique({
         where: { organizationId: purchase.organizationId },
       });
       this.assertPaymentMatches(payment, {
@@ -209,18 +257,18 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       this.assertSupportedReversal(type);
       this.assertChargebackTerminal(type, payment);
       if (this.isBenefitReceived(type, payment, isPix)) {
-        await this.purchases.completeById(purchase.id, payment.id);
+        await this.purchases.completeById(purchase.id, payment.id, tx);
       } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
-        await this.purchases.refundById(purchase.id);
+        await this.purchases.refundById(purchase.id, tx);
       } else if (type.startsWith('PAYMENT_CHARGEBACK') && this.isConfirmedChargeback(payment)) {
-        await this.purchases.refundById(purchase.id);
+        await this.purchases.refundById(purchase.id, tx);
       }
       return;
     }
 
-    const monthly = await this.resolveMonthlyCheckout(payment);
+    const monthly = await this.resolveMonthlyCheckout(db, payment);
     if (!monthly) throw new Error('Asaas payment does not match a Prospectly checkout');
-    const profile = await this.prisma.billingProfile.findUnique({
+    const profile = await db.billingProfile.findUnique({
       where: { organizationId: monthly.organizationId },
     });
     this.assertPaymentMatches(payment, {
@@ -244,9 +292,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
         asaasSubscriptionId: monthly.isPix ? null : payment.subscription,
         asaasPaymentId: monthly.isPix ? payment.id : null,
         currentPeriodEnd: monthly.isPix ? this.pixPeriodEnd() : this.periodEnd(payment.dueDate),
+        tx,
       });
       if (monthly.attemptExternalId) {
-        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer, tx);
       }
     } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
       await this.activation.syncMonthlyStatus({
@@ -257,9 +306,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
           ? { asaasPaymentId: payment.id }
           : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
+        tx,
       });
       if (monthly.attemptExternalId) {
-        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer, tx);
       }
     } else if (type.startsWith('PAYMENT_CHARGEBACK') && this.isConfirmedChargeback(payment)) {
       await this.activation.syncMonthlyStatus({
@@ -270,9 +320,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
           ? { asaasPaymentId: payment.id }
           : { asaasSubscriptionId: payment.subscription }),
         currentPeriodEnd: new Date(),
+        tx,
       });
       if (monthly.attemptExternalId) {
-        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer);
+        await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer, tx);
       }
     }
   }
@@ -282,7 +333,10 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
    * Card renewals often omit it — resolve via organization.asaasSubscriptionId.
    * PIX one-shots never use this subscription fallback.
    */
-  private async resolveMonthlyCheckout(payment: AsaasPayment): Promise<{
+  private async resolveMonthlyCheckout(
+    db: BillingDb,
+    payment: AsaasPayment,
+  ): Promise<{
     organizationId: string;
     amountCentavos: number;
     expectedExternalReference: string;
@@ -291,7 +345,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     attemptExternalId?: string;
   } | null> {
     if (payment.externalReference) {
-      const attempt = await this.prisma.monthlyCheckoutAttempt.findUnique({
+      const attempt = await db.monthlyCheckoutAttempt.findUnique({
         where: { externalId: payment.externalReference },
       });
       if (attempt) {
@@ -310,7 +364,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (!payment.subscription || payment.billingType === 'PIX') return null;
-    const org = await this.prisma.organization.findUnique({
+    const org = await db.organization.findUnique({
       where: { asaasSubscriptionId: payment.subscription },
       select: { id: true },
     });
@@ -439,7 +493,9 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
             : this.isConfirmedChargeback(payment)
               ? 'PAYMENT_CHARGEBACK_REQUESTED'
               : null;
-    if (eventType) await this.applyPayment(eventType, payment);
+    if (eventType) {
+      await this.prisma.$transaction((tx) => this.applyPayment(tx, eventType, payment));
+    }
   }
 
   private assertSupportedReversal(type: string): void {

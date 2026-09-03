@@ -45,6 +45,7 @@ export class OpsMetricsController {
       process: this.metrics.getProcessSnapshot(),
       http: this.metrics.getHttpSnapshot(),
       jobs: this.metrics.getJobSnapshot(),
+      reliability: this.metrics.getReliabilitySnapshot(),
       queues,
       redis,
     };

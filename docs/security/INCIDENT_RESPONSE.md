@@ -8,7 +8,7 @@ Prazos e deveres de comunicação à ANPD/titulares: `LEGAL_REVIEW_REQUIRED`.
 - Falhas de auth / lockout (`failedLoginAttempts`, `lockedUntil`)
 - TenantScopeError / 404 cross-tenant (não vazar existência)
 - Spike de export CSV / `/privacy/export` (throttle + audit `privacy.data_exported`)
-- Jobs BullMQ failed; `GET /health/ready` (Postgres+Redis)
+- Jobs BullMQ failed; `GET /health/ready` (Postgres); `ops/metrics.redis` e `reliability`
 - `pnpm audit` + `scripts/secret-scan.cjs` no CI
 - Alertas de host (Render) — configurar no dashboard
 

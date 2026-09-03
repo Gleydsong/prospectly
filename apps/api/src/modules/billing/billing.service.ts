@@ -918,46 +918,75 @@ export class BillingService {
       if (used <= FREE_SEARCH_LIMIT) return;
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.creditLedgerEntry.findUnique({
-        where: {
-          organizationId_idempotencyKey: {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const existing = await tx.creditLedgerEntry.findUnique({
+          where: {
+            organizationId_idempotencyKey: {
+              organizationId: params.organizationId,
+              idempotencyKey: params.idempotencyKey,
+            },
+          },
+        });
+        if (existing) {
+          this.logger.log({
+            event: 'duplicate_credit_prevented',
             organizationId: params.organizationId,
             idempotencyKey: params.idempotencyKey,
-          },
-        },
-      });
-      if (existing) return;
+            reason: params.reason,
+          });
+          return;
+        }
 
-      const consumed = await tx.organization.updateMany({
-        where: { id: params.organizationId, creditBalance: { gte: params.amount } },
-        data: { creditBalance: { decrement: params.amount } },
-      });
-      if (consumed.count !== 1) {
-        throw new ForbiddenException({
-          code: 'ENTITLEMENT_CREDITS',
-          message: 'No credits remaining. Purchase a credit package to continue.',
+        const consumed = await tx.organization.updateMany({
+          where: { id: params.organizationId, creditBalance: { gte: params.amount } },
+          data: { creditBalance: { decrement: params.amount } },
         });
-      }
+        if (consumed.count !== 1) {
+          throw new ForbiddenException({
+            code: 'ENTITLEMENT_CREDITS',
+            message: 'No credits remaining. Purchase a credit package to continue.',
+          });
+        }
 
-      const updated = await tx.organization.findFirstOrThrow({
-        where: { id: params.organizationId },
-        select: { creditBalance: true },
-      });
+        const updated = await tx.organization.findFirstOrThrow({
+          where: { id: params.organizationId },
+          select: { creditBalance: true },
+        });
 
-      await tx.creditLedgerEntry.create({
-        data: {
+        await tx.creditLedgerEntry.create({
+          data: {
+            organizationId: params.organizationId,
+            reason: params.reason,
+            delta: -params.amount,
+            balanceAfter: updated.creditBalance,
+            idempotencyKey: params.idempotencyKey,
+            ...(params.searchId ? { searchId: params.searchId } : {}),
+            ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
+            ...(params.metadata ? { metadata: params.metadata } : {}),
+          },
+        });
+        this.logger.log({
+          event: 'credit_transaction_created',
           organizationId: params.organizationId,
+          idempotencyKey: params.idempotencyKey,
           reason: params.reason,
           delta: -params.amount,
           balanceAfter: updated.creditBalance,
-          idempotencyKey: params.idempotencyKey,
-          ...(params.searchId ? { searchId: params.searchId } : {}),
-          ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
-          ...(params.metadata ? { metadata: params.metadata } : {}),
-        },
+        });
       });
-    });
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) {
+        this.logger.log({
+          event: 'duplicate_credit_prevented',
+          organizationId: params.organizationId,
+          idempotencyKey: params.idempotencyKey,
+          reason: params.reason,
+        });
+        return;
+      }
+      throw error;
+    }
   }
 
   private async refundConsumedCredits(params: {
@@ -968,45 +997,50 @@ export class BillingService {
     opportunityRunId?: string;
     metadata?: Record<string, string>;
   }): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const [consume, existingRefund] = await Promise.all([
-        tx.creditLedgerEntry.findUnique({
-          where: {
-            organizationId_idempotencyKey: {
-              organizationId: params.organizationId,
-              idempotencyKey: params.consumeKey,
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const [consume, existingRefund] = await Promise.all([
+          tx.creditLedgerEntry.findUnique({
+            where: {
+              organizationId_idempotencyKey: {
+                organizationId: params.organizationId,
+                idempotencyKey: params.consumeKey,
+              },
             },
-          },
-        }),
-        tx.creditLedgerEntry.findUnique({
-          where: {
-            organizationId_idempotencyKey: {
-              organizationId: params.organizationId,
-              idempotencyKey: params.refundKey,
+          }),
+          tx.creditLedgerEntry.findUnique({
+            where: {
+              organizationId_idempotencyKey: {
+                organizationId: params.organizationId,
+                idempotencyKey: params.refundKey,
+              },
             },
-          },
-        }),
-      ]);
-      if (!consume || existingRefund) return;
+          }),
+        ]);
+        if (!consume || existingRefund) return;
 
-      const updated = await tx.organization.update({
-        where: { id: params.organizationId },
-        data: { creditBalance: { increment: Math.abs(consume.delta) } },
-        select: { creditBalance: true },
+        const updated = await tx.organization.update({
+          where: { id: params.organizationId },
+          data: { creditBalance: { increment: Math.abs(consume.delta) } },
+          select: { creditBalance: true },
+        });
+        await tx.creditLedgerEntry.create({
+          data: {
+            organizationId: params.organizationId,
+            reason: 'REFUND',
+            delta: Math.abs(consume.delta),
+            balanceAfter: updated.creditBalance,
+            idempotencyKey: params.refundKey,
+            ...(params.searchId ? { searchId: params.searchId } : {}),
+            ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
+            ...(params.metadata ? { metadata: params.metadata } : {}),
+          },
+        });
       });
-      await tx.creditLedgerEntry.create({
-        data: {
-          organizationId: params.organizationId,
-          reason: 'REFUND',
-          delta: Math.abs(consume.delta),
-          balanceAfter: updated.creditBalance,
-          idempotencyKey: params.refundKey,
-          ...(params.searchId ? { searchId: params.searchId } : {}),
-          ...(params.opportunityRunId ? { opportunityRunId: params.opportunityRunId } : {}),
-          ...(params.metadata ? { metadata: params.metadata } : {}),
-        },
-      });
-    });
+    } catch (error) {
+      if (this.isUniqueConstraintViolation(error)) return;
+      throw error;
+    }
   }
 
   private async hydrateOrg(organizationId: string): Promise<Organization> {

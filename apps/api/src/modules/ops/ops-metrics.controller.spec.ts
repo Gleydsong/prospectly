@@ -33,6 +33,13 @@ describe('OpsMetricsController', () => {
     const snapshot = await controller.getMetrics();
     expect(snapshot.http.total).toBe(1);
     expect(snapshot.jobs.imports?.completed).toBe(1);
+    expect(snapshot.reliability).toEqual({
+      webhooks: { duplicates: 0, processed: 0, failed: 0 },
+      redisErrors: 0,
+      creditFailures: 0,
+      dbTransactionFailures: 0,
+      jobsRecovered: 0,
+    });
     expect(snapshot.queues.prospecting).toEqual(counts);
     expect(snapshot.redis).toEqual({ status: 'up' });
     expect(snapshot.process.pid).toBe(process.pid);

@@ -13,6 +13,7 @@ import { TenantContextInterceptor } from './common/prisma/tenant-context.interce
 import { HealthModule } from './common/health/health.module';
 import { MailModule } from './common/mail/mail.module';
 import { RateLimitGuard } from './common/throttler/rate-limit.guard';
+import { RedisThrottlerModule } from './common/throttler/redis-throttler.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -72,11 +73,12 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
         },
       }),
     }),
+    RedisThrottlerModule,
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      inject: [RedisThrottlerStorage],
+      useFactory: (storage: RedisThrottlerStorage) => ({
         throttlers: [{ ttl: 60_000, limit: 120 }],
-        storage: new RedisThrottlerStorage(config),
+        storage,
       }),
     }),
     BullModule.forRootAsync({

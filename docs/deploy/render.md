@@ -56,7 +56,7 @@ O plugin da Render **não** cria custom domains — faça no Dashboard + DNS:
 3. Voltar ao Render e esperar verificação + HTTPS automático.
 4. Docs oficiais: [Namecheap DNS](https://render.com/docs/configure-namecheap-dns).
 
-Health check da API: `GET /health/ready` (Postgres + Redis).
+Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marcar a revisão como morta.
 
 ## Setup inicial
 

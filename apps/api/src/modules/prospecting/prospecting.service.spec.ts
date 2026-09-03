@@ -179,7 +179,32 @@ describe('ProspectingService', () => {
       expect.objectContaining({ jobId: 'search-1' }),
     );
     expect(prisma.search.updateMany).toHaveBeenCalledWith({
-      where: { id: 'search-1', status: 'PENDING', jobDispatchedAt: null },
+      where: { id: 'search-1', status: { in: ['PENDING', 'PROCESSING'] } },
+      data: { jobDispatchedAt: expect.any(Date) },
+    });
+  });
+
+  it('re-enqueues a PROCESSING search after Redis loss using the durable jobId', async () => {
+    const { prisma, queue, service } = createService();
+    const search = {
+      id: 'search-stale',
+      status: 'PROCESSING',
+      correlationId: 'corr-stale',
+      jobDispatchedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    prisma.search.findMany.mockResolvedValue([search]);
+    prisma.search.updateMany.mockResolvedValue({ count: 1 });
+    queue.add.mockResolvedValue(undefined);
+
+    await expect(service.reconcilePending()).resolves.toBe(1);
+
+    expect(queue.add).toHaveBeenCalledWith(
+      'run-search',
+      { searchId: 'search-stale', correlationId: 'corr-stale' },
+      expect.objectContaining({ jobId: 'search-stale' }),
+    );
+    expect(prisma.search.updateMany).toHaveBeenCalledWith({
+      where: { id: 'search-stale', status: { in: ['PENDING', 'PROCESSING'] } },
       data: { jobDispatchedAt: expect.any(Date) },
     });
   });

@@ -105,6 +105,7 @@ describe('OpportunityFinderService niche targeting', () => {
         delete: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
+        findMany: jest.fn(),
       },
       opportunityCandidate: {
         upsert: jest.fn(),
@@ -205,6 +206,58 @@ describe('OpportunityFinderService niche targeting', () => {
         }),
       }),
     });
+  });
+
+  it('keeps the durable run and consumed credit when Redis enqueue fails', async () => {
+    const harness = createHarness();
+    const now = new Date('2026-08-15T10:00:00.000Z');
+    harness.prisma.opportunityRun.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+      id: 'run-redis-down',
+      status: 'PREPARING',
+      ...data,
+      candidateCount: 0,
+      analyzedCount: 0,
+      failedCount: 0,
+      errorCode: null,
+      errorMessage: null,
+      startedAt: now,
+      completedAt: null,
+      createdAt: now,
+    }));
+    harness.queue.add.mockRejectedValue(new Error('ECONNREFUSED'));
+
+    await expect(
+      harness.service.create('org-1', 'user-1', {
+        service: 'Marketing para restaurantes',
+        city: 'Curitiba',
+        state: 'PR',
+        country: 'BR',
+      }),
+    ).resolves.toMatchObject({ id: 'run-redis-down' });
+
+    expect(harness.billing.consumeCreditForOpportunityRun).toHaveBeenCalled();
+    expect(harness.billing.refundOpportunityRunCredit).not.toHaveBeenCalled();
+    expect(harness.prisma.opportunityRun.delete).not.toHaveBeenCalled();
+  });
+
+  it('re-enqueues a stale Opportunity Finder run after Redis loss', async () => {
+    const harness = createHarness();
+    harness.prisma.opportunityRun.findMany.mockResolvedValue([
+      {
+        id: 'run-stale',
+        status: 'SEARCHING',
+        correlationId: 'corr-1',
+        jobDispatchedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+    harness.prisma.opportunityRun.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(harness.service.reconcilePending()).resolves.toBe(1);
+    expect(harness.queue.add).toHaveBeenCalledWith(
+      'process-opportunity-run',
+      { runId: 'run-stale', correlationId: 'corr-1' },
+      expect.objectContaining({ jobId: 'run-stale' }),
+    );
   });
 
   it('locks clothing searches even when AI suggests restaurants', async () => {

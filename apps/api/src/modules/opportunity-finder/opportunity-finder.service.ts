@@ -21,6 +21,12 @@ import type {
 import type { Queue } from 'bullmq';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { runWithBypass } from '../../common/prisma/tenant-context';
+import {
+  isDuplicateJobError,
+  OPPORTUNITY_JOB_STALE_MS,
+  staleBefore,
+} from '../../common/workers/durable-job';
 import { StructuredAiService } from '../ai/structured-ai.service';
 import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
@@ -156,18 +162,61 @@ export class OpportunityFinderService {
     }
     try {
       await this.billing.consumeCreditForOpportunityRun(organizationId, run.id);
-      await this.queue.add(
-        PROCESS_OPPORTUNITY_RUN_JOB,
-        { runId: run.id, correlationId },
-        { ...OPPORTUNITY_JOB_OPTIONS, jobId: run.id },
-      );
     } catch (error) {
-      await this.billing.refundOpportunityRunCredit(organizationId, run.id);
       await this.prisma.opportunityRun.delete({ where: { id: run.id } });
       throw error;
     }
+    try {
+      await this.dispatch(run);
+    } catch {
+      this.logger.warn({
+        event: 'critical_job_created',
+        jobId: run.id,
+        type: 'opportunity-finder',
+        redisDispatch: 'deferred',
+      });
+    }
     await this.audit.log({ organizationId, userId, action: 'OPPORTUNITY_RUN_CREATED', entity: 'OpportunityRun', entityId: run.id, metadata: { city: dto.city, state: dto.state, category } });
     return this.toRunView(run);
+  }
+
+  async reconcilePending(): Promise<number> {
+    return runWithBypass(async () => {
+      const stale = staleBefore(OPPORTUNITY_JOB_STALE_MS);
+      const active: OpportunityRunStatus[] = [
+        OpportunityRunStatus.PREPARING,
+        OpportunityRunStatus.SEARCHING,
+        OpportunityRunStatus.ANALYZING,
+        OpportunityRunStatus.RANKING,
+      ];
+      const runs = await this.prisma.opportunityRun.findMany({
+        where: {
+          status: { in: active },
+          OR: [{ jobDispatchedAt: null }, { jobDispatchedAt: { lt: stale } }],
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 50,
+      });
+      let dispatched = 0;
+      for (const run of runs) {
+        try {
+          const recovered = run.jobDispatchedAt !== null;
+          await this.dispatch(run);
+          if (recovered) {
+            this.logger.log({
+              event: 'critical_job_recovered',
+              jobId: run.id,
+              type: 'opportunity-finder',
+              status: run.status,
+            });
+          }
+          dispatched += 1;
+        } catch {
+          // Keep the durable run; the next pass retries dispatch.
+        }
+      }
+      return dispatched;
+    });
   }
 
   async get(organizationId: string, id: string): Promise<OpportunityRunView> {
@@ -307,6 +356,32 @@ export class OpportunityFinderService {
     });
     if (!run) return null;
     return { organizationId: run.organizationId, correlationId: run.correlationId };
+  }
+
+  private async dispatch(run: { id: string; correlationId?: string | null }): Promise<void> {
+    try {
+      await this.queue.add(
+        PROCESS_OPPORTUNITY_RUN_JOB,
+        { runId: run.id, ...(run.correlationId ? { correlationId: run.correlationId } : {}) },
+        { ...OPPORTUNITY_JOB_OPTIONS, jobId: run.id },
+      );
+    } catch (error) {
+      if (!isDuplicateJobError(error)) throw error;
+    }
+    await this.prisma.opportunityRun.updateMany({
+      where: {
+        id: run.id,
+        status: {
+          in: [
+            OpportunityRunStatus.PREPARING,
+            OpportunityRunStatus.SEARCHING,
+            OpportunityRunStatus.ANALYZING,
+            OpportunityRunStatus.RANKING,
+          ],
+        },
+      },
+      data: { jobDispatchedAt: new Date() },
+    });
   }
 
   async processRun(runId: string): Promise<void> {

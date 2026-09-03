@@ -34,4 +34,23 @@ describe('MetricsService', () => {
       },
     });
   });
+
+  it('aggregates reliability counters for webhooks, Redis and recovered jobs', () => {
+    const metrics = new MetricsService();
+    metrics.recordWebhookDuplicate();
+    metrics.recordWebhookProcessed();
+    metrics.recordWebhookFailed();
+    metrics.recordRedisError();
+    metrics.recordCreditFailure();
+    metrics.recordDbTransactionFailure();
+    metrics.recordJobRecovered();
+
+    expect(metrics.getReliabilitySnapshot()).toEqual({
+      webhooks: { duplicates: 1, processed: 1, failed: 1 },
+      redisErrors: 1,
+      creditFailures: 1,
+      dbTransactionFailures: 1,
+      jobsRecovered: 1,
+    });
+  });
 });

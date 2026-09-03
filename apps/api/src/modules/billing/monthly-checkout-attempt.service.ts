@@ -195,8 +195,13 @@ export class MonthlyCheckoutAttemptService {
     });
   }
 
-  async markResolved(externalId: string, externalCustomerId?: string): Promise<void> {
-    await this.prisma.monthlyCheckoutAttempt.updateMany({
+  async markResolved(
+    externalId: string,
+    externalCustomerId?: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    const db = tx ?? this.prisma;
+    await db.monthlyCheckoutAttempt.updateMany({
       where: {
         externalId,
         status: {

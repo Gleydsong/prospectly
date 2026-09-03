@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import type { BillingDb } from './billing-db';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import type { CreditOffer, PaymentMethod } from './domain/payment-provider';
 
@@ -119,10 +120,18 @@ export class CreditPurchaseService {
       purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED
     )
       return;
-    await this.completePurchase(purchase.id, paymentId);
+    await this.completePurchase(this.prisma, purchase.id, paymentId);
   }
 
-  async completeById(purchaseId: string, externalPaymentId: string): Promise<void> {
+  async completeById(
+    purchaseId: string,
+    externalPaymentId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    if (tx) {
+      await this.completePurchase(tx, purchaseId, externalPaymentId);
+      return;
+    }
     const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
     if (
       !purchase ||
@@ -130,22 +139,28 @@ export class CreditPurchaseService {
         purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
     )
       return;
-    await this.completePurchase(purchase.id, externalPaymentId);
+    await this.prisma.$transaction((inner) =>
+      this.completePurchase(inner, purchase.id, externalPaymentId),
+    );
   }
 
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
     const purchase = await this.findMatching(data);
     if (!purchase || purchase.status === CreditPurchaseStatus.REFUNDED) return;
 
-    await this.refundPurchase(purchase.id);
+    await this.refundPurchase(this.prisma, purchase.id);
   }
 
-  async refundById(purchaseId: string): Promise<void> {
-    await this.refundPurchase(purchaseId);
+  async refundById(purchaseId: string, tx?: Prisma.TransactionClient): Promise<void> {
+    if (tx) {
+      await this.refundPurchase(tx, purchaseId);
+      return;
+    }
+    await this.prisma.$transaction((inner) => this.refundPurchase(inner, purchaseId));
   }
 
-  private async refundPurchase(purchaseId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+  private async refundPurchase(db: BillingDb, purchaseId: string): Promise<void> {
+    const run = async (tx: BillingDb) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (!current || current.status === CreditPurchaseStatus.REFUNDED) return;
 
@@ -173,11 +188,21 @@ export class CreditPurchaseService {
           },
         });
       }
-    });
+    };
+
+    if ('$transaction' in db) {
+      await this.prisma.$transaction((inner) => run(inner));
+      return;
+    }
+    await run(db);
   }
 
-  private async completePurchase(purchaseId: string, externalPaymentId?: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+  private async completePurchase(
+    db: BillingDb,
+    purchaseId: string,
+    externalPaymentId?: string,
+  ): Promise<void> {
+    const run = async (tx: BillingDb) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (
         !current ||
@@ -210,7 +235,13 @@ export class CreditPurchaseService {
           metadata: { provider: current.provider, paymentMethod: current.paymentMethod },
         },
       });
-    });
+    };
+
+    if ('$transaction' in db) {
+      await this.prisma.$transaction((inner) => run(inner));
+      return;
+    }
+    await run(db);
   }
 
   private readMetadata(data: Record<string, unknown>): Record<string, string> {

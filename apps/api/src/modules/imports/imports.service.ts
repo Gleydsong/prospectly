@@ -10,6 +10,11 @@ import type { Queue } from 'bullmq';
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  IMPORT_JOB_STALE_MS,
+  isDuplicateJobError,
+  staleBefore,
+} from '../../common/workers/durable-job';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
@@ -132,11 +137,15 @@ export class ImportsService {
   }
 
   async reconcilePending(): Promise<number> {
+    const stale = staleBefore(IMPORT_JOB_STALE_MS);
     const pending = await this.prisma.import.findMany({
       where: {
-        status: ImportStatus.PENDING,
-        jobDispatchedAt: null,
         stagedRows: { not: Prisma.DbNull },
+        OR: [
+          { status: ImportStatus.PENDING, jobDispatchedAt: null },
+          { status: ImportStatus.PENDING, jobDispatchedAt: { lt: stale } },
+          { status: ImportStatus.PROCESSING, jobDispatchedAt: { lt: stale } },
+        ],
       },
       orderBy: { createdAt: 'asc' },
       take: 100,
@@ -286,16 +295,23 @@ export class ImportsService {
   }
 
   private async dispatch(importRecord: { id: string; correlationId?: string | null }): Promise<void> {
-    await this.queue.add(
-      PROCESS_CSV_IMPORT_JOB,
-      {
-        importId: importRecord.id,
-        ...(importRecord.correlationId ? { correlationId: importRecord.correlationId } : {}),
-      },
-      { ...IMPORT_JOB_OPTIONS, jobId: importRecord.id },
-    );
+    try {
+      await this.queue.add(
+        PROCESS_CSV_IMPORT_JOB,
+        {
+          importId: importRecord.id,
+          ...(importRecord.correlationId ? { correlationId: importRecord.correlationId } : {}),
+        },
+        { ...IMPORT_JOB_OPTIONS, jobId: importRecord.id },
+      );
+    } catch (error) {
+      if (!isDuplicateJobError(error)) throw error;
+    }
     await this.prisma.import.updateMany({
-      where: { id: importRecord.id, status: ImportStatus.PENDING, jobDispatchedAt: null },
+      where: {
+        id: importRecord.id,
+        status: { in: [ImportStatus.PENDING, ImportStatus.PROCESSING] },
+      },
       data: { jobDispatchedAt: new Date() },
     });
   }
