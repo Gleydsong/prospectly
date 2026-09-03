@@ -27,19 +27,30 @@ Escale se as profundidades continuarem subindo depois do restart ou se jobs fail
 
 Sintomas:
 
-- `GET /health/ready` devolve `503` com `{ "status": "not_ready" }`
 - `ops/metrics` reporta `redis.status: "down"` (quando o processo ainda consegue servir o token de ops)
-- Caminhos de enqueue/rate-limit falham; jobs param de avançar
+- Caminhos de enqueue/rate-limit degradam; jobs param de avançar até o Redis voltar
+- `GET /health/ready` **continua 200** se o PostgreSQL responder — a API não depende do Redis para receber webhooks Asaas nem para a fonte da verdade financeira
 
 Ações:
 
 1. Verifique se a instância Key Value da Render (`prospectly-redis`) está no ar e não esgotada.
-2. Confirme `REDIS_URL` no serviço da API e que a política continua `noeviction` (obrigatório para BullMQ).
+2. Confirme `REDIS_URL` no serviço da API e que a política continua `noeviction` (obrigatório para BullMQ; **não** mude para LRU).
 3. A partir do host/rede da API, teste conectividade com o Redis (somente rede privada).
-4. Restaure o Redis antes de forçar retries de job. Quando o Redis voltar, reconfira `health/ready` e as profundidades de fila.
-5. Se houve perda de dados num Redis efêmero/recriado, jobs em voo terão sumido — reconcilie pesquisas/importações pendentes a partir do estado no Postgres e redispare pelo app se preciso.
+4. Restaure o Redis. Quando voltar, reconfira `ops/metrics` e as profundidades de fila. Reconciliadores reenfileiram `PENDING`/`PROCESSING` stale a partir do Postgres.
+5. Se houve perda de dados num Redis efêmero/recriado, jobs em voo no Redis terão sumido — o Postgres ainda tem pesquisas, imports, Opportunity Finder, análises de site e a inbox Asaas. Os reconciliadores (~5s) republicam com o mesmo `jobId`.
 
 Não troque o Redis para políticas de eviction voláteis.
+
+### Política de TTL (plano 25 MB)
+
+| Uso | TTL | Fonte da verdade |
+| --- | --- | --- |
+| Throttle HTTP (hits + block) | TTL do throttler via script Lua atômico (`INCR` + `PEXPIRE`) | Não financeira; fail-open se Redis cair |
+| Nominatim 1 rps | `PX` no slot Lua | Fail-closed de propósito (política OSM) |
+| Locks / debounce / cache | TTL curto | Postgres |
+| Jobs BullMQ | Coordenação volátil | Linha Postgres (`PENDING`/`PROCESSING` + `jobDispatchedAt`) + inbox `BillingWebhookEvent` |
+
+Chaves permanentes desnecessárias são um risco neste plano. `maxmemory-policy` deve permanecer `noeviction` enquanto houver filas BullMQ.
 
 ## Falha de provedor
 
@@ -75,8 +86,8 @@ Use quando um deploy introduzir pico de erros, filas travadas ou regressão de a
 | Checagem | Esperado |
 |-------|----------|
 | `GET /health` | OK estilo liveness público, sem internos |
-| `GET /health/ready` | ready só quando Postgres + Redis respondem |
+| `GET /health/ready` | ready quando **Postgres** responde. Redis down não deve derrubar o health da API |
 | `GET /api/v1/ops/metrics` sem `OPS_METRICS_TOKEN` configurado | 404 |
 | `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` ausente/errado | 401 |
 | `GET /api/v1/ops/metrics` só com JWT de tenant | 401 (ou 404 se o token não estiver definido) |
-| `GET /api/v1/ops/metrics` com token de ops correto | JSON com `http`, `jobs`, `queues`, `redis` |
+| `GET /api/v1/ops/metrics` com token de ops correto | JSON com `http`, `jobs`, `queues`, `redis`, `reliability` |

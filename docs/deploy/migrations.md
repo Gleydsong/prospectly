@@ -16,7 +16,7 @@ A API expõe:
 |------|---------|
 | `GET /health` | Processo básico no ar |
 | `GET /health/live` | Liveness (processo vivo) |
-| `GET /health/ready` | Readiness — **PostgreSQL** (`SELECT 1` via Prisma) **e Redis** (`PING` via cliente de fila BullMQ) |
+| `GET /health/ready` | Readiness — **PostgreSQL** (`SELECT 1` via Prisma). Redis **não** entra no gate: a API precisa permanecer apta a receber webhooks Asaas |
 
 A Render usa `healthCheckPath: /health/ready`. Não marque uma revisão nova como viva até o readiness passar depois das migrations (quando o release inclui mudança de schema).
 
@@ -70,7 +70,7 @@ Evite expand+contract no mesmo release quando as instâncias sobem aos poucos. R
 1. Merge em `main` depois do CI verde (`autoDeployTrigger: checksPass` na Render).
 2. Se houver migrations Prisma no release: rode o job de migrate **único** primeiro; confirme exit code 0.
 3. Deixe o serviço da API implantar a imagem nova (`CMD`: só `node dist/main.js`).
-4. Verifique `GET /health/ready` (Postgres + Redis) e um caminho de smoke (login / uma leitura autenticada).
+4. Verifique `GET /health/ready` (Postgres) e um caminho de smoke (login / uma leitura autenticada). Redis down não deve impedir o ready.
 
 ## Rollback
 

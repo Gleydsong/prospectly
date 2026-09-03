@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
+import { OrgPlan, PaymentProvider, PlanStatus, type Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import type { BillingDb } from './billing-db';
 import type { BillingCurrency } from './domain/payment-provider';
 
 @Injectable()
@@ -21,11 +22,13 @@ export class BillingActivationService {
     stripeCustomerId?: string | null;
     abacateCustomerId?: string | null;
     abacatePaymentId?: string | null;
+    tx?: Prisma.TransactionClient;
   }): Promise<{
     previousStripeSubscriptionId: string | null;
     previousAbacateSubscriptionId: string | null;
   }> {
-    const org = await this.prisma.organization.findUnique({
+    const db = this.db(input.tx);
+    const org = await db.organization.findUnique({
       where: { id: input.organizationId },
     });
     if (!org) {
@@ -39,7 +42,7 @@ export class BillingActivationService {
     const previousStripeSubscriptionId = org.stripeSubscriptionId;
     const previousAbacateSubscriptionId = org.abacateSubscriptionId;
 
-    await this.prisma.organization.update({
+    await db.organization.update({
       where: { id: input.organizationId },
       data: {
         plan: OrgPlan.LIFETIME,
@@ -68,8 +71,10 @@ export class BillingActivationService {
     provider: PaymentProvider;
     abacatePaymentId?: string | null;
     stripeCustomerId?: string | null;
+    tx?: Prisma.TransactionClient;
   }): Promise<void> {
-    const org = await this.prisma.organization.findUnique({
+    const db = this.db(input.tx);
+    const org = await db.organization.findUnique({
       where: { id: input.organizationId },
     });
     if (!org) {
@@ -100,7 +105,7 @@ export class BillingActivationService {
       return;
     }
 
-    await this.prisma.organization.update({
+    await db.organization.update({
       where: { id: org.id },
       data: {
         plan: OrgPlan.FREE,
@@ -121,8 +126,10 @@ export class BillingActivationService {
     asaasSubscriptionId?: string | null;
     asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
+    tx?: Prisma.TransactionClient;
   }): Promise<void> {
-    const org = await this.prisma.organization.findUnique({
+    const db = this.db(input.tx);
+    const org = await db.organization.findUnique({
       where: { id: input.organizationId },
     });
     if (!org) {
@@ -182,7 +189,7 @@ export class BillingActivationService {
         ? org.currentPeriodEnd
         : input.currentPeriodEnd;
 
-    await this.prisma.organization.update({
+    await db.organization.update({
       where: { id: input.organizationId },
       data: {
         plan: OrgPlan.STARTER_MONTHLY,
@@ -215,8 +222,10 @@ export class BillingActivationService {
     asaasSubscriptionId?: string | null;
     asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
+    tx?: Prisma.TransactionClient;
   }): Promise<void> {
-    const org = await this.prisma.organization.findUnique({
+    const db = this.db(input.tx);
+    const org = await db.organization.findUnique({
       where: { id: input.organizationId },
     });
     if (!org) {
@@ -242,7 +251,7 @@ export class BillingActivationService {
 
     const canceled = input.status === PlanStatus.CANCELED || input.status === PlanStatus.INACTIVE;
 
-    await this.prisma.organization.update({
+    await db.organization.update({
       where: { id: org.id },
       data: {
         plan: canceled ? OrgPlan.FREE : OrgPlan.STARTER_MONTHLY,
@@ -266,11 +275,16 @@ export class BillingActivationService {
     });
   }
 
-  async markInvoicePaid(organizationId: string): Promise<void> {
-    const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+  private db(tx?: Prisma.TransactionClient): BillingDb {
+    return tx ?? this.prisma;
+  }
+
+  async markInvoicePaid(organizationId: string, tx?: Prisma.TransactionClient): Promise<void> {
+    const db = this.db(tx);
+    const org = await db.organization.findUnique({ where: { id: organizationId } });
     if (!org || org.plan === OrgPlan.LIFETIME) return;
 
-    await this.prisma.organization.update({
+    await db.organization.update({
       where: { id: org.id },
       data: {
         planStatus: PlanStatus.ACTIVE,

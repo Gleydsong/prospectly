@@ -18,6 +18,11 @@ import {
 
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  isDuplicateJobError,
+  SEARCH_JOB_STALE_MS,
+  staleBefore,
+} from '../../common/workers/durable-job';
 import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
 import {
@@ -152,15 +157,31 @@ export class ProspectingService {
   }
 
   async reconcilePending(): Promise<number> {
+    const stale = staleBefore(SEARCH_JOB_STALE_MS);
     const pending = await this.prisma.search.findMany({
-      where: { status: SearchStatus.PENDING, jobDispatchedAt: null },
+      where: {
+        OR: [
+          { status: SearchStatus.PENDING, jobDispatchedAt: null },
+          { status: SearchStatus.PENDING, jobDispatchedAt: { lt: stale } },
+          { status: SearchStatus.PROCESSING, jobDispatchedAt: { lt: stale } },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
       take: 100,
     });
     let dispatched = 0;
     for (const search of pending) {
       try {
+        const recovered = search.jobDispatchedAt !== null;
         await this.dispatch(search);
+        if (recovered) {
+          this.logger.log({
+            event: 'critical_job_recovered',
+            jobId: search.id,
+            type: 'search',
+            status: search.status,
+          });
+        }
         dispatched += 1;
       } catch {
         // Keep the row pending; the next reconciliation pass retries it.
@@ -448,16 +469,23 @@ export class ProspectingService {
   }
 
   private async dispatch(search: { id: string; correlationId?: string | null }): Promise<void> {
-    await this.queue.add(
-      RUN_SEARCH_JOB,
-      {
-        searchId: search.id,
-        ...(search.correlationId ? { correlationId: search.correlationId } : {}),
-      },
-      { ...PROSPECTING_JOB_OPTIONS, jobId: search.id },
-    );
+    try {
+      await this.queue.add(
+        RUN_SEARCH_JOB,
+        {
+          searchId: search.id,
+          ...(search.correlationId ? { correlationId: search.correlationId } : {}),
+        },
+        { ...PROSPECTING_JOB_OPTIONS, jobId: search.id },
+      );
+    } catch (error) {
+      if (!isDuplicateJobError(error)) throw error;
+    }
     await this.prisma.search.updateMany({
-      where: { id: search.id, status: SearchStatus.PENDING, jobDispatchedAt: null },
+      where: {
+        id: search.id,
+        status: { in: [SearchStatus.PENDING, SearchStatus.PROCESSING] },
+      },
       data: { jobDispatchedAt: new Date() },
     });
   }

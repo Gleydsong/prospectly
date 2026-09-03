@@ -10,9 +10,16 @@ import type { Queue } from 'bullmq';
 import type { WebsiteAnalyzer } from '@prospectly/shared-types';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { runWithBypass } from '../../common/prisma/tenant-context';
+import {
+  isDuplicateJobError,
+  staleBefore,
+  WEBSITE_ANALYSIS_JOB_STALE_MS,
+} from '../../common/workers/durable-job';
 import { ScoringService } from '../scoring/scoring.service';
 import {
   ANALYZE_WEBSITE_JOB,
+  WEBSITE_ANALYSIS_JOB_OPTIONS,
   WEBSITE_ANALYSIS_QUEUE,
   type AnalyzeWebsiteJobData,
 } from './website-analysis.constants';
@@ -97,29 +104,85 @@ export class WebsiteAnalysisService {
       },
     });
 
-    await this.queue.add(
-      ANALYZE_WEBSITE_JOB,
-      {
+    try {
+      await this.dispatch({
         organizationId,
         leadId,
         analysisId: analysis.id,
         url: websiteUrl,
         ...(correlationId ? { correlationId } : {}),
-      },
-      {
-        jobId: `analyze-${leadId}-${analysis.id}`,
-        removeOnComplete: 100,
-        removeOnFail: 50,
-        attempts: 2,
-        backoff: { type: 'exponential', delay: 2000 },
-      },
-    );
+      });
+    } catch {
+      // PENDING row remains; WebsiteAnalysisDispatchReconciler republishes.
+    }
 
     return {
       queued: true as const,
       analysisId: analysis.id,
       status: analysis.status,
     };
+  }
+
+  async reconcilePending(): Promise<number> {
+    return runWithBypass(async () => {
+      const stale = staleBefore(WEBSITE_ANALYSIS_JOB_STALE_MS);
+      const pending = await this.prisma.websiteAnalysis.findMany({
+        where: {
+          OR: [
+            { status: 'PENDING' },
+            { status: 'RUNNING', startedAt: { lt: stale } },
+            { status: 'RUNNING', startedAt: null, createdAt: { lt: stale } },
+          ],
+        },
+        include: {
+          website: { select: { url: true, lead: { select: { id: true, organizationId: true } } } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 50,
+      });
+      let dispatched = 0;
+      for (const analysis of pending) {
+        const lead = analysis.website.lead;
+        try {
+          await this.dispatch({
+            organizationId: lead.organizationId,
+            leadId: lead.id,
+            analysisId: analysis.id,
+            url: analysis.website.url,
+          });
+          dispatched += 1;
+        } catch {
+          // Redis still down; the next pass retries the PENDING/RUNNING row.
+        }
+      }
+      return dispatched;
+    });
+  }
+
+  private async dispatch(job: AnalyzeWebsiteJobData): Promise<void> {
+    try {
+      await this.queue.add(
+        ANALYZE_WEBSITE_JOB,
+        {
+          organizationId: job.organizationId,
+          leadId: job.leadId,
+          analysisId: job.analysisId,
+          url: job.url,
+          ...(job.correlationId ? { correlationId: job.correlationId } : {}),
+        },
+        { jobId: `analyze-${job.leadId}-${job.analysisId}`, ...WEBSITE_ANALYSIS_JOB_OPTIONS },
+      );
+    } catch (error) {
+      if (!isDuplicateJobError(error)) {
+        this.logger.warn({
+          event: 'critical_job_created',
+          jobId: job.analysisId,
+          type: 'website-analysis',
+          redisDispatch: 'deferred',
+        });
+        throw error;
+      }
+    }
   }
 
   async processAnalysis(job: AnalyzeWebsiteJobData): Promise<void> {

@@ -24,6 +24,14 @@ export class MetricsService {
   private readonly httpByMethod = new Map<string, number>();
   private readonly jobsByQueue = new Map<string, JobBucket>();
 
+  private jobsRecovered = 0;
+  private webhookDuplicates = 0;
+  private webhookProcessed = 0;
+  private webhookFailed = 0;
+  private redisErrors = 0;
+  private creditFailures = 0;
+  private dbTransactionFailures = 0;
+
   recordHttp(method: string, statusCode: number, durationMs: number): void {
     this.httpTotal += 1;
     if (statusCode >= 500) {
@@ -59,6 +67,34 @@ export class MetricsService {
     }
 
     this.jobsByQueue.set(queue, bucket);
+  }
+
+  recordJobRecovered(): void {
+    this.jobsRecovered += 1;
+  }
+
+  recordWebhookDuplicate(): void {
+    this.webhookDuplicates += 1;
+  }
+
+  recordWebhookProcessed(): void {
+    this.webhookProcessed += 1;
+  }
+
+  recordWebhookFailed(): void {
+    this.webhookFailed += 1;
+  }
+
+  recordRedisError(): void {
+    this.redisErrors += 1;
+  }
+
+  recordCreditFailure(): void {
+    this.creditFailures += 1;
+  }
+
+  recordDbTransactionFailure(): void {
+    this.dbTransactionFailures += 1;
   }
 
   getHttpSnapshot() {
@@ -103,6 +139,20 @@ export class MetricsService {
     }
 
     return queues;
+  }
+
+  getReliabilitySnapshot() {
+    return {
+      webhooks: {
+        duplicates: this.webhookDuplicates,
+        processed: this.webhookProcessed,
+        failed: this.webhookFailed,
+      },
+      redisErrors: this.redisErrors,
+      creditFailures: this.creditFailures,
+      dbTransactionFailures: this.dbTransactionFailures,
+      jobsRecovered: this.jobsRecovered,
+    };
   }
 
   getProcessSnapshot() {

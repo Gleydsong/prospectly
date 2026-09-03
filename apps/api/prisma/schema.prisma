@@ -807,6 +807,7 @@ model OpportunityRun {
   errorMessage        String?
   correlationId       String?
   idempotencyKey      String?
+  jobDispatchedAt     DateTime?
   startedAt           DateTime             @default(now())
   completedAt         DateTime?
   createdAt           DateTime             @default(now())
@@ -822,6 +823,7 @@ model OpportunityRun {
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
   @@index([userId, createdAt])
+  @@index([status, jobDispatchedAt])
 }
 
 model OpportunityCandidate {

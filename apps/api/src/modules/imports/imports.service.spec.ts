@@ -186,9 +186,31 @@ describe('ImportsService', () => {
       expect.objectContaining({ jobId: 'import-1' }),
     );
     expect(prisma.import.updateMany).toHaveBeenCalledWith({
-      where: { id: 'import-1', status: 'PENDING', jobDispatchedAt: null },
+      where: { id: 'import-1', status: { in: ['PENDING', 'PROCESSING'] } },
       data: { jobDispatchedAt: expect.any(Date) },
     });
+  });
+
+  it('re-enqueues a PROCESSING import after Redis flush using the durable jobId', async () => {
+    const { prisma, queue, service } = createService();
+    prisma.import.findMany.mockResolvedValue([
+      {
+        id: 'import-stale',
+        status: 'PROCESSING',
+        correlationId: 'corr-stale',
+        jobDispatchedAt: new Date('2026-01-01T00:00:00.000Z'),
+      },
+    ]);
+    prisma.import.updateMany.mockResolvedValue({ count: 1 });
+    queue.add.mockResolvedValue(undefined);
+
+    await expect(service.reconcilePending()).resolves.toBe(1);
+
+    expect(queue.add).toHaveBeenCalledWith(
+      'process-csv-import',
+      { importId: 'import-stale', correlationId: 'corr-stale' },
+      expect.objectContaining({ jobId: 'import-stale' }),
+    );
   });
 
   it('scopes import history and hides imports from another organization', async () => {

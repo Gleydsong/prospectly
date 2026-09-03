@@ -1101,6 +1101,36 @@ describe('BillingService', () => {
     expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
   });
 
+  it('treats a concurrent ledger unique conflict as already consumed', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 20,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(5);
+    prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
+
+    await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
+  });
+
+  it('refuses a second concurrent consume when remaining balance is insufficient', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 14,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(5);
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+    prisma.organization.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.consumeCreditForSearch('org1', 'search-42')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
   it('decrements 16 credits for an Opportunity Finder run after the free quota', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',

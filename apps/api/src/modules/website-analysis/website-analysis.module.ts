@@ -9,6 +9,7 @@ import {
   WEBSITE_ANALYSIS_TIMEOUT_MS,
 } from './website-analysis.constants';
 import { WebsiteAnalysisService } from './website-analysis.service';
+import { WebsiteAnalysisDispatchReconciler } from './website-analysis-dispatch.reconciler';
 import { WEBSITE_ANALYZER } from './website-analysis.tokens';
 
 @Module({
@@ -18,6 +19,11 @@ import { WEBSITE_ANALYZER } from './website-analysis.tokens';
   ],
   providers: [
     WebsiteAnalysisService,
+    {
+      provide: WebsiteAnalysisDispatchReconciler,
+      inject: [WebsiteAnalysisService],
+      useFactory: (service: WebsiteAnalysisService) => new WebsiteAnalysisDispatchReconciler(service),
+    },
     {
       provide: WEBSITE_ANALYZER,
       inject: [ConfigService],

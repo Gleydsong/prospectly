@@ -18,7 +18,7 @@ A API guarda identificadores históricos de Stripe e AbacatePay. Contratos exist
 ## Propriedades de segurança
 
 - Benefícios só são concedidos depois de webhook autenticado do provedor **e** leitura autoritativa no provedor.
-- Webhooks Asaas são persistidos no PostgreSQL antes do acknowledgment e processados com fluxo atômico de lease/reclaim.
+- Webhooks Asaas são persistidos no PostgreSQL (`BillingWebhookEvent`, `UNIQUE(provider, eventId)`) antes do acknowledgment. Apply financeiro (pagamento, créditos, assinatura) e marcação `PROCESSED` ocorrem na mesma transação Postgres. Replay duplicado é no-op durável — Redis nunca é a prova de idempotência.
 - Criação de checkout Asaas ambígua vira `REVIEW_REQUIRED`; a organização não cria outro checkout e não há retry cego.
 - O ID de pagamento Asaas persistido é reutilizado para recuperar o QR depois de falha transitória de resposta.
 - PIX só concede benefício depois que a leitura autoritativa do pagamento Asaas reporta `RECEIVED`; `CONFIRMED` **não** basta para PIX.

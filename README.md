@@ -222,8 +222,9 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 - Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
 - Billing (PIX e cartão novos pelo Asaas; AbacatePay só histórico; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
 - Estado operacional do billing, rollback Appmax ou continuação Asaas: [`docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md`](docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md).
-- `GET /health/ready` verifica PostgreSQL e Redis; falha de qualquer dependência
-  obrigatória retorna `503`.
+- `GET /health/ready` verifica **PostgreSQL**. Redis fora não tira a API do ar:
+  webhooks Asaas, pagamentos e créditos continuam corretos (mais lentos / sem fila
+  até o Redis voltar). Redis é acelerador (cache, throttle, locks, BullMQ).
 - A migration de hardening canonicaliza domínio, e-mail e telefone legados e
   adiciona a chave provável `(tenant, nome + cidade + UF)`. Preflights
   não destrutivos interrompem a migration com os IDs conflitantes; resolva-os

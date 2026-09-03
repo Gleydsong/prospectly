@@ -11,10 +11,11 @@ import {
 import { MailService } from '../../common/mail/mail.service';
 import { buildCreditsPurchasedEmail } from '../../common/mail/templates/credits-purchased-email';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import type { BillingDb } from './billing-db';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
 import type { CreditOffer, PaymentMethod } from './domain/payment-provider';
 
-type CompletedCreditPurchase = {
+export type CompletedCreditPurchase = {
   id: string;
   organizationId: string;
   credits: number;
@@ -137,33 +138,44 @@ export class CreditPurchaseService {
       purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED
     )
       return;
-    await this.completePurchase(purchase.id, paymentId);
+    await this.completePurchase(this.prisma, purchase.id, paymentId);
   }
 
-  async completeById(purchaseId: string, externalPaymentId: string): Promise<void> {
+  async completeById(
+    purchaseId: string,
+    externalPaymentId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CompletedCreditPurchase | null> {
+    if (tx) {
+      return this.completePurchase(tx, purchaseId, externalPaymentId);
+    }
     const purchase = await this.prisma.creditPurchase.findUnique({ where: { id: purchaseId } });
     if (
       !purchase ||
       (purchase.status !== CreditPurchaseStatus.PENDING &&
         purchase.status !== CreditPurchaseStatus.REVIEW_REQUIRED)
     )
-      return;
-    await this.completePurchase(purchase.id, externalPaymentId);
+      return null;
+    return this.completePurchase(this.prisma, purchase.id, externalPaymentId);
   }
 
   async refundFromWebhook(data: Record<string, unknown>): Promise<void> {
     const purchase = await this.findMatching(data);
     if (!purchase || purchase.status === CreditPurchaseStatus.REFUNDED) return;
 
-    await this.refundPurchase(purchase.id);
+    await this.refundPurchase(this.prisma, purchase.id);
   }
 
-  async refundById(purchaseId: string): Promise<void> {
-    await this.refundPurchase(purchaseId);
+  async refundById(purchaseId: string, tx?: Prisma.TransactionClient): Promise<void> {
+    if (tx) {
+      await this.refundPurchase(tx, purchaseId);
+      return;
+    }
+    await this.prisma.$transaction((inner) => this.refundPurchase(inner, purchaseId));
   }
 
-  private async refundPurchase(purchaseId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+  private async refundPurchase(db: BillingDb, purchaseId: string): Promise<void> {
+    const run = async (tx: BillingDb) => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (!current || current.status === CreditPurchaseStatus.REFUNDED) return;
 
@@ -191,11 +203,21 @@ export class CreditPurchaseService {
           },
         });
       }
-    });
+    };
+
+    if ('$transaction' in db) {
+      await this.prisma.$transaction((inner) => run(inner));
+      return;
+    }
+    await run(db);
   }
 
-  private async completePurchase(purchaseId: string, externalPaymentId?: string): Promise<void> {
-    const completed = await this.prisma.$transaction(async (tx) => {
+  private async completePurchase(
+    db: BillingDb,
+    purchaseId: string,
+    externalPaymentId?: string,
+  ): Promise<CompletedCreditPurchase | null> {
+    const run = async (tx: BillingDb): Promise<CompletedCreditPurchase | null> => {
       const current = await tx.creditPurchase.findUnique({ where: { id: purchaseId } });
       if (
         !current ||
@@ -237,14 +259,18 @@ export class CreditPurchaseService {
         completedAt: new Date(),
         balanceAfter: organization.creditBalance,
       } satisfies CompletedCreditPurchase;
-    });
+    };
 
-    if (completed) {
-      await this.notifyCreditsPurchased(completed);
+    if ('$transaction' in db) {
+      const completed = await this.prisma.$transaction((inner) => run(inner));
+      if (completed) await this.notifyCreditsPurchased(completed);
+      return completed ?? null;
     }
+
+    return run(db);
   }
 
-  private async notifyCreditsPurchased(purchase: CompletedCreditPurchase): Promise<void> {
+  async notifyCreditsPurchased(purchase: CompletedCreditPurchase): Promise<void> {
     try {
       const recipients = await this.prisma.organizationMember.findMany({
         where: {

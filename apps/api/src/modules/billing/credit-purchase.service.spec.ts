@@ -237,4 +237,33 @@ describe('CreditPurchaseService', () => {
     expect(tx.organization.findUnique).not.toHaveBeenCalled();
     expect(tx.organization.update).not.toHaveBeenCalled();
   });
+
+  it('does not leave a completed purchase when the ledger insert fails', async () => {
+    const purchase = {
+      id: 'purchase_1',
+      organizationId: 'org_1',
+      offer: 'credits-2000',
+      credits: 2000,
+      status: CreditPurchaseStatus.PENDING,
+      provider: PaymentProvider.ASAAS,
+      paymentMethod: 'PIX',
+    };
+    const tx = {
+      creditPurchase: {
+        findUnique: jest.fn().mockResolvedValue(purchase),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      organization: { update: jest.fn().mockResolvedValue({ creditBalance: 2000 }) },
+      creditLedgerEntry: { create: jest.fn().mockRejectedValue(new Error('ledger insert failed')) },
+    };
+    const prisma = {
+      creditPurchase: { findUnique: jest.fn().mockResolvedValue(purchase) },
+      $transaction: jest.fn(async (callback: (client: typeof tx) => Promise<void>) => callback(tx)),
+    };
+    const service = makeService(prisma);
+
+    await expect(
+      service.completeFromWebhook({ id: 'pix_1', metadata: { purchaseId: 'purchase_1' } }),
+    ).rejects.toThrow('ledger insert failed');
+  });
 });

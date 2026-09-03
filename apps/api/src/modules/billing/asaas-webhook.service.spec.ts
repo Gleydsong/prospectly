@@ -1,4 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -25,9 +27,17 @@ describe('AsaasWebhookService', () => {
     billingProfile: { findUnique: jest.fn() },
     monthlyCheckoutAttempt: { findUnique: jest.fn(), findMany: jest.fn(), updateMany: jest.fn() },
     organization: { findUnique: jest.fn() },
+    $transaction: jest.fn(),
+  };
+  const txClient = {
+    billingWebhookEvent: prisma.billingWebhookEvent,
+    creditPurchase: prisma.creditPurchase,
+    billingProfile: prisma.billingProfile,
+    monthlyCheckoutAttempt: prisma.monthlyCheckoutAttempt,
+    organization: prisma.organization,
   };
   const client = { getPayment: jest.fn(), findPayment: jest.fn() };
-  const purchases = { completeById: jest.fn(), refundById: jest.fn() };
+  const purchases = { completeById: jest.fn(), refundById: jest.fn(), notifyCreditsPurchased: jest.fn() };
   const activation = { activateMonthly: jest.fn(), syncMonthlyStatus: jest.fn() };
   const monthlyAttempts = {
     markResolved: jest.fn(),
@@ -43,6 +53,9 @@ describe('AsaasWebhookService', () => {
     prisma.creditPurchase.updateMany.mockResolvedValue({ count: 1 });
     prisma.monthlyCheckoutAttempt.findMany.mockResolvedValue([]);
     prisma.organization.findUnique.mockResolvedValue(null);
+    prisma.$transaction.mockImplementation(async (work: (client: typeof txClient) => Promise<unknown>) =>
+      work(txClient),
+    );
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AsaasWebhookService,
@@ -128,7 +141,7 @@ describe('AsaasWebhookService', () => {
 
     await service.processEvent('evt_1');
 
-    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1');
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1', txClient);
     expect(prisma.billingWebhookEvent.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'PROCESSED' }) }),
     );
@@ -165,7 +178,7 @@ describe('AsaasWebhookService', () => {
 
     await service.processEvent('evt_1');
 
-    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1');
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1', txClient);
   });
 
   it('fulfills a still-pending card package from PAYMENT_RECEIVED after CONFIRMED was missed', async () => {
@@ -199,7 +212,7 @@ describe('AsaasWebhookService', () => {
 
     await service.processEvent('evt_received');
 
-    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1');
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-1', 'pay_1', txClient);
   });
 
   it('extends an active Asaas card subscription when a renewal lacks the original checkout reference', async () => {
@@ -322,7 +335,7 @@ describe('AsaasWebhookService', () => {
 
     await service.processEvent('evt_1');
 
-    expect(purchases.completeById).toHaveBeenCalledWith('purchase-pix-1', 'pay_pix_1');
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-pix-1', 'pay_pix_1', txClient);
   });
 
   it('does not credit an Asaas PIX package while CONFIRMED may still be cautional', async () => {
@@ -415,6 +428,7 @@ describe('AsaasWebhookService', () => {
     expect(monthlyAttempts.markResolved).toHaveBeenCalledWith(
       'org:org-1:monthly-card:attempt-1',
       'cus_1',
+      txClient,
     );
   });
 
@@ -466,6 +480,7 @@ describe('AsaasWebhookService', () => {
     expect(monthlyAttempts.markResolved).toHaveBeenCalledWith(
       'org:org-1:monthly-pix:attempt-1',
       'cus_1',
+      txClient,
     );
   });
 
@@ -564,7 +579,7 @@ describe('AsaasWebhookService', () => {
     expect(client.findPayment).toHaveBeenCalledWith({
       externalReference: 'org:org-1:credits:review',
     });
-    expect(purchases.completeById).toHaveBeenCalledWith('purchase-review', 'pay_recovered');
+    expect(purchases.completeById).toHaveBeenCalledWith('purchase-review', 'pay_recovered', txClient);
   });
 
   it('expires a stale review-required package when Asaas has no payment', async () => {
@@ -676,5 +691,83 @@ describe('AsaasWebhookService', () => {
       expect.objectContaining({ checkoutSession: 'pay_pix_monthly_1' }),
     );
     expect(activation.activateMonthly).toHaveBeenCalled();
+  });
+
+  it('acknowledges a duplicate Asaas event without inserting a second inbox row', async () => {
+    prisma.billingWebhookEvent.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '6',
+      }),
+    );
+
+    await expect(
+      service.ingest(Buffer.from(JSON.stringify(payload)), {
+        'asaas-access-token': 'webhook-secret',
+      }),
+    ).resolves.toEqual({ received: true });
+  });
+
+  it('lets only one concurrent processor claim the same event', async () => {
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 0 });
+
+    await service.processEvent('evt_1');
+
+    expect(client.getPayment).not.toHaveBeenCalled();
+    expect(purchases.completeById).not.toHaveBeenCalled();
+  });
+
+  it('rolls back financial work when marking the inbox processed fails', async () => {
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      id: 'inbox-1',
+      provider: 'ASAAS',
+      eventId: 'evt_1',
+      type: 'PAYMENT_CONFIRMED',
+      status: 'PENDING',
+      payload,
+      attempts: 1,
+    });
+    prisma.creditPurchase.findUnique.mockResolvedValue({
+      id: 'purchase-1',
+      organizationId: 'org-1',
+      amountCentavos: 1499,
+      currency: 'BRL',
+      externalId: 'org:org-1:credits:purchase-1',
+      provider: 'ASAAS',
+      paymentMethod: 'CARD',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_1',
+      value: 14.99,
+      externalReference: 'org:org-1:credits:purchase-1',
+      billingType: 'CREDIT_CARD',
+      status: 'CONFIRMED',
+    });
+    prisma.billingWebhookEvent.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockRejectedValueOnce(new Error('pg timeout'));
+
+    await expect(service.processEvent('evt_1')).rejects.toThrow('pg timeout');
+    expect(prisma.$transaction).toHaveBeenCalled();
+  });
+
+  it('rejects an invalid webhook payload before persistence', async () => {
+    await expect(
+      service.ingest(Buffer.from('not-json'), { 'asaas-access-token': 'webhook-secret' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('ignores unknown non-payment event types without financial side effects', async () => {
+    await expect(
+      service.ingest(
+        Buffer.from(JSON.stringify({ id: 'evt_unknown', event: 'TRANSFER_CREATED' })),
+        { 'asaas-access-token': 'webhook-secret' },
+      ),
+    ).resolves.toEqual({ received: true });
+    expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
+    expect(purchases.completeById).not.toHaveBeenCalled();
   });
 });

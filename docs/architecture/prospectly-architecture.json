@@ -962,7 +962,7 @@
         "CI instala, gera Prisma, executa lint, typecheck, tests, build e audit",
         "Render autoDeployTrigger=checksPass seleciona serviços por buildFilter",
         "API aplica prisma migrate deploy antes de iniciar",
-        "Health check /health/ready exige PostgreSQL e Redis"
+        "Health check /health/ready exige PostgreSQL (Redis é acelerador, não gate de ready)"
       ],
       "evidence": [
         ".github/workflows/ci.yml",
