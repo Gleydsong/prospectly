@@ -13,6 +13,8 @@ import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.modu
 import { WebsiteAnalysisProcessor } from '../website-analysis/website-analysis.processor';
 import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finder.module';
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
+import { OutboxModule } from '../outbox/outbox.module';
+import { OutboxProcessor } from '../outbox/outbox.processor';
 
 /**
  * Registers BullMQ processors for the dedicated worker process.
@@ -27,6 +29,7 @@ import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-fi
     OpsModule,
     OpportunityFinderModule,
     PrivacyRetentionModule,
+    OutboxModule,
   ],
   providers: [
     ProspectingProcessor,
@@ -35,6 +38,7 @@ import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-fi
     WebsiteAnalysisProcessor,
     OpportunityFinderProcessor,
     RetentionProcessor,
+    OutboxProcessor,
   ],
 })
 export class WorkersModule {}

@@ -5,6 +5,7 @@ export const SEARCH_JOB_STALE_MS = 15 * 60 * 1000;
 export const IMPORT_JOB_STALE_MS = 15 * 60 * 1000;
 export const OPPORTUNITY_JOB_STALE_MS = 5 * 60 * 1000;
 export const WEBSITE_ANALYSIS_JOB_STALE_MS = 10 * 60 * 1000;
+export const OUTBOX_JOB_STALE_MS = 2 * 60 * 1000;
 
 export function isDuplicateJobError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);

@@ -4,6 +4,8 @@ import { ImportsDispatchReconciler } from '../imports/imports-dispatch.reconcile
 import { ImportsModule } from '../imports/imports.module';
 import { OpportunityFinderDispatchReconciler } from '../opportunity-finder/opportunity-finder-dispatch.reconciler';
 import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finder.module';
+import { OutboxDispatchReconciler } from '../outbox/outbox-dispatch.reconciler';
+import { OutboxModule } from '../outbox/outbox.module';
 import { ProspectingDispatchReconciler } from '../prospecting/prospecting-dispatch.reconciler';
 import { ProspectingModule } from '../prospecting/prospecting.module';
 import { WebsiteAnalysisDispatchReconciler } from '../website-analysis/website-analysis-dispatch.reconciler';
@@ -25,6 +27,7 @@ describe('API-only dispatch reconcilers', () => {
     ['ImportsModule', ImportsModule, ImportsDispatchReconciler],
     ['WebsiteAnalysisModule', WebsiteAnalysisModule, WebsiteAnalysisDispatchReconciler],
     ['OpportunityFinderModule', OpportunityFinderModule, OpportunityFinderDispatchReconciler],
+    ['OutboxModule', OutboxModule, OutboxDispatchReconciler],
   ] as const)('%s does not start its reconciler', (_name, mod, reconciler) => {
     expect(providerTokens(mod)).not.toContain(reconciler);
   });
@@ -37,8 +40,9 @@ describe('API-only dispatch reconcilers', () => {
         ImportsDispatchReconciler,
         WebsiteAnalysisDispatchReconciler,
         OpportunityFinderDispatchReconciler,
+        OutboxDispatchReconciler,
       ]),
     );
-    expect(tokens).toHaveLength(4);
+    expect(tokens).toHaveLength(5);
   });
 });

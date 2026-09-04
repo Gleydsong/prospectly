@@ -36,6 +36,7 @@ export const TENANT_MODELS = new Set([
   'AiRun',
   'DataSubjectRequest',
   'SuppressionEntry',
+  'OutboxEvent',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

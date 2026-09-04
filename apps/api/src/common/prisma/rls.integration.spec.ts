@@ -31,6 +31,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const checkoutAttemptB = randomUUID();
   const billingProfileA = randomUUID();
   const billingProfileB = randomUUID();
+  const outboxEventA = randomUUID();
+  const outboxEventB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -85,6 +87,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         VALUES
           (${billingProfileA}, ${orgA}, 'Billing A', '11111111111', '11999999999', 'a@example.test', NOW(), NOW()),
           (${billingProfileB}, ${orgB}, 'Billing B', '22222222222', '21999999999', 'b@example.test', NOW(), NOW())
+      `;
+      await tx.$executeRaw`
+        INSERT INTO "OutboxEvent"
+          (id, "organizationId", type, "schemaVersion", "aggregateType", "aggregateId", "idempotencyKey", payload, status, attempts, "retainUntil", "createdAt", "updatedAt")
+        VALUES
+          (${outboxEventA}, ${orgA}, 'lead.stage_changed', 1, 'Lead', ${leadA}, ${`key-${outboxEventA}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW()),
+          (${outboxEventB}, ${orgB}, 'lead.stage_changed', 1, 'Lead', ${leadB}, ${`key-${outboxEventB}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW())
       `;
     });
   });
@@ -154,6 +163,69 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     expect(rows).toEqual([{ id: billingProfileA }]);
   });
 
+  it('isolates outbox events by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "OutboxEvent" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: outboxEventA }]);
+  });
+
+  it('rejects a cross-tenant outbox insert', async () => {
+    const foreignEventId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "OutboxEvent"
+            (id, "organizationId", type, "schemaVersion", "aggregateType", "aggregateId", "idempotencyKey", payload, status, attempts, "retainUntil", "createdAt", "updatedAt")
+          VALUES
+            (${foreignEventId}, ${orgB}, 'lead.stage_changed', 1, 'Lead', ${leadB}, ${`key-${foreignEventId}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rolls back a lead write and outbox insert together', async () => {
+    const rolledBackEventId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        await tx.$executeRaw`UPDATE "Lead" SET "companyName" = 'Moved then rolled back' WHERE id = ${leadA}`;
+        await tx.$executeRaw`
+          INSERT INTO "OutboxEvent"
+            (id, "organizationId", type, "schemaVersion", "aggregateType", "aggregateId", "idempotencyKey", payload, status, attempts, "retainUntil", "createdAt", "updatedAt")
+          VALUES
+            (${rolledBackEventId}, ${orgA}, 'lead.stage_changed', 1, 'Lead', ${leadA}, ${`key-${rolledBackEventId}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW())
+        `;
+        throw new Error('forced rollback');
+      }),
+    ).rejects.toThrow('forced rollback');
+
+    const lead = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      return tx.$queryRaw<Array<{ companyName: string }>>`
+        SELECT "companyName" FROM "Lead" WHERE id = ${leadA}
+      `;
+    });
+    const events = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "OutboxEvent" WHERE id = ${rolledBackEventId}
+      `;
+    });
+
+    expect(lead).toEqual([{ companyName: 'Lead A' }]);
+    expect(events).toEqual([]);
+  });
+
   it('rejects a cross-tenant insert', async () => {
     const foreignLeadId = randomUUID();
 
@@ -205,8 +277,9 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       );
       expect(tenantRows).toEqual([{ id: leadA }]);
 
-      const tenantRawRows = await runWithTenant(orgA, () =>
-        runtimePrisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Lead" ORDER BY id`,
+      const tenantRawRows = await runWithTenant(
+        orgA,
+        () => runtimePrisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM "Lead" ORDER BY id`,
       );
       expect(tenantRawRows).toEqual([{ id: leadA }]);
 

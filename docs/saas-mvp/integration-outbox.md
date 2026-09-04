@@ -5,7 +5,7 @@ Sync de saída CRM/webhook nunca deve bloquear a UX do produto. Use um **outbox*
 ## Fluxo
 
 1. **Na mesma transação de DB** da mudança de negócio (ex.: atualização de estágio do lead): inserir uma linha `OutboxEvent` (`id`, `organizationId`, `type`, `payload`, `idempotencyKey`, `status=PENDING`).
-2. O **worker** faz poll ou escuta (`FOR UPDATE SKIP LOCKED` / fila) e entrega no webhook/CRM configurado.
+2. O **worker** reclama a linha (`PENDING`/`FAILED`/PROCESSING stale) e, neste corte, marca `PROCESSED` sem chamada HTTP. Entrega a webhook/CRM de tenant fica na Release 7.
 3. Marcar `PROCESSED` (ou `FAILED` com retry/backoff). Deduplicar com `idempotencyKey` para o reprocessamento ser seguro.
 4. Handlers HTTP só enfileiram; eles **não** fazem `await` da chamada de terceiro.
 
@@ -17,4 +17,6 @@ Sync de saída CRM/webhook nunca deve bloquear a UX do produto. Use um **outbox*
 
 ## Stub atual do MVP
 
-`Integration` com `provider=WEBHOOK` guarda a URL de destino. Workers de entrega e uma tabela física `OutboxEvent` podem entrar numa fase posterior; até lá, trate este doc como o contrato de qualquer implementação de sync.
+`lead.stage_changed` já persiste `OutboxEvent` na mesma transação que move o Lead. O worker reclama a linha; Redis só acorda o dispatch. Entrega HTTP para `Integration` com `provider=WEBHOOK` continua fora deste corte (Release 7).
+
+`Integration` com `provider=WEBHOOK` guarda a URL de destino. Não trate essa URL como publisher ativo.

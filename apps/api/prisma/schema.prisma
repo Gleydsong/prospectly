@@ -176,6 +176,14 @@ enum BillingWebhookEventStatus {
   FAILED
 }
 
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  DEAD
+}
+
 enum BillingCheckoutAttemptStatus {
   PROCESSING
   READY
@@ -312,6 +320,7 @@ model Organization {
   aiRuns              AiRun[]
   dataSubjectRequests DataSubjectRequest[]
   suppressionEntries  SuppressionEntry[]
+  outboxEvents        OutboxEvent[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -1061,6 +1070,38 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@index([entity, entityId])
+}
+
+/// Durable domain fact plus delivery state. Not AuditLog and not LeadActivity.
+model OutboxEvent {
+  id              String            @id @default(uuid())
+  organizationId  String
+  type            String
+  schemaVersion   Int               @default(1)
+  aggregateType   String
+  aggregateId     String
+  actorId         String?
+  correlationId   String?
+  idempotencyKey  String
+  payload         Json
+  status          OutboxEventStatus @default(PENDING)
+  attempts        Int               @default(0)
+  lastError       String?
+  jobDispatchedAt DateTime?
+  processedAt     DateTime?
+  failedAt        DateTime?
+  retainUntil     DateTime
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, status, createdAt])
+  @@index([status, jobDispatchedAt])
+  @@index([status, retainUntil])
+  @@index([retainUntil])
+  @@index([organizationId, type, aggregateId])
 }
 
 /// Provider-agnostic webhook idempotency for active and historical gateways.
