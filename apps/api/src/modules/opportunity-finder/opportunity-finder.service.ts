@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import {
   ConfidenceLevel,
   LeadSource,
@@ -32,6 +32,7 @@ import { AuditService } from '../audit/audit.service';
 import { BillingService } from '../billing/billing.service';
 import { CREDIT_COSTS } from '../billing/billing.constants';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
+import { MetricsService } from '../ops/metrics.service';
 import type { NormalizedBusiness } from '../prospecting/domain/normalized-business';
 import { mergeProviderResults } from '../prospecting/domain/merge-search-results';
 import {
@@ -85,6 +86,7 @@ export class OpportunityFinderService {
     private readonly ai: StructuredAiService,
     private readonly leadIngestion: LeadIngestionService,
     private readonly audit: AuditService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   async create(
@@ -203,6 +205,7 @@ export class OpportunityFinderService {
           const recovered = run.jobDispatchedAt !== null;
           await this.dispatch(run);
           if (recovered) {
+            this.metrics?.recordJobRecovered();
             this.logger.log({
               event: 'critical_job_recovered',
               jobId: run.id,

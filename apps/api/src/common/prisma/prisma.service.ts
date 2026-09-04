@@ -1,17 +1,20 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
+import { MetricsService } from '../../modules/ops/metrics.service';
+import { instrumentPrismaTransaction } from './prisma-transaction-metrics';
 import { extendPrismaClient } from './tenant-prisma';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
-  constructor(config: ConfigService) {
+  constructor(config: ConfigService, @Optional() metrics?: MetricsService) {
     const appUrl = config.get<string>('databaseAppUrl')?.trim();
     const ownerUrl = config.get<string>('databaseUrl')?.trim();
     const url = (appUrl && appUrl.length > 0 ? appUrl : undefined) ?? ownerUrl ?? process.env.DATABASE_URL;
     super(url ? { datasources: { db: { url } } } : undefined);
     const extended = extendPrismaClient(this);
+    instrumentPrismaTransaction(extended, () => metrics?.recordDbTransactionFailure());
     Object.defineProperty(extended, 'onModuleInit', {
       value: async () => {
         await extended.$connect();

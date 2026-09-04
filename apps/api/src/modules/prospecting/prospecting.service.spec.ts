@@ -59,6 +59,7 @@ function createService(overrides: Record<string, unknown> = {}) {
     consumeCreditForSearch: jest.fn().mockResolvedValue(undefined),
     refundSearchCredit: jest.fn().mockResolvedValue(undefined),
   };
+  const metrics = { recordJobRecovered: jest.fn() };
 
   return {
     prisma,
@@ -67,12 +68,14 @@ function createService(overrides: Record<string, unknown> = {}) {
     registry,
     ingestion,
     billing,
+    metrics,
     service: new ProspectingService(
       prisma as never,
       queue as never,
       registry as never,
       ingestion as never,
       billing as never,
+      metrics as never,
     ),
   };
 }
@@ -157,8 +160,8 @@ describe('ProspectingService', () => {
   });
 
   it('keeps a failed dispatch recoverable and republishes it idempotently', async () => {
-    const { prisma, queue, service } = createService();
-    const search = { id: 'search-1', status: 'PENDING', correlationId: 'corr-1' };
+    const { prisma, queue, service, metrics } = createService();
+    const search = { id: 'search-1', status: 'PENDING', correlationId: 'corr-1', jobDispatchedAt: null };
     prisma.search.create.mockResolvedValue(search);
     queue.add.mockRejectedValue(new Error('redis password=super-secret unavailable'));
 
@@ -172,6 +175,7 @@ describe('ProspectingService', () => {
     prisma.search.updateMany.mockResolvedValue({ count: 1 });
     queue.add.mockResolvedValue(undefined);
     await service.reconcilePending();
+    expect(metrics.recordJobRecovered).not.toHaveBeenCalled();
 
     expect(queue.add).toHaveBeenLastCalledWith(
       'run-search',
@@ -185,7 +189,7 @@ describe('ProspectingService', () => {
   });
 
   it('re-enqueues a PROCESSING search after Redis loss using the durable jobId', async () => {
-    const { prisma, queue, service } = createService();
+    const { prisma, queue, service, metrics } = createService();
     const search = {
       id: 'search-stale',
       status: 'PROCESSING',
@@ -197,6 +201,7 @@ describe('ProspectingService', () => {
     queue.add.mockResolvedValue(undefined);
 
     await expect(service.reconcilePending()).resolves.toBe(1);
+    expect(metrics.recordJobRecovered).toHaveBeenCalledTimes(1);
 
     expect(queue.add).toHaveBeenCalledWith(
       'run-search',

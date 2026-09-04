@@ -6,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ConfidenceLevel, LeadSource, LeadStatus, OrgPlan, Prisma, SearchStatus, WebsitePresence } from '@prisma/client';
 import type { Queue } from 'bullmq';
@@ -25,6 +26,7 @@ import {
 } from '../../common/workers/durable-job';
 import { BillingService } from '../billing/billing.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
+import { MetricsService } from '../ops/metrics.service';
 import {
   CATEGORY_REQUIRED_PLAN,
   availableCategoryCount,
@@ -81,6 +83,7 @@ export class ProspectingService {
     @Inject(SEARCH_PROVIDER_REGISTRY) private readonly providers: SearchProviderRegistry,
     private readonly leadIngestion: LeadIngestionService,
     private readonly billing: BillingService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   listProviders() {
@@ -175,6 +178,7 @@ export class ProspectingService {
         const recovered = search.jobDispatchedAt !== null;
         await this.dispatch(search);
         if (recovered) {
+          this.metrics?.recordJobRecovered();
           this.logger.log({
             event: 'critical_job_recovered',
             jobId: search.id,

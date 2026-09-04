@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Prisma } from '@prisma/client';
@@ -16,6 +17,7 @@ import {
   staleBefore,
   WEBSITE_ANALYSIS_JOB_STALE_MS,
 } from '../../common/workers/durable-job';
+import { MetricsService } from '../ops/metrics.service';
 import { ScoringService } from '../scoring/scoring.service';
 import {
   ANALYZE_WEBSITE_JOB,
@@ -50,6 +52,7 @@ export class WebsiteAnalysisService {
     @Inject(WEBSITE_ANALYZER) private readonly analyzer: WebsiteAnalyzer,
     @InjectQueue(WEBSITE_ANALYSIS_QUEUE)
     private readonly queue: Queue<AnalyzeWebsiteJobData>,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   async enqueueForLead(organizationId: string, leadId: string, force = false, correlationId?: string) {
@@ -144,12 +147,16 @@ export class WebsiteAnalysisService {
       for (const analysis of pending) {
         const lead = analysis.website.lead;
         try {
+          const recovered = analysis.status === 'RUNNING';
           await this.dispatch({
             organizationId: lead.organizationId,
             leadId: lead.id,
             analysisId: analysis.id,
             url: analysis.website.url,
           });
+          if (recovered) {
+            this.metrics?.recordJobRecovered();
+          }
           dispatched += 1;
         } catch {
           // Redis still down; the next pass retries the PENDING/RUNNING row.

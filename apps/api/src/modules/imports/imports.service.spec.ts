@@ -50,6 +50,7 @@ function createService(overrides: Record<string, unknown> = {}) {
   const parser = { preview: jest.fn(), parse: jest.fn() };
   const config = { get: jest.fn().mockReturnValue(10_000) };
   const audit = { log: jest.fn().mockResolvedValue(undefined) };
+  const metrics = { recordJobRecovered: jest.fn() };
 
   return {
     prisma,
@@ -58,6 +59,7 @@ function createService(overrides: Record<string, unknown> = {}) {
     parser,
     config,
     audit,
+    metrics,
     service: new ImportsService(
       prisma as never,
       queue as never,
@@ -65,6 +67,7 @@ function createService(overrides: Record<string, unknown> = {}) {
       parser as never,
       config as never,
       audit as never,
+      metrics as never,
     ),
   };
 }
@@ -192,7 +195,7 @@ describe('ImportsService', () => {
   });
 
   it('re-enqueues a PROCESSING import after Redis flush using the durable jobId', async () => {
-    const { prisma, queue, service } = createService();
+    const { prisma, queue, service, metrics } = createService();
     prisma.import.findMany.mockResolvedValue([
       {
         id: 'import-stale',
@@ -205,6 +208,7 @@ describe('ImportsService', () => {
     queue.add.mockResolvedValue(undefined);
 
     await expect(service.reconcilePending()).resolves.toBe(1);
+    expect(metrics.recordJobRecovered).toHaveBeenCalledTimes(1);
 
     expect(queue.add).toHaveBeenCalledWith(
       'process-csv-import',
