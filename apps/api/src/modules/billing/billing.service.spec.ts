@@ -4,6 +4,7 @@ import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { MetricsService } from '../ops/metrics.service';
 import { BillingActivationService } from './billing-activation.service';
 import { BillingService } from './billing.service';
 import { CreditPurchaseService } from './credit-purchase.service';
@@ -103,6 +104,10 @@ describe('BillingService', () => {
     canExportCsv: jest.fn().mockResolvedValue(false),
   };
 
+  const metrics = {
+    recordCreditFailure: jest.fn(),
+  };
+
   const readConfig = (key: string) => {
     const map: Record<string, string | boolean> = {
       'abacate.successUrl': 'https://app.test/success',
@@ -140,6 +145,7 @@ describe('BillingService', () => {
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
         { provide: MonthlyCheckoutAttemptService, useValue: monthlyAttempts },
+        { provide: MetricsService, useValue: metrics },
         AsaasCheckoutSwitchService,
       ],
     }).compile();
@@ -1112,6 +1118,23 @@ describe('BillingService', () => {
     prisma.$transaction.mockRejectedValueOnce({ code: 'P2002' });
 
     await expect(service.consumeCreditForSearch('org1', 'search-42')).resolves.toBeUndefined();
+    expect(metrics.recordCreditFailure).not.toHaveBeenCalled();
+  });
+
+  it('records a credit failure when the ledger transaction fails unexpectedly', async () => {
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      planStatus: PlanStatus.INACTIVE,
+      creditBalance: 20,
+      deletedAt: null,
+    });
+    prisma.search.count.mockResolvedValue(5);
+    prisma.$transaction.mockRejectedValueOnce(new Error('connection reset'));
+
+    await expect(service.consumeCreditForSearch('org1', 'search-42')).rejects.toThrow(
+      'connection reset',
+    );
+    expect(metrics.recordCreditFailure).toHaveBeenCalledTimes(1);
   });
 
   it('refuses a second concurrent consume when remaining balance is insufficient', async () => {
@@ -1129,6 +1152,7 @@ describe('BillingService', () => {
       ForbiddenException,
     );
     expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+    expect(metrics.recordCreditFailure).not.toHaveBeenCalled();
   });
 
   it('decrements 16 credits for an Opportunity Finder run after the free quota', async () => {

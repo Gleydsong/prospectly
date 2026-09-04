@@ -132,6 +132,7 @@ describe('OpportunityFinderService niche targeting', () => {
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
     const websiteAnalyzer = { analyze: jest.fn() };
+    const metrics = { recordJobRecovered: jest.fn() };
     const service = new OpportunityFinderService(
       prisma as never,
       queue as never,
@@ -142,8 +143,9 @@ describe('OpportunityFinderService niche targeting', () => {
       ai as never,
       {} as never,
       audit as never,
+      metrics as never,
     );
-    return { service, prisma, queue, provider, prospecting, billing, ai, audit };
+    return { service, prisma, queue, provider, prospecting, billing, ai, audit, metrics };
   }
 
   it('rejects an unknown niche before creating a run or charging credits', async () => {
@@ -253,6 +255,7 @@ describe('OpportunityFinderService niche targeting', () => {
     harness.prisma.opportunityRun.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(harness.service.reconcilePending()).resolves.toBe(1);
+    expect(harness.metrics.recordJobRecovered).toHaveBeenCalledTimes(1);
     expect(harness.queue.add).toHaveBeenCalledWith(
       'process-opportunity-run',
       { runId: 'run-stale', correlationId: 'corr-1' },

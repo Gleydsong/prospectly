@@ -1,9 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ImportStatus, LeadSource, Prisma } from '@prisma/client';
 import type { Queue } from 'bullmq';
@@ -18,6 +14,7 @@ import {
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
 import { LeadIngestionService, type LeadIngestionCandidate } from '../leads/lead-ingestion.service';
+import { MetricsService } from '../ops/metrics.service';
 import { BRAZILIAN_STATE_CODES } from '../prospecting/domain/search-provider';
 import { CsvParserService, type CsvRow } from './csv-parser.service';
 import {
@@ -65,6 +62,7 @@ export class ImportsService {
     private readonly csvParser: CsvParserService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   preview(fileName: string, content: Buffer) {
@@ -153,7 +151,11 @@ export class ImportsService {
     let dispatched = 0;
     for (const importRecord of pending) {
       try {
+        const recovered = importRecord.jobDispatchedAt !== null;
         await this.dispatch(importRecord);
+        if (recovered) {
+          this.metrics?.recordJobRecovered();
+        }
         dispatched += 1;
       } catch {
         // Keep the row pending; the next reconciliation pass retries it.

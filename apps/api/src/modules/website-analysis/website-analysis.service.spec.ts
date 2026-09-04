@@ -108,4 +108,33 @@ describe('WebsiteAnalysisService.enqueueForLead', () => {
       expect.objectContaining({ jobId: 'analyze-lead-1-an-stale' }),
     );
   });
+
+  it('records recovered metrics when a RUNNING analysis is republished', async () => {
+    const prisma = {
+      websiteAnalysis: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'an-running',
+            status: 'RUNNING',
+            website: {
+              url: 'https://example.com',
+              lead: { id: 'lead-1', organizationId: 'org-1' },
+            },
+          },
+        ]),
+      },
+    };
+    const queue = { add: jest.fn().mockResolvedValue({}) };
+    const metrics = { recordJobRecovered: jest.fn() };
+    const service = new WebsiteAnalysisService(
+      prisma as never,
+      { recalculate: jest.fn() } as never,
+      {} as never,
+      queue as never,
+      metrics as never,
+    );
+
+    await expect(service.reconcilePending()).resolves.toBe(1);
+    expect(metrics.recordJobRecovered).toHaveBeenCalledTimes(1);
+  });
 });

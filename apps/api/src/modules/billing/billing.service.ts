@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import crypto from 'node:crypto';
@@ -17,6 +18,7 @@ import {
 } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { MetricsService } from '../ops/metrics.service';
 import { BillingActivationService } from './billing-activation.service';
 import { CreditPurchaseService } from './credit-purchase.service';
 import { CREDIT_PACKAGES } from './credit-purchase.constants';
@@ -77,6 +79,7 @@ export class BillingService {
     private readonly entitlements: EntitlementService,
     private readonly monthlyAttempts: MonthlyCheckoutAttemptService,
     private readonly checkoutSwitch: AsaasCheckoutSwitchService,
+    @Optional() private readonly metrics?: MetricsService,
   ) {}
 
   async getOrganizationBilling(organizationId: string, role?: Role) {
@@ -985,6 +988,9 @@ export class BillingService {
         });
         return;
       }
+      if (!(error instanceof ForbiddenException)) {
+        this.metrics?.recordCreditFailure();
+      }
       throw error;
     }
   }
@@ -1039,6 +1045,7 @@ export class BillingService {
       });
     } catch (error) {
       if (this.isUniqueConstraintViolation(error)) return;
+      this.metrics?.recordCreditFailure();
       throw error;
     }
   }
