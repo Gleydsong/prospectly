@@ -11,12 +11,12 @@ API HTTP e worker BullMQ são processos distintos. PostgreSQL é a fonte da verd
 
 `main.ts` força `ROLE=api`. `worker.ts` força `ROLE=worker`. `validateEnv` é role-aware: worker exige `DATABASE_URL`, `REDIS_URL` e `DATABASE_APP_URL` em produção; não exige JWT/billing.
 
-Filas: prospecting, imports, scoring, website-analysis, opportunity-finder, privacy-retention.
+Filas: prospecting, imports, scoring, website-analysis, opportunity-finder, privacy-retention, outbox.
 
 Composição:
 
-- `WorkersModule` — os seis processors (incluindo `RetentionProcessor`).
-- `ApiDispatchModule` — reconciliadores de prospecting, imports, website-analysis e opportunity-finder. Só no `AppModule`.
+- `WorkersModule` — os sete processors (incluindo `RetentionProcessor` e `OutboxProcessor`).
+- `ApiDispatchModule` — reconciliadores de prospecting, imports, website-analysis, opportunity-finder e outbox. Só no `AppModule`.
 - `PrivacyModule` — scheduler + HTTP de privacidade. Só na API.
 - `PrivacyRetentionModule` — `RetentionService` + fila. API e worker.
 - `BillingCoreModule` — serviços de crédito/entitlement. `BillingModule` (API) adiciona controller + `AsaasWebhookService`.

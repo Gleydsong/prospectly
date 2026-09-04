@@ -2,7 +2,11 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nest
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
-import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
+import { CorrelationId } from '../../common/decorators/correlation-id.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MoveLeadStageDto } from './dto/move-lead-stage.dto';
 import { QueryBoardDto, QueryStageLeadsDto } from './dto/query-board.dto';
@@ -47,7 +51,8 @@ export class PipelinesController {
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: MoveLeadStageDto,
+    @CorrelationId() correlationId?: string,
   ) {
-    return this.pipelines.moveLeadToStage(organizationId, id, dto.stageId, user.id);
+    return this.pipelines.moveLeadToStage(organizationId, id, dto.stageId, user.id, correlationId);
   }
 }

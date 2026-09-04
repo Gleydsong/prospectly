@@ -6,6 +6,9 @@ import { ImportsDispatchReconciler } from '../imports/imports-dispatch.reconcile
 import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finder.module';
 import { OpportunityFinderService } from '../opportunity-finder/opportunity-finder.service';
 import { OpportunityFinderDispatchReconciler } from '../opportunity-finder/opportunity-finder-dispatch.reconciler';
+import { OutboxModule } from '../outbox/outbox.module';
+import { OutboxService } from '../outbox/outbox.service';
+import { OutboxDispatchReconciler } from '../outbox/outbox-dispatch.reconciler';
 import { ProspectingModule } from '../prospecting/prospecting.module';
 import { ProspectingService } from '../prospecting/prospecting.service';
 import { ProspectingDispatchReconciler } from '../prospecting/prospecting-dispatch.reconciler';
@@ -14,7 +17,13 @@ import { WebsiteAnalysisService } from '../website-analysis/website-analysis.ser
 import { WebsiteAnalysisDispatchReconciler } from '../website-analysis/website-analysis-dispatch.reconciler';
 
 @Module({
-  imports: [ProspectingModule, ImportsModule, WebsiteAnalysisModule, OpportunityFinderModule],
+  imports: [
+    ProspectingModule,
+    ImportsModule,
+    WebsiteAnalysisModule,
+    OpportunityFinderModule,
+    OutboxModule,
+  ],
   providers: [
     {
       provide: ProspectingDispatchReconciler,
@@ -37,6 +46,11 @@ import { WebsiteAnalysisDispatchReconciler } from '../website-analysis/website-a
       inject: [OpportunityFinderService],
       useFactory: (service: OpportunityFinderService) =>
         new OpportunityFinderDispatchReconciler(service),
+    },
+    {
+      provide: OutboxDispatchReconciler,
+      inject: [OutboxService],
+      useFactory: (service: OutboxService) => new OutboxDispatchReconciler(service),
     },
   ],
 })

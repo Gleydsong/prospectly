@@ -3,6 +3,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
+import { OutboxService } from '../outbox/outbox.service';
 
 const leadBoardInclude = {
   owner: { select: { id: true, name: true } },
@@ -13,6 +14,7 @@ export class PipelinesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async list(organizationId: string) {
@@ -111,7 +113,13 @@ export class PipelinesService {
     };
   }
 
-  async moveLeadToStage(organizationId: string, leadId: string, stageId: string, actorId: string) {
+  async moveLeadToStage(
+    organizationId: string,
+    leadId: string,
+    stageId: string,
+    actorId: string,
+    correlationId?: string,
+  ) {
     const lead = await this.prisma.lead.findFirst({
       where: { id: leadId, organizationId, deletedAt: null },
       include: { stage: { select: { id: true, name: true } } },
@@ -131,7 +139,7 @@ export class PipelinesService {
       return lead;
     }
 
-    const [updated] = await this.prisma.$transaction(async (tx) => {
+    const [updated, outboxEvent] = await this.prisma.$transaction(async (tx) => {
       const moved = await tx.lead.update({
         where: { id: leadId },
         data: { stageId },
@@ -147,7 +155,20 @@ export class PipelinesService {
           metadata: { fromStageId: lead.stageId, toStageId: stageId },
         },
       });
-      return [moved];
+      const event = await this.outbox.appendLeadStageChanged(tx, {
+        organizationId,
+        leadId,
+        actorId,
+        correlationId,
+        payload: {
+          leadId,
+          fromStageId: lead.stageId,
+          toStageId: stageId,
+          fromStageName: lead.stage?.name ?? null,
+          toStageName: stage.name,
+        },
+      });
+      return [moved, event] as const;
     });
 
     await this.audit.log({
@@ -158,6 +179,12 @@ export class PipelinesService {
       entityId: leadId,
       metadata: { fromStageId: lead.stageId, toStageId: stageId },
     });
+
+    try {
+      await this.outbox.dispatch(outboxEvent);
+    } catch {
+      // Redis down: reconciler republishes from the persisted PENDING row.
+    }
 
     return updated;
   }
