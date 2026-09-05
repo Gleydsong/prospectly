@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { WebsiteAnalysisService } from './website-analysis.service';
 
@@ -193,7 +194,11 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
 
     await service.processAnalysis(job);
 
-    expect(analyzer.analyze).toHaveBeenCalledWith('https://demo.dev', { city: 'Curitiba', state: 'PR' });
+    expect(analyzer.analyze).toHaveBeenCalledWith('https://demo.dev', {
+      city: 'Curitiba',
+      state: 'PR',
+      includeAuxChecks: true,
+    });
     const update = tx.websiteAnalysis.update.mock.calls[0]?.[0] as {
       data: {
         status: string;
@@ -205,8 +210,9 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
       };
     };
     expect(update.data.status).toBe('COMPLETED');
-    expect(update.data.seoHealthScore).toBeLessThan(100);
-    expect(update.data.seoOpportunity).toEqual(expect.stringMatching(/LOW|MEDIUM|HIGH|CRITICAL/));
+    // CSR 18 + no meta 6 + no H1 6 + no OG 4 + no structured data 5 + no canonical 3 = 42 deducted.
+    expect(update.data.seoHealthScore).toBe(58);
+    expect(update.data.seoOpportunity).toBe('HIGH');
     expect(update.data.architecture).toBe('SPA (CSR)');
     expect(update.data.seoAudit?.findings.length).toBeGreaterThan(0);
     const codes = update.data.issues.create.map((issue) => issue.code);
@@ -237,11 +243,18 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
     await service.processAnalysis(job);
 
     const update = tx.websiteAnalysis.update.mock.calls[0]?.[0] as {
-      data: { status: string; seoHealthScore: number | null; seoOpportunity: string | null; architecture: string | null };
+      data: {
+        status: string;
+        seoHealthScore: number | null;
+        seoOpportunity: string | null;
+        architecture: string | null;
+        seoAudit: unknown;
+      };
     };
     expect(update.data.status).toBe('FAILED');
     expect(update.data.seoHealthScore).toBeNull();
     expect(update.data.seoOpportunity).toBeNull();
     expect(update.data.architecture).toBeNull();
+    expect(update.data.seoAudit).toBe(Prisma.JsonNull);
   });
 });

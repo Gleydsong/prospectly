@@ -226,7 +226,11 @@ export class WebsiteAnalysisService {
       data: { status: 'RUNNING', startedAt: new Date(), error: null },
     });
 
-    const result = await this.analyzer.analyze(job.url, { city: lead.city, state: lead.state });
+    const result = await this.analyzer.analyze(job.url, {
+      city: lead.city,
+      state: lead.state,
+      includeAuxChecks: true,
+    });
 
     if (result.error && result.issues.some((issue) => issue.code === 'SSRF_BLOCKED')) {
       await this.prisma.websiteAnalysis.update({

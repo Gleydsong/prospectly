@@ -7,7 +7,7 @@ import type { SeoAudit, SeoFinding, SeoOpportunityLevel } from '@/types';
 
 type BadgeTone = 'green' | 'blue' | 'amber' | 'red';
 
-export const SEO_OPPORTUNITY_LABEL: Record<SeoOpportunityLevel, { label: string; tone: BadgeTone }> = {
+const SEO_OPPORTUNITY_LABEL: Record<SeoOpportunityLevel, { label: string; tone: BadgeTone }> = {
   LOW: { label: 'Oportunidade baixa', tone: 'green' },
   MEDIUM: { label: 'Oportunidade média', tone: 'blue' },
   HIGH: { label: 'Oportunidade alta', tone: 'amber' },

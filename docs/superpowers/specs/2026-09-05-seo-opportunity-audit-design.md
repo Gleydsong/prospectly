@@ -22,12 +22,13 @@ Tudo persistido em `WebsiteAnalysis` e visível no detalhe do lead. Sem LLM nest
 |---|---------|
 | D1 | Estender `HttpWebsiteAnalyzer` e `WebsiteAnalysisResult` em vez de criar módulo/fila novos. Mesma fetch, mesmo pipeline SSRF, mesmo processor. |
 | D2 | Cálculo do score em função pura `computeSeoAudit(result)` (`seo-audit.ts`), sem I/O. Testável por tabela de casos. |
-| D3 | 3 requests auxiliares em paralelo (robots.txt, sitemap.xml, host alternativo www↔sem-www), budget próprio de 5s, body ≤ 64KB, via `assertSafePublicUrl` + `fetchWithPinnedDns`. Falha ⇒ `unknown`, sem penalidade. |
-| D4 | `WebsiteAnalyzer.analyze(url, context?)` recebe `{ city?, state? }` do lead para verificação de NAP. Compatível com chamadores existentes (Opportunity Finder chama sem contexto). |
+| D3 | 3 requests auxiliares em paralelo (robots.txt, sitemap.xml, host alternativo www↔sem-www), budget próprio de 5s, body ≤ 64KB, via `assertSafePublicUrl` + `fetchWithPinnedDns`. Redirects de robots/sitemap só são seguidos dentro do mesmo site (host ou variante `www.`); host alternativo pode encadear até 3 hops no próprio host antes de apontar para o principal. Falha ⇒ `unknown`, sem penalidade. Só executam com `includeAuxChecks: true` (o `WebsiteAnalysisService` passa; Opportunity Finder não). |
+| D4 | `WebsiteAnalyzer.analyze(url, context?)` recebe `{ city?, state?, includeAuxChecks? }`. Compatível com chamadores existentes (Opportunity Finder chama sem contexto → sinais SEO só do HTML, sem requests extras). |
 | D5 | Site inacessível / FAILED ⇒ `seoHealthScore = null`, `seoOpportunity = null` ("não avaliado"). O `LeadScore` já pune site indisponível. |
 | D6 | Findings SEO também viram `WebsiteAnalysisIssue` (codes `SEO_*`) para manter a tabela de issues consistente. Codes legados (`NO_HTTPS`, `NOT_RESPONSIVE`, `SLOW`, `NO_META_DESCRIPTION`, `NO_CONTACT_FORM`) permanecem — o scoring depende deles. |
 | D7 | Textos dos findings em PT-BR, gerados no backend (catálogo estático). UI não traduz. |
 | D8 | `LeadScore`/`ScoreRule` **não** mudam nesta fatia. |
+| D9 | Parsing do HTML (até 1,5MB, controlado pelo site alvo) é linear: elementos extraídos por `indexOf`, tags limitadas a 2048 chars. Regressão coberta por teste com payloads hostis (< 1,5s). |
 
 ## 3. Fora de escopo (follow-ups)
 
@@ -43,7 +44,7 @@ Todos derivados do HTML principal, exceto onde indicado.
 
 | Sinal | Tipo | Detecção |
 |-------|------|----------|
-| `renderingMode` | `SSR \| CSR \| STATIC \| UNKNOWN` | `visibleTextLength < 200` **e** mount vazio (`<div id="root\|app\|__next\|___gatsby"></div>`) ⇒ `CSR`. `__NEXT_DATA__`/`__NUXT__`/`data-reactroot`/`ng-version` com texto ⇒ `SSR`. Sem framework JS e texto ⇒ `STATIC`. Sem HTML ⇒ `UNKNOWN`. |
+| `renderingMode` | `SSR \| CSR \| STATIC \| UNKNOWN` | `visibleTextLength < 200` **e** mount vazio (`<div id="root\|app\|__next\|__nuxt\|___gatsby\|q-app\|main\|application">` ou `<app-root>` sem filhos além de `<noscript>`) ⇒ `CSR`. Framework detectado ou bundle JS com texto ⇒ `SSR`. Sem framework JS e texto ⇒ `STATIC`. Sem HTML ⇒ `UNKNOWN`. |
 | `framework` | string? | `/_next/` ⇒ Next.js; `/_nuxt/` ⇒ Nuxt; `___gatsby` ⇒ Gatsby; `ng-version` ⇒ Angular; `data-v-`/`vue` ⇒ Vue; `react` em src/`data-reactroot` ⇒ React. |
 | `visibleTextLength` | number | Tamanho do texto após remover `<script>`, `<style>`, `<noscript>`, tags e whitespace colapsado. |
 | `noindex` | boolean | `<meta name="robots" content="...noindex...">`. |
@@ -52,12 +53,13 @@ Todos derivados do HTML principal, exceto onde indicado.
 | `titleLength` / `metaDescriptionLength` | number? | Comprimento em chars. |
 | `ogTitle` / `ogImage` | string? | `property="og:title"` / `og:image`. |
 | `jsonLdTypes` | string[] | `@type` de cada bloco `application/ld+json` parseável (top-level e `@graph`). |
+| `hasMicrodata` | boolean | Atributo `itemscope` presente. |
 | `images` | `{ total, missingDimensions, modernFormat, missingAlt }` | `<img>`: sem `width`+`height`; src `.webp`/`.avif`; sem `alt`. |
 | `thirdPartyScriptHosts` | string[] | Hosts de `<script src>` com host ≠ host final (dedup, máx. 20). |
 | `renderBlockingScripts` | number | `<script src>` dentro de `<head>` sem `async`/`defer`/`type="module"`. |
 | `hasAddress` | boolean | CEP `\d{5}-?\d{3}` ou logradouro (`Rua\|Av\.\|Avenida\|Alameda\|Travessa\|Rodovia` + número). |
 | `mentionsCity` | boolean? | Cidade do lead (normalizada, sem acento) aparece no texto. `undefined` sem contexto. |
-| `hasRobotsTxt` | boolean? | GET `/robots.txt` 200 + texto. *(aux)* |
+| `hasRobotsTxt` | boolean? | GET `/robots.txt` 200 + texto que não é HTML (soft-404 não conta). *(aux)* |
 | `robotsBlocksAll` | boolean? | Bloco `User-agent: *` com `Disallow: /` exato. *(aux)* |
 | `hasSitemap` | boolean? | GET `/sitemap.xml` 200 com `<urlset`/`<sitemapindex` **ou** `Sitemap:` no robots. *(aux)* |
 | `alternateHostRedirects` | boolean? | Host alternativo (adiciona/remove `www.`) responde 301/302/307/308 para host final. `undefined` se falhar/timeout. *(aux)* |
@@ -111,6 +113,7 @@ interface SeoAudit {
   findings: SeoFinding[];           // ordenados por points desc
   topIssues: SeoFinding[];          // 3 primeiros
   quickWins: SeoFinding[];          // quickWin === true, 2 primeiros
+  signals: SeoSignals;              // sinais brutos usados no cálculo
 }
 interface SeoFinding {
   code: string; vector: SeoVector; severity: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -161,6 +164,6 @@ Processor passa `{ city, state }` do lead ao analyzer (select adicional em `proc
 ## 9. Testes
 
 - `seo-audit.spec.ts`: perfeito ⇒ 100/LOW; CSR shell sem meta ⇒ CRITICAL; caps por vetor; `undefined` não deduz; ordenação topIssues/quickWins; arquitetura.
-- `http-website-analyzer.spec.ts`: fixtures HTML (Next.js SSR, React CSR shell, WordPress local) ⇒ sinais; robots/sitemap/alternate via `fetchImpl` mock; aux timeout ⇒ `undefined`.
+- `http-website-analyzer.spec.ts`: fixtures HTML (Next.js SSR, React CSR shell, HTML estático) ⇒ sinais; robots/sitemap/alternate via `fetchImpl` mock; falha aux ⇒ `undefined`; redirect aux para host externo recusado; sem `includeAuxChecks` ⇒ 1 request; falha após redirect preserva URL do último hop; payloads hostis ⇒ tempo linear.
 - `website-analysis.service.spec.ts`: persistência de `seoHealthScore`/`seoOpportunity`/`seoAudit` e issues `SEO_*`; FAILED ⇒ nulls.
 - Web: vitest do painel renderiza score/opportunity/topIssues.

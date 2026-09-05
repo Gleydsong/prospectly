@@ -8,6 +8,9 @@ export interface HtmlSeoExtraction {
   framework?: string;
 }
 
+/** Max chars scanned inside a single tag. Bounds every tag regex so hostile HTML stays linear. */
+const MAX_TAG_LENGTH = 2048;
+
 function attr(tag: string, name: string): string | undefined {
   const match = tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'>]+))`, 'i'));
   if (!match) return undefined;
@@ -18,16 +21,151 @@ function hasAttr(tag: string, name: string): boolean {
   return new RegExp(`\\s${name}(?=[\\s>=/])`, 'i').test(tag);
 }
 
+function isNameBoundary(char: string | undefined): boolean {
+  return char === undefined || char === ' ' || char === '/' || char === '>' || char === '\n' || char === '\t' || char === '\r';
+}
+
+/** Linear scan for opening tags `<name ...>` (void elements: no closer lookup). */
+export function extractTags(html: string, name: string): string[] {
+  const lower = html.toLowerCase();
+  const open = `<${name}`;
+  const tags: string[] = [];
+  let cursor = 0;
+  for (;;) {
+    const start = lower.indexOf(open, cursor);
+    if (start === -1) break;
+    const afterName = start + open.length;
+    if (!isNameBoundary(lower[afterName])) {
+      cursor = afterName;
+      continue;
+    }
+    const tagEnd = lower.indexOf('>', afterName);
+    if (tagEnd === -1) break;
+    if (tagEnd - start <= MAX_TAG_LENGTH) tags.push(html.slice(start, tagEnd + 1));
+    cursor = tagEnd + 1;
+  }
+  return tags;
+}
+
 function extractProperty(html: string, property: string): string | undefined {
-  const patterns = [
-    new RegExp(`<meta[^>]+property=["']${property}["'][^>]+content=["']([^"']+)["']`, 'i'),
-    new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+property=["']${property}["']`, 'i'),
-  ];
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[1]) return match[1].trim();
+  const needle = property.toLowerCase();
+  for (const tag of extractTags(html, 'meta')) {
+    if (attr(tag, 'property')?.toLowerCase() !== needle) continue;
+    const content = attr(tag, 'content');
+    if (content) return content;
   }
   return undefined;
+}
+
+interface HtmlElement {
+  /** Opening tag, e.g. `<script src="x">`. */
+  tag: string;
+  /** Raw inner HTML up to the closing tag (empty when unclosed/self-closing). */
+  inner: string;
+}
+
+/**
+ * Linear scan for `<name ...>inner</name>` elements using indexOf — no
+ * backtracking regardless of how many unclosed openers hostile HTML contains.
+ */
+export function extractElements(html: string, name: string): HtmlElement[] {
+  const lower = html.toLowerCase();
+  const open = `<${name}`;
+  const close = `</${name}`;
+  const elements: HtmlElement[] = [];
+  let cursor = 0;
+  let noMoreClosers = false;
+  for (;;) {
+    const start = lower.indexOf(open, cursor);
+    if (start === -1) break;
+    const afterName = start + open.length;
+    if (!isNameBoundary(lower[afterName])) {
+      cursor = afterName;
+      continue;
+    }
+    const tagEnd = lower.indexOf('>', afterName);
+    if (tagEnd === -1) break;
+    if (tagEnd - start > MAX_TAG_LENGTH) {
+      cursor = tagEnd + 1;
+      continue;
+    }
+    const tag = html.slice(start, tagEnd + 1);
+    const closeStart = noMoreClosers ? -1 : lower.indexOf(close, tagEnd + 1);
+    if (closeStart === -1) {
+      noMoreClosers = true;
+      elements.push({ tag, inner: '' });
+      cursor = tagEnd + 1;
+      continue;
+    }
+    const closeEnd = lower.indexOf('>', closeStart);
+    elements.push({ tag, inner: html.slice(tagEnd + 1, closeStart) });
+    cursor = closeEnd === -1 ? closeStart + close.length : closeEnd + 1;
+  }
+  return elements;
+}
+
+/** Removes `<name ...>...</name>` blocks (and unclosed openers to EOF) in linear time. */
+function stripElements(html: string, name: string): string {
+  const lower = html.toLowerCase();
+  const open = `<${name}`;
+  const close = `</${name}`;
+  let out = '';
+  let cursor = 0;
+  for (;;) {
+    const start = lower.indexOf(open, cursor);
+    if (start === -1) break;
+    if (!isNameBoundary(lower[start + open.length])) {
+      out += html.slice(cursor, start + open.length);
+      cursor = start + open.length;
+      continue;
+    }
+    out += html.slice(cursor, start);
+    const closeStart = lower.indexOf(close, start);
+    if (closeStart === -1) return `${out} `;
+    const closeEnd = lower.indexOf('>', closeStart);
+    cursor = closeEnd === -1 ? html.length : closeEnd + 1;
+    out += ' ';
+  }
+  return out + html.slice(cursor);
+}
+
+function stripComments(html: string): string {
+  let out = '';
+  let cursor = 0;
+  for (;;) {
+    const start = html.indexOf('<!--', cursor);
+    if (start === -1) break;
+    out += html.slice(cursor, start);
+    const end = html.indexOf('-->', start + 4);
+    if (end === -1) return `${out} `;
+    cursor = end + 3;
+    out += ' ';
+  }
+  return out + html.slice(cursor);
+}
+
+/** Removes every `<...>` tag (max MAX_TAG_LENGTH chars) in linear time; stray `<` is kept as text. */
+function stripTags(html: string): string {
+  let out = '';
+  let cursor = 0;
+  for (;;) {
+    const start = html.indexOf('<', cursor);
+    if (start === -1) break;
+    const end = html.indexOf('>', start + 1);
+    if (end === -1) break;
+    if (end - start > MAX_TAG_LENGTH) {
+      out += html.slice(cursor, start + 1);
+      cursor = start + 1;
+      continue;
+    }
+    out += `${html.slice(cursor, start)} `;
+    cursor = end + 1;
+  }
+  return out + html.slice(cursor);
+}
+
+function headSection(html: string): string | undefined {
+  return extractElements(html, 'head')[0]?.inner;
 }
 
 export function normalizeText(value: string): string {
@@ -39,11 +177,11 @@ export function normalizeText(value: string): string {
 
 /** Text a crawler would see without executing JS: strips head, scripts, styles and tags. */
 export function extractVisibleText(html: string): string {
-  return html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<head[\s>][\s\S]*?<\/head>/gi, ' ')
-    .replace(/<(script|style|noscript|template|svg)[\s>][\s\S]*?<\/\1>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
+  let text = stripComments(html);
+  for (const name of ['head', 'script', 'style', 'noscript', 'template', 'svg']) {
+    text = stripElements(text, name);
+  }
+  return stripTags(text)
     .replace(/&nbsp;/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -61,10 +199,28 @@ export function detectFramework(html: string): string | undefined {
   return undefined;
 }
 
-const EMPTY_MOUNT_RE =
-  /<div[^>]+id=["'](root|app|__next|__nuxt|___gatsby|q-app|main|application)["'][^>]*>\s*(<noscript>[\s\S]*?<\/noscript>\s*)?<\/div>/i;
-const BUNDLE_SCRIPT_RE =
-  /<script[^>]+src=["'][^"']*(\/assets\/[^"']*\.js|\/static\/js\/|\/_next\/static|\/_nuxt\/|bundle[^"']*\.js|chunk[^"']*\.js|main\.[0-9a-f]{6,}\.js)/i;
+const MOUNT_IDS = new Set(['root', 'app', '__next', '__nuxt', '___gatsby', 'q-app', 'main', 'application']);
+const MOUNT_ELEMENTS = ['div', 'main', 'app-root', 'app'];
+const BUNDLE_SRC_RE =
+  /(\/assets\/[^"']*\.js|\/static\/js\/|\/_next\/static|\/_nuxt\/|bundle[^"']*\.js|chunk[^"']*\.js|main\.[0-9a-f]{6,}\.js)/i;
+
+/** `<div id="root"></div>` / `<app-root></app-root>`: a JS mount point with no server-rendered children. */
+export function hasEmptyMount(html: string): boolean {
+  for (const name of MOUNT_ELEMENTS) {
+    for (const element of extractElements(html, name)) {
+      const id = attr(element.tag, 'id')?.toLowerCase();
+      const isMountElement = name === 'app-root' || (id !== undefined && MOUNT_IDS.has(id));
+      if (!isMountElement) continue;
+      const inner = stripElements(stripComments(element.inner), 'noscript').trim();
+      if (inner === '') return true;
+    }
+  }
+  return false;
+}
+
+function hasBundleScript(html: string): boolean {
+  return extractElements(html, 'script').some((el) => BUNDLE_SRC_RE.test(attr(el.tag, 'src') ?? ''));
+}
 
 export function detectRenderingMode(
   html: string,
@@ -72,16 +228,16 @@ export function detectRenderingMode(
   framework: string | undefined,
 ): SeoRenderingMode {
   if (!html.trim()) return 'UNKNOWN';
-  const emptyMount = EMPTY_MOUNT_RE.test(html);
-  const hasBundle = BUNDLE_SCRIPT_RE.test(html);
-  if (visibleTextLength < CSR_SHELL_TEXT_THRESHOLD && (emptyMount || hasBundle)) return 'CSR';
-  if (framework || hasBundle) return 'SSR';
+  if (visibleTextLength < CSR_SHELL_TEXT_THRESHOLD && hasEmptyMount(html)) return 'CSR';
+  if (framework || hasBundleScript(html)) return 'SSR';
   return 'STATIC';
 }
 
 export function extractJsonLdTypes(html: string): string[] {
   const types = new Set<string>();
-  const blocks = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  const blocks = extractElements(html, 'script').filter(
+    (el) => attr(el.tag, 'type')?.toLowerCase() === 'application/ld+json',
+  );
   const collect = (node: unknown) => {
     if (!node || typeof node !== 'object') return;
     if (Array.isArray(node)) {
@@ -95,7 +251,7 @@ export function extractJsonLdTypes(html: string): string[] {
     if (record['@graph']) collect(record['@graph']);
   };
   for (const block of blocks) {
-    const raw = block[1]?.trim();
+    const raw = block.inner.trim();
     if (!raw) continue;
     try {
       collect(JSON.parse(raw));
@@ -108,16 +264,16 @@ export function extractJsonLdTypes(html: string): string[] {
 
 export function extractImageSignals(html: string): SeoImageSignals {
   const signals: SeoImageSignals = { total: 0, missingDimensions: 0, modernFormat: 0, missingAlt: 0 };
-  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
-    const tag = match[0];
+  for (const tag of extractTags(html, 'img')) {
     signals.total += 1;
     if (!attr(tag, 'width') || !attr(tag, 'height')) signals.missingDimensions += 1;
     if (!hasAttr(tag, 'alt')) signals.missingAlt += 1;
     const src = `${attr(tag, 'src') ?? ''} ${attr(tag, 'srcset') ?? ''}`;
     if (/\.(webp|avif)(\?|\s|,|$)/i.test(src)) signals.modernFormat += 1;
   }
-  const modernSources = html.match(/<source\b[^>]+type=["']image\/(webp|avif)["']/gi);
-  if (modernSources) signals.modernFormat += modernSources.length;
+  for (const tag of extractTags(html, 'source')) {
+    if (/^image\/(webp|avif)$/i.test(attr(tag, 'type') ?? '')) signals.modernFormat += 1;
+  }
   return signals;
 }
 
@@ -128,8 +284,8 @@ function registrableHost(hostname: string): string {
 export function extractThirdPartyScriptHosts(html: string, finalUrl: string, limit = 20): string[] {
   const base = registrableHost(new URL(finalUrl).hostname);
   const hosts = new Set<string>();
-  for (const match of html.matchAll(/<script\b[^>]+src=["']([^"']+)["']/gi)) {
-    const src = match[1];
+  for (const element of extractElements(html, 'script')) {
+    const src = attr(element.tag, 'src');
     if (!src) continue;
     let host: string;
     try {
@@ -145,14 +301,13 @@ export function extractThirdPartyScriptHosts(html: string, finalUrl: string, lim
 }
 
 export function countRenderBlockingScripts(html: string): number {
-  const head = html.match(/<head[\s>][\s\S]*?<\/head>/i)?.[0];
+  const head = headSection(html);
   if (!head) return 0;
   let count = 0;
-  for (const match of head.matchAll(/<script\b[^>]*>/gi)) {
-    const tag = match[0];
+  for (const { tag } of extractElements(head, 'script')) {
     if (!attr(tag, 'src')) continue;
     if (hasAttr(tag, 'async') || hasAttr(tag, 'defer')) continue;
-    if (/type=["']module["']/i.test(tag)) continue;
+    if (attr(tag, 'type')?.toLowerCase() === 'module') continue;
     count += 1;
   }
   return count;
@@ -177,13 +332,23 @@ export function parseSeoSignals(
   const framework = detectFramework(html);
   const renderingMode = detectRenderingMode(html, visibleText.length, framework);
 
-  const canonicalTag = html.match(/<link\b[^>]+rel=["']canonical["'][^>]*>/i)?.[0];
-  const canonicalUrl = canonicalTag ? attr(canonicalTag, 'href') || undefined : undefined;
+  let canonicalUrl: string | undefined;
+  for (const tag of extractTags(html, 'link')) {
+    if (attr(tag, 'rel')?.toLowerCase() === 'canonical') {
+      canonicalUrl = attr(tag, 'href') || undefined;
+      break;
+    }
+  }
 
-  const robotsMeta = html.match(/<meta\b[^>]+name=["']robots["'][^>]*>/i)?.[0];
-  const noindex = robotsMeta ? /noindex/i.test(attr(robotsMeta, 'content') ?? '') : false;
+  let noindex = false;
+  for (const tag of extractTags(html, 'meta')) {
+    if (attr(tag, 'name')?.toLowerCase() === 'robots' && /noindex/i.test(attr(tag, 'content') ?? '')) {
+      noindex = true;
+      break;
+    }
+  }
 
-  const h1Count = (html.match(/<h1[\s>]/gi) ?? []).length;
+  const h1Count = extractElements(html, 'h1').length;
 
   const city = context?.city?.trim();
   const mentionsCity = city ? normalizeText(visibleText).includes(normalizeText(city)) : undefined;

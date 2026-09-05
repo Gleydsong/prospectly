@@ -5,6 +5,7 @@ import type {
   WebsiteAnalyzer,
 } from '@prospectly/shared-types';
 
+import { SLOW_RESPONSE_MS } from '../scoring/scoring.constants';
 import {
   alternateHostname,
   looksLikeSitemap,
@@ -23,6 +24,12 @@ import {
 import { assertSafePublicUrl, fetchWithPinnedDns, SsrfBlockedError } from './ssrf';
 
 const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
+
+/** Same registrable host, ignoring a `www.` prefix on either side. */
+function isSameSite(hostname: string, reference: string): boolean {
+  const strip = (h: string) => h.toLowerCase().replace(/^www\./, '');
+  return strip(hostname) === strip(reference);
+}
 
 function extractMeta(html: string, name: string): string | undefined {
   const patterns = [
@@ -269,8 +276,10 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
       const { response, finalUrl } = await this.fetchFollowingRedirects(currentUrl, {
         deadline: started + timeoutMs,
         maxRedirects,
+        onHop: (hopUrl) => {
+          currentUrl = hopUrl;
+        },
       });
-      currentUrl = finalUrl;
 
       const responseTimeMs = Date.now() - started;
       const https = finalUrl.startsWith('https:');
@@ -292,7 +301,7 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
           message: 'Website is not served over HTTPS',
         });
       }
-      if (responseTimeMs >= 3000) {
+      if (responseTimeMs >= SLOW_RESPONSE_MS) {
         issues.push({
           code: 'SLOW',
           severity: 'WARNING',
@@ -309,7 +318,9 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
           metaDescription: parsed.metaDescription,
         });
         framework = extraction.framework;
-        aux = await this.collectAuxSignals(finalUrl);
+        if (context?.includeAuxChecks) {
+          aux = await this.collectAuxSignals(finalUrl);
+        }
         seo = {
           ...extraction.seo,
           robotsBlocksAll: aux.robotsBlocksAll,
@@ -387,7 +398,14 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
 
   private async fetchFollowingRedirects(
     startUrl: string,
-    options: { deadline: number; maxRedirects: number },
+    options: {
+      deadline: number;
+      maxRedirects: number;
+      /** Reports every URL actually requested (so failures can be attributed to the last hop). */
+      onHop?: (url: string) => void;
+      /** When set, redirects to hosts it rejects abort the fetch. */
+      allowHost?: (hostname: string) => boolean;
+    },
   ): Promise<FetchedPage> {
     let currentUrl = startUrl;
     let redirects = 0;
@@ -398,6 +416,7 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         throw new SsrfBlockedError('Redirect loop detected');
       }
       visited.add(currentUrl);
+      options.onHop?.(currentUrl);
 
       const { response, url } = await this.request(currentUrl, options.deadline);
       currentUrl = url;
@@ -405,7 +424,13 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
       if (REDIRECT_STATUSES.includes(response.status) && redirects < options.maxRedirects) {
         const location = response.headers.get('location');
         if (!location) return { response, finalUrl: currentUrl };
-        currentUrl = new URL(location, currentUrl).toString();
+        const next = new URL(location, currentUrl);
+        if (options.allowHost && !options.allowHost(next.hostname)) {
+          throw new Error(`Redirect to unexpected host ${next.hostname}`);
+        }
+        // Redirect bodies are never read: release the socket/stream before the next hop.
+        await readBodyWithLimit(response, 0);
+        currentUrl = next.toString();
         redirects += 1;
         continue;
       }
@@ -421,13 +446,19 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     const deadline = Date.now() + (this.options.auxTimeoutMs ?? WEBSITE_ANALYSIS_AUX_TIMEOUT_MS);
     const origin = new URL(finalUrl);
 
+    const sameSite = (hostname: string) => isSameSite(hostname, origin.hostname);
+
     const [robots, sitemap, alternate] = await Promise.all([
-      this.fetchSmallText(`${origin.origin}/robots.txt`, deadline),
-      this.fetchSmallText(`${origin.origin}/sitemap.xml`, deadline),
+      this.fetchSmallText(`${origin.origin}/robots.txt`, deadline, sameSite),
+      this.fetchSmallText(`${origin.origin}/sitemap.xml`, deadline, sameSite),
       this.checkAlternateHostRedirect(origin, deadline),
     ]);
 
-    const robotsBody = robots?.ok && robots.body.trim().length > 0 ? robots.body : undefined;
+    // A soft-404 HTML page served at /robots.txt is not a robots file.
+    const robotsBody =
+      robots?.ok && robots.body.trim().length > 0 && !robots.body.trimStart().startsWith('<')
+        ? robots.body
+        : undefined;
     const hasRobotsTxt = robots === undefined ? undefined : robotsBody !== undefined;
 
     const sitemapFromFile = sitemap === undefined ? undefined : sitemap.ok && looksLikeSitemap(sitemap.body);
@@ -451,9 +482,10 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
   private async fetchSmallText(
     url: string,
     deadline: number,
+    allowHost: (hostname: string) => boolean,
   ): Promise<{ ok: boolean; body: string } | undefined> {
     try {
-      const { response } = await this.fetchFollowingRedirects(url, { deadline, maxRedirects: 3 });
+      const { response } = await this.fetchFollowingRedirects(url, { deadline, maxRedirects: 3, allowHost });
       if (!response.ok) {
         await readBodyWithLimit(response, 0);
         return { ok: false, body: '' };
@@ -472,13 +504,24 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     target.hostname = alternate;
     target.pathname = '/';
     target.search = '';
+    const finalHost = finalUrl.hostname.toLowerCase();
     try {
-      const { response } = await this.request(target.toString(), deadline);
-      await readBodyWithLimit(response, 0);
-      if (!REDIRECT_STATUSES.includes(response.status)) return false;
-      const location = response.headers.get('location');
-      if (!location) return false;
-      return new URL(location, target).hostname.toLowerCase() === finalUrl.hostname.toLowerCase();
+      // Follow hops that stay on the alternate host (e.g. `/` → `/home` → www) and
+      // stop as soon as one points at the main host. Anything else = not redirected.
+      let currentUrl = target.toString();
+      for (let hop = 0; hop < 3; hop += 1) {
+        const { response } = await this.request(currentUrl, deadline);
+        await readBodyWithLimit(response, 0);
+        if (!REDIRECT_STATUSES.includes(response.status)) return false;
+        const location = response.headers.get('location');
+        if (!location) return false;
+        const next = new URL(location, currentUrl);
+        const nextHost = next.hostname.toLowerCase();
+        if (nextHost === finalHost) return true;
+        if (nextHost !== alternate.toLowerCase()) return false;
+        currentUrl = next.toString();
+      }
+      return undefined;
     } catch {
       return undefined;
     }

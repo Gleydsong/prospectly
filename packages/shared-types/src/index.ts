@@ -319,10 +319,16 @@ export interface WebsiteAnalysisResult {
   error?: string;
 }
 
-/** Optional lead context used by the analyzer for local-SEO checks (NAP). */
+/** Optional per-call context for the analyzer. */
 export interface WebsiteAnalysisContext {
+  /** Lead locality, used for local-SEO checks (NAP / city mention). */
   city?: string | null;
   state?: string | null;
+  /**
+   * Also request robots.txt, sitemap.xml and the www/non-www alternate host
+   * (3 extra requests, ~5s budget). Off by default so bulk callers stay cheap.
+   */
+  includeAuxChecks?: boolean;
 }
 
 export interface WebsiteAnalyzer {

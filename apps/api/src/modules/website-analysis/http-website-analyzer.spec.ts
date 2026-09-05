@@ -173,6 +173,24 @@ describe('parseSeoSignals', () => {
     expect(seo.hasAddress).toBe(false);
   });
 
+  it('stays linear on hostile HTML (unclosed tags, comments, huge attribute lists)', () => {
+    const budgetMs = 1500;
+    const hostile = [
+      '<script>'.repeat(180_000),
+      '<!--'.repeat(370_000),
+      '<img '.repeat(300_000),
+      '<div id="root">'.repeat(100_000),
+      `<meta ${'a="b" '.repeat(300_000)}`,
+      '<'.repeat(1_500_000),
+    ];
+    for (const html of hostile) {
+      const started = Date.now();
+      const { seo } = parseSeoSignals(html, 'https://demo.dev/');
+      expect(seo.renderingMode).toBeDefined();
+      expect(Date.now() - started).toBeLessThan(budgetMs);
+    }
+  });
+
   it('parses robots.txt directives', () => {
     expect(robotsBlocksAll('User-agent: *\nDisallow: /')).toBe(true);
     expect(robotsBlocksAll('User-agent: *\nDisallow: /admin/\nSitemap: https://x/sitemap.xml')).toBe(false);
@@ -256,7 +274,7 @@ describe('HttpWebsiteAnalyzer', () => {
     });
 
     const analyzer = new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never });
-    const result = await analyzer.analyze('https://www.demo.dev/', { city: 'Curitiba' });
+    const result = await analyzer.analyze('https://www.demo.dev/', { city: 'Curitiba', includeAuxChecks: true });
 
     expect(result.accessible).toBe(true);
     expect(result.hasRobotsTxt).toBe(true);
@@ -283,7 +301,7 @@ describe('HttpWebsiteAnalyzer', () => {
     });
 
     const analyzer = new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never });
-    const result = await analyzer.analyze('https://demo.dev/');
+    const result = await analyzer.analyze('https://demo.dev/', { includeAuxChecks: true });
 
     expect(result.accessible).toBe(true);
     expect(result.hasRobotsTxt).toBeUndefined();
@@ -291,6 +309,90 @@ describe('HttpWebsiteAnalyzer', () => {
     expect(result.seo?.robotsBlocksAll).toBeUndefined();
     expect(result.seo?.alternateHostRedirects).toBeUndefined();
     expect(result.seo?.renderingMode).toBe('STATIC');
+  });
+
+  it('skips auxiliary requests unless includeAuxChecks is set (bulk callers stay cheap)', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const html = '<html><head><title>Ok</title></head><body><p>Hello world</p></body></html>';
+    const fetchImpl = jest.fn(async () => streamResponse([Buffer.from(html)]));
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze('https://demo.dev/');
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result.seo?.renderingMode).toBe('STATIC');
+    expect(result.hasRobotsTxt).toBeUndefined();
+    expect(result.seo?.alternateHostRedirects).toBeUndefined();
+  });
+
+  it('refuses auxiliary redirects to foreign hosts and follows alternate-host chains', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const redirect = (location: string) => ({
+      ...streamResponse([Buffer.alloc(0)]),
+      status: 301,
+      ok: false,
+      headers: { get: (name: string) => (name === 'location' ? location : null) },
+    });
+    const html = '<html><head><title>Ok</title></head><body><p>Hello world</p></body></html>';
+    const fetchImpl = jest.fn(async (url: string) => {
+      switch (url) {
+        case 'https://www.demo.dev/':
+          return streamResponse([Buffer.from(html)]);
+        case 'https://www.demo.dev/robots.txt':
+          return redirect('https://evil.example/robots.txt');
+        case 'https://www.demo.dev/sitemap.xml':
+          return streamResponse([Buffer.from('<urlset></urlset>')], 'application/xml');
+        case 'https://demo.dev/':
+          return redirect('https://demo.dev/home');
+        case 'https://demo.dev/home':
+          return redirect('https://www.demo.dev/home');
+        default:
+          throw new Error(`unexpected url ${url}`);
+      }
+    });
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze(
+      'https://www.demo.dev/',
+      { includeAuxChecks: true },
+    );
+
+    expect(result.hasRobotsTxt).toBeUndefined();
+    expect(result.hasSitemap).toBe(true);
+    expect(result.seo?.alternateHostRedirects).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalledWith('https://evil.example/robots.txt', expect.anything());
+  });
+
+  it('reports the last hop URL when the fetch fails after a redirect', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const fetchImpl = jest.fn(async (url: string) => {
+      if (url === 'http://demo.dev/') {
+        return {
+          ...streamResponse([Buffer.alloc(0)]),
+          status: 301,
+          ok: false,
+          headers: { get: (name: string) => (name === 'location' ? 'https://demo.dev/' : null) },
+        };
+      }
+      throw new Error('connection reset');
+    });
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze('http://demo.dev/');
+
+    expect(result.accessible).toBe(false);
+    expect(result.url).toBe('https://demo.dev/');
+    expect(result.https).toBe(true);
+    expect(result.issues[0]?.code).toBe('FETCH_FAILED');
   });
 
   it('does not buffer an entire oversized HTML body into memory', async () => {
