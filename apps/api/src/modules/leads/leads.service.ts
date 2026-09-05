@@ -15,6 +15,11 @@ import { EntitlementService } from '../billing/entitlement.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
+  coerceLeadFilter,
+  compileLeadFilter,
+  InvalidLeadFilterError,
+} from './domain/lead-filter-ast';
+import {
   buildProbableDuplicateKey,
   LeadIngestionService,
   normalizeBrazilianPhone,
@@ -293,6 +298,7 @@ export class LeadsService {
             segment: dto.segment ?? null,
             hasWebsite: dto.hasWebsite ?? null,
             hasQuery: Boolean(dto.q),
+            hasFilter: dto.filter !== undefined,
           },
         },
       },
@@ -321,11 +327,22 @@ export class LeadsService {
       | 'maxScore'
       | 'tagId'
       | 'q'
+      | 'filter'
     >,
   ): Prisma.LeadWhereInput {
+    const tenant: Prisma.LeadWhereInput = { organizationId, deletedAt: null };
+    if (query.filter !== undefined) {
+      try {
+        return { AND: [tenant, compileLeadFilter(coerceLeadFilter(query.filter))] };
+      } catch (error) {
+        if (error instanceof InvalidLeadFilterError) {
+          throw new BadRequestException(error.message);
+        }
+        throw error;
+      }
+    }
     return {
-      organizationId,
-      deletedAt: null,
+      ...tenant,
       ...(query.status ? { status: query.status } : {}),
       ...(query.source ? { source: query.source } : {}),
       ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),

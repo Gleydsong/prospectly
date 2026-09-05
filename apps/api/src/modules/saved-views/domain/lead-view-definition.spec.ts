@@ -47,4 +47,39 @@ describe('parseLeadViewDefinition', () => {
       'minScore cannot be greater than maxScore',
     );
   });
+
+  it('accepts an allowlisted filter AST with sort at the top level', () => {
+    expect(
+      parseLeadViewDefinition({
+        filter: {
+          op: 'and',
+          nodes: [
+            { field: 'city', op: 'eq', value: 'Lisboa' },
+            { field: 'lastContactAt', op: 'older_than', days: 14 },
+          ],
+        },
+        sortBy: 'score',
+        sortOrder: 'desc',
+      }),
+    ).toEqual({
+      filter: {
+        op: 'and',
+        nodes: [
+          { field: 'city', op: 'eq', value: 'Lisboa' },
+          { field: 'lastContactAt', op: 'older_than', days: 14 },
+        ],
+      },
+      sortBy: 'score',
+      sortOrder: 'desc',
+    });
+  });
+
+  it('rejects mixing filter AST with flat predicates', () => {
+    expect(() =>
+      parseLeadViewDefinition({
+        filter: { field: 'city', op: 'eq', value: 'Lisboa' },
+        q: 'padaria',
+      }),
+    ).toThrow('Cannot mix filter AST with flat predicate keys');
+  });
 });

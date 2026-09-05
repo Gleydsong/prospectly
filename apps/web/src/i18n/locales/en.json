@@ -586,7 +586,14 @@
     "viewUpdated": "View updated.",
     "viewDuplicated": "View duplicated.",
     "viewArchived": "View archived.",
-    "viewCount": "{{count}} leads in this view"
+    "viewCount": "{{count}} leads in this view",
+    "statusOr": "Or this status",
+    "statusOrNone": "No second status",
+    "lastContact": "Last contact",
+    "lastContactAny": "Any last contact",
+    "lastContactOlder": "No contact for more than N days",
+    "lastContactWithin": "Contacted in the last N days",
+    "lastContactDays": "Days"
   },
   "search": {
     "highIntentEyebrow": "High-intent search",

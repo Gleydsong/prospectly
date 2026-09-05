@@ -96,6 +96,42 @@ describe('SavedViewsService', () => {
     expect(prisma.savedView.create).not.toHaveBeenCalled();
   });
 
+  it('creates a view with an allowlisted filter AST', async () => {
+    const prisma = makePrisma();
+    const definition = {
+      filter: {
+        op: 'and',
+        nodes: [
+          { field: 'hasWebsite', op: 'eq', value: false },
+          { field: 'lastContactAt', op: 'older_than', days: 14 },
+        ],
+      },
+    };
+    prisma.savedView.create.mockResolvedValue({ ...row, definition });
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await service.create('org-a', owner, { name: 'Stale Lisboa', definition });
+
+    expect(prisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ definition }),
+      }),
+    );
+  });
+
+  it('rejects mixing filter AST with flat predicates', async () => {
+    const prisma = makePrisma();
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(
+      service.create('org-a', owner, {
+        name: 'Mixed',
+        definition: { filter: { field: 'city', op: 'eq', value: 'Lisboa' }, q: 'x' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
   it('forbids VIEWER from creating a view', async () => {
     const prisma = makePrisma();
     const service = new SavedViewsService(prisma, makeLeads(), makeAudit());

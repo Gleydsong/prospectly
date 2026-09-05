@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { LeadIngestionService } from './lead-ingestion.service';
@@ -202,6 +202,65 @@ describe('LeadsService', () => {
         where: expect.objectContaining({ organizationId: 'org1', deletedAt: null }),
       }),
     );
+  });
+
+  it('list compiles filter AST ANDed with tenant scope and ignores flat predicates', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      city: 'Porto',
+      filter: {
+        op: 'and',
+        nodes: [
+          { field: 'city', op: 'eq', value: 'Lisboa' },
+          { field: 'lastContactAt', op: 'older_than', days: 14 },
+        ],
+      },
+    });
+
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            { organizationId: 'org1', deletedAt: null },
+            {
+              AND: [
+                { city: { equals: 'Lisboa', mode: 'insensitive' } },
+                {
+                  OR: [
+                    { lastContactAt: { lt: expect.any(Date) } },
+                    { lastContactAt: null },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+  });
+
+  it('list rejects an unknown filter field', async () => {
+    const prisma = makePrisma();
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await expect(
+      service.list('org1', {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+        filter: { field: 'email', op: 'eq', value: 'a@b.c' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
   });
 
   it('getById throws NotFoundException for lead from another org', async () => {

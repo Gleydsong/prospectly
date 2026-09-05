@@ -25,10 +25,17 @@ export interface LeadsQuery {
   maxScore?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  filter?: unknown;
 }
 
 export async function fetchLeads(query: LeadsQuery): Promise<PaginatedResult<LeadListItem>> {
-  const { data } = await api.get<PaginatedResult<LeadListItem>>('/leads', { params: query });
+  const { filter, ...rest } = query;
+  const { data } = await api.get<PaginatedResult<LeadListItem>>('/leads', {
+    params: {
+      ...rest,
+      ...(filter !== undefined ? { filter: JSON.stringify(filter) } : {}),
+    },
+  });
   return data;
 }
 
@@ -146,6 +153,7 @@ export async function exportLeadsCsv(input: {
   hasWebsite?: boolean;
   minScore?: number;
   maxScore?: number;
+  filter?: unknown;
 }): Promise<LeadExportResult> {
   const { data } = await api.post<LeadExportResult>('/leads/export', input);
   return data;

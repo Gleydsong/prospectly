@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
+  Allow,
   IsBoolean,
   IsEnum,
   IsIn,
@@ -88,6 +89,25 @@ export class QueryLeadsDto extends PaginationQueryDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   hasWebsite?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowlisted AND/OR filter AST. When present, flat predicates (q, status, …) are ignored.',
+  })
+  @Allow()
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as unknown;
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
+  filter?: unknown;
 
   @ApiPropertyOptional({ enum: SORTABLE_FIELDS, default: 'createdAt' })
   @IsOptional()

@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
+  Allow,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -135,4 +136,12 @@ export class ExportLeadsDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   hasWebsite?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Allowlisted AND/OR filter AST. When present, flat predicates (q, status, …) are ignored.',
+  })
+  @Allow()
+  @IsOptional()
+  filter?: unknown;
 }

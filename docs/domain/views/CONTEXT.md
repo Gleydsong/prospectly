@@ -9,7 +9,7 @@ Uma consulta nomeada e persistida sobre clientes potenciais da organização, co
 _Avoid_: Segmento, SmartList, Attio View, Search
 
 **Definição**:
-O conjunto allowlisted de filtros e ordenação que a Vista aplica. Não é SQL nem JSONPath.
+O conjunto allowlisted de filtros e ordenação que a Vista aplica. Pode ser um mapa plano ou um AST allowlisted (`and`/`or` + folhas). Não é SQL nem JSONPath.
 _Avoid_: Query string, AST livre, filtro de cliente
 
 **Visibilidade privada**:
