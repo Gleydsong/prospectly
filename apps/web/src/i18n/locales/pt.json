@@ -593,7 +593,23 @@
     "lastContactAny": "Qualquer último contacto",
     "lastContactOlder": "Sem contacto há mais de N dias",
     "lastContactWithin": "Contactado nos últimos N dias",
-    "lastContactDays": "Dias"
+    "lastContactDays": "Dias",
+    "layout": "Disposição",
+    "layoutTable": "Tabela",
+    "layoutKanban": "Kanban",
+    "kanbanLabel": "Quadro por status",
+    "columns": "Colunas",
+    "column": {
+      "companyName": "Empresa",
+      "city": "Cidade",
+      "status": "Status",
+      "score": "Pontuação",
+      "owner": "Responsável",
+      "tags": "Etiquetas",
+      "segment": "Segmento",
+      "email": "E-mail",
+      "website": "Website"
+    }
   },
   "search": {
     "highIntentEyebrow": "Busca de alta intenção",

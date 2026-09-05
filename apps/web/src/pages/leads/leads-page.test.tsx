@@ -417,4 +417,105 @@ describe('LeadsPage saved views', () => {
       }),
     );
   });
+
+  it('saves kanban layout with the view definition', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const mutateAsync = vi
+      .fn()
+      .mockResolvedValue({ ...viewFixture, id: 'view-kanban', name: 'Quadro' });
+    mocks.useCreateSavedView.mockReturnValue({ mutateAsync, isPending: false });
+
+    renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
+
+    await user.click(screen.getByRole('button', { name: 'Kanban' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar vista' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Guardar vista da lista' });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
+      target: { value: 'Quadro Lisboa' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      name: 'Quadro Lisboa',
+      visibility: 'PRIVATE',
+      definition: { layout: 'kanban' },
+    });
+  });
+
+  it('applies a kanban view and hides a deselected table column', async () => {
+    const kanbanView: SavedView = {
+      ...viewFixture,
+      id: 'view-board',
+      name: 'Quadro',
+      definition: {
+        hasWebsite: false,
+        layout: 'kanban',
+        columns: ['companyName', 'status', 'score'],
+      },
+    };
+    mocks.useSavedViews.mockReturnValue({
+      data: [kanbanView],
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-board'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByRole('list', { name: 'Quadro por status' })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: 'Novo' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 50 }));
+    });
+  });
+
+  it('hides city when the view columns omit it', async () => {
+    const slimView: SavedView = {
+      ...viewFixture,
+      id: 'view-slim',
+      name: 'Slim',
+      definition: { columns: ['companyName', 'status'] },
+    };
+    mocks.useSavedViews.mockReturnValue({
+      data: [slimView],
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useLeads.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'l1',
+            companyName: 'Padaria Central',
+            city: 'Lisboa',
+            status: LeadStatus.NEW,
+            source: 'MANUAL',
+            score: 40,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: null,
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-slim'],
+      withGoogle: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('columnheader', { name: 'Empresa' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('columnheader', { name: 'Cidade' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+  });
 });

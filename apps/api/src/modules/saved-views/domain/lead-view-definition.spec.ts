@@ -82,4 +82,42 @@ describe('parseLeadViewDefinition', () => {
       }),
     ).toThrow('Cannot mix filter AST with flat predicate keys');
   });
+
+  it('accepts layout and allowlisted columns on a flat definition', () => {
+    expect(
+      parseLeadViewDefinition({
+        hasWebsite: false,
+        layout: 'kanban',
+        columns: ['companyName', 'status', 'score'],
+      }),
+    ).toEqual({
+      hasWebsite: false,
+      layout: 'kanban',
+      columns: ['companyName', 'status', 'score'],
+    });
+  });
+
+  it('accepts layout on an AST definition', () => {
+    expect(
+      parseLeadViewDefinition({
+        filter: { field: 'city', op: 'eq', value: 'Lisboa' },
+        layout: 'table',
+        columns: ['companyName', 'city'],
+      }),
+    ).toMatchObject({
+      layout: 'table',
+      columns: ['companyName', 'city'],
+    });
+  });
+
+  it('rejects unknown layout, unknown columns and missing companyName', () => {
+    expect(() => parseLeadViewDefinition({ layout: 'grid' })).toThrow('layout');
+    expect(() => parseLeadViewDefinition({ columns: ['email'] })).toThrow('companyName');
+    expect(() => parseLeadViewDefinition({ columns: ['companyName', 'phone'] })).toThrow(
+      'Unknown column',
+    );
+    expect(() =>
+      parseLeadViewDefinition({ columns: ['companyName', 'companyName'] }),
+    ).toThrow('duplicates');
+  });
 });

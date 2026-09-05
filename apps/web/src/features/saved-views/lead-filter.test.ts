@@ -1,6 +1,11 @@
 import { LeadStatus } from '@/types';
 
-import { definitionFromFilters, hydrateLeadListFilters, type LeadListFilters } from './lead-filter';
+import {
+  DEFAULT_LEAD_VIEW_COLUMNS,
+  definitionFromFilters,
+  hydrateLeadListFilters,
+  type LeadListFilters,
+} from './lead-filter';
 
 function filters(overrides: Partial<LeadListFilters> = {}): LeadListFilters {
   return {
@@ -10,6 +15,8 @@ function filters(overrides: Partial<LeadListFilters> = {}): LeadListFilters {
     hasWebsite: '',
     lastContactOp: '',
     lastContactDays: 14,
+    layout: 'table',
+    columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
     extras: {},
     ...overrides,
   };
@@ -64,6 +71,22 @@ describe('definitionFromFilters', () => {
       },
     });
   });
+
+  it('persists kanban layout and non-default columns', () => {
+    expect(
+      definitionFromFilters(
+        filters({
+          status: LeadStatus.NEW,
+          layout: 'kanban',
+          columns: ['companyName', 'status', 'score'],
+        }),
+      ),
+    ).toEqual({
+      status: LeadStatus.NEW,
+      layout: 'kanban',
+      columns: ['companyName', 'status', 'score'],
+    });
+  });
 });
 
 describe('hydrateLeadListFilters', () => {
@@ -92,7 +115,23 @@ describe('hydrateLeadListFilters', () => {
       hasWebsite: 'no',
       lastContactOp: 'older_than',
       lastContactDays: 14,
+      layout: 'table',
+      columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
       extras: {},
+    });
+  });
+
+  it('restores kanban layout and columns', () => {
+    expect(
+      hydrateLeadListFilters({
+        hasWebsite: false,
+        layout: 'kanban',
+        columns: ['companyName', 'status'],
+      }),
+    ).toMatchObject({
+      hasWebsite: 'no',
+      layout: 'kanban',
+      columns: ['companyName', 'status'],
     });
   });
 });
