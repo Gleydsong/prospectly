@@ -23,6 +23,7 @@ export const AUDIT_ACTIONS = {
   SAVED_VIEW_CREATED: 'saved_view.created',
   SAVED_VIEW_UPDATED: 'saved_view.updated',
   SAVED_VIEW_ARCHIVED: 'saved_view.archived',
+  SAVED_VIEW_DUPLICATED: 'saved_view.duplicated',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

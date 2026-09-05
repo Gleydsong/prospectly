@@ -32,9 +32,11 @@ import { useDeleteLead, useLeads } from '@/features/leads/hooks';
 import {
   useArchiveSavedView,
   useCreateSavedView,
+  useDuplicateSavedView,
   usePreviewSavedView,
   useSavedView,
   useSavedViews,
+  useUpdateSavedView,
 } from '@/features/saved-views/hooks';
 import type { LeadViewDefinition, SavedViewVisibility } from '@/features/saved-views/api';
 import { useAuthStore } from '@/stores/auth.store';
@@ -71,6 +73,7 @@ export function LeadsPage() {
   const [extras, setExtras] = useState<LeadViewDefinition>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
+  const [saveMode, setSaveMode] = useState<'create' | 'update'>('create');
   const [viewName, setViewName] = useState('');
   const [viewVisibility, setViewVisibility] = useState<SavedViewVisibility>('PRIVATE');
   const [exportOpen, setExportOpen] = useState(false);
@@ -89,6 +92,8 @@ export function LeadsPage() {
   const selectedQuery = useSavedView(viewId && !selectedFromList ? viewId : undefined);
   const selectedView = selectedFromList ?? selectedQuery.data;
   const createView = useCreateSavedView();
+  const updateView = useUpdateSavedView();
+  const duplicateView = useDuplicateSavedView();
   const archiveView = useArchiveSavedView();
   const previewQuery = usePreviewSavedView(selectedView?.id);
 
@@ -160,20 +165,59 @@ export function LeadsPage() {
     navigate(id ? `/leads?view=${encodeURIComponent(id)}` : '/leads', { replace: true });
   };
 
+  const openCreateView = () => {
+    setSaveMode('create');
+    setViewName('');
+    setViewVisibility('PRIVATE');
+    setSaveViewOpen(true);
+  };
+
+  const openUpdateView = () => {
+    if (!selectedView?.canEdit) return;
+    setSaveMode('update');
+    setViewName(selectedView.name);
+    setViewVisibility(selectedView.visibility);
+    setSaveViewOpen(true);
+  };
+
   const saveCurrentView = async () => {
     const name = viewName.trim();
     if (!name) return;
     setActionError(null);
+    const definition = definitionFromFilters({ q, status, hasWebsite, extras });
     try {
+      if (saveMode === 'update' && selectedView) {
+        await updateView.mutateAsync({
+          id: selectedView.id,
+          name,
+          visibility: viewVisibility,
+          definition,
+        });
+        setSaveViewOpen(false);
+        setExportMessage(t('leads.viewUpdated'));
+        return;
+      }
       const saved = await createView.mutateAsync({
         name,
         visibility: viewVisibility,
-        definition: definitionFromFilters({ q, status, hasWebsite, extras }),
+        definition,
       });
       setSaveViewOpen(false);
       setViewName('');
       setExportMessage(t('leads.viewSaved'));
       selectView(saved.id);
+    } catch (error) {
+      setActionError(getApiErrorMessage(error) || t('common.errorGeneric'));
+    }
+  };
+
+  const duplicateCurrentView = async () => {
+    if (!selectedView) return;
+    setActionError(null);
+    try {
+      const copy = await duplicateView.mutateAsync(selectedView.id);
+      setExportMessage(t('leads.viewDuplicated'));
+      selectView(copy.id);
     } catch (error) {
       setActionError(getApiErrorMessage(error) || t('common.errorGeneric'));
     }
@@ -325,8 +369,23 @@ export function LeadsPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {canSaveView ? (
-                <Button type="button" variant="outline" onClick={() => setSaveViewOpen(true)}>
+                <Button type="button" variant="outline" onClick={openCreateView}>
                   {t('leads.saveView')}
+                </Button>
+              ) : null}
+              {canSaveView && selectedView ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={duplicateView.isPending}
+                  onClick={() => void duplicateCurrentView()}
+                >
+                  {t('leads.duplicateView')}
+                </Button>
+              ) : null}
+              {canSaveView && selectedView?.canEdit ? (
+                <Button type="button" variant="outline" onClick={openUpdateView}>
+                  {t('leads.updateView')}
                 </Button>
               ) : null}
               {canSaveView && selectedView?.canEdit ? (
@@ -569,7 +628,7 @@ export function LeadsPage() {
       <Modal
         open={saveViewOpen}
         onClose={() => setSaveViewOpen(false)}
-        title={t('leads.saveViewTitle')}
+        title={t(saveMode === 'update' ? 'leads.updateViewTitle' : 'leads.saveViewTitle')}
       >
         <div className="space-y-4">
           <Input
@@ -595,11 +654,11 @@ export function LeadsPage() {
             </Button>
             <Button
               type="button"
-              loading={createView.isPending}
+              loading={saveMode === 'update' ? updateView.isPending : createView.isPending}
               disabled={!viewName.trim()}
               onClick={() => void saveCurrentView()}
             >
-              {t('leads.saveViewSubmit')}
+              {saveMode === 'update' ? t('leads.updateView') : t('leads.saveViewSubmit')}
             </Button>
           </div>
         </div>

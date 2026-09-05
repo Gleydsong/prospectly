@@ -170,4 +170,67 @@ describe('SavedViewsService', () => {
       expect.objectContaining({ action: 'saved_view.archived' }),
     );
   });
+
+  it('duplicates a visible TEAM view as a private copy owned by the actor', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    const teamRow = { ...row, visibility: SavedViewVisibility.TEAM };
+    const copy = {
+      ...teamRow,
+      id: 'view-2',
+      ownerId: teammate.id,
+      name: 'Lisboa sem site (cópia)',
+      visibility: SavedViewVisibility.PRIVATE,
+    };
+    prisma.savedView.findFirst.mockResolvedValue(teamRow);
+    prisma.savedView.create.mockResolvedValue(copy);
+    const service = new SavedViewsService(prisma, makeLeads(), audit);
+
+    const duplicated = await service.duplicate('org-a', teammate, 'view-1');
+
+    expect(prisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'org-a',
+          ownerId: teammate.id,
+          name: 'Lisboa sem site (cópia)',
+          visibility: SavedViewVisibility.PRIVATE,
+          definition: { hasWebsite: false, city: 'Lisboa' },
+        }),
+      }),
+    );
+    expect(prisma.savedView.update).not.toHaveBeenCalled();
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'saved_view.duplicated',
+        entityId: 'view-2',
+        metadata: { sourceId: 'view-1' },
+      }),
+    );
+    expect(duplicated.canEdit).toBe(true);
+    expect(duplicated.ownerId).toBe(teammate.id);
+  });
+
+  it('forbids VIEWER from duplicating a visible TEAM view', async () => {
+    const prisma = makePrisma();
+    const teamRow = { ...row, visibility: SavedViewVisibility.TEAM };
+    prisma.savedView.findFirst.mockResolvedValue(teamRow);
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(service.duplicate('org-a', viewer, 'view-1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
+  it('does not duplicate another member private view', async () => {
+    const prisma = makePrisma();
+    prisma.savedView.findFirst.mockResolvedValue(row);
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(service.duplicate('org-a', teammate, 'view-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
 });

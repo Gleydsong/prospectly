@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   useSavedViews: vi.fn(),
   useSavedView: vi.fn(),
   useCreateSavedView: vi.fn(),
+  useUpdateSavedView: vi.fn(),
+  useDuplicateSavedView: vi.fn(),
   useArchiveSavedView: vi.fn(),
   usePreviewSavedView: vi.fn(),
   exportLeadsCsv: vi.fn(),
@@ -39,6 +41,8 @@ vi.mock('@/features/saved-views/hooks', () => ({
   useSavedViews: (...args: unknown[]) => mocks.useSavedViews(...args),
   useSavedView: (...args: unknown[]) => mocks.useSavedView(...args),
   useCreateSavedView: (...args: unknown[]) => mocks.useCreateSavedView(...args),
+  useUpdateSavedView: (...args: unknown[]) => mocks.useUpdateSavedView(...args),
+  useDuplicateSavedView: (...args: unknown[]) => mocks.useDuplicateSavedView(...args),
   useArchiveSavedView: (...args: unknown[]) => mocks.useArchiveSavedView(...args),
   usePreviewSavedView: (...args: unknown[]) => mocks.usePreviewSavedView(...args),
 }));
@@ -115,6 +119,16 @@ describe('LeadsPage saved views', () => {
       mutateAsync: vi.fn().mockResolvedValue({ ...viewFixture, id: 'view-new', name: 'Novos' }),
       isPending: false,
     });
+    mocks.useUpdateSavedView.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue(viewFixture),
+      isPending: false,
+    });
+    mocks.useDuplicateSavedView.mockReturnValue({
+      mutateAsync: vi
+        .fn()
+        .mockResolvedValue({ ...viewFixture, id: 'view-2', name: 'Lisboa sem site (cópia)' }),
+      isPending: false,
+    });
     mocks.useArchiveSavedView.mockReturnValue({
       mutateAsync: vi
         .fn()
@@ -181,6 +195,8 @@ describe('LeadsPage saved views', () => {
     });
 
     expect(screen.queryByRole('button', { name: 'Guardar vista' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Duplicar vista' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar alterações' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Arquivar vista' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Vistas')).toHaveValue('view-1');
     await waitFor(() => {
@@ -205,6 +221,78 @@ describe('LeadsPage saved views', () => {
     await user.click(screen.getByRole('button', { name: 'Arquivar vista' }));
 
     expect(mutateAsync).toHaveBeenCalledWith('view-1');
+  });
+
+  it('duplicates the selected view', async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({
+      ...viewFixture,
+      id: 'view-2',
+      name: 'Lisboa sem site (cópia)',
+      visibility: 'PRIVATE',
+    });
+    mocks.useDuplicateSavedView.mockReturnValue({ mutateAsync, isPending: false });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-1'],
+      withGoogle: false,
+    });
+    await user.click(screen.getByRole('button', { name: 'Duplicar vista' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith('view-1');
+  });
+
+  it('lets a member duplicate a team view they cannot edit', async () => {
+    setUser(Role.MEMBER);
+    mocks.useSavedViews.mockReturnValue({
+      data: [{ ...viewFixture, ownerId: 'other', canEdit: false }],
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-1'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByRole('button', { name: 'Duplicar vista' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar alterações' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Arquivar vista' })).not.toBeInTheDocument();
+  });
+
+  it('updates the selected view with the current filters', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const mutateAsync = vi.fn().mockResolvedValue({
+      ...viewFixture,
+      name: 'Lisboa atualizada',
+      definition: { hasWebsite: false, city: 'Lisboa', status: LeadStatus.NEW },
+    });
+    mocks.useUpdateSavedView.mockReturnValue({ mutateAsync, isPending: false });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-1'],
+      withGoogle: false,
+    });
+
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(
+        expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
+      );
+    });
+    await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
+    await user.click(screen.getByRole('button', { name: 'Guardar alterações' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Atualizar vista' });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
+      target: { value: 'Lisboa atualizada' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar alterações' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      id: 'view-1',
+      name: 'Lisboa atualizada',
+      visibility: 'TEAM',
+      definition: { hasWebsite: false, city: 'Lisboa', status: LeadStatus.NEW },
+    });
   });
 
   it('exports CSV with the applied view filters', async () => {

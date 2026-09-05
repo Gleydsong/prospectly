@@ -61,6 +61,16 @@ export class SavedViewsController {
     return this.views.update(organizationId, user, id, dto);
   }
 
+  @Post(':id/duplicate')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  duplicate(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.views.duplicate(organizationId, user, id);
+  }
+
   @Post(':id/archive')
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   archive(

@@ -578,8 +578,13 @@
     "saveViewPrivate": "Só eu",
     "saveViewTeam": "Equipa",
     "saveViewSubmit": "Guardar",
+    "updateView": "Guardar alterações",
+    "updateViewTitle": "Atualizar vista",
+    "duplicateView": "Duplicar vista",
     "archiveView": "Arquivar vista",
     "viewSaved": "Vista guardada.",
+    "viewUpdated": "Vista atualizada.",
+    "viewDuplicated": "Vista duplicada.",
     "viewArchived": "Vista arquivada.",
     "viewCount": "{{count}} clientes nesta vista"
   },
