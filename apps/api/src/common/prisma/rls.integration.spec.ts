@@ -39,6 +39,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const workflowB = randomUUID();
   const workflowVersionA = randomUUID();
   const workflowVersionB = randomUUID();
+  const workflowStepRunA = randomUUID();
+  const workflowStepRunB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -122,6 +124,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${workflowVersionA}, ${orgA}, ${workflowA}, 1, '{"trigger":{"type":"lead.created"},"steps":[{"type":"add_tag","tagName":"a"}]}'::jsonb, NOW(), NOW()),
           (${workflowVersionB}, ${orgB}, ${workflowB}, 1, '{"trigger":{"type":"lead.created"},"steps":[{"type":"add_tag","tagName":"b"}]}'::jsonb, NOW(), NOW())
       `;
+      await tx.$executeRaw`
+        INSERT INTO "WorkflowStepRun"
+          (id, "organizationId", "workflowId", "workflowVersionId", "eventId", "leadId", "stepIndex", outcome, "createdAt")
+        VALUES
+          (${workflowStepRunA}, ${orgA}, ${workflowA}, ${workflowVersionA}, ${outboxEventA}, ${leadA}, 0, 'APPLIED'::"WorkflowStepRunOutcome", NOW()),
+          (${workflowStepRunB}, ${orgB}, ${workflowB}, ${workflowVersionB}, ${outboxEventB}, ${leadB}, 0, 'SKIPPED'::"WorkflowStepRunOutcome", NOW())
+      `;
     });
   });
 
@@ -130,6 +139,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "WorkflowStepRun" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
       await tx.$executeRawUnsafe(
         `DELETE FROM "WorkflowVersion" WHERE "organizationId" IN ($1, $2)`,
         orgA,
@@ -287,6 +301,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
             (id, "organizationId", "workflowId", version, definition, "publishedAt", "createdAt")
           VALUES
             (${foreignVersionId}, ${orgB}, ${workflowB}, 2, '{}'::jsonb, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates workflow step runs by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "WorkflowStepRun" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: workflowStepRunA }]);
+  });
+
+  it('rejects a cross-tenant workflow step run insert', async () => {
+    const foreignRunId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "WorkflowStepRun"
+            (id, "organizationId", "workflowId", "workflowVersionId", "eventId", "leadId", "stepIndex", outcome, "createdAt")
+          VALUES
+            (${foreignRunId}, ${orgB}, ${workflowB}, ${workflowVersionB}, ${outboxEventB}, ${leadB}, 1, 'APPLIED'::"WorkflowStepRunOutcome", NOW())
         `;
       }),
     ).rejects.toThrow();

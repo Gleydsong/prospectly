@@ -4,6 +4,7 @@ import type { Job } from 'bullmq';
 
 import { runWithTenant } from '../../common/prisma/tenant-context';
 import { MetricsService } from '../ops/metrics.service';
+import { WorkflowExecutorService } from '../workflows/application/workflow-executor.service';
 import { OUTBOX_QUEUE, PUBLISH_OUTBOX_JOB, type PublishOutboxJobData } from './outbox.constants';
 import { OutboxService } from './outbox.service';
 
@@ -14,6 +15,7 @@ export class OutboxProcessor extends WorkerHost {
   constructor(
     private readonly outbox: OutboxService,
     private readonly metrics: MetricsService,
+    private readonly workflowExecutor: WorkflowExecutorService,
   ) {
     super();
   }
@@ -27,7 +29,10 @@ export class OutboxProcessor extends WorkerHost {
     const correlationId = job.data.correlationId ?? 'unknown';
     const started = Date.now();
     try {
-      await runWithTenant(job.data.organizationId, () => this.outbox.process(job.data.eventId));
+      await runWithTenant(job.data.organizationId, async () => {
+        await this.outbox.process(job.data.eventId);
+        await this.workflowExecutor.handleOutboxEvent(job.data.eventId);
+      });
       this.metrics.recordJob(OUTBOX_QUEUE, 'completed', Date.now() - started);
     } catch (error) {
       const maxAttempts = job.opts.attempts ?? 1;
