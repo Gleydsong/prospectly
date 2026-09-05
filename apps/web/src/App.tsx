@@ -17,6 +17,7 @@ import { PipelinePage } from '@/pages/pipeline-page';
 import { SearchPage } from '@/pages/search-page';
 import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
+import { WorkflowsPage } from '@/pages/workflows-page';
 
 const DashboardPage = lazy(() =>
   import('@/pages/dashboard-page').then((m) => ({ default: m.DashboardPage })),
@@ -113,7 +114,11 @@ export function App() {
           />
           <Route
             path="tools/opportunity-finder"
-            element={<LazyPage><OpportunityFinderPage /></LazyPage>}
+            element={
+              <LazyPage>
+                <OpportunityFinderPage />
+              </LazyPage>
+            }
           />
           <Route path="search" element={<SearchPage />} />
           <Route path="support" element={<SupportPage />} />
@@ -155,6 +160,7 @@ export function App() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignDetailPage />} />
+          <Route path="workflows" element={<WorkflowsPage />} />
           <Route
             path="credits"
             element={

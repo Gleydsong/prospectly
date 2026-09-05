@@ -28,6 +28,7 @@ import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { SavedViewsModule } from './modules/saved-views/saved-views.module';
+import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { PipelinesModule } from './modules/pipelines/pipelines.module';
@@ -102,6 +103,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     OrganizationsModule,
     LeadsModule,
     SavedViewsModule,
+    WorkflowsModule,
     ActivitiesModule,
     TasksModule,
     PipelinesModule,
