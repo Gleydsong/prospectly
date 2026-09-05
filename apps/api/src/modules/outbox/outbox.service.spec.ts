@@ -1,7 +1,6 @@
 import { OutboxEventStatus } from '@prisma/client';
 
 import { OUTBOX_JOB_STALE_MS } from '../../common/workers/durable-job';
-import type { WebhookDeliveryService } from '../integrations/webhook-delivery.service';
 import {
   LEAD_STAGE_CHANGED_TYPE,
   OUTBOX_MAX_ATTEMPTS,
