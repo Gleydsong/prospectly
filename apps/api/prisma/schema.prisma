@@ -157,6 +157,14 @@ enum IssueSeverity {
   CRITICAL
 }
 
+/// Commercial opportunity derived from the SEO health score (inverse relation).
+enum SeoOpportunityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum OrgPlan {
   FREE
   STARTER_MONTHLY
@@ -704,6 +712,11 @@ model WebsiteAnalysis {
   analytics         String?
   technologies      Json?
   screenshotUrl     String?
+  /// SEO audit (slice 1): 0-100 health, inverse opportunity, detected architecture, full audit payload.
+  seoHealthScore    Int?
+  seoOpportunity    SeoOpportunityLevel?
+  architecture      String?
+  seoAudit          Json?
   error             String?
   startedAt         DateTime?
   completedAt       DateTime?

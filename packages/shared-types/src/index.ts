@@ -313,12 +313,86 @@ export interface WebsiteAnalysisResult {
   framework?: string;
   analytics?: string;
   technologies?: string[];
+  /** Raw SEO signals (present when HTML was fetched). */
+  seo?: SeoSignals;
   issues: Array<{ code: string; severity: 'INFO' | 'WARNING' | 'CRITICAL'; message: string }>;
   error?: string;
 }
 
+/** Optional per-call context for the analyzer. */
+export interface WebsiteAnalysisContext {
+  /** Lead locality, used for local-SEO checks (NAP / city mention). */
+  city?: string | null;
+  state?: string | null;
+  /**
+   * Also request robots.txt, sitemap.xml and the www/non-www alternate host
+   * (3 extra requests, ~5s budget). Off by default so bulk callers stay cheap.
+   */
+  includeAuxChecks?: boolean;
+}
+
 export interface WebsiteAnalyzer {
-  analyze(url: string): Promise<WebsiteAnalysisResult>;
+  analyze(url: string, context?: WebsiteAnalysisContext): Promise<WebsiteAnalysisResult>;
+}
+
+// ---------- SEO audit ----------
+
+export type SeoRenderingMode = 'SSR' | 'CSR' | 'STATIC' | 'UNKNOWN';
+
+export interface SeoImageSignals {
+  total: number;
+  missingDimensions: number;
+  modernFormat: number;
+  missingAlt: number;
+}
+
+/** Signals extracted from the HTML + auxiliary requests. `undefined` = not determined. */
+export interface SeoSignals {
+  renderingMode: SeoRenderingMode;
+  visibleTextLength: number;
+  noindex: boolean;
+  canonicalUrl?: string;
+  h1Count: number;
+  titleLength?: number;
+  metaDescriptionLength?: number;
+  ogTitle?: string;
+  ogImage?: string;
+  jsonLdTypes: string[];
+  hasMicrodata: boolean;
+  images: SeoImageSignals;
+  thirdPartyScriptHosts: string[];
+  renderBlockingScripts: number;
+  hasAddress: boolean;
+  mentionsCity?: boolean;
+  robotsBlocksAll?: boolean;
+  alternateHostRedirects?: boolean;
+}
+
+export type SeoVector = 'INDEXABILITY' | 'ON_PAGE' | 'PERFORMANCE' | 'LOCAL_INFRA';
+export type SeoSeverity = 'HIGH' | 'MEDIUM' | 'LOW';
+export type SeoOpportunityLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface SeoFinding {
+  code: string;
+  vector: SeoVector;
+  severity: SeoSeverity;
+  points: number;
+  quickWin: boolean;
+  title: string;
+  diagnosis: string;
+  impact: string;
+  fix: string;
+}
+
+export interface SeoAudit {
+  healthScore: number;
+  opportunity: SeoOpportunityLevel;
+  architecture: string;
+  vectors: Record<SeoVector, { score: number; max: number }>;
+  findings: SeoFinding[];
+  topIssues: SeoFinding[];
+  quickWins: SeoFinding[];
+  signals: SeoSignals;
 }
 
 // ---------- Lead scoring (Phase 4) ----------

@@ -14,6 +14,7 @@ import {
   parseHtmlSignals,
   readBodyWithLimit,
 } from './http-website-analyzer';
+import { alternateHostname, parseSeoSignals, robotsBlocksAll, robotsDeclaresSitemap } from './seo-signals';
 
 function streamResponse(chunks: Uint8Array[], contentType = 'text/html; charset=utf-8') {
   let index = 0;
@@ -97,6 +98,110 @@ describe('parseHtmlSignals', () => {
   });
 });
 
+describe('parseSeoSignals', () => {
+  const longText = 'Clínica odontológica em Curitiba com atendimento humanizado. '.repeat(10);
+
+  it('classifies a Next.js page with server-rendered content as SSR and extracts on-page signals', () => {
+    const html = `
+      <html><head>
+        <title>Clínica Demo | Dentista em Curitiba</title>
+        <meta name="description" content="Clínica odontológica em Curitiba com atendimento humanizado e agendamento online." />
+        <meta name="viewport" content="width=device-width" />
+        <meta property="og:title" content="Clínica Demo" />
+        <meta property="og:image" content="https://demo.dev/og.png" />
+        <link rel="canonical" href="https://demo.dev/" />
+        <script src="/_next/static/chunks/main.js" defer></script>
+        <script src="https://www.googletagmanager.com/gtag/js"></script>
+        <script src="https://cdn.other.com/a.js"></script>
+        <script src="https://cdn.other.com/b.js"></script>
+        <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"LocalBusiness"},{"@type":"WebSite"}]}</script>
+      </head><body>
+        <div id="__next">
+          <h1>Dentista em Curitiba</h1>
+          <p>${longText}</p>
+          <img src="/a.webp" width="400" height="300" alt="a" />
+          <img src="/b.jpg" alt="b" />
+          <img src="/c.png" width="10" height="10" />
+          <footer>Rua das Flores, 123 - Centro, Curitiba - PR, CEP 80010-000 <a href="tel:+554133334444">Ligue</a></footer>
+        </div>
+      </body></html>
+    `;
+    const { seo, framework } = parseSeoSignals(html, 'https://demo.dev/', { city: 'Curitiba' }, {
+      title: 'Clínica Demo | Dentista em Curitiba',
+      metaDescription: 'x'.repeat(90),
+    });
+
+    expect(framework).toBe('Next.js');
+    expect(seo.renderingMode).toBe('SSR');
+    expect(seo.h1Count).toBe(1);
+    expect(seo.canonicalUrl).toBe('https://demo.dev/');
+    expect(seo.noindex).toBe(false);
+    expect(seo.ogTitle).toBe('Clínica Demo');
+    expect(seo.ogImage).toBe('https://demo.dev/og.png');
+    expect(seo.jsonLdTypes).toEqual(['LocalBusiness', 'WebSite']);
+    expect(seo.images).toEqual({ total: 3, missingDimensions: 1, modernFormat: 1, missingAlt: 1 });
+    expect(seo.thirdPartyScriptHosts).toEqual(['www.googletagmanager.com', 'cdn.other.com']);
+    expect(seo.renderBlockingScripts).toBe(3);
+    expect(seo.hasAddress).toBe(true);
+    expect(seo.mentionsCity).toBe(true);
+    expect(seo.titleLength).toBe(35);
+    expect(seo.metaDescriptionLength).toBe(90);
+    expect(seo.visibleTextLength).toBeGreaterThan(300);
+  });
+
+  it('classifies an empty React mount with a bundle as CSR', () => {
+    const html = `
+      <!doctype html><html><head><meta charset="utf-8"><title>App</title>
+        <script type="module" src="/assets/index-abc123.js"></script>
+      </head><body><div id="root"></div></body></html>
+    `;
+    const { seo } = parseSeoSignals(html, 'https://spa.dev/');
+    expect(seo.renderingMode).toBe('CSR');
+    expect(seo.h1Count).toBe(0);
+    expect(seo.visibleTextLength).toBeLessThan(200);
+    expect(seo.mentionsCity).toBeUndefined();
+    expect(seo.renderBlockingScripts).toBe(0);
+  });
+
+  it('classifies plain HTML without a JS framework as STATIC and detects noindex', () => {
+    const html = `<html><head><meta name="robots" content="noindex, nofollow"></head><body><h1>A</h1><h1>B</h1><p>${longText}</p></body></html>`;
+    const { seo, framework } = parseSeoSignals(html, 'http://old.dev/');
+    expect(framework).toBeUndefined();
+    expect(seo.renderingMode).toBe('STATIC');
+    expect(seo.noindex).toBe(true);
+    expect(seo.h1Count).toBe(2);
+    expect(seo.hasAddress).toBe(false);
+  });
+
+  it('stays linear on hostile HTML (unclosed tags, comments, huge attribute lists)', () => {
+    const budgetMs = 1500;
+    const hostile = [
+      '<script>'.repeat(180_000),
+      '<!--'.repeat(370_000),
+      '<img '.repeat(300_000),
+      '<div id="root">'.repeat(100_000),
+      `<meta ${'a="b" '.repeat(300_000)}`,
+      '<'.repeat(1_500_000),
+    ];
+    for (const html of hostile) {
+      const started = Date.now();
+      const { seo } = parseSeoSignals(html, 'https://demo.dev/');
+      expect(seo.renderingMode).toBeDefined();
+      expect(Date.now() - started).toBeLessThan(budgetMs);
+    }
+  });
+
+  it('parses robots.txt directives', () => {
+    expect(robotsBlocksAll('User-agent: *\nDisallow: /')).toBe(true);
+    expect(robotsBlocksAll('User-agent: *\nDisallow: /admin/\nSitemap: https://x/sitemap.xml')).toBe(false);
+    expect(robotsBlocksAll('User-agent: BadBot\nDisallow: /\n\nUser-agent: *\nDisallow:')).toBe(false);
+    expect(robotsDeclaresSitemap('User-agent: *\nSitemap: https://x/sitemap.xml')).toBe(true);
+    expect(alternateHostname('www.demo.dev')).toBe('demo.dev');
+    expect(alternateHostname('demo.dev')).toBe('www.demo.dev');
+    expect(alternateHostname('93.184.216.34')).toBeUndefined();
+  });
+});
+
 describe('HttpWebsiteAnalyzer', () => {
   it('returns SSRF blocked result for private hosts without fetching', async () => {
     const { assertSafePublicUrl, SsrfBlockedError } = jest.requireMock('./ssrf') as {
@@ -135,6 +240,159 @@ describe('HttpWebsiteAnalyzer', () => {
       'https://example.com/',
       expect.objectContaining({ method: 'GET', redirect: 'manual' }),
     );
+  });
+
+  it('collects robots/sitemap/www signals through auxiliary requests and attaches SEO signals', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+
+    const html =
+      '<html><head><title>Ok</title></head><body><div id="root"></div><script src="/assets/index-1a2b3c.js"></script></body></html>';
+    const fetchImpl = jest.fn(async (url: string) => {
+      if (url === 'https://www.demo.dev/') return streamResponse([Buffer.from(html)]);
+      if (url === 'https://www.demo.dev/robots.txt') {
+        return streamResponse(
+          [Buffer.from('User-agent: *\nDisallow: /wp-admin/\nSitemap: https://www.demo.dev/sitemap_index.xml')],
+          'text/plain',
+        );
+      }
+      if (url === 'https://www.demo.dev/sitemap.xml') {
+        return { ...streamResponse([Buffer.alloc(0)], 'text/html'), status: 404, ok: false };
+      }
+      if (url === 'https://demo.dev/') {
+        return {
+          ...streamResponse([Buffer.alloc(0)]),
+          status: 301,
+          ok: false,
+          headers: { get: (name: string) => (name === 'location' ? 'https://www.demo.dev/' : null) },
+        };
+      }
+      throw new Error(`unexpected url ${url}`);
+    });
+
+    const analyzer = new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never });
+    const result = await analyzer.analyze('https://www.demo.dev/', { city: 'Curitiba', includeAuxChecks: true });
+
+    expect(result.accessible).toBe(true);
+    expect(result.hasRobotsTxt).toBe(true);
+    expect(result.hasSitemap).toBe(true);
+    expect(result.framework).toBeUndefined();
+    expect(result.seo?.renderingMode).toBe('CSR');
+    expect(result.seo?.robotsBlocksAll).toBe(false);
+    expect(result.seo?.alternateHostRedirects).toBe(true);
+    expect(result.seo?.mentionsCity).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+  });
+
+  it('treats auxiliary request failures as unknown without failing the analysis', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+
+    const html = '<html><head><title>Ok</title></head><body><p>Hello world</p></body></html>';
+    const fetchImpl = jest.fn(async (url: string) => {
+      if (url === 'https://demo.dev/') return streamResponse([Buffer.from(html)]);
+      throw new Error('network down');
+    });
+
+    const analyzer = new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never });
+    const result = await analyzer.analyze('https://demo.dev/', { includeAuxChecks: true });
+
+    expect(result.accessible).toBe(true);
+    expect(result.hasRobotsTxt).toBeUndefined();
+    expect(result.hasSitemap).toBeUndefined();
+    expect(result.seo?.robotsBlocksAll).toBeUndefined();
+    expect(result.seo?.alternateHostRedirects).toBeUndefined();
+    expect(result.seo?.renderingMode).toBe('STATIC');
+  });
+
+  it('skips auxiliary requests unless includeAuxChecks is set (bulk callers stay cheap)', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const html = '<html><head><title>Ok</title></head><body><p>Hello world</p></body></html>';
+    const fetchImpl = jest.fn(async () => streamResponse([Buffer.from(html)]));
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze('https://demo.dev/');
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(result.seo?.renderingMode).toBe('STATIC');
+    expect(result.hasRobotsTxt).toBeUndefined();
+    expect(result.seo?.alternateHostRedirects).toBeUndefined();
+  });
+
+  it('refuses auxiliary redirects to foreign hosts and follows alternate-host chains', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const redirect = (location: string) => ({
+      ...streamResponse([Buffer.alloc(0)]),
+      status: 301,
+      ok: false,
+      headers: { get: (name: string) => (name === 'location' ? location : null) },
+    });
+    const html = '<html><head><title>Ok</title></head><body><p>Hello world</p></body></html>';
+    const fetchImpl = jest.fn(async (url: string) => {
+      switch (url) {
+        case 'https://www.demo.dev/':
+          return streamResponse([Buffer.from(html)]);
+        case 'https://www.demo.dev/robots.txt':
+          return redirect('https://evil.example/robots.txt');
+        case 'https://www.demo.dev/sitemap.xml':
+          return streamResponse([Buffer.from('<urlset></urlset>')], 'application/xml');
+        case 'https://demo.dev/':
+          return redirect('https://demo.dev/home');
+        case 'https://demo.dev/home':
+          return redirect('https://www.demo.dev/home');
+        default:
+          throw new Error(`unexpected url ${url}`);
+      }
+    });
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze(
+      'https://www.demo.dev/',
+      { includeAuxChecks: true },
+    );
+
+    expect(result.hasRobotsTxt).toBeUndefined();
+    expect(result.hasSitemap).toBe(true);
+    expect(result.seo?.alternateHostRedirects).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalledWith('https://evil.example/robots.txt', expect.anything());
+  });
+
+  it('reports the last hop URL when the fetch fails after a redirect', async () => {
+    const { assertSafePublicUrl } = jest.requireMock('./ssrf') as { assertSafePublicUrl: jest.Mock };
+    assertSafePublicUrl.mockImplementation(async (url: string) => ({
+      url: new URL(url),
+      addresses: ['93.184.216.34'],
+    }));
+    const fetchImpl = jest.fn(async (url: string) => {
+      if (url === 'http://demo.dev/') {
+        return {
+          ...streamResponse([Buffer.alloc(0)]),
+          status: 301,
+          ok: false,
+          headers: { get: (name: string) => (name === 'location' ? 'https://demo.dev/' : null) },
+        };
+      }
+      throw new Error('connection reset');
+    });
+
+    const result = await new HttpWebsiteAnalyzer({ fetchImpl: fetchImpl as never }).analyze('http://demo.dev/');
+
+    expect(result.accessible).toBe(false);
+    expect(result.url).toBe('https://demo.dev/');
+    expect(result.https).toBe(true);
+    expect(result.issues[0]?.code).toBe('FETCH_FAILED');
   });
 
   it('does not buffer an entire oversized HTML body into memory', async () => {

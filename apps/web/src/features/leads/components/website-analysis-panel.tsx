@@ -1,6 +1,9 @@
 import { CheckCircle2, Globe2, Loader2, ShieldAlert, Sparkles } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import type { SeoAudit, SeoOpportunityLevel } from '@/types';
+
+import { SeoAuditSection } from './seo-audit-section';
 
 type AnalysisIssue = {
   id: string;
@@ -18,6 +21,10 @@ export type LeadWebsiteAnalysis = {
   title?: string | null;
   hasViewport?: boolean | null;
   hasContactForm?: boolean | null;
+  seoHealthScore?: number | null;
+  seoOpportunity?: SeoOpportunityLevel | null;
+  architecture?: string | null;
+  seoAudit?: SeoAudit | null;
   completedAt?: string | null;
   issues: AnalysisIssue[];
 };
@@ -225,6 +232,8 @@ export function WebsiteAnalysisPanel({
           />
         </div>
       ) : null}
+
+      {showSignals && analysis.seoAudit ? <SeoAuditSection audit={analysis.seoAudit} /> : null}
     </div>
   );
 }

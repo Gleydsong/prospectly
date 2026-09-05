@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { WebsiteAnalysisService } from './website-analysis.service';
 
@@ -136,5 +137,124 @@ describe('WebsiteAnalysisService.enqueueForLead', () => {
 
     await expect(service.reconcilePending()).resolves.toBe(1);
     expect(metrics.recordJobRecovered).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('WebsiteAnalysisService.processAnalysis', () => {
+  function buildPrisma() {
+    const tx = {
+      websiteAnalysisIssue: { deleteMany: jest.fn() },
+      websiteAnalysis: { update: jest.fn() },
+      lead: { update: jest.fn() },
+    };
+    const prisma = {
+      lead: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'lead-1', city: 'Curitiba', state: 'PR' }),
+      },
+      websiteAnalysis: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'an-1' }),
+        update: jest.fn(),
+      },
+      $transaction: jest.fn(async (fn: (tx: unknown) => Promise<void>) => fn(tx)),
+    };
+    return { prisma, tx };
+  }
+
+  const job = { organizationId: 'org-1', leadId: 'lead-1', analysisId: 'an-1', url: 'https://demo.dev' };
+
+  it('passes lead context to the analyzer and persists the SEO audit plus SEO issues', async () => {
+    const { prisma, tx } = buildPrisma();
+    const analyzer = {
+      analyze: jest.fn().mockResolvedValue({
+        url: 'https://demo.dev/',
+        accessible: true,
+        httpStatus: 200,
+        https: true,
+        responseTimeMs: 500,
+        title: 'Demo',
+        hasViewport: true,
+        hasPhone: true,
+        seo: {
+          renderingMode: 'CSR',
+          visibleTextLength: 10,
+          noindex: false,
+          h1Count: 0,
+          jsonLdTypes: [],
+          hasMicrodata: false,
+          images: { total: 0, missingDimensions: 0, modernFormat: 0, missingAlt: 0 },
+          thirdPartyScriptHosts: [],
+          renderBlockingScripts: 0,
+          hasAddress: true,
+        },
+        issues: [{ code: 'NO_META_DESCRIPTION', severity: 'INFO', message: 'Missing meta description' }],
+      }),
+    };
+    const scoring = { recalculate: jest.fn() };
+    const service = new WebsiteAnalysisService(prisma as never, scoring as never, analyzer as never, {} as never);
+
+    await service.processAnalysis(job);
+
+    expect(analyzer.analyze).toHaveBeenCalledWith('https://demo.dev', {
+      city: 'Curitiba',
+      state: 'PR',
+      includeAuxChecks: true,
+    });
+    const update = tx.websiteAnalysis.update.mock.calls[0]?.[0] as {
+      data: {
+        status: string;
+        seoHealthScore: number | null;
+        seoOpportunity: string | null;
+        architecture: string | null;
+        seoAudit: { findings: unknown[] } | null;
+        issues: { create: Array<{ code: string; severity: string }> };
+      };
+    };
+    expect(update.data.status).toBe('COMPLETED');
+    // CSR 18 + no meta 6 + no H1 6 + no OG 4 + no structured data 5 + no canonical 3 = 42 deducted.
+    expect(update.data.seoHealthScore).toBe(58);
+    expect(update.data.seoOpportunity).toBe('HIGH');
+    expect(update.data.architecture).toBe('SPA (CSR)');
+    expect(update.data.seoAudit?.findings.length).toBeGreaterThan(0);
+    const codes = update.data.issues.create.map((issue) => issue.code);
+    expect(codes).toContain('NO_META_DESCRIPTION');
+    expect(codes).toContain('SEO_CSR_SHELL');
+    expect(update.data.issues.create.find((issue) => issue.code === 'SEO_CSR_SHELL')?.severity).toBe('CRITICAL');
+    expect(scoring.recalculate).toHaveBeenCalledWith('lead-1');
+  });
+
+  it('stores null SEO fields when the page was not analysable', async () => {
+    const { prisma, tx } = buildPrisma();
+    const analyzer = {
+      analyze: jest.fn().mockResolvedValue({
+        url: 'https://demo.dev/',
+        accessible: false,
+        https: true,
+        issues: [{ code: 'FETCH_FAILED', severity: 'CRITICAL', message: 'timeout' }],
+        error: 'timeout',
+      }),
+    };
+    const service = new WebsiteAnalysisService(
+      prisma as never,
+      { recalculate: jest.fn() } as never,
+      analyzer as never,
+      {} as never,
+    );
+
+    await service.processAnalysis(job);
+
+    const update = tx.websiteAnalysis.update.mock.calls[0]?.[0] as {
+      data: {
+        status: string;
+        seoHealthScore: number | null;
+        seoOpportunity: string | null;
+        architecture: string | null;
+        seoAudit: unknown;
+      };
+    };
+    expect(update.data.status).toBe('FAILED');
+    expect(update.data.seoHealthScore).toBeNull();
+    expect(update.data.seoOpportunity).toBeNull();
+    expect(update.data.architecture).toBeNull();
+    expect(update.data.seoAudit).toBe(Prisma.JsonNull);
   });
 });
