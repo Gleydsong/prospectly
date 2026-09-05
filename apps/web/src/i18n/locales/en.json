@@ -578,8 +578,13 @@
     "saveViewPrivate": "Only me",
     "saveViewTeam": "Team",
     "saveViewSubmit": "Save",
+    "updateView": "Save changes",
+    "updateViewTitle": "Update view",
+    "duplicateView": "Duplicate view",
     "archiveView": "Archive view",
     "viewSaved": "View saved.",
+    "viewUpdated": "View updated.",
+    "viewDuplicated": "View duplicated.",
     "viewArchived": "View archived.",
     "viewCount": "{{count}} leads in this view"
   },

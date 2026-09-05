@@ -40,6 +40,13 @@ export interface CreateSavedViewInput {
   definition: LeadViewDefinition;
 }
 
+export interface UpdateSavedViewInput {
+  name?: string;
+  description?: string | null;
+  visibility?: SavedViewVisibility;
+  definition?: LeadViewDefinition;
+}
+
 export async function fetchSavedViews(): Promise<SavedView[]> {
   const { data } = await api.get<SavedView[]>('/views');
   return data;
@@ -52,6 +59,16 @@ export async function fetchSavedView(id: string): Promise<SavedView> {
 
 export async function createSavedView(input: CreateSavedViewInput): Promise<SavedView> {
   const { data } = await api.post<SavedView>('/views', input);
+  return data;
+}
+
+export async function updateSavedView(id: string, input: UpdateSavedViewInput): Promise<SavedView> {
+  const { data } = await api.patch<SavedView>(`/views/${id}`, input);
+  return data;
+}
+
+export async function duplicateSavedView(id: string): Promise<SavedView> {
+  const { data } = await api.post<SavedView>(`/views/${id}/duplicate`);
   return data;
 }
 

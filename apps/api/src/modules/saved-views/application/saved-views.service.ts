@@ -10,6 +10,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../../audit/audit.constants';
 import { AuditService } from '../../audit/audit.service';
 import { LeadsService } from '../../leads/leads.service';
+import { copiedSavedViewName } from '../domain/copied-saved-view-name';
 import {
   InvalidLeadViewDefinitionError,
   parseLeadViewDefinition,
@@ -113,6 +114,31 @@ export class SavedViewsService {
       entityId: archived.id,
     });
     return this.serialize(archived, actor);
+  }
+
+  async duplicate(organizationId: string, actor: Actor, id: string) {
+    this.assertCanWrite(actor);
+    const source = await this.requireVisible(organizationId, actor, id, { includeArchived: true });
+    const definition = this.parseDefinition(source.definition);
+    const copy = await this.prisma.savedView.create({
+      data: {
+        organizationId,
+        ownerId: actor.id,
+        name: copiedSavedViewName(source.name),
+        description: source.description,
+        visibility: SavedViewVisibility.PRIVATE,
+        definition: definition as Prisma.InputJsonValue,
+      },
+    });
+    await this.audit.log({
+      organizationId,
+      userId: actor.id,
+      action: AUDIT_ACTIONS.SAVED_VIEW_DUPLICATED,
+      entity: 'SavedView',
+      entityId: copy.id,
+      metadata: { sourceId: source.id },
+    });
+    return this.serialize(copy, actor);
   }
 
   async preview(organizationId: string, actor: Actor, id: string) {
