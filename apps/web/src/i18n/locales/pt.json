@@ -26,6 +26,7 @@
     "themeToDark": "Ativar tema escuro",
     "campaigns": "Campanhas",
     "workflows": "Fluxos",
+    "reports": "Relatórios",
     "agents": "Assistentes",
     "principal": "Principal",
     "clientes": "Clientes",
@@ -215,7 +216,9 @@
     "pipelineTitle": "Funil",
     "pipelineDesc": "Visualize o funil em Kanban.",
     "tasksTitle": "Tarefas",
-    "tasksDesc": "Agenda operacional e compromissos."
+    "tasksDesc": "Agenda operacional e compromissos.",
+    "reportsTitle": "Relatórios",
+    "reportsDesc": "Conversão do funil a partir dos eventos do outbox."
   },
   "support": {
     "eyebrow": "Suporte",
@@ -817,6 +820,43 @@
       "LOST": "Perdido",
       "NO_RESPONSE": "Sem resposta",
       "OPT_OUT": "Não contatar"
+    }
+  },
+  "reports": {
+    "title": "Relatórios",
+    "subtitle": "Conversão do funil a partir dos eventos duráveis da organização.",
+    "retentionNotice": "O histórico segue a retenção do outbox (90 dias). Ganho e Perdido usam as etapas do funil de agora — reclassificar uma etapa reescreve o passado.",
+    "loadError": "Não foi possível carregar o relatório.",
+    "empty": "Nenhum evento neste período.",
+    "breakdownTitle": "Por origem",
+    "fields": {
+      "period": "Período",
+      "source": "Origem",
+      "sourceAll": "Todas as origens",
+      "mineOnly": "Só os meus clientes"
+    },
+    "periods": {
+      "7d": "Últimos 7 dias",
+      "30d": "Últimos 30 dias",
+      "90d": "Últimos 90 dias"
+    },
+    "kpis": {
+      "inflow": "Entradas",
+      "wins": "Ganhos",
+      "losses": "Perdas",
+      "winRate": "Taxa de ganho"
+    },
+    "columns": {
+      "source": "Origem"
+    },
+    "sources": {
+      "MANUAL": "Manual",
+      "CSV_IMPORT": "Importação CSV",
+      "GOOGLE_PLACES": "Google Places",
+      "OPENSTREETMAP": "OpenStreetMap",
+      "YELP": "Yelp",
+      "REFERRAL": "Indicação",
+      "OTHER": "Outro"
     }
   },
   "workflows": {

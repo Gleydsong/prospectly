@@ -6,6 +6,7 @@
 - [Events](./docs/domain/events/CONTEXT.md): registra fatos duráveis do domínio comercial e o estado de entrega desses fatos
 - [Views](./docs/domain/views/CONTEXT.md): guarda listas inteligentes da organização sobre clientes potenciais
 - [Workflows](./docs/domain/workflows/CONTEXT.md): guarda Fluxos da organização que reagem a DomainEvents com definição allowlisted
+- [Reports](./docs/domain/reports/CONTEXT.md): lê DomainEvents da organização e mostra conversão do funil na janela rolling
 
 ## Relacionamentos
 
@@ -16,5 +17,8 @@
 - **Views → Organizations**: cada Vista salva pertence à organização da sessão
 - **Views → Lead**: a definição da Vista é uma allowlist da listagem de clientes potenciais; não copia PII do Lead
 - **Workflows → Organizations**: cada Fluxo pertence à organização da sessão
-- **Workflows → Events**: o executor futuro consome DomainEvents já persistidos (`lead.created` no primeiro tracer)
+- **Workflows → Events**: o executor consome DomainEvents já persistidos (`lead.created` no primeiro tracer)
 - **Workflows → Views**: o filtro opcional do Fluxo reutiliza a AST allowlisted da Vista; não inventa um segundo motor
+- **Reports → Organizations**: cada leitura pertence à organização da sessão; nunca chega `organizationId` do cliente
+- **Reports → Events**: Relatórios agrega `OutboxEvent` (`lead.created`, `lead.stage_changed`); não cria DomainEvent
+- **Reports → Pipeline**: Ganho/Perdido usa as flags atuais de `PipelineStage`, não o snapshot da Principal

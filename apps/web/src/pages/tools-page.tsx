@@ -15,6 +15,7 @@ export const QUICK = [
 export const ALL = [
   { to: '/agents/whatsapp', titleKey: 'tools.whatsappTitle', descKey: 'tools.whatsappDesc' },
   { to: '/campaigns', titleKey: 'tools.campaignsTitle', descKey: 'tools.campaignsDesc' },
+  { to: '/reports', titleKey: 'tools.reportsTitle', descKey: 'tools.reportsDesc' },
   { to: '/pipeline', titleKey: 'tools.pipelineTitle', descKey: 'tools.pipelineDesc' },
   { to: '/tasks', titleKey: 'tools.tasksTitle', descKey: 'tools.tasksDesc' },
 ] as const;

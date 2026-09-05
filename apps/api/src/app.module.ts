@@ -33,6 +33,7 @@ import { ActivitiesModule } from './modules/activities/activities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { ImportsModule } from './modules/imports/imports.module';
 import { GeoModule } from './modules/geo/geo.module';
@@ -108,6 +109,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     TasksModule,
     PipelinesModule,
     DashboardModule,
+    ReportsModule,
     ProspectingModule,
     ImportsModule,
     GeoModule,

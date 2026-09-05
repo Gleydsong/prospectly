@@ -1,0 +1,26 @@
+# Reports
+
+O contexto de Reports lê fatos duráveis já persistidos e mostra conversão do funil para a organização da sessão. Não guarda um Relatório persistido e não muta estado comercial.
+
+## Language
+
+**Relatórios**:
+A área de produto que agrega DomainEvents da organização numa janela rolling. Não é a Principal, a Vista, o Fluxo nem a Cadência.
+_Avoid_: Dashboard, SavedView, Workflow, Campaign, cubo OLAP
+
+**Conversão do funil**:
+Contagem de `leadId` distintos que, na janela, tiveram `lead.stage_changed` para uma etapa cujo `PipelineStage.isWon` ou `isLost` está verdadeiro **agora**.
+_Avoid_: snapshot de `Lead.status`, taxa da Principal (`won / (won + lost)` com `createdAt` no período)
+
+**Entrada**:
+`lead.created` na janela. KPI à parte; não entra no denominador da taxa de ganho.
+_Avoid_: primeira etapa do funil, importação sem evento
+
+## Invariants
+
+- Fonte: `OutboxEvent`. Relatórios não lê `DashboardService` nem o status atual do Lead para ganho/perda.
+- Períodos: `7d`, `30d`, `90d` rolling. Não há `all`. O copy de retenção segue `OUTBOX_RETAIN_DAYS` (90).
+- Taxa = ganhos distintos / união (ganhou ou perdeu pelo menos uma vez). Lead que ganhou e perdeu: wins=1, losses=1, union=1, winRate=100.
+- `organizationId` só da sessão. VIEWER lê. Filtro de dono é opcional; SALES pode abrir já filtrado em si.
+- `doNotContact` não apaga ganho/perda já ocorridos. Lead apagado (`deletedAt`) não entra.
+- Reclassificar `isWon`/`isLost` reescreve o passado do relatório. Congelar flags no payload do evento é trabalho futuro.
