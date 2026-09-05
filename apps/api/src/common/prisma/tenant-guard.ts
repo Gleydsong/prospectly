@@ -37,6 +37,7 @@ export const TENANT_MODELS = new Set([
   'DataSubjectRequest',
   'SuppressionEntry',
   'OutboxEvent',
+  'SavedView',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

@@ -568,7 +568,20 @@
     "exportColumns": "Colunas",
     "exportSuccess": "Exportação concluída ({{count}} linhas).",
     "exportError": "Não foi possível exportar os clientes.",
-    "exportTitle": "Exportar clientes filtrados"
+    "exportTitle": "Exportar clientes filtrados",
+    "viewsLabel": "Vistas",
+    "viewsNone": "Nenhuma vista",
+    "saveView": "Guardar vista",
+    "saveViewTitle": "Guardar vista da lista",
+    "saveViewName": "Nome",
+    "saveViewVisibility": "Visibilidade",
+    "saveViewPrivate": "Só eu",
+    "saveViewTeam": "Equipa",
+    "saveViewSubmit": "Guardar",
+    "archiveView": "Arquivar vista",
+    "viewSaved": "Vista guardada.",
+    "viewArchived": "Vista arquivada.",
+    "viewCount": "{{count}} clientes nesta vista"
   },
   "search": {
     "highIntentEyebrow": "Busca de alta intenção",

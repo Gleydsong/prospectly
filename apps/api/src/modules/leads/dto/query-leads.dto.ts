@@ -1,11 +1,28 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
-const SORTABLE_FIELDS = ['createdAt', 'updatedAt', 'companyName', 'score', 'rating', 'reviewCount'] as const;
+export const SORTABLE_FIELDS = [
+  'createdAt',
+  'updatedAt',
+  'companyName',
+  'score',
+  'rating',
+  'reviewCount',
+] as const;
 export type LeadSortField = (typeof SORTABLE_FIELDS)[number];
 
 export class QueryLeadsDto extends PaginationQueryDto {

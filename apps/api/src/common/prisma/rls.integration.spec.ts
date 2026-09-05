@@ -33,6 +33,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const billingProfileB = randomUUID();
   const outboxEventA = randomUUID();
   const outboxEventB = randomUUID();
+  const savedViewA = randomUUID();
+  const savedViewB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -95,6 +97,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${outboxEventA}, ${orgA}, 'task.completed', 1, 'Task', ${leadA}, ${`key-${outboxEventA}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW()),
           (${outboxEventB}, ${orgB}, 'lead.stage_changed', 1, 'Lead', ${leadB}, ${`key-${outboxEventB}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW())
       `;
+      await tx.$executeRaw`
+        INSERT INTO "SavedView"
+          (id, "organizationId", "ownerId", name, visibility, "resourceType", definition, "createdAt", "updatedAt")
+        VALUES
+          (${savedViewA}, ${orgA}, ${userA}, 'Vista A', 'PRIVATE'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{"hasWebsite":false}'::jsonb, NOW(), NOW()),
+          (${savedViewB}, ${orgB}, ${userB}, 'Vista B', 'TEAM'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{"status":"NEW"}'::jsonb, NOW(), NOW())
+      `;
     });
   });
 
@@ -103,6 +112,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "SavedView" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
       await tx.$executeRawUnsafe(
         `DELETE FROM "OrganizationMember" WHERE id IN ($1, $2)`,
         memberAOrgA,
@@ -161,6 +175,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     });
 
     expect(rows).toEqual([{ id: billingProfileA }]);
+  });
+
+  it('isolates saved views by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "SavedView" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: savedViewA }]);
+  });
+
+  it('rejects a cross-tenant saved view insert', async () => {
+    const foreignViewId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "SavedView"
+            (id, "organizationId", "ownerId", name, visibility, "resourceType", definition, "createdAt", "updatedAt")
+          VALUES
+            (${foreignViewId}, ${orgB}, ${userB}, 'Leaked', 'PRIVATE'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{}'::jsonb, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
   });
 
   it('isolates outbox events by organization', async () => {
