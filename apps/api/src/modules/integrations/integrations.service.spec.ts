@@ -3,6 +3,16 @@ import { BadRequestException } from '@nestjs/common';
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import { IntegrationsService, WEBHOOK_PROVIDER } from './integrations.service';
 
+jest.mock('../website-analysis/ssrf', () => ({
+  assertSafePublicUrl: jest.fn(async (url: string) => ({
+    url: new URL(url),
+    addresses: ['93.184.216.34'],
+  })),
+  SsrfBlockedError: class SsrfBlockedError extends Error {
+    name = 'SsrfBlockedError';
+  },
+}));
+
 const makePrisma = () => {
   const prisma = {
     integration: {

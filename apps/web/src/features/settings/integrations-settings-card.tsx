@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import {
   createPluginToken,
+  fetchIntegrations,
   fetchPluginTokens,
   revokePluginToken,
   upsertWebhookIntegration,
@@ -28,11 +29,30 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const [webhookMessage, setWebhookMessage] = useState<string | null>(null);
   const [webhookError, setWebhookError] = useState<string | null>(null);
 
+  const [webhookHydrated, setWebhookHydrated] = useState(false);
+
   const tokens = useQuery({
     queryKey: ['plugin-tokens'],
     queryFn: fetchPluginTokens,
     enabled: canManage,
   });
+
+  const integrations = useQuery({
+    queryKey: ['integrations'],
+    queryFn: fetchIntegrations,
+    enabled: canManage,
+  });
+
+  useEffect(() => {
+    if (webhookHydrated || !integrations.data) return;
+    const webhook = integrations.data.find((item) => item.provider === 'WEBHOOK');
+    if (webhook) {
+      setUrl(webhook.url ?? '');
+      setLabel(webhook.label ?? '');
+      setEnabled(webhook.status === 'ENABLED');
+    }
+    setWebhookHydrated(true);
+  }, [integrations.data, webhookHydrated]);
 
   const createToken = useMutation({
     mutationFn: () => createPluginToken(pluginName),
@@ -61,9 +81,10 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const saveWebhook = useMutation({
     mutationFn: () =>
       upsertWebhookIntegration({ url: url.trim(), label: label.trim() || undefined, enabled }),
-    onSuccess: () => {
+    onSuccess: async () => {
       setWebhookMessage(t('settings.webhookSaved'));
       setWebhookError(null);
+      await queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
     onError: (err) => {
       setWebhookMessage(null);
