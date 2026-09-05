@@ -18,6 +18,8 @@ import {
   LEAD_AGGREGATE_TYPE,
   LEAD_CREATED_SCHEMA_VERSION,
   LEAD_CREATED_TYPE,
+  LEAD_DO_NOT_CONTACT_SET_SCHEMA_VERSION,
+  LEAD_DO_NOT_CONTACT_SET_TYPE,
   LEAD_STAGE_CHANGED_SCHEMA_VERSION,
   LEAD_STAGE_CHANGED_TYPE,
   OUTBOX_JOB_OPTIONS,
@@ -28,6 +30,7 @@ import {
   PUBLISH_OUTBOX_JOB,
   outboxJobId,
   type LeadCreatedPayload,
+  type LeadDoNotContactSetPayload,
   type LeadStageChangedPayload,
   type PublishOutboxJobData,
 } from './outbox.constants';
@@ -46,6 +49,14 @@ export type AppendLeadCreatedInput = {
   actorId: string;
   correlationId?: string;
   payload: LeadCreatedPayload;
+};
+
+export type AppendLeadDoNotContactSetInput = {
+  organizationId: string;
+  leadId: string;
+  actorId: string;
+  correlationId?: string;
+  payload: LeadDoNotContactSetPayload;
 };
 
 @Injectable()
@@ -95,6 +106,28 @@ export class OutboxService {
         actorId: input.actorId,
         correlationId: input.correlationId ?? null,
         idempotencyKey: `${LEAD_CREATED_TYPE}:${input.leadId}`,
+        payload: input.payload as unknown as Prisma.InputJsonValue,
+        status: OutboxEventStatus.PENDING,
+        attempts: 0,
+        retainUntil,
+      },
+    });
+  }
+
+  async appendLeadDoNotContactSet(tx: Prisma.TransactionClient, input: AppendLeadDoNotContactSetInput) {
+    const id = randomUUID();
+    const retainUntil = new Date(Date.now() + OUTBOX_RETAIN_DAYS * 24 * 60 * 60 * 1000);
+    return tx.outboxEvent.create({
+      data: {
+        id,
+        organizationId: input.organizationId,
+        type: LEAD_DO_NOT_CONTACT_SET_TYPE,
+        schemaVersion: LEAD_DO_NOT_CONTACT_SET_SCHEMA_VERSION,
+        aggregateType: LEAD_AGGREGATE_TYPE,
+        aggregateId: input.leadId,
+        actorId: input.actorId,
+        correlationId: input.correlationId ?? null,
+        idempotencyKey: `${LEAD_DO_NOT_CONTACT_SET_TYPE}:${input.leadId}`,
         payload: input.payload as unknown as Prisma.InputJsonValue,
         status: OutboxEventStatus.PENDING,
         attempts: 0,
@@ -267,14 +300,29 @@ export class OutboxService {
   private assertPayload(
     type: string,
     payload: Prisma.JsonValue,
-  ): LeadStageChangedPayload | LeadCreatedPayload {
+  ): LeadStageChangedPayload | LeadCreatedPayload | LeadDoNotContactSetPayload {
     if (type === LEAD_STAGE_CHANGED_TYPE) {
       return this.assertLeadStageChangedPayload(payload);
     }
     if (type === LEAD_CREATED_TYPE) {
       return this.assertLeadCreatedPayload(payload);
     }
+    if (type === LEAD_DO_NOT_CONTACT_SET_TYPE) {
+      return this.assertLeadDoNotContactSetPayload(payload);
+    }
     throw new Error('Unknown outbox event type');
+  }
+
+  private assertLeadDoNotContactSetPayload(payload: Prisma.JsonValue): LeadDoNotContactSetPayload {
+    const record = this.assertObjectPayload(payload);
+    if (typeof record.leadId !== 'string' || typeof record.source !== 'string') {
+      throw new Error('Invalid outbox payload');
+    }
+    return {
+      leadId: record.leadId,
+      source: record.source,
+      campaignId: typeof record.campaignId === 'string' ? record.campaignId : null,
+    };
   }
 
   private assertLeadCreatedPayload(payload: Prisma.JsonValue): LeadCreatedPayload {
