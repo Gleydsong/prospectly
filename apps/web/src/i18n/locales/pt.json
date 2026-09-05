@@ -25,6 +25,7 @@
     "themeToLight": "Ativar tema claro",
     "themeToDark": "Ativar tema escuro",
     "campaigns": "Campanhas",
+    "workflows": "Fluxos",
     "agents": "Assistentes",
     "principal": "Principal",
     "clientes": "Clientes",
@@ -802,6 +803,52 @@
       "LOST": "Perdido",
       "NO_RESPONSE": "Sem resposta",
       "OPT_OUT": "Não contatar"
+    }
+  },
+  "workflows": {
+    "title": "Fluxos",
+    "subtitle": "Automatize uma etiqueta quando um cliente potencial entra. A execução ainda não corre neste recorte.",
+    "create": "Novo fluxo",
+    "createTitle": "Novo fluxo",
+    "editTitle": "Editar fluxo",
+    "saveDraft": "Guardar rascunho",
+    "publish": "Publicar",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "archive": "Arquivar",
+    "edit": "Editar",
+    "createError": "Não foi possível guardar o fluxo.",
+    "publishError": "Não foi possível publicar o fluxo.",
+    "actionError": "Não foi possível concluir a ação.",
+    "loadError": "Não foi possível carregar os fluxos.",
+    "createSuccess": "Fluxo \"{{name}}\" guardado.",
+    "publishSuccess": "Fluxo \"{{name}}\" publicado. A execução ainda não corre.",
+    "emptyTitle": "Nenhum fluxo ainda",
+    "emptyDescription": "Crie um rascunho com o gatilho lead.created e um passo de etiqueta. Publicar congela a versão; nada executa ainda.",
+    "executionNotice": "Publicar deixa o fluxo ACTIVE com uma versão imutável. A execução (aplicar a etiqueta) chega no próximo recorte — nada corre hoje.",
+    "tagRequiredToPublish": "Indique uma etiqueta para publicar.",
+    "fields": {
+      "name": "Nome",
+      "description": "Descrição",
+      "tagName": "Etiqueta",
+      "tagPlaceholder": "alto-potencial",
+      "filter": "Quem entra",
+      "filterAll": "Todos os novos clientes potenciais",
+      "filterNoWebsite": "Só quem não tem site"
+    },
+    "trigger": "Gatilho: cliente potencial criado",
+    "columns": {
+      "name": "Nome",
+      "status": "Estado",
+      "trigger": "Gatilho",
+      "updated": "Atualizado",
+      "actions": "Ações"
+    },
+    "status": {
+      "DRAFT": "Rascunho",
+      "ACTIVE": "Ativo",
+      "PAUSED": "Pausado",
+      "ARCHIVED": "Arquivado"
     }
   },
   "agents": {

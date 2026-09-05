@@ -38,6 +38,8 @@ export const TENANT_MODELS = new Set([
   'SuppressionEntry',
   'OutboxEvent',
   'SavedView',
+  'Workflow',
+  'WorkflowVersion',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

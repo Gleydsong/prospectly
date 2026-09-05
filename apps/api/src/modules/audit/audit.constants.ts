@@ -24,6 +24,11 @@ export const AUDIT_ACTIONS = {
   SAVED_VIEW_UPDATED: 'saved_view.updated',
   SAVED_VIEW_ARCHIVED: 'saved_view.archived',
   SAVED_VIEW_DUPLICATED: 'saved_view.duplicated',
+  WORKFLOW_CREATED: 'workflow.created',
+  WORKFLOW_UPDATED: 'workflow.updated',
+  WORKFLOW_PUBLISHED: 'workflow.published',
+  WORKFLOW_PAUSED: 'workflow.paused',
+  WORKFLOW_ARCHIVED: 'workflow.archived',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

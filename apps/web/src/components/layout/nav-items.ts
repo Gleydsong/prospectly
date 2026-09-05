@@ -10,6 +10,7 @@ import {
   Search,
   Settings,
   Users,
+  Workflow,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -61,6 +62,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/agents', labelKey: 'nav.agents', icon: Bot },
       { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
+      { to: '/workflows', labelKey: 'nav.workflows', icon: Workflow },
       { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
     ],
   },
@@ -82,6 +84,7 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/agents\/whatsapp/, labelKey: 'agents.whatsapp.title' },
   { pattern: /^\/agents/, labelKey: 'nav.conversas' },
   { pattern: /^\/campaigns/, labelKey: 'nav.campaigns' },
+  { pattern: /^\/workflows/, labelKey: 'nav.workflows' },
   { pattern: /^\/tasks/, labelKey: 'nav.tasks' },
   { pattern: /^\/settings/, labelKey: 'nav.settings' },
 ];

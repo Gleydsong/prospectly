@@ -25,6 +25,7 @@
     "themeToLight": "Switch to light theme",
     "themeToDark": "Switch to dark theme",
     "campaigns": "Campaigns",
+    "workflows": "Flows",
     "agents": "Agents",
     "principal": "Home",
     "clientes": "Clients",
@@ -802,6 +803,52 @@
       "LOST": "Lost",
       "NO_RESPONSE": "No response",
       "OPT_OUT": "Opt-out"
+    }
+  },
+  "workflows": {
+    "title": "Flows",
+    "subtitle": "Tag a lead automatically when they are created. Execution does not run in this slice.",
+    "create": "New flow",
+    "createTitle": "New flow",
+    "editTitle": "Edit flow",
+    "saveDraft": "Save draft",
+    "publish": "Publish",
+    "pause": "Pause",
+    "resume": "Resume",
+    "archive": "Archive",
+    "edit": "Edit",
+    "createError": "Could not save the flow.",
+    "publishError": "Could not publish the flow.",
+    "actionError": "Could not complete the action.",
+    "loadError": "Could not load flows.",
+    "createSuccess": "Flow \"{{name}}\" saved.",
+    "publishSuccess": "Flow \"{{name}}\" published. Execution still does not run.",
+    "emptyTitle": "No flows yet",
+    "emptyDescription": "Create a draft with the lead.created trigger and a tag step. Publishing freezes the version; nothing executes yet.",
+    "executionNotice": "Publishing sets the flow ACTIVE with an immutable version. Execution (applying the tag) comes in the next slice — nothing runs today.",
+    "tagRequiredToPublish": "Enter a tag name to publish.",
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "tagName": "Tag",
+      "tagPlaceholder": "high-potential",
+      "filter": "Who enters",
+      "filterAll": "All newly created leads",
+      "filterNoWebsite": "Only leads without a website"
+    },
+    "trigger": "Trigger: lead created",
+    "columns": {
+      "name": "Name",
+      "status": "Status",
+      "trigger": "Trigger",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "ARCHIVED": "Archived"
     }
   },
   "agents": {

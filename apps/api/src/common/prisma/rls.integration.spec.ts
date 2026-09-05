@@ -35,6 +35,10 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const outboxEventB = randomUUID();
   const savedViewA = randomUUID();
   const savedViewB = randomUUID();
+  const workflowA = randomUUID();
+  const workflowB = randomUUID();
+  const workflowVersionA = randomUUID();
+  const workflowVersionB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -104,6 +108,20 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${savedViewA}, ${orgA}, ${userA}, 'Vista A', 'PRIVATE'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{"hasWebsite":false}'::jsonb, NOW(), NOW()),
           (${savedViewB}, ${orgB}, ${userB}, 'Vista B', 'TEAM'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{"status":"NEW"}'::jsonb, NOW(), NOW())
       `;
+      await tx.$executeRaw`
+        INSERT INTO "Workflow"
+          (id, "organizationId", "ownerId", name, status, "draftDefinition", "createdAt", "updatedAt")
+        VALUES
+          (${workflowA}, ${orgA}, ${userA}, 'Fluxo A', 'DRAFT'::"WorkflowStatus", '{"trigger":{"type":"lead.created"},"steps":[]}'::jsonb, NOW(), NOW()),
+          (${workflowB}, ${orgB}, ${userB}, 'Fluxo B', 'DRAFT'::"WorkflowStatus", '{"trigger":{"type":"lead.created"},"steps":[]}'::jsonb, NOW(), NOW())
+      `;
+      await tx.$executeRaw`
+        INSERT INTO "WorkflowVersion"
+          (id, "organizationId", "workflowId", version, definition, "publishedAt", "createdAt")
+        VALUES
+          (${workflowVersionA}, ${orgA}, ${workflowA}, 1, '{"trigger":{"type":"lead.created"},"steps":[{"type":"add_tag","tagName":"a"}]}'::jsonb, NOW(), NOW()),
+          (${workflowVersionB}, ${orgB}, ${workflowB}, 1, '{"trigger":{"type":"lead.created"},"steps":[{"type":"add_tag","tagName":"b"}]}'::jsonb, NOW(), NOW())
+      `;
     });
   });
 
@@ -112,6 +130,16 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "WorkflowVersion" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "Workflow" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
       await tx.$executeRawUnsafe(
         `DELETE FROM "SavedView" WHERE "organizationId" IN ($1, $2)`,
         orgA,
@@ -201,6 +229,64 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
             (id, "organizationId", "ownerId", name, visibility, "resourceType", definition, "createdAt", "updatedAt")
           VALUES
             (${foreignViewId}, ${orgB}, ${userB}, 'Leaked', 'PRIVATE'::"SavedViewVisibility", 'LEAD'::"SavedViewResourceType", '{}'::jsonb, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates workflows by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "Workflow" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: workflowA }]);
+  });
+
+  it('rejects a cross-tenant workflow insert', async () => {
+    const foreignWorkflowId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "Workflow"
+            (id, "organizationId", "ownerId", name, status, "draftDefinition", "createdAt", "updatedAt")
+          VALUES
+            (${foreignWorkflowId}, ${orgB}, ${userB}, 'Leaked', 'DRAFT'::"WorkflowStatus", '{}'::jsonb, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates workflow versions by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "WorkflowVersion" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: workflowVersionA }]);
+  });
+
+  it('rejects a cross-tenant workflow version insert', async () => {
+    const foreignVersionId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "WorkflowVersion"
+            (id, "organizationId", "workflowId", version, definition, "publishedAt", "createdAt")
+          VALUES
+            (${foreignVersionId}, ${orgB}, ${workflowB}, 2, '{}'::jsonb, NOW(), NOW())
         `;
       }),
     ).rejects.toThrow();
