@@ -8,7 +8,7 @@ import {
 import { InjectQueue } from '@nestjs/bullmq';
 import { Prisma } from '@prisma/client';
 import type { Queue } from 'bullmq';
-import type { WebsiteAnalyzer } from '@prospectly/shared-types';
+import type { SeoFinding, WebsiteAnalyzer } from '@prospectly/shared-types';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { runWithBypass } from '../../common/prisma/tenant-context';
@@ -25,7 +25,22 @@ import {
   WEBSITE_ANALYSIS_QUEUE,
   type AnalyzeWebsiteJobData,
 } from './website-analysis.constants';
+import { computeSeoAudit } from './seo-audit';
 import { WEBSITE_ANALYZER } from './website-analysis.tokens';
+
+const SEO_SEVERITY_TO_ISSUE: Record<SeoFinding['severity'], 'CRITICAL' | 'WARNING' | 'INFO'> = {
+  HIGH: 'CRITICAL',
+  MEDIUM: 'WARNING',
+  LOW: 'INFO',
+};
+
+function seoFindingToIssue(finding: SeoFinding) {
+  return {
+    code: finding.code,
+    severity: SEO_SEVERITY_TO_ISSUE[finding.severity],
+    message: finding.title,
+  };
+}
 
 function extractDomain(url: string): string | null {
   try {
@@ -195,7 +210,7 @@ export class WebsiteAnalysisService {
   async processAnalysis(job: AnalyzeWebsiteJobData): Promise<void> {
     const lead = await this.prisma.lead.findFirst({
       where: { id: job.leadId, organizationId: job.organizationId, deletedAt: null },
-      select: { id: true },
+      select: { id: true, city: true, state: true },
     });
     if (!lead) {
       return;
@@ -211,7 +226,7 @@ export class WebsiteAnalysisService {
       data: { status: 'RUNNING', startedAt: new Date(), error: null },
     });
 
-    const result = await this.analyzer.analyze(job.url);
+    const result = await this.analyzer.analyze(job.url, { city: lead.city, state: lead.state });
 
     if (result.error && result.issues.some((issue) => issue.code === 'SSRF_BLOCKED')) {
       await this.prisma.websiteAnalysis.update({
@@ -226,6 +241,9 @@ export class WebsiteAnalysisService {
       await this.scoring.recalculate(job.leadId);
       return;
     }
+
+    const seoAudit = computeSeoAudit(result);
+    const seoIssues = seoAudit ? seoAudit.findings.map(seoFindingToIssue) : [];
 
     await this.prisma.$transaction(async (tx) => {
       await tx.websiteAnalysisIssue.deleteMany({ where: { analysisId: analysis.id } });
@@ -257,14 +275,21 @@ export class WebsiteAnalysisService {
           framework: result.framework ?? null,
           analytics: result.analytics ?? null,
           technologies: (result.technologies ?? undefined) as Prisma.InputJsonValue | undefined,
+          seoHealthScore: seoAudit?.healthScore ?? null,
+          seoOpportunity: seoAudit?.opportunity ?? null,
+          architecture: seoAudit?.architecture ?? null,
+          seoAudit: seoAudit ? (seoAudit as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
           error: result.error ?? null,
           completedAt: new Date(),
           issues: {
-            create: result.issues.map((issue) => ({
-              code: issue.code,
-              severity: issue.severity,
-              message: issue.message,
-            })),
+            create: [
+              ...result.issues.map((issue) => ({
+                code: issue.code,
+                severity: issue.severity,
+                message: issue.message,
+              })),
+              ...seoIssues,
+            ],
           },
         },
       });

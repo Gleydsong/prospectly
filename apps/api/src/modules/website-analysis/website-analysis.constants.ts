@@ -21,3 +21,7 @@ export const WEBSITE_ANALYSIS_JOB_OPTIONS = {
   attempts: 2,
   backoff: { type: 'exponential' as const, delay: 2000 },
 };
+
+/** Budget shared by the parallel robots.txt / sitemap.xml / www-redirect checks. */
+export const WEBSITE_ANALYSIS_AUX_TIMEOUT_MS = 5_000;
+export const WEBSITE_ANALYSIS_AUX_MAX_BODY_BYTES = 64_000;

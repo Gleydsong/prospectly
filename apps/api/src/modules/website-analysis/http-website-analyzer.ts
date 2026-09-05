@@ -1,12 +1,28 @@
-import type { WebsiteAnalysisResult, WebsiteAnalyzer } from '@prospectly/shared-types';
+import type {
+  SeoSignals,
+  WebsiteAnalysisContext,
+  WebsiteAnalysisResult,
+  WebsiteAnalyzer,
+} from '@prospectly/shared-types';
 
 import {
+  alternateHostname,
+  looksLikeSitemap,
+  parseSeoSignals,
+  robotsBlocksAll,
+  robotsDeclaresSitemap,
+} from './seo-signals';
+import {
+  WEBSITE_ANALYSIS_AUX_MAX_BODY_BYTES,
+  WEBSITE_ANALYSIS_AUX_TIMEOUT_MS,
   WEBSITE_ANALYSIS_MAX_BODY_BYTES,
   WEBSITE_ANALYSIS_MAX_REDIRECTS,
   WEBSITE_ANALYSIS_TIMEOUT_MS,
   WEBSITE_ANALYSIS_USER_AGENT,
 } from './website-analysis.constants';
 import { assertSafePublicUrl, fetchWithPinnedDns, SsrfBlockedError } from './ssrf';
+
+const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
 
 function extractMeta(html: string, name: string): string | undefined {
   const patterns = [
@@ -46,7 +62,18 @@ function extractProperty(html: string, property: string): string | undefined {
 
 export function parseHtmlSignals(html: string, finalUrl: string): Omit<
   WebsiteAnalysisResult,
-  'url' | 'accessible' | 'httpStatus' | 'https' | 'sslValid' | 'redirectsToHttps' | 'responseTimeMs' | 'error'
+  | 'url'
+  | 'accessible'
+  | 'httpStatus'
+  | 'https'
+  | 'sslValid'
+  | 'redirectsToHttps'
+  | 'responseTimeMs'
+  | 'error'
+  | 'hasSitemap'
+  | 'hasRobotsTxt'
+  | 'framework'
+  | 'seo'
 > {
   const titleMatch = html.match(/<title[^>]*>([^<]*)<\/title>/i);
   const title = titleMatch?.[1]?.trim() || undefined;
@@ -116,13 +143,10 @@ export function parseHtmlSignals(html: string, finalUrl: string): Omit<
     hasWhatsapp,
     hasBooking,
     hasPrivacyPolicy,
-    hasSitemap: undefined,
-    hasRobotsTxt: undefined,
     hasFavicon,
     hasOpenGraph,
     hasStructuredData,
     cms,
-    framework: undefined,
     analytics,
     technologies: [cms, analytics].filter(Boolean) as string[],
     issues,
@@ -198,28 +222,31 @@ export async function readBodyWithLimit(
   return buffer.byteLength > maxBodyBytes ? buffer.subarray(0, maxBodyBytes) : buffer;
 }
 
+type FetchedPage = { response: Response; finalUrl: string };
+
+type AuxSignals = Pick<WebsiteAnalysisResult, 'hasRobotsTxt' | 'hasSitemap'> &
+  Pick<SeoSignals, 'robotsBlocksAll' | 'alternateHostRedirects'>;
+
 export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
   constructor(
     private readonly options: {
       timeoutMs?: number;
       maxBodyBytes?: number;
       maxRedirects?: number;
+      auxTimeoutMs?: number;
       fetchImpl?: typeof fetch;
     } = {},
   ) {}
 
-  async analyze(url: string): Promise<WebsiteAnalysisResult> {
+  async analyze(url: string, context?: WebsiteAnalysisContext): Promise<WebsiteAnalysisResult> {
     const timeoutMs = this.options.timeoutMs ?? WEBSITE_ANALYSIS_TIMEOUT_MS;
     const maxBodyBytes = this.options.maxBodyBytes ?? WEBSITE_ANALYSIS_MAX_BODY_BYTES;
     const maxRedirects = this.options.maxRedirects ?? WEBSITE_ANALYSIS_MAX_REDIRECTS;
-    const fetchImpl = this.options.fetchImpl ?? fetch;
 
     let currentUrl: string;
-    let pinnedAddresses: string[];
     try {
       const safe = await assertSafePublicUrl(url);
       currentUrl = safe.url.toString();
-      pinnedAddresses = safe.addresses;
     } catch (error) {
       return {
         url,
@@ -237,62 +264,15 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
     }
 
     const started = Date.now();
-    const deadline = started + timeoutMs;
-    let redirects = 0;
-    let response: Response | undefined;
-    const visited = new Set<string>();
-    const useInjectedFetch = Boolean(this.options.fetchImpl);
 
     try {
-      while (redirects <= maxRedirects) {
-        const remainingMs = deadline - Date.now();
-        if (remainingMs <= 0) throw new Error('Website analysis deadline exceeded');
-        if (visited.has(currentUrl)) {
-          throw new SsrfBlockedError('Redirect loop detected');
-        }
-        visited.add(currentUrl);
-        const safe = await assertSafePublicUrl(currentUrl);
-        currentUrl = safe.url.toString();
-        pinnedAddresses = safe.addresses;
-
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), remainingMs);
-        const requestInit = {
-          method: 'GET',
-          redirect: 'manual' as const,
-          signal: controller.signal,
-          headers: {
-            'User-Agent': WEBSITE_ANALYSIS_USER_AGENT,
-            Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
-          },
-        };
-        try {
-          // Default path pins DNS at connect time so a rebinding A record
-          // cannot slip past assertSafePublicUrl between resolve and fetch.
-          // Injected fetchImpl is for tests only — it cannot pin DNS.
-          response = useInjectedFetch
-            ? await fetchImpl(currentUrl, requestInit)
-            : await fetchWithPinnedDns(currentUrl, pinnedAddresses, requestInit);
-        } finally {
-          clearTimeout(timer);
-        }
-
-        if ([301, 302, 303, 307, 308].includes(response.status)) {
-          const location = response.headers.get('location');
-          if (!location) break;
-          currentUrl = new URL(location, currentUrl).toString();
-          redirects += 1;
-          continue;
-        }
-        break;
-      }
-
-      if (!response) {
-        throw new Error('No response received');
-      }
+      const { response, finalUrl } = await this.fetchFollowingRedirects(currentUrl, {
+        deadline: started + timeoutMs,
+        maxRedirects,
+      });
+      currentUrl = finalUrl;
 
       const responseTimeMs = Date.now() - started;
-      const finalUrl = currentUrl;
       const https = finalUrl.startsWith('https:');
       const contentType = response.headers.get('content-type') ?? '';
       let html = '';
@@ -301,13 +281,10 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         html = buffer.toString('utf8');
       }
 
-      const signals = html
-        ? parseHtmlSignals(html, finalUrl)
-        : {
-            issues: [] as WebsiteAnalysisResult['issues'],
-          };
+      const parsed = html ? parseHtmlSignals(html, finalUrl) : undefined;
+      const signals = parsed ?? { issues: [] as WebsiteAnalysisResult['issues'] };
 
-      const issues = [...(signals.issues ?? [])];
+      const issues = [...signals.issues];
       if (!https) {
         issues.unshift({
           code: 'NO_HTTPS',
@@ -323,6 +300,23 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         });
       }
 
+      let seo: SeoSignals | undefined;
+      let framework: string | undefined;
+      let aux: AuxSignals = {};
+      if (html && parsed) {
+        const extraction = parseSeoSignals(html, finalUrl, context, {
+          title: parsed.title,
+          metaDescription: parsed.metaDescription,
+        });
+        framework = extraction.framework;
+        aux = await this.collectAuxSignals(finalUrl);
+        seo = {
+          ...extraction.seo,
+          robotsBlocksAll: aux.robotsBlocksAll,
+          alternateHostRedirects: aux.alternateHostRedirects,
+        };
+      }
+
       return {
         url: finalUrl,
         accessible: response.ok,
@@ -332,6 +326,10 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         redirectsToHttps: url.startsWith('http:') && https,
         responseTimeMs,
         ...signals,
+        framework,
+        hasRobotsTxt: aux.hasRobotsTxt,
+        hasSitemap: aux.hasSitemap,
+        seo,
         issues,
       };
     } catch (error) {
@@ -349,6 +347,140 @@ export class HttpWebsiteAnalyzer implements WebsiteAnalyzer {
         ],
         error: error instanceof Error ? error.message : 'Fetch failed',
       };
+    }
+  }
+
+  /**
+   * Single request through the SSRF guard (URL validated + DNS pinned), with a
+   * hard deadline. `redirect: 'manual'` — callers decide whether to follow.
+   */
+  private async request(url: string, deadline: number): Promise<{ response: Response; url: string }> {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) throw new Error('Website analysis deadline exceeded');
+
+    const safe = await assertSafePublicUrl(url);
+    const safeUrl = safe.url.toString();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), remainingMs);
+    const requestInit = {
+      method: 'GET',
+      redirect: 'manual' as const,
+      signal: controller.signal,
+      headers: {
+        'User-Agent': WEBSITE_ANALYSIS_USER_AGENT,
+        Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8',
+      },
+    };
+    try {
+      // Default path pins DNS at connect time so a rebinding A record
+      // cannot slip past assertSafePublicUrl between resolve and fetch.
+      // Injected fetchImpl is for tests only — it cannot pin DNS.
+      const response = this.options.fetchImpl
+        ? await this.options.fetchImpl(safeUrl, requestInit)
+        : await fetchWithPinnedDns(safeUrl, safe.addresses, requestInit);
+      return { response, url: safeUrl };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  private async fetchFollowingRedirects(
+    startUrl: string,
+    options: { deadline: number; maxRedirects: number },
+  ): Promise<FetchedPage> {
+    let currentUrl = startUrl;
+    let redirects = 0;
+    const visited = new Set<string>();
+
+    for (;;) {
+      if (visited.has(currentUrl)) {
+        throw new SsrfBlockedError('Redirect loop detected');
+      }
+      visited.add(currentUrl);
+
+      const { response, url } = await this.request(currentUrl, options.deadline);
+      currentUrl = url;
+
+      if (REDIRECT_STATUSES.includes(response.status) && redirects < options.maxRedirects) {
+        const location = response.headers.get('location');
+        if (!location) return { response, finalUrl: currentUrl };
+        currentUrl = new URL(location, currentUrl).toString();
+        redirects += 1;
+        continue;
+      }
+      return { response, finalUrl: currentUrl };
+    }
+  }
+
+  /**
+   * robots.txt, sitemap.xml and www/non-www redirect checks. Run in parallel
+   * with their own short budget; any failure yields `undefined` (unknown), never an error.
+   */
+  private async collectAuxSignals(finalUrl: string): Promise<AuxSignals> {
+    const deadline = Date.now() + (this.options.auxTimeoutMs ?? WEBSITE_ANALYSIS_AUX_TIMEOUT_MS);
+    const origin = new URL(finalUrl);
+
+    const [robots, sitemap, alternate] = await Promise.all([
+      this.fetchSmallText(`${origin.origin}/robots.txt`, deadline),
+      this.fetchSmallText(`${origin.origin}/sitemap.xml`, deadline),
+      this.checkAlternateHostRedirect(origin, deadline),
+    ]);
+
+    const robotsBody = robots?.ok && robots.body.trim().length > 0 ? robots.body : undefined;
+    const hasRobotsTxt = robots === undefined ? undefined : robotsBody !== undefined;
+
+    const sitemapFromFile = sitemap === undefined ? undefined : sitemap.ok && looksLikeSitemap(sitemap.body);
+    const sitemapFromRobots = robotsBody ? robotsDeclaresSitemap(robotsBody) : false;
+    let hasSitemap: boolean | undefined;
+    if (sitemapFromRobots) hasSitemap = true;
+    else if (sitemapFromFile !== undefined) hasSitemap = sitemapFromFile;
+
+    let blocksAll: boolean | undefined;
+    if (robotsBody) blocksAll = robotsBlocksAll(robotsBody);
+    else if (hasRobotsTxt === false) blocksAll = false;
+
+    return {
+      hasRobotsTxt,
+      hasSitemap,
+      robotsBlocksAll: blocksAll,
+      alternateHostRedirects: alternate,
+    };
+  }
+
+  private async fetchSmallText(
+    url: string,
+    deadline: number,
+  ): Promise<{ ok: boolean; body: string } | undefined> {
+    try {
+      const { response } = await this.fetchFollowingRedirects(url, { deadline, maxRedirects: 3 });
+      if (!response.ok) {
+        await readBodyWithLimit(response, 0);
+        return { ok: false, body: '' };
+      }
+      const buffer = await readBodyWithLimit(response, WEBSITE_ANALYSIS_AUX_MAX_BODY_BYTES);
+      return { ok: true, body: buffer.toString('utf8') };
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async checkAlternateHostRedirect(finalUrl: URL, deadline: number): Promise<boolean | undefined> {
+    const alternate = alternateHostname(finalUrl.hostname);
+    if (!alternate) return undefined;
+    const target = new URL(finalUrl.toString());
+    target.hostname = alternate;
+    target.pathname = '/';
+    target.search = '';
+    try {
+      const { response } = await this.request(target.toString(), deadline);
+      await readBodyWithLimit(response, 0);
+      if (!REDIRECT_STATUSES.includes(response.status)) return false;
+      const location = response.headers.get('location');
+      if (!location) return false;
+      return new URL(location, target).hostname.toLowerCase() === finalUrl.hostname.toLowerCase();
+    } catch {
+      return undefined;
     }
   }
 }
