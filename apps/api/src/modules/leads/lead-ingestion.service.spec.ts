@@ -300,4 +300,102 @@ describe('LeadIngestionService', () => {
     expect(result.status).toBe('SUPPRESSED');
     expect(prisma.lead.create).not.toHaveBeenCalled();
   });
+
+  const makeOutbox = () => ({
+    appendLeadCreated: jest.fn().mockResolvedValue({ id: 'evt-created' }),
+    dispatch: jest.fn().mockResolvedValue(undefined),
+  });
+
+  it('persists lead.created in the ingest transaction and dispatches after commit', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: 'lead-new',
+        ownerId: data.ownerId,
+        stageId: null,
+        source: data.source,
+        ...data,
+      }),
+    );
+    const outbox = makeOutbox();
+    const service = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+
+    const result = await service.ingest('org-1', 'user-1', {
+      companyName: 'Cantina da Estação',
+      email: 'contato@example.com',
+      phone: '(11) 99876-5432',
+      source: 'MANUAL',
+    });
+
+    expect(result.status).toBe('IMPORTED');
+    expect(outbox.appendLeadCreated).toHaveBeenCalledTimes(1);
+    const [tx, input] = outbox.appendLeadCreated.mock.calls[0];
+    expect(tx).toBe(prisma);
+    expect(input).toEqual({
+      organizationId: 'org-1',
+      leadId: 'lead-new',
+      actorId: 'user-1',
+      payload: {
+        leadId: 'lead-new',
+        source: 'MANUAL',
+        ownerId: 'user-1',
+        stageId: null,
+      },
+    });
+    expect(JSON.stringify(input.payload)).not.toMatch(/email|phone|whatsapp|Cantina/i);
+    expect(outbox.dispatch).toHaveBeenCalledWith({ id: 'evt-created' });
+  });
+
+  it('does not emit lead.created for duplicates or suppressed contacts', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'lead-existing',
+      companyName: 'Padaria Central',
+    });
+    const outbox = makeOutbox();
+    const duplicateService = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+
+    await duplicateService.ingest('org-1', 'user-1', {
+      companyName: 'Padaria Central',
+      source: 'OPENSTREETMAP',
+      externalId: 'node/42',
+    });
+
+    expect(outbox.appendLeadCreated).not.toHaveBeenCalled();
+    expect(outbox.dispatch).not.toHaveBeenCalled();
+
+    const suppressedOutbox = makeOutbox();
+    const suppression = { isSuppressed: jest.fn().mockResolvedValue(true) };
+    const suppressedService = new LeadIngestionService(
+      prisma,
+      undefined,
+      suppression as never,
+      suppressedOutbox as never,
+    );
+    await suppressedService.ingest('org-1', 'user-1', {
+      companyName: 'Opt Out Ltda',
+      email: 'optout@example.com',
+    });
+    expect(suppressedOutbox.appendLeadCreated).not.toHaveBeenCalled();
+    expect(suppressedOutbox.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('does not dispatch lead.created when the ingest transaction fails', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-new', ownerId: data.ownerId, stageId: null, source: data.source }),
+    );
+    const outbox = makeOutbox();
+    outbox.appendLeadCreated.mockRejectedValue(new Error('outbox fail'));
+    const service = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+
+    await expect(
+      service.ingest('org-1', 'user-1', { companyName: 'Cantina da Estação' }),
+    ).rejects.toThrow('outbox fail');
+    expect(outbox.dispatch).not.toHaveBeenCalled();
+  });
 });

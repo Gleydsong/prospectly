@@ -16,6 +16,8 @@ import { MetricsService } from '../ops/metrics.service';
 import { WebhookDeliveryService } from '../integrations/webhook-delivery.service';
 import {
   LEAD_AGGREGATE_TYPE,
+  LEAD_CREATED_SCHEMA_VERSION,
+  LEAD_CREATED_TYPE,
   LEAD_STAGE_CHANGED_SCHEMA_VERSION,
   LEAD_STAGE_CHANGED_TYPE,
   OUTBOX_JOB_OPTIONS,
@@ -25,6 +27,7 @@ import {
   OUTBOX_RETAIN_DAYS,
   PUBLISH_OUTBOX_JOB,
   outboxJobId,
+  type LeadCreatedPayload,
   type LeadStageChangedPayload,
   type PublishOutboxJobData,
 } from './outbox.constants';
@@ -35,6 +38,14 @@ export type AppendLeadStageChangedInput = {
   actorId: string;
   correlationId?: string;
   payload: LeadStageChangedPayload;
+};
+
+export type AppendLeadCreatedInput = {
+  organizationId: string;
+  leadId: string;
+  actorId: string;
+  correlationId?: string;
+  payload: LeadCreatedPayload;
 };
 
 @Injectable()
@@ -62,6 +73,28 @@ export class OutboxService {
         actorId: input.actorId,
         correlationId: input.correlationId ?? null,
         idempotencyKey: `${LEAD_STAGE_CHANGED_TYPE}:${input.leadId}:${input.payload.fromStageId ?? 'none'}:${input.payload.toStageId}:${id}`,
+        payload: input.payload as unknown as Prisma.InputJsonValue,
+        status: OutboxEventStatus.PENDING,
+        attempts: 0,
+        retainUntil,
+      },
+    });
+  }
+
+  async appendLeadCreated(tx: Prisma.TransactionClient, input: AppendLeadCreatedInput) {
+    const id = randomUUID();
+    const retainUntil = new Date(Date.now() + OUTBOX_RETAIN_DAYS * 24 * 60 * 60 * 1000);
+    return tx.outboxEvent.create({
+      data: {
+        id,
+        organizationId: input.organizationId,
+        type: LEAD_CREATED_TYPE,
+        schemaVersion: LEAD_CREATED_SCHEMA_VERSION,
+        aggregateType: LEAD_AGGREGATE_TYPE,
+        aggregateId: input.leadId,
+        actorId: input.actorId,
+        correlationId: input.correlationId ?? null,
+        idempotencyKey: `${LEAD_CREATED_TYPE}:${input.leadId}`,
         payload: input.payload as unknown as Prisma.InputJsonValue,
         status: OutboxEventStatus.PENDING,
         attempts: 0,
@@ -177,7 +210,7 @@ export class OutboxService {
     });
 
     try {
-      const payload = this.assertLeadStageChangedPayload(event.payload);
+      const payload = this.assertPayload(event.type, event.payload);
       const delivery = await this.webhookDelivery.deliverOutboxEvent({
         id: event.id,
         organizationId: event.organizationId,
@@ -231,16 +264,36 @@ export class OutboxService {
     }
   }
 
-  private assertLeadStageChangedPayload(payload: Prisma.JsonValue): LeadStageChangedPayload {
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+  private assertPayload(
+    type: string,
+    payload: Prisma.JsonValue,
+  ): LeadStageChangedPayload | LeadCreatedPayload {
+    if (type === LEAD_STAGE_CHANGED_TYPE) {
+      return this.assertLeadStageChangedPayload(payload);
+    }
+    if (type === LEAD_CREATED_TYPE) {
+      return this.assertLeadCreatedPayload(payload);
+    }
+    throw new Error('Unknown outbox event type');
+  }
+
+  private assertLeadCreatedPayload(payload: Prisma.JsonValue): LeadCreatedPayload {
+    const record = this.assertObjectPayload(payload);
+    if (typeof record.leadId !== 'string' || typeof record.source !== 'string') {
       throw new Error('Invalid outbox payload');
     }
-    const record = payload as Record<string, unknown>;
+    return {
+      leadId: record.leadId,
+      source: record.source,
+      ownerId: typeof record.ownerId === 'string' ? record.ownerId : null,
+      stageId: typeof record.stageId === 'string' ? record.stageId : null,
+    };
+  }
+
+  private assertLeadStageChangedPayload(payload: Prisma.JsonValue): LeadStageChangedPayload {
+    const record = this.assertObjectPayload(payload);
     if (typeof record.leadId !== 'string' || typeof record.toStageId !== 'string') {
       throw new Error('Invalid outbox payload');
-    }
-    if ('email' in record || 'phone' in record || 'whatsapp' in record) {
-      throw new Error('Outbox payload must not include contact PII');
     }
     return {
       leadId: record.leadId,
@@ -249,6 +302,17 @@ export class OutboxService {
       fromStageName: typeof record.fromStageName === 'string' ? record.fromStageName : null,
       toStageName: typeof record.toStageName === 'string' ? record.toStageName : '',
     };
+  }
+
+  private assertObjectPayload(payload: Prisma.JsonValue): Record<string, unknown> {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new Error('Invalid outbox payload');
+    }
+    const record = payload as Record<string, unknown>;
+    if ('email' in record || 'phone' in record || 'whatsapp' in record) {
+      throw new Error('Outbox payload must not include contact PII');
+    }
+    return record;
   }
 
   private sanitizeError(error: unknown): string {

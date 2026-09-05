@@ -3,6 +3,7 @@ import { ConfidenceLevel, LeadSource, LeadStatus, Prisma, WebsitePresence } from
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { SuppressionService } from '../privacy/suppression.service';
 
 const INGESTED_LEAD_INCLUDE = {
@@ -136,6 +137,7 @@ export class LeadIngestionService {
     private readonly prisma: PrismaService,
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
     @Optional() private readonly suppression?: SuppressionService,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   async ingest(
@@ -221,8 +223,29 @@ export class LeadIngestionService {
           },
           include: INGESTED_LEAD_INCLUDE,
         });
-        return { status: 'IMPORTED' as const, lead };
+        const event = this.outbox
+          ? await this.outbox.appendLeadCreated(transaction, {
+              organizationId,
+              leadId: lead.id,
+              actorId,
+              payload: {
+                leadId: lead.id,
+                source: lead.source,
+                ownerId: lead.ownerId ?? null,
+                stageId: lead.stageId ?? null,
+              },
+            })
+          : null;
+        return { status: 'IMPORTED' as const, lead, event };
       });
+
+      if (result.status === 'IMPORTED' && result.event && this.outbox) {
+        try {
+          await this.outbox.dispatch(result.event);
+        } catch {
+          // Redis down: reconciler republishes from the persisted PENDING row.
+        }
+      }
 
       if (result.status === 'IMPORTED' && this.websiteAnalysis) {
         // Detached on purpose; onLeadUpsert must soft-fail — never let a rejection crash Node.
@@ -231,6 +254,9 @@ export class LeadIngestionService {
           .catch(() => undefined);
       }
 
+      if (result.status === 'IMPORTED') {
+        return { status: 'IMPORTED', lead: result.lead };
+      }
       return result;
     } catch (error) {
       if (!this.isUniqueConstraintViolation(error)) {

@@ -3,6 +3,8 @@ export const PUBLISH_OUTBOX_JOB = 'publish-outbox-event';
 
 export const LEAD_STAGE_CHANGED_TYPE = 'lead.stage_changed';
 export const LEAD_STAGE_CHANGED_SCHEMA_VERSION = 1;
+export const LEAD_CREATED_TYPE = 'lead.created';
+export const LEAD_CREATED_SCHEMA_VERSION = 1;
 export const LEAD_AGGREGATE_TYPE = 'Lead';
 
 export const OUTBOX_MAX_ATTEMPTS = 10;
@@ -28,6 +30,13 @@ export type LeadStageChangedPayload = {
   toStageId: string;
   fromStageName: string | null;
   toStageName: string;
+};
+
+export type LeadCreatedPayload = {
+  leadId: string;
+  source: string;
+  ownerId: string | null;
+  stageId: string | null;
 };
 
 export function outboxJobId(eventId: string): string {

@@ -8,7 +8,7 @@ import {
 } from '../website-analysis/ssrf';
 import { MetricsService } from '../ops/metrics.service';
 import { WEBHOOK_PROVIDER } from './integrations.service';
-import type { LeadStageChangedPayload } from '../outbox/outbox.constants';
+import type { LeadCreatedPayload, LeadStageChangedPayload } from '../outbox/outbox.constants';
 
 const WEBHOOK_USER_AGENT = 'Prospectly-Webhook/1';
 const WEBHOOK_TIMEOUT_MS = 15_000;
@@ -25,7 +25,7 @@ export type DeliverOutboxEventInput = {
   schemaVersion: number;
   correlationId: string | null;
   createdAt: Date;
-  payload: LeadStageChangedPayload;
+  payload: LeadStageChangedPayload | LeadCreatedPayload;
 };
 
 export type WebhookDeliveryResult =
