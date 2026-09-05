@@ -14,7 +14,10 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
-import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTasksDto } from './dto/query-tasks.dto';
@@ -34,7 +37,11 @@ export class TasksController {
 
   @Post('tasks')
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
-  create(@CurrentOrg() organizationId: string, @CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTaskDto) {
+  create(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateTaskDto,
+  ) {
     return this.tasks.create(organizationId, user.id, dto);
   }
 
@@ -53,10 +60,11 @@ export class TasksController {
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   update(
     @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTaskDto,
   ) {
-    return this.tasks.update(organizationId, id, dto);
+    return this.tasks.update(organizationId, id, user.id, dto);
   }
 
   @Delete('tasks/:id')

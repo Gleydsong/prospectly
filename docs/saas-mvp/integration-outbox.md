@@ -17,6 +17,6 @@ Sync de saída CRM/webhook nunca deve bloquear a UX do produto. Use um **outbox*
 
 ## Stub atual do MVP
 
-`lead.stage_changed`, `lead.created` e `lead.do_not_contact_set` já persistem `OutboxEvent` na mesma transação da escrita do Lead. O worker reclama a linha, Redis acorda o dispatch e, quando existe `Integration` com `provider=WEBHOOK` e `status=ENABLED`, o worker faz `POST` JSON para a URL configurada (com proteção SSRF e DNS pinning).
+`lead.stage_changed`, `lead.created`, `lead.do_not_contact_set` e `task.completed` já persistem `OutboxEvent` na mesma transação da escrita de domínio. O worker reclama a linha, Redis acorda o dispatch e, quando existe `Integration` com `provider=WEBHOOK` e `status=ENABLED`, o worker faz `POST` JSON para a URL configurada (com proteção SSRF e DNS pinning).
 
 Sem webhook ativo, o evento ainda é marcado `PROCESSED` após validação do payload.

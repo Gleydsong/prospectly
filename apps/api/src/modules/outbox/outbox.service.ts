@@ -28,11 +28,15 @@ import {
   OUTBOX_QUEUE,
   OUTBOX_RETAIN_DAYS,
   PUBLISH_OUTBOX_JOB,
+  TASK_AGGREGATE_TYPE,
+  TASK_COMPLETED_SCHEMA_VERSION,
+  TASK_COMPLETED_TYPE,
   outboxJobId,
   type LeadCreatedPayload,
   type LeadDoNotContactSetPayload,
   type LeadStageChangedPayload,
   type PublishOutboxJobData,
+  type TaskCompletedPayload,
 } from './outbox.constants';
 
 export type AppendLeadStageChangedInput = {
@@ -57,6 +61,14 @@ export type AppendLeadDoNotContactSetInput = {
   actorId: string;
   correlationId?: string;
   payload: LeadDoNotContactSetPayload;
+};
+
+export type AppendTaskCompletedInput = {
+  organizationId: string;
+  taskId: string;
+  actorId: string;
+  correlationId?: string;
+  payload: TaskCompletedPayload;
 };
 
 @Injectable()
@@ -114,7 +126,10 @@ export class OutboxService {
     });
   }
 
-  async appendLeadDoNotContactSet(tx: Prisma.TransactionClient, input: AppendLeadDoNotContactSetInput) {
+  async appendLeadDoNotContactSet(
+    tx: Prisma.TransactionClient,
+    input: AppendLeadDoNotContactSetInput,
+  ) {
     const id = randomUUID();
     const retainUntil = new Date(Date.now() + OUTBOX_RETAIN_DAYS * 24 * 60 * 60 * 1000);
     return tx.outboxEvent.create({
@@ -128,6 +143,28 @@ export class OutboxService {
         actorId: input.actorId,
         correlationId: input.correlationId ?? null,
         idempotencyKey: `${LEAD_DO_NOT_CONTACT_SET_TYPE}:${input.leadId}`,
+        payload: input.payload as unknown as Prisma.InputJsonValue,
+        status: OutboxEventStatus.PENDING,
+        attempts: 0,
+        retainUntil,
+      },
+    });
+  }
+
+  async appendTaskCompleted(tx: Prisma.TransactionClient, input: AppendTaskCompletedInput) {
+    const id = randomUUID();
+    const retainUntil = new Date(Date.now() + OUTBOX_RETAIN_DAYS * 24 * 60 * 60 * 1000);
+    return tx.outboxEvent.create({
+      data: {
+        id,
+        organizationId: input.organizationId,
+        type: TASK_COMPLETED_TYPE,
+        schemaVersion: TASK_COMPLETED_SCHEMA_VERSION,
+        aggregateType: TASK_AGGREGATE_TYPE,
+        aggregateId: input.taskId,
+        actorId: input.actorId,
+        correlationId: input.correlationId ?? null,
+        idempotencyKey: `${TASK_COMPLETED_TYPE}:${input.taskId}:${id}`,
         payload: input.payload as unknown as Prisma.InputJsonValue,
         status: OutboxEventStatus.PENDING,
         attempts: 0,
@@ -300,7 +337,11 @@ export class OutboxService {
   private assertPayload(
     type: string,
     payload: Prisma.JsonValue,
-  ): LeadStageChangedPayload | LeadCreatedPayload | LeadDoNotContactSetPayload {
+  ):
+    | LeadStageChangedPayload
+    | LeadCreatedPayload
+    | LeadDoNotContactSetPayload
+    | TaskCompletedPayload {
     if (type === LEAD_STAGE_CHANGED_TYPE) {
       return this.assertLeadStageChangedPayload(payload);
     }
@@ -310,7 +351,23 @@ export class OutboxService {
     if (type === LEAD_DO_NOT_CONTACT_SET_TYPE) {
       return this.assertLeadDoNotContactSetPayload(payload);
     }
+    if (type === TASK_COMPLETED_TYPE) {
+      return this.assertTaskCompletedPayload(payload);
+    }
     throw new Error('Unknown outbox event type');
+  }
+
+  private assertTaskCompletedPayload(payload: Prisma.JsonValue): TaskCompletedPayload {
+    const record = this.assertObjectPayload(payload);
+    if (typeof record.taskId !== 'string') {
+      throw new Error('Invalid outbox payload');
+    }
+    return {
+      taskId: record.taskId,
+      leadId: typeof record.leadId === 'string' ? record.leadId : null,
+      campaignId: typeof record.campaignId === 'string' ? record.campaignId : null,
+      campaignStageId: typeof record.campaignStageId === 'string' ? record.campaignStageId : null,
+    };
   }
 
   private assertLeadDoNotContactSetPayload(payload: Prisma.JsonValue): LeadDoNotContactSetPayload {

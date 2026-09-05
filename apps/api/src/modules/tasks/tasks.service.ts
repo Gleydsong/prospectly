@@ -1,15 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { paginate } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { OutboxService } from '../outbox/outbox.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { QueryTasksDto } from './dto/query-tasks.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly outbox?: OutboxService,
+  ) {}
 
   async list(organizationId: string, query: QueryTasksDto) {
     const where: Prisma.TaskWhereInput = {
@@ -66,7 +70,7 @@ export class TasksService {
     );
   }
 
-  async update(organizationId: string, id: string, dto: UpdateTaskDto) {
+  async update(organizationId: string, id: string, userId: string, dto: UpdateTaskDto) {
     const task = await this.prisma.task.findFirst({ where: { id, organizationId } });
     if (!task) {
       throw new NotFoundException('Task not found');
@@ -74,22 +78,60 @@ export class TasksService {
     if (dto.assigneeId) {
       await this.assertMember(organizationId, dto.assigneeId);
     }
-    return this.serialize(
-      await this.prisma.task.update({
+
+    const completing = dto.status === 'DONE' && task.status !== 'DONE';
+    const data = {
+      title: dto.title?.trim(),
+      description: dto.description,
+      dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+      priority: dto.priority,
+      status: dto.status,
+      ...(dto.status === 'DONE' ? { completedAt: new Date() } : {}),
+      ...(dto.status && dto.status !== 'DONE' ? { completedAt: null } : {}),
+      assigneeId: dto.assigneeId,
+    };
+
+    if (!completing) {
+      return this.serialize(
+        await this.prisma.task.update({
+          where: { id },
+          data,
+          include: this.taskInclude,
+        }),
+      );
+    }
+
+    const [updated, event] = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.task.update({
         where: { id },
-        data: {
-          title: dto.title?.trim(),
-          description: dto.description,
-          dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
-          priority: dto.priority,
-          status: dto.status,
-          ...(dto.status === 'DONE' ? { completedAt: new Date() } : {}),
-          ...(dto.status && dto.status !== 'DONE' ? { completedAt: null } : {}),
-          assigneeId: dto.assigneeId,
-        },
+        data,
         include: this.taskInclude,
-      }),
-    );
+      });
+      const outboxEvent = this.outbox
+        ? await this.outbox.appendTaskCompleted(tx, {
+            organizationId,
+            taskId: task.id,
+            actorId: userId,
+            payload: {
+              taskId: task.id,
+              leadId: task.leadId,
+              campaignId: task.campaignId,
+              campaignStageId: task.campaignStageId,
+            },
+          })
+        : null;
+      return [saved, outboxEvent] as const;
+    });
+
+    if (event && this.outbox) {
+      try {
+        await this.outbox.dispatch(event);
+      } catch {
+        // Redis down: reconciler republishes from the persisted PENDING row.
+      }
+    }
+
+    return this.serialize(updated);
   }
 
   async remove(organizationId: string, id: string) {

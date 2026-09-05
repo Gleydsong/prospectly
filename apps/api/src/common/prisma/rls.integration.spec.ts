@@ -92,7 +92,7 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         INSERT INTO "OutboxEvent"
           (id, "organizationId", type, "schemaVersion", "aggregateType", "aggregateId", "idempotencyKey", payload, status, attempts, "retainUntil", "createdAt", "updatedAt")
         VALUES
-          (${outboxEventA}, ${orgA}, 'lead.do_not_contact_set', 1, 'Lead', ${leadA}, ${`key-${outboxEventA}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW()),
+          (${outboxEventA}, ${orgA}, 'task.completed', 1, 'Task', ${leadA}, ${`key-${outboxEventA}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW()),
           (${outboxEventB}, ${orgB}, 'lead.stage_changed', 1, 'Lead', ${leadB}, ${`key-${outboxEventB}`}, '{}'::jsonb, 'PENDING'::"OutboxEventStatus", 0, NOW() + INTERVAL '90 days', NOW(), NOW())
       `;
     });
