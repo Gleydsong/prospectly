@@ -15,6 +15,7 @@ import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finde
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 import { OutboxModule } from '../outbox/outbox.module';
 import { OutboxProcessor } from '../outbox/outbox.processor';
+import { WorkflowsModule } from '../workflows/workflows.module';
 
 /**
  * Registers BullMQ processors for the dedicated worker process.
@@ -30,6 +31,7 @@ import { OutboxProcessor } from '../outbox/outbox.processor';
     OpportunityFinderModule,
     PrivacyRetentionModule,
     OutboxModule,
+    WorkflowsModule,
   ],
   providers: [
     ProspectingProcessor,

@@ -4,6 +4,7 @@ import { ImportsProcessor } from '../imports/imports.processor';
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 import { OutboxModule } from '../outbox/outbox.module';
 import { OutboxProcessor } from '../outbox/outbox.processor';
+import { WorkflowsModule } from '../workflows/workflows.module';
 import { PrivacyRetentionModule } from '../privacy/privacy-retention.module';
 import { RetentionProcessor } from '../privacy/retention.processor';
 import { RetentionScheduler } from '../privacy/retention.scheduler';
@@ -41,5 +42,6 @@ describe('WorkersModule', () => {
     const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, WorkersModule) as unknown[];
     expect(imports).toContain(PrivacyRetentionModule);
     expect(imports).toContain(OutboxModule);
+    expect(imports).toContain(WorkflowsModule);
   });
 });

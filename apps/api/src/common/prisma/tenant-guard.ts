@@ -40,6 +40,7 @@ export const TENANT_MODELS = new Set([
   'SavedView',
   'Workflow',
   'WorkflowVersion',
+  'WorkflowStepRun',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

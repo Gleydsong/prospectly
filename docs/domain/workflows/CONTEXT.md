@@ -22,4 +22,5 @@ _Avoid_: Query string, AST livre, grafo
 - VIEWER lê. OWNER/ADMIN/SALES/MEMBER criam. Só o dono, OWNER ou ADMIN mutam.
 - DRAFT aceita 0–10 passos. Publicar exige ≥1 passo e cria `WorkflowVersion` imutável.
 - O primeiro gatilho é `lead.created`. O primeiro passo é `add_tag`.
+- O worker aplica a versão publicada ACTIVE; redelivery não duplica LeadTag.
 - `doNotContact` e consentimento vencem qualquer execução futura. Não há cold outreach.

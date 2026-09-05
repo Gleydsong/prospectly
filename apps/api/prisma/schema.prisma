@@ -91,6 +91,11 @@ enum WorkflowStatus {
   ARCHIVED
 }
 
+enum WorkflowStepRunOutcome {
+  APPLIED
+  SKIPPED
+}
+
 enum CampaignStatus {
   DRAFT
   SCHEDULED
@@ -342,6 +347,7 @@ model Organization {
   savedViews          SavedView[]
   workflows           Workflow[]
   workflowVersions    WorkflowVersion[]
+  workflowStepRuns    WorkflowStepRun[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -1177,11 +1183,31 @@ model WorkflowVersion {
   publishedAt    DateTime
   createdAt      DateTime @default(now())
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  workflow     Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflow     Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  stepRuns     WorkflowStepRun[]
 
   @@unique([workflowId, version])
   @@index([organizationId, workflowId])
+}
+
+/// Idempotent record of one published step against one DomainEvent. Redelivery must not duplicate LeadTag.
+model WorkflowStepRun {
+  id                 String                   @id @default(uuid())
+  organizationId     String
+  workflowId         String
+  workflowVersionId  String
+  eventId            String
+  leadId             String
+  stepIndex          Int
+  outcome            WorkflowStepRunOutcome
+  createdAt          DateTime                 @default(now())
+
+  organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workflowVersion  WorkflowVersion  @relation(fields: [workflowVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowVersionId, eventId, stepIndex])
+  @@index([organizationId, eventId])
 }
 
 /// Provider-agnostic webhook idempotency for active and historical gateways.
