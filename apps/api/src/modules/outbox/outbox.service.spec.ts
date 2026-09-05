@@ -3,6 +3,7 @@ import { OutboxEventStatus } from '@prisma/client';
 import { OUTBOX_JOB_STALE_MS } from '../../common/workers/durable-job';
 import {
   LEAD_CREATED_TYPE,
+  LEAD_DO_NOT_CONTACT_SET_TYPE,
   LEAD_STAGE_CHANGED_TYPE,
   OUTBOX_MAX_ATTEMPTS,
   OUTBOX_QUEUE,
@@ -112,6 +113,42 @@ describe('OutboxService', () => {
       stageId: null,
     });
     expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp/i);
+    expect(data.status).toBe(OutboxEventStatus.PENDING);
+  });
+
+  it('appends lead.do_not_contact_set keyed by lead id without contact PII', async () => {
+    const prisma = makePrisma();
+    const created = {
+      id: 'event-dnc',
+      type: LEAD_DO_NOT_CONTACT_SET_TYPE,
+      payload: { leadId: 'lead-9', source: 'CAMPAIGN_OPT_OUT', campaignId: 'c1' },
+    };
+    prisma.outboxEvent.create.mockResolvedValue(created);
+    const service = makeService(prisma);
+    const tx = { outboxEvent: prisma.outboxEvent };
+
+    const result = await service.appendLeadDoNotContactSet(tx as never, {
+      organizationId: 'org-1',
+      leadId: 'lead-9',
+      actorId: 'user-1',
+      correlationId: 'corr-dnc',
+      payload: {
+        leadId: 'lead-9',
+        source: 'CAMPAIGN_OPT_OUT',
+        campaignId: 'c1',
+      },
+    });
+
+    expect(result).toBe(created);
+    const data = prisma.outboxEvent.create.mock.calls[0]?.[0]?.data;
+    expect(data.type).toBe(LEAD_DO_NOT_CONTACT_SET_TYPE);
+    expect(data.idempotencyKey).toBe(`${LEAD_DO_NOT_CONTACT_SET_TYPE}:lead-9`);
+    expect(data.payload).toEqual({
+      leadId: 'lead-9',
+      source: 'CAMPAIGN_OPT_OUT',
+      campaignId: 'c1',
+    });
+    expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp|Pediu/i);
     expect(data.status).toBe(OutboxEventStatus.PENDING);
   });
 
@@ -307,6 +344,41 @@ describe('OutboxService', () => {
     );
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: 'evt-created' },
+      data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
+    });
+  });
+
+  it('processes lead.do_not_contact_set without requiring stage fields', async () => {
+    const prisma = makePrisma();
+    const webhookDelivery = makeWebhookDelivery();
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-dnc',
+      type: LEAD_DO_NOT_CONTACT_SET_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 1,
+      correlationId: 'corr-dnc',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      attempts: 1,
+      payload: {
+        leadId: 'lead-9',
+        source: 'CAMPAIGN_OPT_OUT',
+        campaignId: 'c1',
+      },
+    });
+    const service = makeService(prisma, makeQueue(), webhookDelivery);
+
+    await service.process('evt-dnc');
+
+    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'evt-dnc',
+        organizationId: 'org-1',
+        type: LEAD_DO_NOT_CONTACT_SET_TYPE,
+      }),
+    );
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-dnc' },
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
     });
   });

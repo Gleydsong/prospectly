@@ -5,6 +5,8 @@ export const LEAD_STAGE_CHANGED_TYPE = 'lead.stage_changed';
 export const LEAD_STAGE_CHANGED_SCHEMA_VERSION = 1;
 export const LEAD_CREATED_TYPE = 'lead.created';
 export const LEAD_CREATED_SCHEMA_VERSION = 1;
+export const LEAD_DO_NOT_CONTACT_SET_TYPE = 'lead.do_not_contact_set';
+export const LEAD_DO_NOT_CONTACT_SET_SCHEMA_VERSION = 1;
 export const LEAD_AGGREGATE_TYPE = 'Lead';
 
 export const OUTBOX_MAX_ATTEMPTS = 10;
@@ -37,6 +39,12 @@ export type LeadCreatedPayload = {
   source: string;
   ownerId: string | null;
   stageId: string | null;
+};
+
+export type LeadDoNotContactSetPayload = {
+  leadId: string;
+  source: string;
+  campaignId: string | null;
 };
 
 export function outboxJobId(eventId: string): string {

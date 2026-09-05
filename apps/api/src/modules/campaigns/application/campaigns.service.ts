@@ -11,6 +11,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../../audit/audit.constants';
 import { AuditService } from '../../audit/audit.service';
 import { SuppressionService } from '../../privacy/suppression.service';
+import { OutboxService } from '../../outbox/outbox.service';
 import {
   defaultStages,
   emptyStageMetrics,
@@ -51,6 +52,7 @@ export class CampaignsService {
     private readonly templates: TemplatesService,
     private readonly audit: AuditService,
     @Optional() private readonly suppression?: SuppressionService,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   async list(organizationId: string, query: QueryCampaignsDto) {
@@ -385,8 +387,9 @@ export class CampaignsService {
 
     const followUpAt = dto.followUpAt ? new Date(dto.followUpAt) : undefined;
     const now = new Date();
+    const emitDoNotContact = dto.result === 'OPT_OUT' && !existing.lead.doNotContact;
 
-    const [activity] = await this.prisma.$transaction(async (tx) => {
+    const [activity, event] = await this.prisma.$transaction(async (tx) => {
       const created = await tx.campaignActivity.create({
         data: {
           organizationId,
@@ -436,8 +439,30 @@ export class CampaignsService {
         });
       }
 
-      return [created] as const;
+      const outboxEvent =
+        emitDoNotContact && this.outbox
+          ? await this.outbox.appendLeadDoNotContactSet(tx, {
+              organizationId,
+              leadId,
+              actorId: userId,
+              payload: {
+                leadId,
+                source: 'CAMPAIGN_OPT_OUT',
+                campaignId,
+              },
+            })
+          : null;
+
+      return [created, outboxEvent] as const;
     });
+
+    if (event && this.outbox) {
+      try {
+        await this.outbox.dispatch(event);
+      } catch {
+        // Redis down: reconciler republishes from the persisted PENDING row.
+      }
+    }
 
     if (dto.result === 'OPT_OUT') {
       await this.suppression?.suppressFromLead(organizationId, leadId, 'campaign_opt_out');

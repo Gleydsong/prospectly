@@ -420,6 +420,115 @@ describe('CampaignsService', () => {
     );
   });
 
+  const makeOutbox = () => ({
+    appendLeadDoNotContactSet: jest.fn().mockResolvedValue({ id: 'evt-dnc' }),
+    dispatch: jest.fn().mockResolvedValue(undefined),
+  });
+
+  it('persists lead.do_not_contact_set in the OPT_OUT transaction and dispatches after commit', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    const outbox = makeOutbox();
+    prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
+    prisma.campaignLead.findFirst.mockResolvedValue({
+      campaignId: 'c1',
+      leadId: 'lead-1',
+      currentStageId: stageId,
+      lead: { id: 'lead-1', doNotContact: false },
+    });
+    prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
+    prisma.campaignLead.update.mockResolvedValue({});
+    prisma.lead.update.mockResolvedValue({});
+    const service = new CampaignsService(prisma, makeTemplates(), audit, undefined, outbox as never);
+
+    await service.recordResult('org-a', 'user-1', 'c1', 'lead-1', {
+      result: 'OPT_OUT',
+      note: 'Pediu remoção',
+    });
+
+    expect(outbox.appendLeadDoNotContactSet).toHaveBeenCalledTimes(1);
+    const [tx, input] = outbox.appendLeadDoNotContactSet.mock.calls[0];
+    expect(tx).toBe(prisma);
+    expect(input).toEqual({
+      organizationId: 'org-a',
+      leadId: 'lead-1',
+      actorId: 'user-1',
+      payload: {
+        leadId: 'lead-1',
+        source: 'CAMPAIGN_OPT_OUT',
+        campaignId: 'c1',
+      },
+    });
+    expect(JSON.stringify(input.payload)).not.toMatch(/email|phone|whatsapp|Pediu/i);
+    expect(outbox.dispatch).toHaveBeenCalledWith({ id: 'evt-dnc' });
+  });
+
+  it('does not emit lead.do_not_contact_set when the lead is already blocked or result is not OPT_OUT', async () => {
+    const prisma = makePrisma();
+    const alreadyBlocked = makeOutbox();
+    prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
+    prisma.campaignLead.findFirst.mockResolvedValue({
+      campaignId: 'c1',
+      leadId: 'lead-1',
+      currentStageId: stageId,
+      lead: { id: 'lead-1', doNotContact: true },
+    });
+    prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
+    prisma.campaignLead.update.mockResolvedValue({});
+    prisma.lead.update.mockResolvedValue({});
+    const blockedService = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      alreadyBlocked as never,
+    );
+    await blockedService.recordResult('org-a', 'user-1', 'c1', 'lead-1', { result: 'OPT_OUT' });
+    expect(alreadyBlocked.appendLeadDoNotContactSet).not.toHaveBeenCalled();
+    expect(alreadyBlocked.dispatch).not.toHaveBeenCalled();
+
+    const contactedOutbox = makeOutbox();
+    prisma.campaignLead.findFirst.mockResolvedValue({
+      campaignId: 'c1',
+      leadId: 'lead-2',
+      currentStageId: stageId,
+      lead: { id: 'lead-2', doNotContact: false },
+    });
+    prisma.campaignActivity.create.mockResolvedValue({ id: 'act-2', result: 'CONTACTED' });
+    const contactedService = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      contactedOutbox as never,
+    );
+    await contactedService.recordResult('org-a', 'user-1', 'c1', 'lead-2', { result: 'CONTACTED' });
+    expect(contactedOutbox.appendLeadDoNotContactSet).not.toHaveBeenCalled();
+    expect(contactedOutbox.dispatch).not.toHaveBeenCalled();
+  });
+
+  it('does not dispatch lead.do_not_contact_set when the OPT_OUT transaction fails', async () => {
+    const prisma = makePrisma();
+    const outbox = makeOutbox();
+    outbox.appendLeadDoNotContactSet.mockRejectedValue(new Error('outbox fail'));
+    prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
+    prisma.campaignLead.findFirst.mockResolvedValue({
+      campaignId: 'c1',
+      leadId: 'lead-1',
+      currentStageId: stageId,
+      lead: { id: 'lead-1', doNotContact: false },
+    });
+    prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
+    prisma.campaignLead.update.mockResolvedValue({});
+    prisma.lead.update.mockResolvedValue({});
+    const service = new CampaignsService(prisma, makeTemplates(), makeAudit(), undefined, outbox as never);
+
+    await expect(
+      service.recordResult('org-a', 'user-1', 'c1', 'lead-1', { result: 'OPT_OUT' }),
+    ).rejects.toThrow('outbox fail');
+    expect(outbox.dispatch).not.toHaveBeenCalled();
+  });
+
   it('getMetrics aggregates persisted events instead of placeholders', async () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
