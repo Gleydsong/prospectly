@@ -66,6 +66,23 @@ export function TopNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
+    const handleGlobalShortcuts = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        navigate('/search');
+      } else if (
+        event.key === '/' &&
+        !['INPUT', 'TEXTAREA', 'SELECT'].includes((event.target as HTMLElement)?.tagName)
+      ) {
+        event.preventDefault();
+        navigate('/search');
+      }
+    };
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [navigate]);
+
+  useEffect(() => {
     if (!mobileOpen) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMobileOpen(false);
@@ -127,7 +144,7 @@ export function TopNav() {
           <span className="-ml-0.5 leading-none">rospectly</span>
         </Link>
 
-        <nav className="ml-2 hidden items-center gap-0.5 lg:flex" aria-label={t('nav.mainNav')}>
+        <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label={t('nav.mainNav')}>
           {TOP_NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -135,9 +152,9 @@ export function TopNav() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 cn(
-                  'inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
+                  'inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'border border-sky-200 bg-sky-50 font-semibold text-sky-700 shadow-sm'
+                    ? 'bg-blue-50 text-blue-700 font-semibold dark:bg-blue-950/50 dark:text-blue-300'
                     : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
                 )
               }
@@ -145,7 +162,10 @@ export function TopNav() {
               {({ isActive }) => (
                 <>
                   <item.icon
-                    className={cn('h-4 w-4', isActive ? 'text-sky-700' : 'text-current')}
+                    className={cn(
+                      'h-4 w-4',
+                      isActive ? 'text-blue-700 dark:text-blue-300' : 'text-current',
+                    )}
                     aria-hidden
                   />
                   {t(item.labelKey)}
@@ -159,23 +179,28 @@ export function TopNav() {
 
         <Link
           to="/search"
-          className="cta-primary relative hidden h-10 w-[220px] shrink-0 items-center gap-2 rounded-full pl-9 pr-3 text-sm font-semibold transition-[transform,background-color,box-shadow] hover:-translate-y-px active:translate-y-0 sm:inline-flex"
+          className="group relative hidden h-9 w-[230px] shrink-0 items-center gap-2 rounded-lg border border-slate-200/80 bg-slate-100 px-3 text-sm text-slate-800 transition-colors hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:bg-slate-900 sm:inline-flex"
           aria-label={t('nav.searchClients')}
         >
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/90"
+            className="pointer-events-none h-4 w-4 shrink-0 text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300 transition-colors"
             aria-hidden
           />
-          <span className="truncate">{t('nav.searchClients')}</span>
+          <span className="truncate text-xs font-normal text-slate-400 dark:text-slate-500 sm:text-sm">
+            {t('nav.globalSearch', { defaultValue: 'Busca global...' })}
+          </span>
+          <kbd className="ml-auto pointer-events-none inline-flex items-center rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 shadow-2xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+            ⌘K
+          </kbd>
         </Link>
 
         <Link
           to="/credits"
-          className="hidden items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm sm:inline-flex"
+          className="hidden items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100/80 dark:border-sky-800/60 dark:bg-sky-950/50 dark:text-sky-300 sm:inline-flex"
           title={t('nav.credits')}
         >
-          <Coins className="h-3.5 w-3.5" aria-hidden />
-          {creditsLabel}
+          <Coins className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{creditsLabel}</span>
         </Link>
 
         <ThemeToggle />
@@ -210,69 +235,74 @@ export function TopNav() {
                 id="mobile-nav"
                 className="absolute inset-y-0 left-0 flex w-[min(100%,20rem)] flex-col border-r border-[color:var(--border)] bg-[var(--chrome-sidebar)] shadow-elevated"
               >
-            <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
-              <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
-                <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-                <span className="-ml-0.5 leading-none">rospectly</span>
-              </span>
-              <button
-                type="button"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)]"
-                onClick={() => setMobileOpen(false)}
-                aria-label={t('nav.closeMenu')}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
-              <div className="space-y-1">
-                {TOP_NAV_ITEMS.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
+                <div className="flex h-16 items-center justify-between border-b border-[color:var(--border)] px-4">
+                  <span className="inline-flex items-center gap-0 text-lg font-semibold text-[color:var(--ink)]">
+                    <img
+                      src={prospectlyMark}
+                      alt=""
+                      aria-hidden
+                      className="-ml-0.5 h-7 w-7 shrink-0"
+                    />
+                    <span className="-ml-0.5 leading-none">rospectly</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-[color:var(--ink-muted)]"
                     onClick={() => setMobileOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        'flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium',
-                        isActive
-                          ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
-                          : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
-                      )
-                    }
+                    aria-label={t('nav.closeMenu')}
                   >
-                    <item.icon className="h-5 w-5" aria-hidden />
-                    {t(item.labelKey)}
-                  </NavLink>
-                ))}
-              </div>
-              {NAV_GROUPS.map((group) => (
-                <div key={group.labelKey} className="space-y-1">
-                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    {t(group.labelKey)}
-                  </p>
-                  {group.items.map((item) => (
-                    <NavLink
-                      key={`${group.labelKey}-${item.to}`}
-                      to={item.to}
-                      end={item.to === '/'}
-                      onClick={() => setMobileOpen(false)}
-                      className={({ isActive }) =>
-                        cn(
-                          'flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
-                          isActive
-                            ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
-                            : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)]',
-                        )
-                      }
-                    >
-                      <item.icon className="h-4 w-4" aria-hidden />
-                      {t(item.labelKey)}
-                    </NavLink>
-                  ))}
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-              ))}
-            </nav>
+                <nav className="flex-1 space-y-4 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
+                  <div className="space-y-1">
+                    {TOP_NAV_ITEMS.map((item) => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.to === '/'}
+                        onClick={() => setMobileOpen(false)}
+                        className={({ isActive }) =>
+                          cn(
+                            'flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium',
+                            isActive
+                              ? 'bg-blue-50 text-blue-700 font-semibold dark:bg-blue-950/50 dark:text-blue-300'
+                              : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
+                          )
+                        }
+                      >
+                        <item.icon className="h-5 w-5" aria-hidden />
+                        {t(item.labelKey)}
+                      </NavLink>
+                    ))}
+                  </div>
+                  {NAV_GROUPS.map((group) => (
+                    <div key={group.labelKey} className="space-y-1">
+                      <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                        {t(group.labelKey)}
+                      </p>
+                      {group.items.map((item) => (
+                        <NavLink
+                          key={`${group.labelKey}-${item.to}`}
+                          to={item.to}
+                          end={item.to === '/'}
+                          onClick={() => setMobileOpen(false)}
+                          className={({ isActive }) =>
+                            cn(
+                              'flex items-center gap-3 rounded-control px-3 py-2 text-sm font-medium',
+                              isActive
+                                ? 'bg-[color:var(--surface-hover)] text-[color:var(--ink)]'
+                                : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)]',
+                            )
+                          }
+                        >
+                          <item.icon className="h-4 w-4" aria-hidden />
+                          {t(item.labelKey)}
+                        </NavLink>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
               </aside>
             </div>,
             document.body,

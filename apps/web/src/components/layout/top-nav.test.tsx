@@ -45,7 +45,9 @@ describe('TopNav', () => {
     );
 
     expect(screen.getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('navigation', { name: /navegação principal|main navigation/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: /navegação principal|main navigation/i }),
+    ).toBeInTheDocument();
   });
 
   it('shows user avatar photo when avatarUrl is present', () => {
@@ -117,5 +119,41 @@ describe('TopNav', () => {
     expect(overlay).toBeDefined();
     expect(overlay?.closest('header')).toBeNull();
     expect(document.getElementById('mobile-nav')).toBeTruthy();
+  });
+
+  it('renders global search with soft neutral background and shortcut badge', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    const searchLink = screen.getByRole('link', { name: /buscar clientes|search clients/i });
+    expect(searchLink.className).toContain('bg-slate-100');
+    expect(searchLink.className).toContain('text-slate-800');
+    expect(screen.getByText('⌘K')).toBeInTheDocument();
+  });
+
+  it('renders credit pill with soft sky style', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    const creditLink = await screen.findByTitle(/créditos|credits/i);
+    expect(creditLink.className).toContain('bg-sky-50');
+    expect(creditLink.className).toContain('text-sky-700');
+    expect(creditLink.className).toContain('border-sky-100');
   });
 });
