@@ -8,7 +8,12 @@ import {
 } from '../website-analysis/ssrf';
 import { MetricsService } from '../ops/metrics.service';
 import { WEBHOOK_PROVIDER } from './integrations.service';
-import type { LeadCreatedPayload, LeadDoNotContactSetPayload, LeadStageChangedPayload } from '../outbox/outbox.constants';
+import type {
+  LeadCreatedPayload,
+  LeadDoNotContactSetPayload,
+  LeadStageChangedPayload,
+  TaskCompletedPayload,
+} from '../outbox/outbox.constants';
 
 const WEBHOOK_USER_AGENT = 'Prospectly-Webhook/1';
 const WEBHOOK_TIMEOUT_MS = 15_000;
@@ -25,12 +30,15 @@ export type DeliverOutboxEventInput = {
   schemaVersion: number;
   correlationId: string | null;
   createdAt: Date;
-  payload: LeadStageChangedPayload | LeadCreatedPayload | LeadDoNotContactSetPayload;
+  payload:
+    | LeadStageChangedPayload
+    | LeadCreatedPayload
+    | LeadDoNotContactSetPayload
+    | TaskCompletedPayload;
 };
 
 export type WebhookDeliveryResult =
-  | { delivered: true }
-  | { delivered: false; reason: 'no_active_webhook' | 'missing_url' };
+  { delivered: true } | { delivered: false; reason: 'no_active_webhook' | 'missing_url' };
 
 @Injectable()
 export class WebhookDeliveryService {

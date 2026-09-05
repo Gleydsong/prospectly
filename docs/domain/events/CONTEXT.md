@@ -13,7 +13,7 @@ A linha PostgreSQL que guarda o DomainEvent e o estado de publicação (PENDING,
 _Avoid_: Inbox, BillingWebhookEvent, job Redis
 
 **Aggregate**:
-A entidade de negócio à qual o fato se refere. Hoje o writer usa o Lead (`lead.stage_changed`, `lead.created`, `lead.do_not_contact_set`).
+A entidade de negócio à qual o fato se refere. Hoje o writer usa o Lead (`lead.stage_changed`, `lead.created`, `lead.do_not_contact_set`) e a Task (`task.completed`).
 _Avoid_: Tabela, modelo Prisma, documento
 
 **IdempotencyKey**:

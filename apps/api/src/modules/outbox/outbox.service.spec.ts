@@ -8,6 +8,7 @@ import {
   OUTBOX_MAX_ATTEMPTS,
   OUTBOX_QUEUE,
   PUBLISH_OUTBOX_JOB,
+  TASK_COMPLETED_TYPE,
   outboxJobId,
 } from './outbox.constants';
 import { OutboxService } from './outbox.service';
@@ -27,7 +28,9 @@ describe('OutboxService', () => {
   });
 
   const makeWebhookDelivery = () => ({
-    deliverOutboxEvent: jest.fn().mockResolvedValue({ delivered: false, reason: 'no_active_webhook' }),
+    deliverOutboxEvent: jest
+      .fn()
+      .mockResolvedValue({ delivered: false, reason: 'no_active_webhook' }),
   });
 
   const makeService = (
@@ -149,6 +152,51 @@ describe('OutboxService', () => {
       campaignId: 'c1',
     });
     expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp|Pediu/i);
+    expect(data.status).toBe(OutboxEventStatus.PENDING);
+  });
+
+  it('appends task.completed keyed by task id without contact PII', async () => {
+    const prisma = makePrisma();
+    const created = {
+      id: 'event-task',
+      type: TASK_COMPLETED_TYPE,
+      payload: {
+        taskId: 'task-1',
+        leadId: 'lead-9',
+        campaignId: 'c1',
+        campaignStageId: 'stage-1',
+      },
+    };
+    prisma.outboxEvent.create.mockResolvedValue(created);
+    const service = makeService(prisma);
+    const tx = { outboxEvent: prisma.outboxEvent };
+
+    const result = await service.appendTaskCompleted(tx as never, {
+      organizationId: 'org-1',
+      taskId: 'task-1',
+      actorId: 'user-1',
+      correlationId: 'corr-task',
+      payload: {
+        taskId: 'task-1',
+        leadId: 'lead-9',
+        campaignId: 'c1',
+        campaignStageId: 'stage-1',
+      },
+    });
+
+    expect(result).toBe(created);
+    const data = prisma.outboxEvent.create.mock.calls[0]?.[0]?.data;
+    expect(data.type).toBe(TASK_COMPLETED_TYPE);
+    expect(data.aggregateType).toBe('Task');
+    expect(data.aggregateId).toBe('task-1');
+    expect(data.idempotencyKey).toContain(`${TASK_COMPLETED_TYPE}:task-1:`);
+    expect(data.payload).toEqual({
+      taskId: 'task-1',
+      leadId: 'lead-9',
+      campaignId: 'c1',
+      campaignStageId: 'stage-1',
+    });
+    expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp|Ligar/i);
     expect(data.status).toBe(OutboxEventStatus.PENDING);
   });
 
@@ -379,6 +427,42 @@ describe('OutboxService', () => {
     );
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: 'evt-dnc' },
+      data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
+    });
+  });
+
+  it('processes task.completed without requiring lead stage fields', async () => {
+    const prisma = makePrisma();
+    const webhookDelivery = makeWebhookDelivery();
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-task',
+      type: TASK_COMPLETED_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 1,
+      correlationId: 'corr-task',
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      attempts: 1,
+      payload: {
+        taskId: 'task-1',
+        leadId: 'lead-9',
+        campaignId: 'c1',
+        campaignStageId: 'stage-1',
+      },
+    });
+    const service = makeService(prisma, makeQueue(), webhookDelivery);
+
+    await service.process('evt-task');
+
+    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'evt-task',
+        organizationId: 'org-1',
+        type: TASK_COMPLETED_TYPE,
+      }),
+    );
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-task' },
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
     });
   });
