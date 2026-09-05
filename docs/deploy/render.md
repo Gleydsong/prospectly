@@ -81,7 +81,7 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 5. Faça redesploy de **web** e **landing** depois de setar `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: defina `GOOGLE_CLIENT_ID` (API) e `VITE_GOOGLE_CLIENT_ID` (web, mesmo valor). No Google Cloud Console, adicione JavaScript origins autorizadas para a URL da web e redirect URIs autorizadas se usar GIS.
 7. Mantenha o webhook histórico do AbacatePay em `https://<api>/api/v1/billing/webhook/abacate` com header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>`. Secrets na query string **não** são aceitos. Aponte o webhook Asaas para `https://<api>/api/v1/billing/webhook/asaas` com o mesmo token dedicado guardado em `ASAAS_WEBHOOK_TOKEN` e enviado em `asaas-access-token`.
-8. Se o release incluir mudança de schema, rode o job/passo de migrate **único** antes de rolar a API — ver [`migrations.md`](./migrations.md). A imagem da API **não** roda migrate no start (`CMD` é só `node dist/main.js`).
+8. Migrations rodam no **Pre-Deploy Command** do serviço live `prospectly-api` (uma execução por deploy, antes da revisão nova subir) — ver [`migrations.md`](./migrations.md). Nem a API nem o worker rodam migrate no start.
 
 ## Dockerfiles locais (opcional)
 
