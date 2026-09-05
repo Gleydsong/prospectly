@@ -10,10 +10,16 @@ import type {
   ProspectingCategoryOption,
   Role,
   SearchResultLimit,
+  SeoAudit,
+  SeoFinding,
+  SeoOpportunityLevel,
 } from '@prospectly/shared-types';
 
 export type {
   PaginatedResult,
+  SeoAudit,
+  SeoFinding,
+  SeoOpportunityLevel,
   OpportunityCandidateView,
   OpportunityRunView,
   CreateOpportunityRunInput,
@@ -151,6 +157,10 @@ export interface LeadDetail extends LeadListItem {
       metaDescription?: string | null;
       hasViewport?: boolean | null;
       hasContactForm?: boolean | null;
+      seoHealthScore?: number | null;
+      seoOpportunity?: SeoOpportunityLevel | null;
+      architecture?: string | null;
+      seoAudit?: SeoAudit | null;
       completedAt?: string | null;
       issues: Array<{ id: string; code: string; severity: string; message: string }>;
     }>;
