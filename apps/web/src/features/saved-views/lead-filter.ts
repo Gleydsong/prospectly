@@ -9,6 +9,40 @@ type LeadFilterLeaf = Exclude<LeadFilterNode, LeadFilterGroup>;
 
 export type LastContactOp = '' | 'older_than' | 'within';
 export type HasWebsiteFilter = '' | 'yes' | 'no';
+export type LeadViewLayout = 'table' | 'kanban';
+export type LeadViewColumnKey =
+  | 'companyName'
+  | 'city'
+  | 'status'
+  | 'score'
+  | 'owner'
+  | 'tags'
+  | 'segment'
+  | 'email'
+  | 'website';
+
+export const LEAD_VIEW_COLUMN_KEYS: LeadViewColumnKey[] = [
+  'companyName',
+  'city',
+  'status',
+  'score',
+  'owner',
+  'tags',
+  'segment',
+  'email',
+  'website',
+];
+
+export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
+  'companyName',
+  'city',
+  'status',
+  'score',
+  'owner',
+  'tags',
+];
+
+export const KANBAN_PAGE_SIZE = 50;
 
 export type LeadListFilters = {
   q: string;
@@ -17,6 +51,8 @@ export type LeadListFilters = {
   hasWebsite: HasWebsiteFilter;
   lastContactOp: LastContactOp;
   lastContactDays: number;
+  layout: LeadViewLayout;
+  columns: LeadViewColumnKey[];
   extras: LeadViewDefinition;
 };
 
@@ -30,6 +66,8 @@ export function emptyLeadListFilters(): LeadListFilters {
     hasWebsite: '',
     lastContactOp: '',
     lastContactDays: DEFAULT_LAST_CONTACT_DAYS,
+    layout: 'table',
+    columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
     extras: {},
   };
 }
@@ -110,11 +148,38 @@ function applyNode(node: LeadFilterNode, filters: LeadListFilters): void {
     filters.status = first.value as LeadStatus;
     filters.statusOr = second.value as LeadStatus;
     return;
-    return;
   }
   if (!isGroup(node)) {
     applyLeaf(node, filters);
   }
+}
+
+function applyDisplay(definition: LeadViewDefinition, filters: LeadListFilters): void {
+  if (definition.layout === 'kanban' || definition.layout === 'table') {
+    filters.layout = definition.layout;
+  }
+  if (Array.isArray(definition.columns) && definition.columns.length > 0) {
+    filters.columns = definition.columns.filter((column): column is LeadViewColumnKey =>
+      LEAD_VIEW_COLUMN_KEYS.includes(column as LeadViewColumnKey),
+    );
+    if (!filters.columns.includes('companyName')) {
+      filters.columns = ['companyName', ...filters.columns];
+    }
+  }
+}
+
+function isDefaultColumns(columns: LeadViewColumnKey[]): boolean {
+  return (
+    columns.length === DEFAULT_LEAD_VIEW_COLUMNS.length &&
+    columns.every((column, index) => column === DEFAULT_LEAD_VIEW_COLUMNS[index])
+  );
+}
+
+function displayDefinition(filters: LeadListFilters): Pick<LeadViewDefinition, 'layout' | 'columns'> {
+  return {
+    ...(filters.layout === 'kanban' ? { layout: 'kanban' as const } : {}),
+    ...(isDefaultColumns(filters.columns) ? {} : { columns: filters.columns }),
+  };
 }
 
 function hydrateFromAst(definition: LeadViewDefinition): LeadListFilters {
@@ -123,6 +188,7 @@ function hydrateFromAst(definition: LeadViewDefinition): LeadListFilters {
     ...(definition.sortBy ? { sortBy: definition.sortBy } : {}),
     ...(definition.sortOrder ? { sortOrder: definition.sortOrder } : {}),
   };
+  applyDisplay(definition, filters);
   const root = definition.filter;
   if (!root) return filters;
   const nodes = isGroup(root) && root.op === 'and' ? root.nodes : [root];
@@ -136,16 +202,14 @@ export function hydrateLeadListFilters(definition: LeadViewDefinition): LeadList
   if (definition.filter) {
     return hydrateFromAst(definition);
   }
-  const { q, status, hasWebsite, ...rest } = definition;
-  return {
-    q: q ?? '',
-    status: (status as LeadStatus | undefined) ?? '',
-    statusOr: '',
-    hasWebsite: hasWebsite === true ? 'yes' : hasWebsite === false ? 'no' : '',
-    lastContactOp: '',
-    lastContactDays: DEFAULT_LAST_CONTACT_DAYS,
-    extras: rest,
-  };
+  const { q, status, hasWebsite, layout, columns, ...rest } = definition;
+  const filters = emptyLeadListFilters();
+  filters.q = q ?? '';
+  filters.status = (status as LeadStatus | undefined) ?? '';
+  filters.hasWebsite = hasWebsite === true ? 'yes' : hasWebsite === false ? 'no' : '';
+  filters.extras = rest;
+  applyDisplay({ layout, columns }, filters);
+  return filters;
 }
 
 function extrasLeaves(extras: LeadViewDefinition): LeadFilterNode[] {
@@ -168,6 +232,8 @@ function extrasLeaves(extras: LeadViewDefinition): LeadFilterNode[] {
 export function definitionFromFilters(filters: LeadListFilters): LeadViewDefinition {
   const extras = { ...filters.extras };
   delete extras.filter;
+  delete extras.layout;
+  delete extras.columns;
 
   if (!needsAst(filters)) {
     const status = filters.status || filters.statusOr;
@@ -176,6 +242,7 @@ export function definitionFromFilters(filters: LeadListFilters): LeadViewDefinit
       ...(filters.q.trim() ? { q: filters.q.trim() } : {}),
       ...(status ? { status } : {}),
       ...(filters.hasWebsite === '' ? {} : { hasWebsite: filters.hasWebsite === 'yes' }),
+      ...displayDefinition(filters),
     };
   }
 
@@ -216,15 +283,17 @@ export function definitionFromFilters(filters: LeadListFilters): LeadViewDefinit
     filter: { op: 'and', nodes },
     ...(extras.sortBy ? { sortBy: extras.sortBy } : {}),
     ...(extras.sortOrder ? { sortOrder: extras.sortOrder } : {}),
+    ...displayDefinition(filters),
   };
 }
 
 export function leadsQueryFromFilters(filters: LeadListFilters, page: number): LeadsQuery {
   const definition = definitionFromFilters(filters);
+  const pageSize = filters.layout === 'kanban' ? KANBAN_PAGE_SIZE : 15;
   if (definition.filter) {
     return {
       page,
-      pageSize: 15,
+      pageSize,
       filter: definition.filter,
       sortBy: definition.sortBy ?? 'createdAt',
       sortOrder: definition.sortOrder ?? 'desc',
@@ -232,7 +301,7 @@ export function leadsQueryFromFilters(filters: LeadListFilters, page: number): L
   }
   return {
     page,
-    pageSize: 15,
+    pageSize,
     q: definition.q,
     status: definition.status,
     hasWebsite: definition.hasWebsite,

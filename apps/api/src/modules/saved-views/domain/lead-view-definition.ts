@@ -26,7 +26,33 @@ export const LEAD_VIEW_DEFINITION_KEYS = [
   'sortBy',
   'sortOrder',
   'filter',
+  'layout',
+  'columns',
 ] as const;
+
+export const LEAD_VIEW_COLUMN_KEYS = [
+  'companyName',
+  'city',
+  'status',
+  'score',
+  'owner',
+  'tags',
+  'segment',
+  'email',
+  'website',
+] as const;
+
+export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
+  'companyName',
+  'city',
+  'status',
+  'score',
+  'owner',
+  'tags',
+];
+
+export type LeadViewColumnKey = (typeof LEAD_VIEW_COLUMN_KEYS)[number];
+export type LeadViewLayout = 'table' | 'kanban';
 
 export type LeadViewDefinitionKey = (typeof LEAD_VIEW_DEFINITION_KEYS)[number];
 
@@ -45,11 +71,20 @@ export type LeadViewDefinition = {
   sortBy?: LeadSortField;
   sortOrder?: 'asc' | 'desc';
   filter?: LeadFilterNode;
+  layout?: LeadViewLayout;
+  columns?: LeadViewColumnKey[];
 };
 
-const FLAT_ALLOWED_KEYS = new Set<string>([...LEAD_VIEW_FLAT_PREDICATE_KEYS, 'sortBy', 'sortOrder']);
-const AST_ALLOWED_KEYS = new Set(['filter', 'sortBy', 'sortOrder']);
+const FLAT_ALLOWED_KEYS = new Set<string>([
+  ...LEAD_VIEW_FLAT_PREDICATE_KEYS,
+  'sortBy',
+  'sortOrder',
+  'layout',
+  'columns',
+]);
+const AST_ALLOWED_KEYS = new Set(['filter', 'sortBy', 'sortOrder', 'layout', 'columns']);
 const FLAT_PREDICATE_KEYS = new Set<string>(LEAD_VIEW_FLAT_PREDICATE_KEYS);
+const COLUMN_KEYS = new Set<string>(LEAD_VIEW_COLUMN_KEYS);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LEAD_STATUSES = new Set<string>(Object.values(LeadStatus));
 const LEAD_SOURCES = new Set<string>(Object.values(LeadSource));
@@ -100,6 +135,39 @@ function parseSort(raw: Record<string, unknown>, definition: LeadViewDefinition)
   }
 }
 
+function parseDisplay(raw: Record<string, unknown>, definition: LeadViewDefinition): void {
+  if (raw.layout !== undefined) {
+    if (raw.layout !== 'table' && raw.layout !== 'kanban') {
+      throw new InvalidLeadViewDefinitionError('layout must be table or kanban');
+    }
+    definition.layout = raw.layout;
+  }
+  if (raw.columns !== undefined) {
+    if (!Array.isArray(raw.columns) || raw.columns.length === 0) {
+      throw new InvalidLeadViewDefinitionError('columns must be a non-empty array');
+    }
+    if (raw.columns.length > LEAD_VIEW_COLUMN_KEYS.length) {
+      throw new InvalidLeadViewDefinitionError('columns has too many entries');
+    }
+    const seen = new Set<string>();
+    for (const column of raw.columns) {
+      if (typeof column !== 'string' || !COLUMN_KEYS.has(column)) {
+        throw new InvalidLeadViewDefinitionError(
+          `Unknown column: ${typeof column === 'string' ? column : String(column)}`,
+        );
+      }
+      if (seen.has(column)) {
+        throw new InvalidLeadViewDefinitionError('columns must not contain duplicates');
+      }
+      seen.add(column);
+    }
+    if (!seen.has('companyName')) {
+      throw new InvalidLeadViewDefinitionError('columns must include companyName');
+    }
+    definition.columns = raw.columns as LeadViewColumnKey[];
+  }
+}
+
 function parseAstDefinition(raw: Record<string, unknown>): LeadViewDefinition {
   const unknownKeys = Object.keys(raw).filter((key) => !AST_ALLOWED_KEYS.has(key));
   if (unknownKeys.length > 0) {
@@ -121,6 +189,7 @@ function parseAstDefinition(raw: Record<string, unknown>): LeadViewDefinition {
     throw error;
   }
   parseSort(raw, definition);
+  parseDisplay(raw, definition);
   return definition;
 }
 
@@ -210,6 +279,7 @@ export function parseLeadViewDefinition(raw: unknown): LeadViewDefinition {
     definition.hasWebsite = raw.hasWebsite;
   }
   parseSort(raw, definition);
+  parseDisplay(raw, definition);
 
   return definition;
 }

@@ -40,16 +40,74 @@ import {
 import type { LeadViewDefinition, SavedViewVisibility } from '@/features/saved-views/api';
 import {
   DEFAULT_LAST_CONTACT_DAYS,
+  DEFAULT_LEAD_VIEW_COLUMNS,
   definitionFromFilters,
   hydrateLeadListFilters,
   leadExportFiltersFromList,
   leadsQueryFromFilters,
+  LEAD_VIEW_COLUMN_KEYS,
   type LastContactOp,
+  type LeadViewColumnKey,
+  type LeadViewLayout,
 } from '@/features/saved-views/lead-filter';
 import { useAuthStore } from '@/stores/auth.store';
-import { LeadStatus, Role } from '@/types';
+import { LeadStatus, Role, type LeadListItem } from '@/types';
 
 import { LeadFormModal } from './lead-form-modal';
+import { LeadsKanban } from './leads-kanban';
+
+function LeadColumnValue({ column, lead }: { column: LeadViewColumnKey; lead: LeadListItem }) {
+  switch (column) {
+    case 'companyName':
+      return (
+        <div className="flex items-center gap-2">
+          <div>
+            <Link
+              to={`/leads/${lead.id}`}
+              className="font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {lead.companyName}
+            </Link>
+            <p className="text-xs text-[color:var(--ink-muted)]">
+              {lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : '—')}
+            </p>
+          </div>
+          {!lead.website ? (
+            <Badge tone="amber" title="Sem website">
+              <Globe className="h-3 w-3" aria-hidden /> sem site
+            </Badge>
+          ) : null}
+        </div>
+      );
+    case 'city':
+      return <span className="text-[color:var(--ink-muted)]">{lead.city ?? '—'}</span>;
+    case 'status':
+      return <LeadStatusBadge status={lead.status} />;
+    case 'score':
+      return <ScoreBadge score={lead.score} />;
+    case 'owner':
+      return <span className="text-[color:var(--ink-muted)]">{lead.owner?.name ?? '—'}</span>;
+    case 'tags':
+      return (
+        <div className="flex flex-wrap gap-1">
+          {lead.tags.slice(0, 3).map((tag) => (
+            <Badge key={tag.id}>{tag.name}</Badge>
+          ))}
+        </div>
+      );
+    case 'segment':
+      return (
+        <span className="text-[color:var(--ink-muted)]">
+          {lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : '—')}
+        </span>
+      );
+    case 'email':
+      return <span className="text-[color:var(--ink-muted)]">{lead.email ?? '—'}</span>;
+    case 'website':
+      return <span className="text-[color:var(--ink-muted)]">{lead.website ?? '—'}</span>;
+  }
+}
 
 export function LeadsPage() {
   const { t } = useTranslation();
@@ -66,6 +124,8 @@ export function LeadsPage() {
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
   const [lastContactOp, setLastContactOp] = useState<LastContactOp>('');
   const [lastContactDays, setLastContactDays] = useState(DEFAULT_LAST_CONTACT_DAYS);
+  const [layout, setLayout] = useState<LeadViewLayout>('table');
+  const [columns, setColumns] = useState<LeadViewColumnKey[]>([...DEFAULT_LEAD_VIEW_COLUMNS]);
   const [extras, setExtras] = useState<LeadViewDefinition>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
@@ -108,6 +168,8 @@ export function LeadsPage() {
     setHasWebsite('');
     setLastContactOp('');
     setLastContactDays(DEFAULT_LAST_CONTACT_DAYS);
+    setLayout('table');
+    setColumns([...DEFAULT_LEAD_VIEW_COLUMNS]);
     setExtras({});
   }, [viewId]);
 
@@ -124,6 +186,8 @@ export function LeadsPage() {
     setHasWebsite(hydrated.hasWebsite);
     setLastContactOp(hydrated.lastContactOp);
     setLastContactDays(hydrated.lastContactDays);
+    setLayout(hydrated.layout);
+    setColumns(hydrated.columns);
     setExtras(hydrated.extras);
     setPage(1);
     // Reapply only when the selected view identity or server timestamp changes.
@@ -138,6 +202,8 @@ export function LeadsPage() {
       hasWebsite,
       lastContactOp,
       lastContactDays,
+      layout,
+      columns,
       extras,
     },
     page,
@@ -186,6 +252,8 @@ export function LeadsPage() {
       hasWebsite,
       lastContactOp,
       lastContactDays,
+      layout,
+      columns,
       extras,
     });
     try {
@@ -259,6 +327,8 @@ export function LeadsPage() {
           hasWebsite,
           lastContactOp,
           lastContactDays,
+          layout,
+          columns,
           extras,
         }),
       });
@@ -399,6 +469,65 @@ export function LeadsPage() {
               />
             ) : null}
           </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t('leads.layout')}>
+              <Button
+                type="button"
+                variant={layout === 'table' ? 'primary' : 'outline'}
+                aria-pressed={layout === 'table'}
+                onClick={() => {
+                  setPage(1);
+                  setLayout('table');
+                }}
+              >
+                {t('leads.layoutTable')}
+              </Button>
+              <Button
+                type="button"
+                variant={layout === 'kanban' ? 'primary' : 'outline'}
+                aria-pressed={layout === 'kanban'}
+                onClick={() => {
+                  setPage(1);
+                  setLayout('kanban');
+                }}
+              >
+                {t('leads.layoutKanban')}
+              </Button>
+            </div>
+            {layout === 'table' ? (
+              <fieldset className="flex flex-wrap gap-3 rounded-lg border border-[color:var(--border)] px-3 py-2">
+                <legend className="px-1 text-xs font-semibold text-[color:var(--ink-muted)]">
+                  {t('leads.columns')}
+                </legend>
+                {LEAD_VIEW_COLUMN_KEYS.map((column) => (
+                  <label
+                    key={column}
+                    className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-[color:var(--border)]"
+                      checked={columns.includes(column)}
+                      disabled={column === 'companyName'}
+                      onChange={() => {
+                        if (column === 'companyName') return;
+                        setPage(1);
+                        setColumns((current) => {
+                          if (current.includes(column)) {
+                            return current.filter((value) => value !== column);
+                          }
+                          return LEAD_VIEW_COLUMN_KEYS.filter(
+                            (key) => key === column || current.includes(key),
+                          );
+                        });
+                      }}
+                    />
+                    {t(`leads.column.${column}`)}
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="sm:max-w-xs sm:flex-1">
               <Select
@@ -470,6 +599,18 @@ export function LeadsPage() {
           <div className="p-5">
             <Alert tone="error">Erro ao carregar clientes. Tente novamente.</Alert>
           </div>
+        ) : layout === 'kanban' ? (
+          <div className="space-y-3 p-4 sm:p-5">
+            <LeadsKanban leads={leads} label={t('leads.kanbanLabel')} />
+            {meta ? (
+              <Pagination
+                page={meta.page}
+                totalPages={meta.totalPages}
+                total={meta.total}
+                onPageChange={setPage}
+              />
+            ) : null}
+          </div>
         ) : leads.length === 0 ? (
           <div className="p-5">
             <EmptyState
@@ -527,24 +668,11 @@ export function LeadsPage() {
               <table className="w-full min-w-[820px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--border)] text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Empresa
-                    </th>
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Cidade
-                    </th>
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Status
-                    </th>
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Pontuação
-                    </th>
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Responsável
-                    </th>
-                    <th scope="col" className="px-5 py-3 font-medium">
-                      Etiquetas
-                    </th>
+                    {columns.map((column) => (
+                      <th key={column} scope="col" className="px-5 py-3 font-medium">
+                        {t(`leads.column.${column}`)}
+                      </th>
+                    ))}
                     <th scope="col" className="px-5 py-3 font-medium">
                       <span className="sr-only">Ações</span>
                     </th>
@@ -557,47 +685,11 @@ export function LeadsPage() {
                       className="cursor-pointer border-b border-[color:var(--border)] hover:bg-[color:var(--surface-hover)]"
                       onClick={() => navigate(`/leads/${lead.id}`)}
                     >
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <Link
-                              to={`/leads/${lead.id}`}
-                              className="font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {lead.companyName}
-                            </Link>
-                            <p className="text-xs text-[color:var(--ink-muted)]">
-                              {lead.segment ??
-                                (lead.category ? formatCategoryTag(lead.category) : '—')}
-                            </p>
-                          </div>
-                          {!lead.website ? (
-                            <Badge tone="amber" title="Sem website">
-                              <Globe className="h-3 w-3" aria-hidden /> sem site
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-[color:var(--ink-muted)]">
-                        {lead.city ?? '—'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <LeadStatusBadge status={lead.status} />
-                      </td>
-                      <td className="px-5 py-3">
-                        <ScoreBadge score={lead.score} />
-                      </td>
-                      <td className="px-5 py-3 text-[color:var(--ink-muted)]">
-                        {lead.owner?.name ?? '—'}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {lead.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag.id}>{tag.name}</Badge>
-                          ))}
-                        </div>
-                      </td>
+                      {columns.map((column) => (
+                        <td key={column} className="px-5 py-3">
+                          <LeadColumnValue column={column} lead={lead} />
+                        </td>
+                      ))}
                       <td className="px-3 py-3 text-right">
                         <Button
                           type="button"

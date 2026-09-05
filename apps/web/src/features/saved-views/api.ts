@@ -22,6 +22,8 @@ export interface LeadViewDefinition {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   filter?: LeadFilterNode;
+  layout?: 'table' | 'kanban';
+  columns?: string[];
 }
 
 export interface SavedView {

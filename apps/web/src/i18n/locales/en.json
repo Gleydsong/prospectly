@@ -593,7 +593,23 @@
     "lastContactAny": "Any last contact",
     "lastContactOlder": "No contact for more than N days",
     "lastContactWithin": "Contacted in the last N days",
-    "lastContactDays": "Days"
+    "lastContactDays": "Days",
+    "layout": "Layout",
+    "layoutTable": "Table",
+    "layoutKanban": "Kanban",
+    "kanbanLabel": "Board by status",
+    "columns": "Columns",
+    "column": {
+      "companyName": "Company",
+      "city": "City",
+      "status": "Status",
+      "score": "Score",
+      "owner": "Owner",
+      "tags": "Tags",
+      "segment": "Segment",
+      "email": "Email",
+      "website": "Website"
+    }
   },
   "search": {
     "highIntentEyebrow": "High-intent search",
