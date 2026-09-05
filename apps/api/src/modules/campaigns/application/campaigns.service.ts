@@ -1,17 +1,22 @@
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
-import type { CampaignLeadResult, CampaignStatus, Prisma } from '@prisma/client';
+  SavedViewVisibility,
+  type CampaignLeadResult,
+  type CampaignStatus,
+  type Prisma,
+} from '@prisma/client';
 
 import { paginate } from '../../../common/dto/pagination.dto';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../../audit/audit.constants';
 import { AuditService } from '../../audit/audit.service';
-import { SuppressionService } from '../../privacy/suppression.service';
+import { LeadsService } from '../../leads/leads.service';
 import { OutboxService } from '../../outbox/outbox.service';
+import { SuppressionService } from '../../privacy/suppression.service';
+import {
+  InvalidLeadViewDefinitionError,
+  parseLeadViewDefinition,
+} from '../../saved-views/domain/lead-view-definition';
 import {
   defaultStages,
   emptyStageMetrics,
@@ -21,7 +26,10 @@ import {
   type CampaignStageDefinition,
 } from '../domain/campaign-stages';
 import { assertCampaignStatusTransition } from '../domain/campaign-status';
-import { AddCampaignLeadsDto } from '../presentation/dto/add-campaign-leads.dto';
+import {
+  ADD_CAMPAIGN_LEADS_MAX,
+  AddCampaignLeadsDto,
+} from '../presentation/dto/add-campaign-leads.dto';
 import { CreateCampaignDto } from '../presentation/dto/create-campaign.dto';
 import { CreateStageTasksDto } from '../presentation/dto/create-stage-tasks.dto';
 import { QueryCampaignLeadsDto } from '../presentation/dto/query-campaign-leads.dto';
@@ -53,6 +61,7 @@ export class CampaignsService {
     private readonly audit: AuditService,
     @Optional() private readonly suppression?: SuppressionService,
     @Optional() private readonly outbox?: OutboxService,
+    @Optional() private readonly leads?: LeadsService,
   ) {}
 
   async list(organizationId: string, query: QueryCampaignsDto) {
@@ -202,15 +211,16 @@ export class CampaignsService {
     dto: AddCampaignLeadsDto,
   ) {
     const campaign = await this.requireCampaign(organizationId, campaignId);
+    const leadIds = await this.resolveLeadIds(organizationId, userId, dto);
     const leads = await this.prisma.lead.findMany({
       where: {
         organizationId,
-        id: { in: dto.leadIds },
+        id: { in: leadIds },
         deletedAt: null,
       },
       select: { id: true, doNotContact: true },
     });
-    if (leads.length !== dto.leadIds.length) {
+    if (leads.length !== leadIds.length) {
       throw new BadRequestException('One or more leads were not found in this organization');
     }
     const blocked = leads.filter((l) => l.doNotContact);
@@ -222,7 +232,7 @@ export class CampaignsService {
     }
 
     const result = await this.prisma.campaignLead.createMany({
-      data: dto.leadIds.map((leadId) => ({
+      data: leadIds.map((leadId) => ({
         campaignId: campaign.id,
         leadId,
         status: 'PENDING',
@@ -236,18 +246,17 @@ export class CampaignsService {
       action: AUDIT_ACTIONS.CAMPAIGN_LEADS_ADDED,
       entity: 'Campaign',
       entityId: campaign.id,
-      metadata: { requested: dto.leadIds.length, added: result.count },
+      metadata: {
+        requested: leadIds.length,
+        added: result.count,
+        ...(dto.viewId ? { viewId: dto.viewId } : {}),
+      },
     });
 
     return this.get(organizationId, campaignId);
   }
 
-  async removeLead(
-    organizationId: string,
-    userId: string,
-    campaignId: string,
-    leadId: string,
-  ) {
+  async removeLead(organizationId: string, userId: string, campaignId: string, leadId: string) {
     await this.requireCampaign(organizationId, campaignId);
     const existing = await this.prisma.campaignLead.findFirst({
       where: {
@@ -772,6 +781,78 @@ export class CampaignsService {
       templateId: stage.templateId,
       metrics: emptyStageMetrics(),
     }));
+  }
+
+  private async resolveLeadIds(
+    organizationId: string,
+    userId: string,
+    dto: AddCampaignLeadsDto,
+  ): Promise<string[]> {
+    const hasIds = Array.isArray(dto.leadIds) && dto.leadIds.length > 0;
+    const hasView = Boolean(dto.viewId);
+    if (hasIds === hasView) {
+      throw new BadRequestException('Provide either leadIds or viewId');
+    }
+    if (hasIds) {
+      return dto.leadIds ?? [];
+    }
+    return this.resolveLeadIdsFromView(organizationId, userId, dto.viewId as string);
+  }
+
+  private async resolveLeadIdsFromView(
+    organizationId: string,
+    userId: string,
+    viewId: string,
+  ): Promise<string[]> {
+    if (!this.leads) {
+      throw new BadRequestException('Saved view membership is unavailable');
+    }
+
+    const view = await this.prisma.savedView.findFirst({
+      where: {
+        id: viewId,
+        organizationId,
+        archivedAt: null,
+        OR: [{ ownerId: userId }, { visibility: SavedViewVisibility.TEAM }],
+      },
+    });
+    if (!view) {
+      throw new NotFoundException('Saved view not found');
+    }
+
+    let definition;
+    try {
+      definition = parseLeadViewDefinition(view.definition);
+    } catch (error) {
+      if (error instanceof InvalidLeadViewDefinitionError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
+    }
+
+    const {
+      layout: _layout,
+      columns: _columns,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+      ...filters
+    } = definition;
+    const { ids, total } = await this.leads.listIds(
+      organizationId,
+      filters,
+      ADD_CAMPAIGN_LEADS_MAX + 1,
+    );
+    if (total === 0) {
+      throw new BadRequestException('Vista has no matching leads');
+    }
+    if (total > ADD_CAMPAIGN_LEADS_MAX) {
+      throw new BadRequestException({
+        message: `Vista matches more than ${ADD_CAMPAIGN_LEADS_MAX} leads; narrow the filters before adding to a campaign`,
+        total,
+        max: ADD_CAMPAIGN_LEADS_MAX,
+      });
+    }
+    return ids;
   }
 
   private async requireCampaign(organizationId: string, id: string) {

@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { AuditService } from '../../audit/audit.service';
+import type { LeadsService } from '../../leads/leads.service';
 import { CampaignsService } from './campaigns.service';
 import type { TemplatesService } from './templates.service';
 
@@ -33,6 +34,9 @@ const makePrisma = () => {
     lead: {
       findMany: jest.fn(),
       update: jest.fn(),
+    },
+    savedView: {
+      findFirst: jest.fn(),
     },
     task: {
       create: jest.fn(),
@@ -71,6 +75,7 @@ const makePrisma = () => {
     };
     campaignActivity: { create: MockFn; groupBy: MockFn };
     lead: { findMany: MockFn; update: MockFn };
+    savedView: { findFirst: MockFn };
     task: { create: MockFn; findMany: MockFn; count: MockFn; groupBy: MockFn };
     organizationMember: { findUnique: MockFn };
     $transaction: MockFn;
@@ -86,6 +91,24 @@ const makeAudit = () =>
   ({
     log: jest.fn().mockResolvedValue(undefined),
   }) as unknown as AuditService & { log: jest.Mock };
+
+const makeLeads = () =>
+  ({
+    listIds: jest.fn(),
+  }) as unknown as LeadsService & { listIds: MockFn };
+
+function stubCampaignGet(prisma: ReturnType<typeof makePrisma>) {
+  prisma.campaign.findFirst.mockResolvedValue({
+    id: 'c1',
+    organizationId: 'org-a',
+    metrics: null,
+    template: null,
+    owner: { id: 'user-1', name: 'Owner', email: 'o@test' },
+    leads: [],
+    _count: { leads: 0, tasks: 0, activities: 0 },
+  });
+  prisma.campaignLead.groupBy.mockResolvedValue([]);
+}
 
 const stageId = '11111111-1111-4111-8111-111111111111';
 const stageIdCall = '22222222-2222-4222-8222-222222222222';
@@ -200,15 +223,199 @@ describe('CampaignsService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('addLeads rejects when both leadIds and viewId are sent', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+
+    await expect(
+      service.addLeads('org-a', 'user-1', 'c1', {
+        leadIds: ['lead-1'],
+        viewId: '11111111-1111-4111-8111-111111111111',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+    expect(prisma.savedView.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('addLeads rejects when neither leadIds nor viewId are sent', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+
+    await expect(service.addLeads('org-a', 'user-1', 'c1', {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+  });
+
+  it('addLeads with viewId adds matching leads from a visible Vista', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    const leads = makeLeads();
+    stubCampaignGet(prisma);
+    prisma.savedView.findFirst.mockResolvedValue({
+      id: 'view-1',
+      organizationId: 'org-a',
+      ownerId: 'other-user',
+      visibility: 'TEAM',
+      archivedAt: null,
+      definition: { city: 'Lisboa', layout: 'kanban', columns: ['companyName'] },
+    });
+    leads.listIds.mockResolvedValue({ ids: ['lead-1', 'lead-2'], total: 2 });
+    prisma.lead.findMany.mockResolvedValue([
+      { id: 'lead-1', doNotContact: false },
+      { id: 'lead-2', doNotContact: false },
+    ]);
+    prisma.campaignLead.createMany.mockResolvedValue({ count: 2 });
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      audit,
+      undefined,
+      undefined,
+      leads,
+    );
+
+    await service.addLeads('org-a', 'user-1', 'c1', { viewId: 'view-1' });
+
+    expect(leads.listIds).toHaveBeenCalledWith(
+      'org-a',
+      expect.objectContaining({ city: 'Lisboa' }),
+      201,
+    );
+    expect(leads.listIds.mock.calls[0]?.[1]).not.toHaveProperty('layout');
+    expect(leads.listIds.mock.calls[0]?.[1]).not.toHaveProperty('columns');
+    expect(prisma.campaignLead.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          { campaignId: 'c1', leadId: 'lead-1', status: 'PENDING' },
+          { campaignId: 'c1', leadId: 'lead-2', status: 'PENDING' },
+        ],
+        skipDuplicates: true,
+      }),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'campaign.leads_added',
+        metadata: expect.objectContaining({ requested: 2, added: 2, viewId: 'view-1' }),
+      }),
+    );
+  });
+
+  it('addLeads with viewId returns NotFound when the Vista is not visible', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    prisma.savedView.findFirst.mockResolvedValue(null);
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      undefined,
+      makeLeads(),
+    );
+
+    await expect(
+      service.addLeads('org-a', 'user-1', 'c1', { viewId: 'view-missing' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+  });
+
+  it('addLeads with viewId rejects when the Vista matches more than 200 leads', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    prisma.savedView.findFirst.mockResolvedValue({
+      id: 'view-1',
+      ownerId: 'user-1',
+      visibility: 'PRIVATE',
+      archivedAt: null,
+      definition: { city: 'Lisboa' },
+    });
+    const leads = makeLeads();
+    leads.listIds.mockResolvedValue({
+      ids: Array.from({ length: 201 }, (_, i) => `lead-${i}`),
+      total: 201,
+    });
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      undefined,
+      leads,
+    );
+
+    await expect(
+      service.addLeads('org-a', 'user-1', 'c1', { viewId: 'view-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+  });
+
+  it('addLeads with viewId rejects an empty Vista', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    prisma.savedView.findFirst.mockResolvedValue({
+      id: 'view-1',
+      ownerId: 'user-1',
+      visibility: 'PRIVATE',
+      archivedAt: null,
+      definition: { city: 'Lisboa' },
+    });
+    const leads = makeLeads();
+    leads.listIds.mockResolvedValue({ ids: [], total: 0 });
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      undefined,
+      leads,
+    );
+
+    await expect(
+      service.addLeads('org-a', 'user-1', 'c1', { viewId: 'view-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+  });
+
+  it('addLeads with viewId rejects doNotContact leads in the Vista', async () => {
+    const prisma = makePrisma();
+    prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
+    prisma.savedView.findFirst.mockResolvedValue({
+      id: 'view-1',
+      ownerId: 'user-1',
+      visibility: 'PRIVATE',
+      archivedAt: null,
+      definition: { city: 'Lisboa' },
+    });
+    const leads = makeLeads();
+    leads.listIds.mockResolvedValue({ ids: ['lead-1'], total: 1 });
+    prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1', doNotContact: true }]);
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      undefined,
+      leads,
+    );
+
+    await expect(
+      service.addLeads('org-a', 'user-1', 'c1', { viewId: 'view-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.campaignLead.createMany).not.toHaveBeenCalled();
+  });
+
   it('removeLead returns NotFound for another organization', async () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.campaignLead.findFirst.mockResolvedValue(null);
     const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
 
-    await expect(
-      service.removeLead('org-a', 'user-1', 'c1', 'lead-1'),
-    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.removeLead('org-a', 'user-1', 'c1', 'lead-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('removeLead deletes membership when found', async () => {
@@ -439,7 +646,13 @@ describe('CampaignsService', () => {
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const service = new CampaignsService(prisma, makeTemplates(), audit, undefined, outbox as never);
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      audit,
+      undefined,
+      outbox as never,
+    );
 
     await service.recordResult('org-a', 'user-1', 'c1', 'lead-1', {
       result: 'OPT_OUT',
@@ -521,7 +734,13 @@ describe('CampaignsService', () => {
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit(), undefined, outbox as never);
+    const service = new CampaignsService(
+      prisma,
+      makeTemplates(),
+      makeAudit(),
+      undefined,
+      outbox as never,
+    );
 
     await expect(
       service.recordResult('org-a', 'user-1', 'c1', 'lead-1', { result: 'OPT_OUT' }),

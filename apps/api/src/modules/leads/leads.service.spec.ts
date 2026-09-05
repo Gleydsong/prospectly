@@ -234,10 +234,7 @@ describe('LeadsService', () => {
               AND: [
                 { city: { equals: 'Lisboa', mode: 'insensitive' } },
                 {
-                  OR: [
-                    { lastContactAt: { lt: expect.any(Date) } },
-                    { lastContactAt: null },
-                  ],
+                  OR: [{ lastContactAt: { lt: expect.any(Date) } }, { lastContactAt: null }],
                 },
               ],
             },
@@ -261,6 +258,33 @@ describe('LeadsService', () => {
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.lead.findMany).not.toHaveBeenCalled();
+  });
+
+  it('listIds scopes by organization and returns ids with total', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(2);
+    prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1' }, { id: 'lead-2' }]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await expect(service.listIds('org1', { city: 'Lisboa' }, 201)).resolves.toEqual({
+      ids: ['lead-1', 'lead-2'],
+      total: 2,
+    });
+
+    expect(prisma.lead.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        organizationId: 'org1',
+        deletedAt: null,
+        city: expect.anything(),
+      }),
+    });
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ organizationId: 'org1', deletedAt: null }),
+        select: { id: true },
+        take: 201,
+      }),
+    );
   });
 
   it('getById throws NotFoundException for lead from another org', async () => {
@@ -366,10 +390,16 @@ describe('LeadsService', () => {
         source: 'OPENSTREETMAP',
         websitePresence: 'NO_WEBSITE_REPORTED',
         confidenceLevel: 'LOW',
-        missingFields: expect.arrayContaining(['phone', 'email', 'website', 'whatsapp', 'address', 'category']),
+        missingFields: expect.arrayContaining([
+          'phone',
+          'email',
+          'website',
+          'whatsapp',
+          'address',
+          'category',
+        ]),
       }),
     );
     expect((result as { missingFields: string[] }).missingFields).not.toContain('city');
   });
-
 });

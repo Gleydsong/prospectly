@@ -16,17 +16,20 @@ import {
   removeCampaignLead,
   updateCampaignStatus,
   updateMessageTemplate,
+  type AddCampaignLeadsInput,
   type CampaignLeadResult,
   type CampaignStatus,
   type CreateCampaignInput,
   type CreateTemplateInput,
 } from './api';
 
-export function useCampaigns(params: {
-  page?: number;
-  pageSize?: number;
-  status?: CampaignStatus;
-} = {}) {
+export function useCampaigns(
+  params: {
+    page?: number;
+    pageSize?: number;
+    status?: CampaignStatus;
+  } = {},
+) {
   return useQuery({
     queryKey: ['campaigns', params],
     queryFn: () => fetchCampaigns(params),
@@ -83,7 +86,7 @@ export function useUpdateCampaignStatus(campaignId: string) {
 export function useAddCampaignLeads(campaignId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (leadIds: string[]) => addCampaignLeads(campaignId, leadIds),
+    mutationFn: (input: AddCampaignLeadsInput) => addCampaignLeads(campaignId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['campaigns', campaignId] });
     },
@@ -103,13 +106,8 @@ export function useRemoveCampaignLead(campaignId: string) {
 export function useCreateStageTasks(campaignId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      stageId,
-      leadIds,
-    }: {
-      stageId: string;
-      leadIds?: string[];
-    }) => createStageTasks(campaignId, stageId, { leadIds }),
+    mutationFn: ({ stageId, leadIds }: { stageId: string; leadIds?: string[] }) =>
+      createStageTasks(campaignId, stageId, { leadIds }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['campaigns', campaignId] });
     },
