@@ -12,7 +12,10 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantContextInterceptor } from './common/prisma/tenant-context.interceptor';
 import { HealthModule } from './common/health/health.module';
 import { MailModule } from './common/mail/mail.module';
-import { EmailPreviewModule, shouldEnableEmailPreview } from './common/mail/preview/email-preview.module';
+import {
+  EmailPreviewModule,
+  shouldEnableEmailPreview,
+} from './common/mail/preview/email-preview.module';
 import { RateLimitGuard } from './common/throttler/rate-limit.guard';
 import { RedisThrottlerModule } from './common/throttler/redis-throttler.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
@@ -24,6 +27,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { SavedViewsModule } from './modules/saved-views/saved-views.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { PipelinesModule } from './modules/pipelines/pipelines.module';
@@ -97,6 +101,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     UsersModule,
     OrganizationsModule,
     LeadsModule,
+    SavedViewsModule,
     ActivitiesModule,
     TasksModule,
     PipelinesModule,

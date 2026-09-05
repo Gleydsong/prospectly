@@ -75,6 +75,15 @@ enum TaskStatus {
   CANCELLED
 }
 
+enum SavedViewVisibility {
+  PRIVATE
+  TEAM
+}
+
+enum SavedViewResourceType {
+  LEAD
+}
+
 enum CampaignStatus {
   DRAFT
   SCHEDULED
@@ -271,6 +280,7 @@ model User {
   opportunityRuns      OpportunityRun[]
   aiRuns               AiRun[]
   consents             ConsentRecord[]
+  savedViews           SavedView[]
 
   @@index([email])
 }
@@ -321,6 +331,7 @@ model Organization {
   dataSubjectRequests DataSubjectRequest[]
   suppressionEntries  SuppressionEntry[]
   outboxEvents        OutboxEvent[]
+  savedViews          SavedView[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -1102,6 +1113,27 @@ model OutboxEvent {
   @@index([status, retainUntil])
   @@index([retainUntil])
   @@index([organizationId, type, aggregateId])
+}
+
+/// Named, tenant-owned query over Leads. Definition is allowlisted; not SQL.
+model SavedView {
+  id             String                @id @default(uuid())
+  organizationId String
+  ownerId        String
+  name           String
+  description    String?
+  visibility     SavedViewVisibility   @default(PRIVATE)
+  resourceType   SavedViewResourceType @default(LEAD)
+  definition     Json
+  archivedAt     DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, archivedAt, updatedAt])
+  @@index([organizationId, ownerId, visibility])
 }
 
 /// Provider-agnostic webhook idempotency for active and historical gateways.

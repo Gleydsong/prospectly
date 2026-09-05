@@ -20,6 +20,9 @@ export const AUDIT_ACTIONS = {
   CAMPAIGN_TASKS_CREATED: 'campaign.tasks_created',
   MESSAGE_TEMPLATE_CREATED: 'message_template.created',
   MESSAGE_TEMPLATE_UPDATED: 'message_template.updated',
+  SAVED_VIEW_CREATED: 'saved_view.created',
+  SAVED_VIEW_UPDATED: 'saved_view.updated',
+  SAVED_VIEW_ARCHIVED: 'saved_view.archived',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

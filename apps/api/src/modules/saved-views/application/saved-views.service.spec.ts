@@ -1,0 +1,173 @@
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { SavedViewVisibility } from '@prisma/client';
+
+import type { PrismaService } from '../../../common/prisma/prisma.service';
+import type { AuditService } from '../../audit/audit.service';
+import type { LeadsService } from '../../leads/leads.service';
+import { SavedViewsService } from './saved-views.service';
+
+const makePrisma = () => {
+  const prisma = {
+    savedView: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    },
+  };
+  return prisma as unknown as PrismaService & {
+    savedView: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+    };
+  };
+};
+
+const makeLeads = () =>
+  ({
+    list: jest.fn(),
+  }) as unknown as LeadsService & { list: jest.Mock };
+
+const makeAudit = () =>
+  ({
+    log: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as AuditService & { log: jest.Mock };
+
+const owner = { id: 'user-1', role: 'SALES' as const };
+const teammate = { id: 'user-2', role: 'MEMBER' as const };
+const viewer = { id: 'user-3', role: 'VIEWER' as const };
+
+const row = {
+  id: 'view-1',
+  organizationId: 'org-a',
+  ownerId: owner.id,
+  name: 'Lisboa sem site',
+  description: null,
+  visibility: SavedViewVisibility.PRIVATE,
+  resourceType: 'LEAD',
+  definition: { hasWebsite: false, city: 'Lisboa' },
+  archivedAt: null,
+  createdAt: new Date('2026-09-05T12:00:00.000Z'),
+  updatedAt: new Date('2026-09-05T12:00:00.000Z'),
+};
+
+describe('SavedViewsService', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('creates a private view with a validated definition and records audit', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    prisma.savedView.create.mockResolvedValue(row);
+    const service = new SavedViewsService(prisma, makeLeads(), audit);
+
+    const created = await service.create('org-a', owner, {
+      name: 'Lisboa sem site',
+      definition: { hasWebsite: false, city: 'Lisboa' },
+    });
+
+    expect(prisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          organizationId: 'org-a',
+          ownerId: owner.id,
+          visibility: SavedViewVisibility.PRIVATE,
+          definition: { hasWebsite: false, city: 'Lisboa' },
+        }),
+      }),
+    );
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'saved_view.created', entityId: 'view-1' }),
+    );
+    expect(created.canEdit).toBe(true);
+  });
+
+  it('rejects an unknown definition key before persist', async () => {
+    const prisma = makePrisma();
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(
+      service.create('org-a', owner, {
+        name: 'Hack',
+        definition: { email: 'a@b.c' },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
+  it('forbids VIEWER from creating a view', async () => {
+    const prisma = makePrisma();
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(
+      service.create('org-a', viewer, { name: 'X', definition: {} }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
+  it('hides another member private view from list and get', async () => {
+    const prisma = makePrisma();
+    prisma.savedView.findMany.mockResolvedValue([]);
+    prisma.savedView.findFirst.mockResolvedValue(row);
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(service.list('org-a', teammate)).resolves.toEqual([]);
+    await expect(service.get('org-a', teammate, 'view-1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('lists TEAM views to another member and allows preview through LeadsService.list', async () => {
+    const prisma = makePrisma();
+    const leads = makeLeads();
+    const teamRow = { ...row, visibility: SavedViewVisibility.TEAM };
+    prisma.savedView.findMany.mockResolvedValue([teamRow]);
+    prisma.savedView.findFirst.mockResolvedValue(teamRow);
+    leads.list.mockResolvedValue({
+      data: [],
+      meta: { page: 1, pageSize: 1, total: 7, totalPages: 7 },
+    });
+    const service = new SavedViewsService(prisma, leads, makeAudit());
+
+    const listed = await service.list('org-a', teammate);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.canEdit).toBe(false);
+
+    await expect(service.preview('org-a', teammate, 'view-1')).resolves.toEqual({ total: 7 });
+    expect(leads.list).toHaveBeenCalledWith(
+      'org-a',
+      expect.objectContaining({ hasWebsite: false, city: 'Lisboa', page: 1, pageSize: 1 }),
+    );
+  });
+
+  it('omits archived views from the default list', async () => {
+    const prisma = makePrisma();
+    prisma.savedView.findMany.mockResolvedValue([]);
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await service.list('org-a', owner);
+    expect(prisma.savedView.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ archivedAt: null }),
+      }),
+    );
+  });
+
+  it('archives a view the owner can edit', async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    prisma.savedView.findFirst.mockResolvedValue(row);
+    prisma.savedView.update.mockResolvedValue({
+      ...row,
+      archivedAt: new Date('2026-09-05T13:00:00.000Z'),
+    });
+    const service = new SavedViewsService(prisma, makeLeads(), audit);
+
+    const archived = await service.archive('org-a', owner, 'view-1');
+    expect(archived.archivedAt).toBeTruthy();
+    expect(audit.log).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'saved_view.archived' }),
+    );
+  });
+});

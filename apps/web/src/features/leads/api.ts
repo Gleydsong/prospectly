@@ -14,8 +14,12 @@ export interface LeadsQuery {
   pageSize?: number;
   q?: string;
   status?: LeadStatus;
-  city?: string;
+  source?: string;
+  category?: string;
   segment?: string;
+  city?: string;
+  ownerId?: string;
+  tagId?: string;
   hasWebsite?: boolean;
   minScore?: number;
   maxScore?: number;
@@ -81,7 +85,10 @@ export interface CreateActivityInput {
   followUpAt?: string;
 }
 
-export async function createActivity(leadId: string, input: CreateActivityInput): Promise<Activity> {
+export async function createActivity(
+  leadId: string,
+  input: CreateActivityInput,
+): Promise<Activity> {
   const { data } = await api.post<Activity>(`/leads/${leadId}/activities`, input);
   return data;
 }
@@ -130,7 +137,15 @@ export async function exportLeadsCsv(input: {
   columns: ExportableLeadColumn[];
   q?: string;
   status?: LeadStatus;
+  source?: string;
+  category?: string;
+  segment?: string;
+  city?: string;
+  ownerId?: string;
+  tagId?: string;
   hasWebsite?: boolean;
+  minScore?: number;
+  maxScore?: number;
 }): Promise<LeadExportResult> {
   const { data } = await api.post<LeadExportResult>('/leads/export', input);
   return data;

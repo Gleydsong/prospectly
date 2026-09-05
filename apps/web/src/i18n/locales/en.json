@@ -568,7 +568,20 @@
     "exportColumns": "Columns",
     "exportSuccess": "Export complete ({{count}} rows).",
     "exportError": "Could not export leads.",
-    "exportTitle": "Export filtered leads"
+    "exportTitle": "Export filtered leads",
+    "viewsLabel": "Views",
+    "viewsNone": "No saved view",
+    "saveView": "Save view",
+    "saveViewTitle": "Save this list as a view",
+    "saveViewName": "Name",
+    "saveViewVisibility": "Visibility",
+    "saveViewPrivate": "Only me",
+    "saveViewTeam": "Team",
+    "saveViewSubmit": "Save",
+    "archiveView": "Archive view",
+    "viewSaved": "View saved.",
+    "viewArchived": "View archived.",
+    "viewCount": "{{count}} leads in this view"
   },
   "search": {
     "highIntentEyebrow": "High-intent search",
