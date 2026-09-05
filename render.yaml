@@ -41,6 +41,10 @@ projects:
             branch: main
             dockerfilePath: ./apps/api/Dockerfile
             dockerContext: .
+            # Migrations: o serviço LIVE (runtime Node) usa Pre-Deploy Command
+            # `pnpm --filter @prospectly/api exec prisma migrate deploy`, configurado
+            # via scripts/render-set-predeploy.cjs (docs/deploy/migrations.md).
+            # Não declare preDeployCommand aqui: o runner Docker não embarca Prisma CLI.
             healthCheckPath: /health/ready
             autoDeployTrigger: checksPass
             buildFilter:
