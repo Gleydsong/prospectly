@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { assertSafePublicUrl, SsrfBlockedError } from '../website-analysis/ssrf';
 import { CreateWebhookIntegrationDto } from './dto/create-webhook-integration.dto';
 
 export const WEBHOOK_PROVIDER = 'WEBHOOK';
@@ -27,6 +28,15 @@ export class IntegrationsService {
     const url = dto.url.trim();
     if (!url.startsWith('https://') && !url.startsWith('http://')) {
       throw new BadRequestException('Webhook URL must use http or https');
+    }
+
+    try {
+      await assertSafePublicUrl(url);
+    } catch (error) {
+      if (error instanceof SsrfBlockedError) {
+        throw new BadRequestException(error.message);
+      }
+      throw error;
     }
 
     const config: WebhookConfig = {
