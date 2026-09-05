@@ -112,6 +112,7 @@ export function createPinnedLookup(addresses: string[]) {
 type PinnedFetchInit = {
   method?: string;
   headers?: Record<string, string>;
+  body?: string;
   signal?: AbortSignal;
   /** Analyzer always uses manual redirects; ignore follow. */
   redirect?: 'follow' | 'error' | 'manual';
@@ -202,7 +203,11 @@ export async function fetchWithPinnedDns(
       request.on('close', () => init.signal?.removeEventListener('abort', onAbort));
     }
 
-    request.end();
+    if (init.body !== undefined) {
+      request.end(init.body);
+    } else {
+      request.end();
+    }
   });
 }
 

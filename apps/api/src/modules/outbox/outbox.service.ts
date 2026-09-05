@@ -13,6 +13,7 @@ import {
   staleBefore,
 } from '../../common/workers/durable-job';
 import { MetricsService } from '../ops/metrics.service';
+import { WebhookDeliveryService } from '../integrations/webhook-delivery.service';
 import {
   LEAD_AGGREGATE_TYPE,
   LEAD_STAGE_CHANGED_SCHEMA_VERSION,
@@ -43,6 +44,7 @@ export class OutboxService {
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue(OUTBOX_QUEUE) private readonly queue: Queue<PublishOutboxJobData>,
+    private readonly webhookDelivery: WebhookDeliveryService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
@@ -175,7 +177,16 @@ export class OutboxService {
     });
 
     try {
-      this.assertLeadStageChangedPayload(event.payload);
+      const payload = this.assertLeadStageChangedPayload(event.payload);
+      const delivery = await this.webhookDelivery.deliverOutboxEvent({
+        id: event.id,
+        organizationId: event.organizationId,
+        type: event.type,
+        schemaVersion: event.schemaVersion,
+        correlationId: event.correlationId,
+        createdAt: event.createdAt,
+        payload,
+      });
       await this.prisma.outboxEvent.updateMany({
         where: { id: eventId },
         data: {
@@ -193,6 +204,8 @@ export class OutboxService {
         correlationId: event.correlationId,
         attempts: event.attempts,
         status: OutboxEventStatus.PROCESSED,
+        webhookDelivered: delivery.delivered,
+        ...(delivery.delivered ? {} : { webhookSkipReason: delivery.reason }),
       });
     } catch (error) {
       const dead = event.attempts >= OUTBOX_MAX_ATTEMPTS;

@@ -24,6 +24,16 @@ describe('OutboxService', () => {
     },
   });
 
+  const makeWebhookDelivery = () => ({
+    deliverOutboxEvent: jest.fn().mockResolvedValue({ delivered: false, reason: 'no_active_webhook' }),
+  });
+
+  const makeService = (
+    prisma: ReturnType<typeof makePrisma>,
+    queue = makeQueue(),
+    webhookDelivery = makeWebhookDelivery(),
+  ) => new OutboxService(prisma as never, queue as never, webhookDelivery as never);
+
   it('appends lead.stage_changed without contact PII and with 90-day retention', async () => {
     const prisma = makePrisma();
     const created = {
@@ -32,7 +42,7 @@ describe('OutboxService', () => {
       payload: { leadId: 'lead-1', toStageId: 'stage-b' },
     };
     prisma.outboxEvent.create.mockResolvedValue(created);
-    const service = new OutboxService(prisma as never, makeQueue() as never);
+    const service = makeService(prisma);
     const tx = { outboxEvent: prisma.outboxEvent };
 
     const result = await service.appendLeadStageChanged(tx as never, {
@@ -69,7 +79,7 @@ describe('OutboxService', () => {
   it('dispatches with deterministic jobId outbox-<id> and records jobDispatchedAt', async () => {
     const prisma = makePrisma();
     const queue = makeQueue();
-    const service = new OutboxService(prisma as never, queue as never);
+    const service = makeService(prisma, queue);
 
     await service.dispatch({ id: 'evt-9', organizationId: 'org-1', correlationId: 'corr-9' });
 
@@ -93,7 +103,7 @@ describe('OutboxService', () => {
     prisma.outboxEvent.findMany.mockResolvedValue([
       { id: 'evt-pending', organizationId: 'org-1', correlationId: null, jobDispatchedAt: null },
     ]);
-    const service = new OutboxService(prisma as never, queue as never);
+    const service = makeService(prisma, queue);
 
     const dispatched = await service.reconcilePending();
 
@@ -126,7 +136,7 @@ describe('OutboxService', () => {
         toStageName: 'B',
       },
     });
-    const service = new OutboxService(prisma as never, makeQueue() as never);
+    const service = makeService(prisma);
 
     await service.process('evt-1');
     await service.process('evt-1');
@@ -140,7 +150,7 @@ describe('OutboxService', () => {
   it('replays a already-processed event as a no-op', async () => {
     const prisma = makePrisma();
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 0 });
-    const service = new OutboxService(prisma as never, makeQueue() as never);
+    const service = makeService(prisma);
 
     await service.process('evt-done');
 
@@ -158,7 +168,7 @@ describe('OutboxService', () => {
       attempts: OUTBOX_MAX_ATTEMPTS,
       payload: { email: 'secret@example.test' },
     });
-    const service = new OutboxService(prisma as never, makeQueue() as never);
+    const service = makeService(prisma);
 
     await expect(service.process('evt-poison')).rejects.toThrow(/PII|payload/i);
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
@@ -167,21 +177,30 @@ describe('OutboxService', () => {
     });
   });
 
-  it('does not enqueue to tenant webhook URLs', async () => {
+  it('delivers tenant webhook when processing lead.stage_changed', async () => {
     const prisma = makePrisma();
-    const queue = makeQueue();
+    const webhookDelivery = makeWebhookDelivery();
+    webhookDelivery.deliverOutboxEvent.mockResolvedValue({ delivered: true });
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
     prisma.outboxEvent.findUnique.mockResolvedValue({
       id: 'evt-1',
       type: LEAD_STAGE_CHANGED_TYPE,
       organizationId: 'org-1',
+      schemaVersion: 1,
       correlationId: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
       attempts: 1,
       payload: { leadId: 'lead-1', toStageId: 'stage-b' },
     });
-    const service = new OutboxService(prisma as never, queue as never);
+    const service = makeService(prisma, makeQueue(), webhookDelivery);
     await service.process('evt-1');
-    expect(JSON.stringify(queue.add.mock.calls)).not.toMatch(/webhook|http/i);
+    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'evt-1',
+        organizationId: 'org-1',
+        type: LEAD_STAGE_CHANGED_TYPE,
+      }),
+    );
     expect(OUTBOX_QUEUE).toBe('outbox');
   });
 
@@ -197,7 +216,7 @@ describe('OutboxService', () => {
       status: OutboxEventStatus.PROCESSING,
       payload: { leadId: 'lead-1', toStageId: 'stage-b' },
     });
-    const service = new OutboxService(prisma as never, makeQueue() as never);
+    const service = makeService(prisma);
 
     await service.process('evt-stale');
 
