@@ -21,7 +21,6 @@ import {
   DEFAULT_EXPORT_COLUMNS,
   EXPORTABLE_LEAD_COLUMNS,
   type ExportableLeadColumn,
-  type LeadsQuery,
   downloadCsvFile,
   exportLeadsCsv,
 } from '@/features/leads/api';
@@ -39,24 +38,18 @@ import {
   useUpdateSavedView,
 } from '@/features/saved-views/hooks';
 import type { LeadViewDefinition, SavedViewVisibility } from '@/features/saved-views/api';
+import {
+  DEFAULT_LAST_CONTACT_DAYS,
+  definitionFromFilters,
+  hydrateLeadListFilters,
+  leadExportFiltersFromList,
+  leadsQueryFromFilters,
+  type LastContactOp,
+} from '@/features/saved-views/lead-filter';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadStatus, Role } from '@/types';
 
 import { LeadFormModal } from './lead-form-modal';
-
-function definitionFromFilters(input: {
-  q: string;
-  status: LeadStatus | '';
-  hasWebsite: '' | 'yes' | 'no';
-  extras: LeadViewDefinition;
-}): LeadViewDefinition {
-  return {
-    ...input.extras,
-    ...(input.q.trim() ? { q: input.q.trim() } : {}),
-    ...(input.status ? { status: input.status } : {}),
-    ...(input.hasWebsite === '' ? {} : { hasWebsite: input.hasWebsite === 'yes' }),
-  };
-}
 
 export function LeadsPage() {
   const { t } = useTranslation();
@@ -69,7 +62,10 @@ export function LeadsPage() {
   const [q, setQ] = useState(initialQ);
   const [search, setSearch] = useState(initialQ);
   const [status, setStatus] = useState<LeadStatus | ''>('');
+  const [statusOr, setStatusOr] = useState<LeadStatus | ''>('');
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
+  const [lastContactOp, setLastContactOp] = useState<LastContactOp>('');
+  const [lastContactDays, setLastContactDays] = useState(DEFAULT_LAST_CONTACT_DAYS);
   const [extras, setExtras] = useState<LeadViewDefinition>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
@@ -108,7 +104,10 @@ export function LeadsPage() {
   useEffect(() => {
     if (viewId) return;
     setStatus('');
+    setStatusOr('');
     setHasWebsite('');
+    setLastContactOp('');
+    setLastContactDays(DEFAULT_LAST_CONTACT_DAYS);
     setExtras({});
   }, [viewId]);
 
@@ -117,36 +116,32 @@ export function LeadsPage() {
   useEffect(() => {
     if (!selectedView) return;
     const definition = selectedView.definition ?? {};
-    setQ(definition.q ?? '');
-    setSearch(definition.q ?? '');
-    setStatus((definition.status as LeadStatus | undefined) ?? '');
-    setHasWebsite(
-      definition.hasWebsite === true ? 'yes' : definition.hasWebsite === false ? 'no' : '',
-    );
-    const { q: _q, status: _status, hasWebsite: _hasWebsite, ...rest } = definition;
-    setExtras(rest);
+    const hydrated = hydrateLeadListFilters(definition);
+    setQ(hydrated.q);
+    setSearch(hydrated.q);
+    setStatus(hydrated.status);
+    setStatusOr(hydrated.statusOr);
+    setHasWebsite(hydrated.hasWebsite);
+    setLastContactOp(hydrated.lastContactOp);
+    setLastContactDays(hydrated.lastContactDays);
+    setExtras(hydrated.extras);
     setPage(1);
     // Reapply only when the selected view identity or server timestamp changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedViewId, selectedViewUpdatedAt]);
 
-  const listQuery: LeadsQuery = {
+  const listQuery = leadsQueryFromFilters(
+    {
+      q: search,
+      status,
+      statusOr,
+      hasWebsite,
+      lastContactOp,
+      lastContactDays,
+      extras,
+    },
     page,
-    pageSize: 15,
-    q: search || undefined,
-    status: status || undefined,
-    hasWebsite: hasWebsite === '' ? undefined : hasWebsite === 'yes',
-    source: extras.source,
-    category: extras.category,
-    segment: extras.segment,
-    city: extras.city,
-    ownerId: extras.ownerId,
-    tagId: extras.tagId,
-    minScore: extras.minScore,
-    maxScore: extras.maxScore,
-    sortBy: extras.sortBy ?? 'createdAt',
-    sortOrder: extras.sortOrder ?? 'desc',
-  };
+  );
   const query = useLeads(listQuery);
 
   const leads = query.data?.data ?? [];
@@ -184,7 +179,15 @@ export function LeadsPage() {
     const name = viewName.trim();
     if (!name) return;
     setActionError(null);
-    const definition = definitionFromFilters({ q, status, hasWebsite, extras });
+    const definition = definitionFromFilters({
+      q,
+      status,
+      statusOr,
+      hasWebsite,
+      lastContactOp,
+      lastContactDays,
+      extras,
+    });
     try {
       if (saveMode === 'update' && selectedView) {
         await updateView.mutateAsync({
@@ -249,17 +252,15 @@ export function LeadsPage() {
     try {
       const result = await exportLeadsCsv({
         columns: exportColumns,
-        q: search || undefined,
-        status: status || undefined,
-        hasWebsite: hasWebsite === '' ? undefined : hasWebsite === 'yes',
-        source: extras.source,
-        category: extras.category,
-        segment: extras.segment,
-        city: extras.city,
-        ownerId: extras.ownerId,
-        tagId: extras.tagId,
-        minScore: extras.minScore,
-        maxScore: extras.maxScore,
+        ...leadExportFiltersFromList({
+          q: search,
+          status,
+          statusOr,
+          hasWebsite,
+          lastContactOp,
+          lastContactDays,
+          extras,
+        }),
       });
       downloadCsvFile(result.filename, result.csv);
       setExportMessage(t('leads.exportSuccess', { count: result.rowCount }));
@@ -308,7 +309,7 @@ export function LeadsPage() {
 
       <Card className="overflow-hidden">
         <div className="space-y-4 border-b border-[color:var(--border)] p-4 sm:p-5">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_170px_auto]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_200px_170px_auto]">
             <div className="flex gap-2">
               <Input
                 placeholder={t('principal.clientsSearch')}
@@ -336,6 +337,21 @@ export function LeadsPage() {
               ))}
             </Select>
             <Select
+              value={statusOr}
+              onChange={(event) => {
+                setPage(1);
+                setStatusOr(event.target.value as LeadStatus | '');
+              }}
+              aria-label={t('leads.statusOr')}
+            >
+              <option value="">{t('leads.statusOrNone')}</option>
+              {Object.values(LeadStatus).map((value) => (
+                <option key={value} value={value}>
+                  {getLeadStatusLabel(value)}
+                </option>
+              ))}
+            </Select>
+            <Select
               value={hasWebsite}
               onChange={(event) => {
                 setPage(1);
@@ -350,6 +366,38 @@ export function LeadsPage() {
             <Button variant="outline" onClick={applySearch}>
               Buscar
             </Button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[220px_120px]">
+            <Select
+              value={lastContactOp}
+              onChange={(event) => {
+                setPage(1);
+                setLastContactOp(event.target.value as LastContactOp);
+              }}
+              aria-label={t('leads.lastContact')}
+            >
+              <option value="">{t('leads.lastContactAny')}</option>
+              <option value="older_than">{t('leads.lastContactOlder')}</option>
+              <option value="within">{t('leads.lastContactWithin')}</option>
+            </Select>
+            {lastContactOp ? (
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                value={lastContactDays}
+                onChange={(event) => {
+                  setPage(1);
+                  const next = Number(event.target.value);
+                  setLastContactDays(
+                    Number.isInteger(next)
+                      ? Math.min(365, Math.max(1, next))
+                      : DEFAULT_LAST_CONTACT_DAYS,
+                  );
+                }}
+                aria-label={t('leads.lastContactDays')}
+              />
+            ) : null}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="sm:max-w-xs sm:flex-1">

@@ -3,6 +3,10 @@ import type { LeadStatus, PaginatedResult } from '@/types';
 
 export type SavedViewVisibility = 'PRIVATE' | 'TEAM';
 
+export type LeadFilterNode =
+  | { op: 'and' | 'or'; nodes: LeadFilterNode[] }
+  | { field: string; op: string; value?: string | number | boolean; days?: number };
+
 export interface LeadViewDefinition {
   q?: string;
   status?: LeadStatus;
@@ -17,6 +21,7 @@ export interface LeadViewDefinition {
   hasWebsite?: boolean;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  filter?: LeadFilterNode;
 }
 
 export interface SavedView {

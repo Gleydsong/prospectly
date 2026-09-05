@@ -1,8 +1,13 @@
 import { LeadSource, LeadStatus } from '@prisma/client';
 
+import {
+  InvalidLeadFilterError,
+  parseLeadFilter,
+  type LeadFilterNode,
+} from '../../leads/domain/lead-filter-ast';
 import { SORTABLE_FIELDS, type LeadSortField } from '../../leads/dto/query-leads.dto';
 
-export const LEAD_VIEW_DEFINITION_KEYS = [
+export const LEAD_VIEW_FLAT_PREDICATE_KEYS = [
   'q',
   'status',
   'source',
@@ -14,8 +19,13 @@ export const LEAD_VIEW_DEFINITION_KEYS = [
   'minScore',
   'maxScore',
   'hasWebsite',
+] as const;
+
+export const LEAD_VIEW_DEFINITION_KEYS = [
+  ...LEAD_VIEW_FLAT_PREDICATE_KEYS,
   'sortBy',
   'sortOrder',
+  'filter',
 ] as const;
 
 export type LeadViewDefinitionKey = (typeof LEAD_VIEW_DEFINITION_KEYS)[number];
@@ -34,9 +44,12 @@ export type LeadViewDefinition = {
   hasWebsite?: boolean;
   sortBy?: LeadSortField;
   sortOrder?: 'asc' | 'desc';
+  filter?: LeadFilterNode;
 };
 
-const ALLOWED_KEYS = new Set<string>(LEAD_VIEW_DEFINITION_KEYS);
+const FLAT_ALLOWED_KEYS = new Set<string>([...LEAD_VIEW_FLAT_PREDICATE_KEYS, 'sortBy', 'sortOrder']);
+const AST_ALLOWED_KEYS = new Set(['filter', 'sortBy', 'sortOrder']);
+const FLAT_PREDICATE_KEYS = new Set<string>(LEAD_VIEW_FLAT_PREDICATE_KEYS);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LEAD_STATUSES = new Set<string>(Object.values(LeadStatus));
 const LEAD_SOURCES = new Set<string>(Object.values(LeadSource));
@@ -72,10 +85,53 @@ function assertBoundedString(key: string, value: unknown, max: number): string {
   return trimmed;
 }
 
+function parseSort(raw: Record<string, unknown>, definition: LeadViewDefinition): void {
+  if (raw.sortBy !== undefined) {
+    if (typeof raw.sortBy !== 'string' || !SORT_FIELDS.has(raw.sortBy)) {
+      throw new InvalidLeadViewDefinitionError('sortBy is not an allowed field');
+    }
+    definition.sortBy = raw.sortBy as LeadSortField;
+  }
+  if (raw.sortOrder !== undefined) {
+    if (raw.sortOrder !== 'asc' && raw.sortOrder !== 'desc') {
+      throw new InvalidLeadViewDefinitionError('sortOrder must be asc or desc');
+    }
+    definition.sortOrder = raw.sortOrder;
+  }
+}
+
+function parseAstDefinition(raw: Record<string, unknown>): LeadViewDefinition {
+  const unknownKeys = Object.keys(raw).filter((key) => !AST_ALLOWED_KEYS.has(key));
+  if (unknownKeys.length > 0) {
+    const mixed = unknownKeys.filter((key) => FLAT_PREDICATE_KEYS.has(key));
+    throw new InvalidLeadViewDefinitionError(
+      mixed.length > 0
+        ? 'Cannot mix filter AST with flat predicate keys'
+        : `Unknown definition keys: ${unknownKeys.join(', ')}`,
+    );
+  }
+
+  const definition: LeadViewDefinition = {};
+  try {
+    definition.filter = parseLeadFilter(raw.filter);
+  } catch (error) {
+    if (error instanceof InvalidLeadFilterError) {
+      throw new InvalidLeadViewDefinitionError(error.message);
+    }
+    throw error;
+  }
+  parseSort(raw, definition);
+  return definition;
+}
+
 export function parseLeadViewDefinition(raw: unknown): LeadViewDefinition {
   assertPlainObject(raw);
 
-  const unknownKeys = Object.keys(raw).filter((key) => !ALLOWED_KEYS.has(key));
+  if (raw.filter !== undefined) {
+    return parseAstDefinition(raw);
+  }
+
+  const unknownKeys = Object.keys(raw).filter((key) => !FLAT_ALLOWED_KEYS.has(key));
   if (unknownKeys.length > 0) {
     throw new InvalidLeadViewDefinitionError(`Unknown definition keys: ${unknownKeys.join(', ')}`);
   }
@@ -153,18 +209,7 @@ export function parseLeadViewDefinition(raw: unknown): LeadViewDefinition {
     }
     definition.hasWebsite = raw.hasWebsite;
   }
-  if (raw.sortBy !== undefined) {
-    if (typeof raw.sortBy !== 'string' || !SORT_FIELDS.has(raw.sortBy)) {
-      throw new InvalidLeadViewDefinitionError('sortBy is not an allowed field');
-    }
-    definition.sortBy = raw.sortBy as LeadSortField;
-  }
-  if (raw.sortOrder !== undefined) {
-    if (raw.sortOrder !== 'asc' && raw.sortOrder !== 'desc') {
-      throw new InvalidLeadViewDefinitionError('sortOrder must be asc or desc');
-    }
-    definition.sortOrder = raw.sortOrder;
-  }
+  parseSort(raw, definition);
 
   return definition;
 }

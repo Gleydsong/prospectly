@@ -316,4 +316,105 @@ describe('LeadsPage saved views', () => {
       expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
     );
   });
+
+  it('saves status OR and last-contact recency as a filter AST', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const mutateAsync = vi
+      .fn()
+      .mockResolvedValue({ ...viewFixture, id: 'view-ast', name: 'Novos ou qualificados' });
+    mocks.useCreateSavedView.mockReturnValue({ mutateAsync, isPending: false });
+
+    renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
+
+    await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
+    await user.selectOptions(screen.getByLabelText('Ou este status'), LeadStatus.QUALIFIED);
+    await user.selectOptions(screen.getByLabelText('Último contacto'), 'older_than');
+    await user.click(screen.getByRole('button', { name: 'Guardar vista' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Guardar vista da lista' });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
+      target: { value: 'Novos ou qualificados' },
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({
+      name: 'Novos ou qualificados',
+      visibility: 'PRIVATE',
+      definition: {
+        filter: {
+          op: 'and',
+          nodes: [
+            {
+              op: 'or',
+              nodes: [
+                { field: 'status', op: 'eq', value: LeadStatus.NEW },
+                { field: 'status', op: 'eq', value: LeadStatus.QUALIFIED },
+              ],
+            },
+            { field: 'lastContactAt', op: 'older_than', days: 14 },
+          ],
+        },
+      },
+    });
+  });
+
+  it('applies an AST view to the lead list and export', async () => {
+    const astView: SavedView = {
+      ...viewFixture,
+      id: 'view-ast',
+      name: 'Lisboa stale',
+      definition: {
+        filter: {
+          op: 'and',
+          nodes: [
+            { field: 'hasWebsite', op: 'eq', value: false },
+            { field: 'city', op: 'eq', value: 'Lisboa' },
+            { field: 'lastContactAt', op: 'older_than', days: 14 },
+          ],
+        },
+      },
+    };
+    mocks.useSavedViews.mockReturnValue({
+      data: [astView],
+      isLoading: false,
+      isError: false,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-ast'],
+      withGoogle: false,
+    });
+
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filter: {
+            op: 'and',
+            nodes: [
+              { field: 'hasWebsite', op: 'eq', value: false },
+              { field: 'city', op: 'eq', value: 'Lisboa' },
+              { field: 'lastContactAt', op: 'older_than', days: 14 },
+            ],
+          },
+        }),
+      );
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Exportar CSV' }));
+    const dialog = screen.getByRole('dialog', { name: 'Exportar clientes filtrados' });
+    await user.click(within(dialog).getByRole('button', { name: 'Exportar CSV' }));
+
+    expect(mocks.exportLeadsCsv).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filter: {
+          op: 'and',
+          nodes: [
+            { field: 'hasWebsite', op: 'eq', value: false },
+            { field: 'city', op: 'eq', value: 'Lisboa' },
+            { field: 'lastContactAt', op: 'older_than', days: 14 },
+          ],
+        },
+      }),
+    );
+  });
 });

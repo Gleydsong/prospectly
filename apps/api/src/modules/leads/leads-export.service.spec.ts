@@ -147,4 +147,33 @@ describe('LeadsService.exportCsv', () => {
     ).rejects.toThrow(/ENTITLEMENT_CSV_EXPORT/);
     expect(prisma.lead.findMany).not.toHaveBeenCalled();
   });
+
+  it('compiles filter AST for export and still scopes the tenant', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.auditLog.create.mockResolvedValue({});
+    const entitlements = { assertFeature: jest.fn().mockResolvedValue(undefined) };
+    const service = new LeadsService(
+      prisma,
+      { ingest: jest.fn() } as unknown as LeadIngestionService,
+      entitlements as never,
+    );
+
+    await service.exportCsv('org-1', 'user-1', {
+      columns: ['companyName'],
+      city: 'Porto',
+      filter: { field: 'city', op: 'eq', value: 'Lisboa' },
+    });
+
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          AND: [
+            { organizationId: 'org-1', deletedAt: null },
+            { city: { equals: 'Lisboa', mode: 'insensitive' } },
+          ],
+        },
+      }),
+    );
+  });
 });

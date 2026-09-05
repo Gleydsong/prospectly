@@ -586,7 +586,14 @@
     "viewUpdated": "Vista atualizada.",
     "viewDuplicated": "Vista duplicada.",
     "viewArchived": "Vista arquivada.",
-    "viewCount": "{{count}} clientes nesta vista"
+    "viewCount": "{{count}} clientes nesta vista",
+    "statusOr": "Ou este status",
+    "statusOrNone": "Sem segundo status",
+    "lastContact": "Último contacto",
+    "lastContactAny": "Qualquer último contacto",
+    "lastContactOlder": "Sem contacto há mais de N dias",
+    "lastContactWithin": "Contactado nos últimos N dias",
+    "lastContactDays": "Dias"
   },
   "search": {
     "highIntentEyebrow": "Busca de alta intenção",
