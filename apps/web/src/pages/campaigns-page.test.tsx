@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   useCreateMessageTemplate: vi.fn(),
   usePreviewMessageTemplate: vi.fn(),
   useLeads: vi.fn(),
+  useSavedViews: vi.fn(),
+  usePreviewSavedView: vi.fn(),
   sendCampaignMessage: vi.fn(),
 }));
 
@@ -45,6 +47,11 @@ vi.mock('@/features/campaigns/hooks', () => ({
 
 vi.mock('@/features/leads/hooks', () => ({
   useLeads: (...args: unknown[]) => mocks.useLeads(...args),
+}));
+
+vi.mock('@/features/saved-views/hooks', () => ({
+  useSavedViews: (...args: unknown[]) => mocks.useSavedViews(...args),
+  usePreviewSavedView: (...args: unknown[]) => mocks.usePreviewSavedView(...args),
 }));
 
 const stageId = '11111111-1111-4111-8111-111111111111';
@@ -181,6 +188,8 @@ describe('CampaignDetailPage', () => {
       },
       isLoading: false,
     });
+    mocks.useSavedViews.mockReturnValue({ data: [], isLoading: false });
+    mocks.usePreviewSavedView.mockReturnValue({ data: undefined, isLoading: false });
     mocks.useCampaign.mockReturnValue({
       data: {
         id: 'c1',
@@ -292,6 +301,28 @@ describe('CampaignDetailPage', () => {
     expect(screen.getByText(/Marcado para não contatar/i)).toBeInTheDocument();
     const dncCheckbox = screen.getByText('Blocked Co').closest('label')?.querySelector('input');
     expect(dncCheckbox).toBeDisabled();
+  });
+
+  it('adds leads from a saved view', async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    mocks.useAddCampaignLeads.mockReturnValue({ mutateAsync, isPending: false });
+    mocks.useSavedViews.mockReturnValue({
+      data: [{ id: 'view-1', name: 'Lisboa sem site', visibility: 'TEAM' }],
+      isLoading: false,
+    });
+    mocks.usePreviewSavedView.mockReturnValue({
+      data: { total: 3 },
+      isLoading: false,
+    });
+    renderDetail();
+
+    await user.click(screen.getByRole('button', { name: 'Adicionar clientes potenciais' }));
+    await user.selectOptions(screen.getByLabelText('Vista salva'), 'view-1');
+    expect(screen.getByText(/3 clientes nesta vista/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Adicionar da vista' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({ viewId: 'view-1' });
   });
 
   it('records a manual result without sending', async () => {

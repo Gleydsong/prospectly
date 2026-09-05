@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
+import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import type { CampaignLeadResult, CampaignStage, CampaignStatus } from '@/features/campaigns/api';
 import {
@@ -27,6 +28,7 @@ import {
   useUpdateCampaignStatus,
 } from '@/features/campaigns/hooks';
 import { useLeads } from '@/features/leads/hooks';
+import { usePreviewSavedView, useSavedViews } from '@/features/saved-views/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
 import { formatDate } from '@/lib/utils';
@@ -83,6 +85,7 @@ export function CampaignDetailPage() {
   const [leadSearch, setLeadSearch] = useState('');
   const [leadPage, setLeadPage] = useState(1);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [selectedViewId, setSelectedViewId] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [activeLeadId, setActiveLeadId] = useState<string | null>(null);
@@ -104,6 +107,8 @@ export function CampaignDetailPage() {
     pageSize: 10,
     q: leadSearch || undefined,
   });
+  const viewsQuery = useSavedViews();
+  const viewPreviewQuery = usePreviewSavedView(selectedViewId || undefined);
 
   const campaign = campaignQuery.data;
   const metrics = metricsQuery.data;
@@ -128,8 +133,23 @@ export function CampaignDetailPage() {
     if (selectedLeadIds.length === 0) return;
     setError(null);
     try {
-      await addLeads.mutateAsync(selectedLeadIds);
+      await addLeads.mutateAsync({ leadIds: selectedLeadIds });
       setSelectedLeadIds([]);
+      setSelectedViewId('');
+      setPickerOpen(false);
+      setLiveMessage(t('campaigns.leadsAdded'));
+    } catch (err) {
+      setError(getApiErrorMessage(err) || t('campaigns.actionError'));
+    }
+  }
+
+  async function handleAddFromView() {
+    if (!selectedViewId) return;
+    setError(null);
+    try {
+      await addLeads.mutateAsync({ viewId: selectedViewId });
+      setSelectedLeadIds([]);
+      setSelectedViewId('');
       setPickerOpen(false);
       setLiveMessage(t('campaigns.leadsAdded'));
     } catch (err) {
@@ -252,9 +272,15 @@ export function CampaignDetailPage() {
                 defaultValue: 'Estado não identificado',
               })}
             </Badge>
-            <span>{t('campaigns.columns.segment')}: {campaign.segment ?? '—'}</span>
-            <span>{t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}</span>
-            <span>{t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}</span>
+            <span>
+              {t('campaigns.columns.segment')}: {campaign.segment ?? '—'}
+            </span>
+            <span>
+              {t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}
+            </span>
+            <span>
+              {t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}
+            </span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -279,7 +305,10 @@ export function CampaignDetailPage() {
         </div>
       </div>
 
-      <Card className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]" role="note">
+      <Card
+        className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
+        role="note"
+      >
         {t('campaigns.assistedNotice')}
       </Card>
 
@@ -329,11 +358,14 @@ export function CampaignDetailPage() {
             <Card key={stage.id} className="p-4">
               <CardHeader
                 title={stage.name}
-                description={t(`campaigns.stageType.${stage.type}`, { defaultValue: 'Etapa manual' })}
+                description={t(`campaigns.stageType.${stage.type}`, {
+                  defaultValue: 'Etapa manual',
+                })}
               />
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-[color:var(--ink-muted)]">
                 <span>
-                  {t('campaigns.metrics.leads')}: {'leadCount' in stage ? stage.leadCount : campaign.stageCounts?.[stage.id] ?? 0}
+                  {t('campaigns.metrics.leads')}:{' '}
+                  {'leadCount' in stage ? stage.leadCount : (campaign.stageCounts?.[stage.id] ?? 0)}
                 </span>
                 <span>
                   {t('campaigns.metrics.openTasks')}: {'openTasks' in stage ? stage.openTasks : 0}
@@ -391,7 +423,10 @@ export function CampaignDetailPage() {
                 </thead>
                 <tbody>
                   {(leadsQuery.data?.data ?? []).map((row) => (
-                    <tr key={row.leadId} className="border-b border-[color:var(--border)] text-[color:var(--ink)]">
+                    <tr
+                      key={row.leadId}
+                      className="border-b border-[color:var(--border)] text-[color:var(--ink)]"
+                    >
                       <td className="px-4 py-3">
                         <Link
                           to={`/leads/${row.leadId}`}
@@ -524,7 +559,11 @@ export function CampaignDetailPage() {
             </label>
             <label className="text-sm text-[color:var(--ink)]">
               {t('campaigns.nextAction')}
-              <Input className="mt-1" value={nextAction} onChange={(e) => setNextAction(e.target.value)} />
+              <Input
+                className="mt-1"
+                value={nextAction}
+                onChange={(e) => setNextAction(e.target.value)}
+              />
             </label>
             <label className="text-sm text-[color:var(--ink)]">
               {t('campaigns.followUpAt')}
@@ -538,7 +577,11 @@ export function CampaignDetailPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="button" loading={recordResult.isPending} onClick={() => void handleRecordResult()}>
+            <Button
+              type="button"
+              loading={recordResult.isPending}
+              onClick={() => void handleRecordResult()}
+            >
               {t('campaigns.saveResult')}
             </Button>
             {(templatesQuery.data?.data ?? []).slice(0, 3).map((template) => (
@@ -572,8 +615,54 @@ export function CampaignDetailPage() {
         </Card>
       ) : null}
 
-      <Modal open={pickerOpen} onClose={() => setPickerOpen(false)} title={t('campaigns.addLeads')}>
+      <Modal
+        open={pickerOpen}
+        onClose={() => {
+          setPickerOpen(false);
+          setSelectedViewId('');
+        }}
+        title={t('campaigns.addLeads')}
+      >
         <div className="space-y-4">
+          <Select
+            id="campaign-saved-view"
+            label={t('campaigns.savedView')}
+            value={selectedViewId}
+            onChange={(event) => setSelectedViewId(event.target.value)}
+          >
+            <option value="">{t('campaigns.chooseView')}</option>
+            {(viewsQuery.data ?? []).map((view) => (
+              <option key={view.id} value={view.id}>
+                {view.name}
+              </option>
+            ))}
+          </Select>
+          {selectedViewId && viewPreviewQuery.data ? (
+            <p className="text-sm text-[color:var(--ink-muted)]">
+              {t('campaigns.viewMatchCount', { count: viewPreviewQuery.data.total })}
+            </p>
+          ) : null}
+          {selectedViewId && viewPreviewQuery.data && viewPreviewQuery.data.total > 200 ? (
+            <p className="text-sm text-amber-300" role="alert">
+              {t('campaigns.viewTooLarge')}
+            </p>
+          ) : null}
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              loading={addLeads.isPending}
+              disabled={
+                !selectedViewId ||
+                viewPreviewQuery.isLoading ||
+                !viewPreviewQuery.data ||
+                viewPreviewQuery.data.total === 0 ||
+                viewPreviewQuery.data.total > 200
+              }
+              onClick={() => void handleAddFromView()}
+            >
+              {t('campaigns.addFromView')}
+            </Button>
+          </div>
           <Input
             value={leadSearch}
             onChange={(e) => {
@@ -612,7 +701,9 @@ export function CampaignDetailPage() {
                         }}
                       />
                       <span>
-                        <span className="block font-medium text-[color:var(--ink)]">{lead.companyName}</span>
+                        <span className="block font-medium text-[color:var(--ink)]">
+                          {lead.companyName}
+                        </span>
                         <span className="block text-xs text-[color:var(--ink-muted)]">
                           {[lead.city, lead.email, lead.phone].filter(Boolean).join(' · ')}
                         </span>
@@ -719,7 +810,11 @@ export function CampaignDetailPage() {
   );
 }
 
-function expectNoSend(payload: { autoSend?: boolean; messageSent?: boolean; autoSendEnabled?: boolean }) {
+function expectNoSend(payload: {
+  autoSend?: boolean;
+  messageSent?: boolean;
+  autoSendEnabled?: boolean;
+}) {
   if (payload.autoSend || payload.messageSent || payload.autoSendEnabled) {
     throw new Error('Unexpected auto-send flag in assisted campaign response');
   }

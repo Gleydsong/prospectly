@@ -1,11 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsUUID } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsOptional, IsUUID } from 'class-validator';
+
+export const ADD_CAMPAIGN_LEADS_MAX = 200;
 
 export class AddCampaignLeadsDto {
-  @ApiProperty({ type: [String] })
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayMaxSize(200)
+  @ArrayMaxSize(ADD_CAMPAIGN_LEADS_MAX)
   @IsUUID('4', { each: true })
-  leadIds!: string[];
+  leadIds?: string[];
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID('4')
+  viewId?: string;
 }
