@@ -3,6 +3,7 @@ import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   Allow,
+  ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
@@ -136,6 +137,13 @@ export class ExportLeadsDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   hasWebsite?: boolean;
+
+  @ApiPropertyOptional({ description: 'Lead ids from a Relatórios bucket' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5000)
+  @IsUUID(4, { each: true })
+  ids?: string[];
 
   @ApiPropertyOptional({
     description:

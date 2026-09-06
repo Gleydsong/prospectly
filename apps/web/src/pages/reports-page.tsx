@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { reportLeadsPath, type ReportPeriod } from '@/features/reports/api';
 import { useFunnelConversion } from '@/features/reports/hooks';
-import type { ReportPeriod } from '@/features/reports/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, Role } from '@/types';
 
@@ -21,11 +22,12 @@ export function ReportsPage() {
   const [source, setSource] = useState<LeadSource | ''>('');
   const [mineOnly, setMineOnly] = useState(user?.role === Role.SALES);
 
-  const query = useFunnelConversion({
+  const filters = {
     period,
     source: source || undefined,
     ownerId: mineOnly ? user?.id : undefined,
-  });
+  };
+  const query = useFunnelConversion(filters);
 
   return (
     <div className="space-y-6">
@@ -90,9 +92,37 @@ export function ReportsPage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-4">
-            <Kpi label={t('reports.kpis.inflow')} value={query.data?.inflow ?? 0} />
-            <Kpi label={t('reports.kpis.wins')} value={query.data?.wins ?? 0} />
-            <Kpi label={t('reports.kpis.losses')} value={query.data?.losses ?? 0} />
+            <Kpi
+              label={t('reports.kpis.inflow')}
+              value={query.data?.inflow ?? 0}
+              href={
+                (query.data?.inflow ?? 0) > 0
+                  ? reportLeadsPath('inflow', filters)
+                  : undefined
+              }
+              openLabel={t('reports.openBucket', {
+                label: t('reports.kpis.inflow'),
+                count: query.data?.inflow ?? 0,
+              })}
+            />
+            <Kpi
+              label={t('reports.kpis.wins')}
+              value={query.data?.wins ?? 0}
+              href={(query.data?.wins ?? 0) > 0 ? reportLeadsPath('wins', filters) : undefined}
+              openLabel={t('reports.openBucket', {
+                label: t('reports.kpis.wins'),
+                count: query.data?.wins ?? 0,
+              })}
+            />
+            <Kpi
+              label={t('reports.kpis.losses')}
+              value={query.data?.losses ?? 0}
+              href={(query.data?.losses ?? 0) > 0 ? reportLeadsPath('losses', filters) : undefined}
+              openLabel={t('reports.openBucket', {
+                label: t('reports.kpis.losses'),
+                count: query.data?.losses ?? 0,
+              })}
+            />
             <Kpi
               label={t('reports.kpis.winRate')}
               value={`${(query.data?.winRate ?? 0).toLocaleString(undefined, {
@@ -131,9 +161,54 @@ export function ReportsPage() {
                         <td className="px-4 py-3">
                           {t(`reports.sources.${row.source}`, { defaultValue: row.source })}
                         </td>
-                        <td className="px-4 py-3">{row.inflow}</td>
-                        <td className="px-4 py-3">{row.wins}</td>
-                        <td className="px-4 py-3">{row.losses}</td>
+                        <td className="px-4 py-3">
+                          <BucketCell
+                            count={row.inflow}
+                            href={reportLeadsPath('inflow', {
+                              ...filters,
+                              source: row.source as LeadSource,
+                            })}
+                            label={t('reports.openSourceBucket', {
+                              label: t('reports.kpis.inflow'),
+                              source: t(`reports.sources.${row.source}`, {
+                                defaultValue: row.source,
+                              }),
+                              count: row.inflow,
+                            })}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <BucketCell
+                            count={row.wins}
+                            href={reportLeadsPath('wins', {
+                              ...filters,
+                              source: row.source as LeadSource,
+                            })}
+                            label={t('reports.openSourceBucket', {
+                              label: t('reports.kpis.wins'),
+                              source: t(`reports.sources.${row.source}`, {
+                                defaultValue: row.source,
+                              }),
+                              count: row.wins,
+                            })}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <BucketCell
+                            count={row.losses}
+                            href={reportLeadsPath('losses', {
+                              ...filters,
+                              source: row.source as LeadSource,
+                            })}
+                            label={t('reports.openSourceBucket', {
+                              label: t('reports.kpis.losses'),
+                              source: t(`reports.sources.${row.source}`, {
+                                defaultValue: row.source,
+                              }),
+                              count: row.losses,
+                            })}
+                          />
+                        </td>
                         <td className="px-4 py-3">{row.winRate}%</td>
                       </tr>
                     ))
@@ -148,13 +223,46 @@ export function ReportsPage() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number | string }) {
-  return (
-    <Card className="p-4">
+function Kpi({
+  label,
+  value,
+  href,
+  openLabel,
+}: {
+  label: string;
+  value: number | string;
+  href?: string;
+  openLabel?: string;
+}) {
+  const body = (
+    <Card className="p-4" interactive={Boolean(href)}>
       <p className="text-xs font-medium uppercase tracking-wide text-[color:var(--ink-muted)]">
         {label}
       </p>
       <p className="mt-1 text-2xl font-semibold text-[color:var(--ink)]">{value}</p>
     </Card>
+  );
+  if (!href) return body;
+  return (
+    <Link
+      to={href}
+      className="block rounded-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+      aria-label={openLabel}
+    >
+      {body}
+    </Link>
+  );
+}
+
+function BucketCell({ count, href, label }: { count: number; href: string; label: string }) {
+  if (count <= 0) return <>{count}</>;
+  return (
+    <Link
+      to={href}
+      className="font-semibold text-[color:var(--accent)] hover:underline"
+      aria-label={label}
+    >
+      {count}
+    </Link>
   );
 }

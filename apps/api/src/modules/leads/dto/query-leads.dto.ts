@@ -3,18 +3,30 @@ import { LeadSource, LeadStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   Allow,
+  ArrayMaxSize,
   IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
 
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
+
+function parseIdList(value: unknown): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  const flattened =
+    Array.isArray(value) && value.length === 1 && typeof value[0] === 'string' && value[0].includes(',')
+      ? value[0]
+      : value;
+  const raw = Array.isArray(flattened) ? flattened : String(flattened).split(',');
+  return raw.map((item) => String(item).trim()).filter(Boolean);
+}
 
 export const SORTABLE_FIELDS = [
   'createdAt',
@@ -67,6 +79,13 @@ export class QueryLeadsDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   tagId?: string;
+
+  @ApiPropertyOptional({ description: 'Comma-separated lead ids from a Relatórios bucket' })
+  @IsOptional()
+  @Transform(({ value }) => parseIdList(value))
+  @IsUUID(4, { each: true })
+  @ArrayMaxSize(5000)
+  ids?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()

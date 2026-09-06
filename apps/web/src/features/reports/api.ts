@@ -27,6 +27,15 @@ export interface FunnelConversionFilters {
   ownerId?: string;
 }
 
+export type ReportBucket = 'inflow' | 'wins' | 'losses';
+
+export interface FunnelConversionLeads {
+  bucket: ReportBucket;
+  period: ReportPeriod;
+  ids: string[];
+  total: number;
+}
+
 export async function fetchFunnelConversion(
   filters: FunnelConversionFilters = {},
 ): Promise<FunnelConversion> {
@@ -34,4 +43,25 @@ export async function fetchFunnelConversion(
     params: filters,
   });
   return data;
+}
+
+export async function fetchFunnelConversionLeads(
+  filters: FunnelConversionFilters & { bucket: ReportBucket },
+): Promise<FunnelConversionLeads> {
+  const { data } = await api.get<FunnelConversionLeads>('/reports/funnel-conversion/leads', {
+    params: filters,
+  });
+  return data;
+}
+
+export function reportLeadsPath(
+  bucket: ReportBucket,
+  filters: FunnelConversionFilters,
+): string {
+  const params = new URLSearchParams();
+  params.set('reportBucket', bucket);
+  if (filters.period) params.set('period', filters.period);
+  if (filters.source) params.set('source', filters.source);
+  if (filters.ownerId) params.set('ownerId', filters.ownerId);
+  return `/leads?${params.toString()}`;
 }

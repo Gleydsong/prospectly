@@ -1,6 +1,7 @@
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 import { QueryFunnelConversionDto } from './query-funnel-conversion.dto';
+import { QueryFunnelConversionLeadsDto } from './query-funnel-conversion-leads.dto';
 
 const pipe = new ValidationPipe({
   whitelist: true,
@@ -29,6 +30,17 @@ describe('QueryFunnelConversionDto', () => {
       pipe.transform(
         { organizationId: 'other-org' },
         { type: 'query', metatype: QueryFunnelConversionDto },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('QueryFunnelConversionLeadsDto', () => {
+  it('rejects a bucket that is not inflow, wins or losses', async () => {
+    await expect(
+      pipe.transform(
+        { period: '30d', bucket: 'rate' },
+        { type: 'query', metatype: QueryFunnelConversionLeadsDto },
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });

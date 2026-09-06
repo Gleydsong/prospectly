@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   usePreviewSavedView: vi.fn(),
   exportLeadsCsv: vi.fn(),
   downloadCsvFile: vi.fn(),
+  useFunnelConversionLeads: vi.fn(),
 }));
 
 vi.mock('@/features/leads/hooks', () => ({
@@ -35,6 +36,10 @@ vi.mock('@/features/leads/hooks', () => ({
 vi.mock('@/features/billing/hooks', () => ({
   BILLING_STATUS_QUERY_KEY: ['billing', 'status'],
   useBillingStatus: (...args: unknown[]) => mocks.useBillingStatus(...args),
+}));
+
+vi.mock('@/features/reports/hooks', () => ({
+  useFunnelConversionLeads: (...args: unknown[]) => mocks.useFunnelConversionLeads(...args),
 }));
 
 vi.mock('@/features/saved-views/hooks', () => ({
@@ -146,6 +151,12 @@ describe('LeadsPage saved views', () => {
       rowCount: 1,
       columns: ['companyName'],
     });
+    mocks.useFunnelConversionLeads.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isSuccess: false,
+      isError: false,
+    });
   });
 
   it('applies ?view= filters to the lead list and shows the count preview', async () => {
@@ -159,6 +170,7 @@ describe('LeadsPage saved views', () => {
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(
         expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
+        expect.anything(),
       );
     });
   });
@@ -202,6 +214,7 @@ describe('LeadsPage saved views', () => {
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(
         expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
+        expect.anything(),
       );
     });
   });
@@ -277,6 +290,7 @@ describe('LeadsPage saved views', () => {
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(
         expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
+        expect.anything(),
       );
     });
     await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
@@ -305,6 +319,7 @@ describe('LeadsPage saved views', () => {
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(
         expect.objectContaining({ hasWebsite: false, city: 'Lisboa' }),
+        expect.anything(),
       );
     });
 
@@ -397,6 +412,7 @@ describe('LeadsPage saved views', () => {
             ],
           },
         }),
+        expect.anything(),
       );
     });
 
@@ -467,7 +483,10 @@ describe('LeadsPage saved views', () => {
     expect(screen.getByRole('list', { name: 'Quadro por status' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { name: 'Novo' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(mocks.useLeads).toHaveBeenCalledWith(expect.objectContaining({ pageSize: 50 }));
+      expect(mocks.useLeads).toHaveBeenCalledWith(
+        expect.objectContaining({ pageSize: 50 }),
+        expect.anything(),
+      );
     });
   });
 
@@ -517,5 +536,97 @@ describe('LeadsPage saved views', () => {
     });
     expect(screen.queryByRole('columnheader', { name: 'Cidade' })).not.toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+  });
+
+  it('lists only the Relatórios bucket ids and does not save a Vista', async () => {
+    mocks.useFunnelConversionLeads.mockReturnValue({
+      data: { bucket: 'wins', period: '30d', ids: ['lead-jan'], total: 1 },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?reportBucket=wins&period=30d'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByText(/A mostrar os 1 clientes deste Relatório/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Voltar aos Relatórios' })).toHaveAttribute(
+      'href',
+      '/reports',
+    );
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(
+        expect.objectContaining({ ids: ['lead-jan'] }),
+        { enabled: true },
+      );
+    });
+  });
+
+  it('does not pretend the Relatórios bucket is empty while ids are loading', async () => {
+    mocks.useFunnelConversionLeads.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?reportBucket=wins&period=30d'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByText(/A carregar os clientes deste Relatório/i)).toBeInTheDocument();
+    expect(screen.queryByText(/A mostrar os 0 clientes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhum cliente encontrado')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(expect.anything(), { enabled: false });
+    });
+  });
+
+  it('forwards Relatórios source and owner to the bucket ids query', async () => {
+    mocks.useFunnelConversionLeads.mockReturnValue({
+      data: { bucket: 'wins', period: '30d', ids: ['lead-jan'], total: 1 },
+      isLoading: false,
+      isSuccess: true,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?reportBucket=wins&period=30d&source=MANUAL&ownerId=user-sales'],
+      withGoogle: false,
+    });
+
+    expect(mocks.useFunnelConversionLeads).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bucket: 'wins',
+        period: '30d',
+        source: 'MANUAL',
+        ownerId: 'user-sales',
+      }),
+      { enabled: true },
+    );
+  });
+
+  it('does not show an empty Relatórios list when bucket ids fail to load', async () => {
+    mocks.useFunnelConversionLeads.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isSuccess: false,
+      isError: true,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?reportBucket=wins&period=30d'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByText('Não foi possível carregar o relatório.')).toBeInTheDocument();
+    expect(screen.getByText('Erro ao carregar clientes. Tente novamente.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum cliente encontrado')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenCalledWith(expect.anything(), { enabled: false });
+    });
   });
 });

@@ -67,11 +67,34 @@ describe('ReportsPage', () => {
     expect(screen.queryByRole('button', { name: /guardar|salvar|publicar/i })).not.toBeInTheDocument();
   });
 
-  it('lets VIEWER read numbers without mutate controls', () => {
+  it('opens the wins bucket in Clientes and does not navigate empty cells', () => {
+    renderWithProviders(<ReportsPage />, { withGoogle: false });
+    expect(screen.getByRole('link', { name: 'Ver Ganhos (1)' })).toHaveAttribute(
+      'href',
+      '/leads?reportBucket=wins&period=30d',
+    );
+    expect(screen.getByRole('link', { name: 'Ver Entradas (4)' })).toHaveAttribute(
+      'href',
+      '/leads?reportBucket=inflow&period=30d',
+    );
+    expect(screen.getByRole('link', { name: 'Ver Ganhos · Manual (1)' })).toHaveAttribute(
+      'href',
+      '/leads?reportBucket=wins&period=30d&source=MANUAL',
+    );
+    expect(screen.queryByRole('link', { name: /Taxa de ganho/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Ver Ganhos · Google Places (0)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Ver Perdas · Manual (0)' })).not.toBeInTheDocument();
+  });
+
+  it('lets VIEWER follow a bucket without mutate controls', () => {
     setUser(Role.VIEWER);
     renderWithProviders(<ReportsPage />, { withGoogle: false });
     expect(screen.getByRole('heading', { name: 'Relatórios' })).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver Ganhos (1)' })).toHaveAttribute(
+      'href',
+      '/leads?reportBucket=wins&period=30d',
+    );
     expect(screen.queryByRole('button', { name: /guardar|salvar|publicar|criar/i })).not.toBeInTheDocument();
   });
 
@@ -90,6 +113,10 @@ describe('ReportsPage', () => {
     renderWithProviders(<ReportsPage />, { withGoogle: false });
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: 'u1' }),
+    );
+    expect(screen.getByRole('link', { name: 'Ver Ganhos (1)' })).toHaveAttribute(
+      'href',
+      '/leads?reportBucket=wins&period=30d&ownerId=u1',
     );
     await user.click(screen.getByLabelText('Só os meus clientes'));
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(

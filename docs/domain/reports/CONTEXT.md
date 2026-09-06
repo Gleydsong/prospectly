@@ -16,6 +16,10 @@ _Avoid_: snapshot de `Lead.status`, taxa da Principal (`won / (won + lost)` com 
 `lead.created` na janela. KPI à parte; não entra no denominador da taxa de ganho.
 _Avoid_: primeira etapa do funil, importação sem evento
 
+**Balde**:
+O conjunto de `leadId` distintos por métrica (entradas, ganhos ou perdas), opcionalmente restrito a uma origem, na mesma janela e filtros do Relatório.
+_Avoid_: Vista salva, CSV, funil etapa-a-etapa
+
 ## Invariants
 
 - Fonte: `OutboxEvent`. Relatórios não lê `DashboardService` nem o status atual do Lead para ganho/perda.
@@ -24,3 +28,4 @@ _Avoid_: primeira etapa do funil, importação sem evento
 - `organizationId` só da sessão. VIEWER lê. Filtro de dono é opcional; SALES pode abrir já filtrado em si.
 - `doNotContact` não apaga ganho/perda já ocorridos. Lead apagado (`deletedAt`) não entra.
 - Reclassificar `isWon`/`isLost` reescreve o passado do relatório. Congelar flags no payload do evento é trabalho futuro.
+- Clique num balde (entradas, ganhos, perdas, ou célula de origem) abre Clientes com os mesmos `leadId` distintos; não grava Vista. Balde vazio não navega.
