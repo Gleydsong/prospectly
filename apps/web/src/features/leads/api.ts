@@ -26,14 +26,16 @@ export interface LeadsQuery {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   filter?: unknown;
+  ids?: string[];
 }
 
 export async function fetchLeads(query: LeadsQuery): Promise<PaginatedResult<LeadListItem>> {
-  const { filter, ...rest } = query;
+  const { filter, ids, ...rest } = query;
   const { data } = await api.get<PaginatedResult<LeadListItem>>('/leads', {
     params: {
       ...rest,
       ...(filter !== undefined ? { filter: JSON.stringify(filter) } : {}),
+      ...(ids !== undefined ? { ids: ids.join(',') } : {}),
     },
   });
   return data;

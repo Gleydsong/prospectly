@@ -9,4 +9,12 @@ describe('ReportsController', () => {
     ) as string[] | undefined;
     expect(roles).toBeUndefined();
   });
+
+  it('lets VIEWER GET funnel conversion lead ids (no extra @Roles on the handler)', () => {
+    const roles = Reflect.getMetadata(
+      ROLES_KEY,
+      ReportsController.prototype.funnelConversionLeads,
+    ) as string[] | undefined;
+    expect(roles).toBeUndefined();
+  });
 });

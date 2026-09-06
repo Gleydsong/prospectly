@@ -2,12 +2,29 @@ import { useQuery } from '@tanstack/react-query';
 
 import { useAuthStore } from '@/stores/auth.store';
 
-import { fetchFunnelConversion, type FunnelConversionFilters } from './api';
+import {
+  fetchFunnelConversion,
+  fetchFunnelConversionLeads,
+  type FunnelConversionFilters,
+  type ReportBucket,
+} from './api';
 
 export function useFunnelConversion(filters: FunnelConversionFilters) {
   const userId = useAuthStore((state) => state.user?.id);
   return useQuery({
     queryKey: ['reports', 'funnel-conversion', userId, filters],
     queryFn: () => fetchFunnelConversion(filters),
+  });
+}
+
+export function useFunnelConversionLeads(
+  filters: FunnelConversionFilters & { bucket: ReportBucket },
+  options?: { enabled?: boolean },
+) {
+  const userId = useAuthStore((state) => state.user?.id);
+  return useQuery({
+    queryKey: ['reports', 'funnel-conversion', 'leads', userId, filters],
+    queryFn: () => fetchFunnelConversionLeads(filters),
+    enabled: options?.enabled ?? true,
   });
 }

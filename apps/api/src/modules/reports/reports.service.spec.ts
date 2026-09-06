@@ -290,4 +290,47 @@ describe('ReportsService', () => {
 
     expect(result.wins).toBe(0);
   });
+
+  it('puts a January-created February win in the wins bucket, not inflow', async () => {
+    const prisma = makePrisma();
+    prisma.pipelineStage.findMany.mockResolvedValue([
+      { id: WON_STAGE, isWon: true, isLost: false },
+      { id: LOST_STAGE, isWon: false, isLost: true },
+    ]);
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      createdEvent('lead-jan', JAN_1),
+      stageEvent('lead-jan', WON_STAGE, FEB_10),
+    ]);
+    prisma.lead.findMany.mockResolvedValue([
+      { id: 'lead-jan', source: 'MANUAL', ownerId: 'owner-1', doNotContact: false },
+    ]);
+    const service = new ReportsService(prisma);
+
+    await expect(
+      service.funnelConversionLeads('org-1', { period: '30d', bucket: 'wins' }),
+    ).resolves.toEqual(
+      expect.objectContaining({ bucket: 'wins', ids: ['lead-jan'], total: 1 }),
+    );
+    await expect(
+      service.funnelConversionLeads('org-1', { period: '30d', bucket: 'inflow' }),
+    ).resolves.toEqual(expect.objectContaining({ ids: [], total: 0 }));
+  });
+
+  it('rejects an unknown bucket instead of inventing a set', async () => {
+    const service = new ReportsService(makePrisma());
+    await expect(
+      service.funnelConversionLeads('org-1', { period: '30d', bucket: 'rate' as 'wins' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns an empty id list for an empty bucket', async () => {
+    const prisma = makePrisma();
+    prisma.pipelineStage.findMany.mockResolvedValue([]);
+    prisma.outboxEvent.findMany.mockResolvedValue([]);
+    const service = new ReportsService(prisma);
+
+    await expect(
+      service.funnelConversionLeads('org-1', { period: '30d', bucket: 'losses' }),
+    ).resolves.toEqual(expect.objectContaining({ ids: [], total: 0 }));
+  });
 });

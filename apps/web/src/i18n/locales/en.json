@@ -605,6 +605,9 @@
     "viewDuplicated": "View duplicated.",
     "viewArchived": "View archived.",
     "viewCount": "{{count}} leads in this view",
+    "reportBucketBanner": "Showing the {{count}} clients from this report. This list is not a View.",
+    "reportBucketLoading": "Loading the clients from this report. This list is not a View.",
+    "backToReports": "Back to Reports",
     "statusOr": "Or this status",
     "statusOrNone": "No second status",
     "lastContact": "Last contact",
@@ -828,6 +831,8 @@
     "retentionNotice": "History follows outbox retention (90 days). Won and Lost use the current pipeline stages — reclassifying a stage rewrites the past.",
     "loadError": "Could not load the report.",
     "empty": "No events in this period.",
+    "openBucket": "View {{label}} ({{count}})",
+    "openSourceBucket": "View {{label}} · {{source}} ({{count}})",
     "breakdownTitle": "By source",
     "fields": {
       "period": "Period",

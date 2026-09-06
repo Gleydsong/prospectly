@@ -50,8 +50,10 @@ import {
   type LeadViewColumnKey,
   type LeadViewLayout,
 } from '@/features/saved-views/lead-filter';
+import type { ReportBucket, ReportPeriod } from '@/features/reports/api';
+import { useFunnelConversionLeads } from '@/features/reports/hooks';
 import { useAuthStore } from '@/stores/auth.store';
-import { LeadStatus, Role, type LeadListItem } from '@/types';
+import { LeadSource, LeadStatus, Role, type LeadListItem } from '@/types';
 
 import { LeadFormModal } from './lead-form-modal';
 import { LeadsKanban } from './leads-kanban';
@@ -116,6 +118,21 @@ export function LeadsPage() {
   const [searchParams] = useSearchParams();
   const initialQ = (searchParams.get('q') ?? '').trim();
   const viewId = (searchParams.get('view') ?? '').trim();
+  const reportBucketParam = searchParams.get('reportBucket');
+  const reportBucket: ReportBucket | null =
+    reportBucketParam === 'inflow' || reportBucketParam === 'wins' || reportBucketParam === 'losses'
+      ? reportBucketParam
+      : null;
+  const reportPeriod = (['7d', '30d', '90d'] as ReportPeriod[]).includes(
+    searchParams.get('period') as ReportPeriod,
+  )
+    ? (searchParams.get('period') as ReportPeriod)
+    : '30d';
+  const reportSourceParam = searchParams.get('source');
+  const reportSource = (Object.values(LeadSource) as string[]).includes(reportSourceParam ?? '')
+    ? (reportSourceParam as LeadSource)
+    : undefined;
+  const reportOwnerId = searchParams.get('ownerId') || undefined;
   const [page, setPage] = useState(1);
   const [q, setQ] = useState(initialQ);
   const [search, setSearch] = useState(initialQ);
@@ -194,21 +211,35 @@ export function LeadsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedViewId, selectedViewUpdatedAt]);
 
-  const listQuery = leadsQueryFromFilters(
+  const idsQuery = useFunnelConversionLeads(
     {
-      q: search,
-      status,
-      statusOr,
-      hasWebsite,
-      lastContactOp,
-      lastContactDays,
-      layout,
-      columns,
-      extras,
+      bucket: reportBucket ?? 'wins',
+      period: reportPeriod,
+      source: reportSource,
+      ownerId: reportOwnerId,
     },
-    page,
+    { enabled: Boolean(reportBucket) },
   );
-  const query = useLeads(listQuery);
+  const listQuery = {
+    ...leadsQueryFromFilters(
+      {
+        q: search,
+        status,
+        statusOr,
+        hasWebsite,
+        lastContactOp,
+        lastContactDays,
+        layout,
+        columns,
+        extras,
+      },
+      page,
+    ),
+    ...(reportBucket && idsQuery.isSuccess ? { ids: idsQuery.data?.ids ?? [] } : {}),
+  };
+  const waitingForReportIds = Boolean(reportBucket) && !idsQuery.isSuccess && !idsQuery.isError;
+  const reportIdsFailed = Boolean(reportBucket) && idsQuery.isError;
+  const query = useLeads(listQuery, { enabled: !waitingForReportIds && !reportIdsFailed });
 
   const leads = query.data?.data ?? [];
   const meta = query.data?.meta;
@@ -314,6 +345,7 @@ export function LeadsPage() {
 
   const runExport = async () => {
     if (!exportColumns.length) return;
+    if (reportBucket && !idsQuery.isSuccess) return;
     setExporting(true);
     setExportMessage(null);
     setActionError(null);
@@ -331,6 +363,7 @@ export function LeadsPage() {
           columns,
           extras,
         }),
+        ...(reportBucket && idsQuery.isSuccess ? { ids: idsQuery.data?.ids ?? [] } : {}),
       });
       downloadCsvFile(result.filename, result.csv);
       setExportMessage(t('leads.exportSuccess', { count: result.rowCount }));
@@ -364,7 +397,11 @@ export function LeadsPage() {
         actions={
           <>
             {canExportCsv ? (
-              <Button variant="outline" onClick={() => setExportOpen(true)}>
+              <Button
+                variant="outline"
+                onClick={() => setExportOpen(true)}
+                disabled={Boolean(reportBucket) && !idsQuery.isSuccess}
+              >
                 <Download className="h-4 w-4" aria-hidden />
                 {t('leads.export')}
               </Button>
@@ -376,6 +413,22 @@ export function LeadsPage() {
           </>
         }
       />
+
+      {reportBucket ? (
+        <Card
+          className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
+          role="status"
+        >
+          {idsQuery.isError
+            ? t('reports.loadError')
+            : idsQuery.isSuccess
+              ? t('leads.reportBucketBanner', { count: idsQuery.data?.total ?? 0 })
+              : t('leads.reportBucketLoading')}{' '}
+          <Link to="/reports" className="font-semibold text-[color:var(--accent)] hover:underline">
+            {t('leads.backToReports')}
+          </Link>
+        </Card>
+      ) : null}
 
       <Card className="overflow-hidden">
         <div className="space-y-4 border-b border-[color:var(--border)] p-4 sm:p-5">
@@ -591,11 +644,11 @@ export function LeadsPage() {
           </div>
         ) : null}
 
-        {query.isLoading ? (
+        {query.isLoading || waitingForReportIds ? (
           <div className="p-5">
             <TableSkeleton rows={8} columns={5} />
           </div>
-        ) : query.isError ? (
+        ) : query.isError || reportIdsFailed ? (
           <div className="p-5">
             <Alert tone="error">Erro ao carregar clientes. Tente novamente.</Alert>
           </div>

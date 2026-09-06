@@ -3,10 +3,13 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LEAD_CREATED_TYPE, LEAD_STAGE_CHANGED_TYPE } from '../outbox/outbox.constants';
 import {
+  REPORT_BUCKETS,
   REPORT_PERIODS,
   type QueryFunnelConversionDto,
+  type ReportBucket,
   type ReportPeriod,
 } from './dto/query-funnel-conversion.dto';
+import type { QueryFunnelConversionLeadsDto } from './dto/query-funnel-conversion-leads.dto';
 
 export type FunnelConversionSourceRow = {
   source: string;
@@ -26,6 +29,21 @@ export type FunnelConversionResult = {
   bySource: FunnelConversionSourceRow[];
 };
 
+export type FunnelConversionLeadsResult = {
+  bucket: ReportBucket;
+  period: ReportPeriod;
+  ids: string[];
+  total: number;
+};
+
+type CollectedBuckets = {
+  periodStart: Date;
+  inflowIds: Set<string>;
+  winIds: Set<string>;
+  lossIds: Set<string>;
+  bySource: Map<string, SourceBucket>;
+};
+
 type SourceBucket = {
   inflow: Set<string>;
   wins: Set<string>;
@@ -34,6 +52,10 @@ type SourceBucket = {
 
 function isReportPeriod(value: string): value is ReportPeriod {
   return (REPORT_PERIODS as readonly string[]).includes(value);
+}
+
+function isReportBucket(value: string | undefined): value is ReportBucket {
+  return typeof value === 'string' && (REPORT_BUCKETS as readonly string[]).includes(value);
 }
 
 function periodStartDate(period: ReportPeriod, now: Date): Date {
@@ -60,6 +82,58 @@ export class ReportsService {
     organizationId: string,
     query: QueryFunnelConversionDto,
   ): Promise<FunnelConversionResult> {
+    const collected = await this.collectBuckets(organizationId, query);
+    const union = new Set([...collected.winIds, ...collected.lossIds]);
+
+    return {
+      period: query.period,
+      periodStart: collected.periodStart.toISOString(),
+      inflow: collected.inflowIds.size,
+      wins: collected.winIds.size,
+      losses: collected.lossIds.size,
+      winRate: roundRate(collected.winIds.size, union.size),
+      bySource: [...collected.bySource.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([source, bucket]) => {
+          const sourceUnion = new Set([...bucket.wins, ...bucket.losses]);
+          return {
+            source,
+            inflow: bucket.inflow.size,
+            wins: bucket.wins.size,
+            losses: bucket.losses.size,
+            winRate: roundRate(bucket.wins.size, sourceUnion.size),
+          };
+        }),
+    };
+  }
+
+  async funnelConversionLeads(
+    organizationId: string,
+    query: QueryFunnelConversionLeadsDto,
+  ): Promise<FunnelConversionLeadsResult> {
+    if (!isReportBucket(query.bucket)) {
+      throw new BadRequestException('Bucket must be inflow, wins or losses');
+    }
+    const collected = await this.collectBuckets(organizationId, query);
+    const set =
+      query.bucket === 'inflow'
+        ? collected.inflowIds
+        : query.bucket === 'wins'
+          ? collected.winIds
+          : collected.lossIds;
+    const ids = [...set].sort();
+    return {
+      bucket: query.bucket,
+      period: query.period,
+      ids,
+      total: ids.length,
+    };
+  }
+
+  private async collectBuckets(
+    organizationId: string,
+    query: QueryFunnelConversionDto,
+  ): Promise<CollectedBuckets> {
     if (!isReportPeriod(query.period)) {
       throw new BadRequestException('Period must be 7d, 30d or 90d');
     }
@@ -153,27 +227,6 @@ export class ReportsService {
       }
     }
 
-    const union = new Set([...winIds, ...lossIds]);
-
-    return {
-      period: query.period,
-      periodStart: periodStart.toISOString(),
-      inflow: inflowIds.size,
-      wins: winIds.size,
-      losses: lossIds.size,
-      winRate: roundRate(winIds.size, union.size),
-      bySource: [...bySource.entries()]
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([source, bucket]) => {
-          const sourceUnion = new Set([...bucket.wins, ...bucket.losses]);
-          return {
-            source,
-            inflow: bucket.inflow.size,
-            wins: bucket.wins.size,
-            losses: bucket.losses.size,
-            winRate: roundRate(bucket.wins.size, sourceUnion.size),
-          };
-        }),
-    };
+    return { periodStart, inflowIds, winIds, lossIds, bySource };
   }
 }

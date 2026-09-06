@@ -51,6 +51,9 @@ export class LeadsService {
   ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
+    if (query.ids && query.ids.length === 0) {
+      return paginate([], 0, query.page, query.pageSize);
+    }
     const where = this.buildListWhere(organizationId, query);
 
     const [total, leads] = await Promise.all([
@@ -285,6 +288,15 @@ export class LeadsService {
     const columns = (
       dto.columns?.length ? dto.columns : DEFAULT_EXPORT_COLUMNS
     ) as ExportableLeadColumn[];
+    if (dto.ids && dto.ids.length === 0) {
+      const csv = this.toCsv(columns, []);
+      return {
+        filename: `leads-export-${new Date().toISOString().slice(0, 10)}.csv`,
+        rowCount: 0,
+        columns,
+        csv,
+      };
+    }
     const where = this.buildListWhere(organizationId, dto);
 
     const leads = await this.prisma.lead.findMany({
@@ -370,12 +382,22 @@ export class LeadsService {
       | 'tagId'
       | 'q'
       | 'filter'
+      | 'ids'
     >,
   ): Prisma.LeadWhereInput {
     const tenant: Prisma.LeadWhereInput = { organizationId, deletedAt: null };
+    if (query.ids && query.ids.length === 0) {
+      return { ...tenant, id: { in: [] } };
+    }
     if (query.filter !== undefined) {
       try {
-        return { AND: [tenant, compileLeadFilter(coerceLeadFilter(query.filter))] };
+        return {
+          AND: [
+            tenant,
+            compileLeadFilter(coerceLeadFilter(query.filter)),
+            ...(query.ids?.length ? [{ id: { in: query.ids } }] : []),
+          ],
+        };
       } catch (error) {
         if (error instanceof InvalidLeadFilterError) {
           throw new BadRequestException(error.message);
@@ -402,6 +424,7 @@ export class LeadsService {
           }
         : {}),
       ...(query.tagId ? { tags: { some: { tagId: query.tagId } } } : {}),
+      ...(query.ids?.length ? { id: { in: query.ids } } : {}),
       ...(query.q
         ? {
             OR: [

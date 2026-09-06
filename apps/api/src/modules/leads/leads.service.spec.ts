@@ -186,6 +186,49 @@ describe('LeadsService', () => {
     );
   });
 
+  it('list with an explicit empty ids list returns no rows instead of the whole org', async () => {
+    const prisma = makePrisma();
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    const result = await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      ids: [],
+    });
+
+    expect(result.data).toEqual([]);
+    expect(result.meta.total).toBe(0);
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
+    expect(prisma.lead.count).not.toHaveBeenCalled();
+  });
+
+  it('list with ids constrains to those leads inside the tenant', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      ids: ['11111111-1111-4111-8111-111111111111'],
+    });
+
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          organizationId: 'org1',
+          deletedAt: null,
+          id: { in: ['11111111-1111-4111-8111-111111111111'] },
+        }),
+      }),
+    );
+  });
+
   it('list always scopes by organization and excludes soft-deleted', async () => {
     const prisma = makePrisma();
     prisma.lead.count.mockResolvedValue(0);

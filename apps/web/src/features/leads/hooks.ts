@@ -14,11 +14,12 @@ import {
   type LeadsQuery,
 } from './api';
 
-export function useLeads(query: LeadsQuery) {
+export function useLeads(query: LeadsQuery, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['leads', query],
     queryFn: () => fetchLeads(query),
     placeholderData: (previous) => previous,
+    enabled: options?.enabled ?? true,
   });
 }
 
