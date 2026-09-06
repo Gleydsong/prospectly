@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { FaqPageView } from '@/components/faq-section';
 import { getFaqItems } from '@/lib/faq-content';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'FAQ - Search, plans, and privacy questions',
   description:
     'Answers about Prospectly: no-website filter, OpenStreetMap, Google Places, credits and unlimited plan, privacy, and how to start with 3 free searches.',
+  alternates: landingAlternates('/en/faq'),
 };
 
 export default function FaqPageEn() {

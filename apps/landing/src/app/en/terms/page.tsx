@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Terms of Use',
   description: 'Prospectly SaaS terms of use (summary).',
+  alternates: landingAlternates('/en/terms'),
 };
 
 export default function EnTermsPage() {
@@ -19,8 +21,8 @@ export default function EnTermsPage() {
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">Plans</h2>
         <p>
-          We offer credit packs (one-time) and monthly unlimited access. New PIX and card charges
-          go through Asaas. Monthly PIX lasts 30 days with no auto-renew. Monthly cards renew until
+          We offer credit packs (one-time) and monthly unlimited access. New PIX and card charges go
+          through Asaas. Monthly PIX lasts 30 days with no auto-renew. Monthly cards renew until
           canceled in-app under Credits. Historical AbacatePay or Stripe contracts are not migrated
           automatically. Credit packs do not auto-renew.
         </p>

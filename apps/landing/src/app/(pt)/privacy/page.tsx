@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade',
   description: 'Como o Prospectly trata dados pessoais sob LGPD e GDPR.',
+  alternates: landingAlternates('/privacy'),
 };
 
 export default function PrivacyPage() {
@@ -14,9 +16,9 @@ export default function PrivacyPage() {
       </p>
       <div className="mt-8 space-y-4 text-base leading-relaxed text-[color:var(--ink-muted)]">
         <p>
-          O Prospectly (&quot;nós&quot;) processa dados para oferecer um SaaS de prospecção de negócios
-          locais a agências e freelancers. Controlador: operador do serviço Prospectly. Contato de
-          privacidade: privacy@prospectly.dev.
+          O Prospectly (&quot;nós&quot;) processa dados para oferecer um SaaS de prospecção de
+          negócios locais a agências e freelancers. Controlador: operador do serviço Prospectly.
+          Contato de privacidade: privacy@prospectly.dev.
         </p>
         <h2 className="pt-4 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Dados que coletamos
@@ -25,8 +27,8 @@ export default function PrivacyPage() {
           <li>Conta: nome, e-mail, organização, consentimento de termos.</li>
           <li>Uso: buscas, leads importados, pipeline e tarefas da sua organização.</li>
           <li>
-            Pagamento: processado pelo Asaas (PIX e cartão novos). Contratos históricos
-            AbacatePay ou Stripe, quando existirem. Não armazenamos o número completo do cartão.
+            Pagamento: processado pelo Asaas (PIX e cartão novos). Contratos históricos AbacatePay
+            ou Stripe, quando existirem. Não armazenamos o número completo do cartão.
           </li>
           <li>
             Dados de negócios públicos obtidos via OpenStreetMap / Google Places - podem incluir
@@ -38,7 +40,9 @@ export default function PrivacyPage() {
         </h2>
         <ul className="list-disc space-y-2 pl-5">
           <li>Execução de contrato: provisão do SaaS e cobrança.</li>
-          <li>Consentimento: aceite de termos no cadastro; cookies não essenciais (quando houver).</li>
+          <li>
+            Consentimento: aceite de termos no cadastro; cookies não essenciais (quando houver).
+          </li>
           <li>
             Legítimo interesse: melhoria do produto e segurança, com avaliação de impacto quando
             aplicável.
@@ -48,19 +52,19 @@ export default function PrivacyPage() {
           Compartilhamento
         </h2>
         <p>
-          Subprocessadores típicos: hospedagem (Render/Vercel), banco PostgreSQL, Redis,
-          Asaas, AbacatePay (histórico), Stripe (legado), provedores de mapas. Não vendemos listas
-          de leads.
+          Subprocessadores típicos: hospedagem (Render/Vercel), banco PostgreSQL, Redis, Asaas,
+          AbacatePay (histórico), Stripe (legado), provedores de mapas. Não vendemos listas de
+          leads.
         </p>
         <h2 className="pt-4 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Direitos do titular
         </h2>
         <p>
           Você pode solicitar acesso, correção, portabilidade ou exclusão dos dados da sua conta
-          pelo e-mail privacy@prospectly.dev ou no app em Configurações → Privacidade
-          (GET /api/v1/privacy/export e DELETE /api/v1/privacy/account). Responderemos em prazo
-          razoável conforme a LGPD. Leads da organização permanecem com o controlador (sua empresa)
-          até pedido específico.
+          pelo e-mail privacy@prospectly.dev ou no app em Configurações → Privacidade (GET
+          /api/v1/privacy/export e DELETE /api/v1/privacy/account). Responderemos em prazo razoável
+          conforme a LGPD. Leads da organização permanecem com o controlador (sua empresa) até
+          pedido específico.
         </p>
         <h2 className="pt-4 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Retenção

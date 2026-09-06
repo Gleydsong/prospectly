@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { LandingV2SectionPage } from '@/components/landing-v2';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'Dúvidas frequentes | Prospectly',
+  title: 'Dúvidas frequentes',
   description: 'Respostas diretas sobre busca, dados, créditos e o fluxo do Prospectly.',
-  alternates: { canonical: '/duvidas' },
+  alternates: landingAlternates('/duvidas'),
 };
 
 export default function QuestionsPage() {

@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { PricingCard } from '@/components/pricing-card';
 import { Reveal } from '@/components/motion';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Preços - créditos e plano ilimitado',
   description:
     'Compre créditos sem expiração ou assine buscas ilimitadas para sua prospecção local.',
+  alternates: landingAlternates('/pricing'),
 };
 
 export default function PricingPage() {

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Política de Cookies',
   description: 'Cookies usados pelo site Prospectly.',
+  alternates: landingAlternates('/cookies'),
 };
 
 export default function CookiesPage() {
@@ -17,15 +19,16 @@ export default function CookiesPage() {
           Cookies essenciais
         </h2>
         <p>
-          Necessários para preferência de idioma e consentimento do banner (localStorage no
-          browser) e funcionamento do site. Não exigem consentimento adicional além da transparência.
+          Necessários para preferência de idioma e consentimento do banner (localStorage no browser)
+          e funcionamento do site. Não exigem consentimento adicional além da transparência.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Analytics
         </h2>
         <p>
-          Analytics de terceiros fica <strong className="text-[color:var(--ink)]">desligado por padrão</strong>.
-          Se ativarmos no futuro, pediremos consentimento explícito no banner.
+          Analytics de terceiros fica{' '}
+          <strong className="text-[color:var(--ink)]">desligado por padrão</strong>. Se ativarmos no
+          futuro, pediremos consentimento explícito no banner.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           Como gerenciar

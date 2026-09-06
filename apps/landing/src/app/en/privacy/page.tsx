@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Prospectly handles personal data under LGPD/GDPR.',
+  alternates: landingAlternates('/en/privacy'),
 };
 
 export default function EnPrivacyPage() {
@@ -34,7 +36,8 @@ export default function EnPrivacyPage() {
         </h2>
         <p>
           Request access, correction, portability or deletion via privacy@prospectly.dev or in the
-          app under Settings → Privacy (GET /api/v1/privacy/export and DELETE /api/v1/privacy/account).
+          app under Settings → Privacy (GET /api/v1/privacy/export and DELETE
+          /api/v1/privacy/account).
         </p>
       </div>
     </article>

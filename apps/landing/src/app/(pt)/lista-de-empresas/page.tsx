@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { IntentLanding, type IntentPageContent } from '@/components/intent-landing';
+import { landingAlternates } from '@/lib/seo';
 
 const content: IntentPageContent = {
   title: 'Lista de empresas para prospecção',
@@ -32,9 +33,7 @@ const content: IntentPageContent = {
 export const metadata: Metadata = {
   title: content.title,
   description: content.description,
-  alternates: {
-    canonical: '/lista-de-empresas',
-  },
+  alternates: landingAlternates('/lista-de-empresas'),
   openGraph: {
     title: `${content.title} | Prospectly`,
     description: content.description,

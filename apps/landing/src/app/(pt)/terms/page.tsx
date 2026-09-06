@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Termos de Uso',
   description: 'Termos de uso do SaaS Prospectly.',
+  alternates: landingAlternates('/terms'),
 };
 
 export default function TermsPage() {
@@ -41,15 +43,16 @@ export default function TermsPage() {
           4. Uso aceitável
         </h2>
         <p>
-          É proibido usar o serviço para spam ilegal, engenharia social abusiva ou violar direitos de
-          titulares. Dados públicos de mapas não isentam compliance com LGPD/GDPR no seu outreach.
+          É proibido usar o serviço para spam ilegal, engenharia social abusiva ou violar direitos
+          de titulares. Dados públicos de mapas não isentam compliance com LGPD/GDPR no seu
+          outreach.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           5. Limitação
         </h2>
         <p>
-          O serviço é fornecido &quot;como está&quot;. Não garantimos cobertura completa de mapas nem
-          taxa de conversão de leads.
+          O serviço é fornecido &quot;como está&quot;. Não garantimos cobertura completa de mapas
+          nem taxa de conversão de leads.
         </p>
         <h2 className="pt-2 text-xl font-semibold tracking-tight text-[color:var(--ink)]">
           6. Contato

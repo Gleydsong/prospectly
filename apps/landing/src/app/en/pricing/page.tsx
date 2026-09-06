@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { PricingCard } from '@/components/pricing-card';
 import { Reveal } from '@/components/motion';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Pricing - credits and unlimited plan',
   description: 'Buy credits with no expiration or subscribe to unlimited prospecting.',
+  alternates: landingAlternates('/en/pricing'),
 };
 
 export default function EnPricingPage() {

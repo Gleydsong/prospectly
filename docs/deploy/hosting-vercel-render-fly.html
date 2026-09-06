@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prospectly · Hospedagem: Render vs Vercel vs Fly.io</title>
+    <meta
+      name="description"
+      content="Análise de migração da hospedagem do Prospectly: Render (atual), Vercel (candidato) e Fly.io (alternativa com escala vertical e horizontal nativa)."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #07101d;
+        --panel: #0b1525;
+        --panel-2: #101c2d;
+        --line: #24344d;
+        --text: #e8eef8;
+        --muted: #8fa0b8;
+        --faint: #60718a;
+        --accent: #f4c430;
+        --accent-soft: rgba(244, 196, 48, 0.13);
+        --blue: #5ea7ff;
+        --cyan: #5fe1d2;
+        --green: #6bda91;
+        --orange: #ffad66;
+        --red: #ff7f83;
+        --violet: #b79cff;
+        --radius: 12px;
+        --shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(94, 167, 255, 0.08), transparent 50%),
+          radial-gradient(900px 500px at 110% 0%, rgba(244, 196, 48, 0.07), transparent 45%),
+          var(--bg);
+        color: var(--text);
+        line-height: 1.55;
+      }
+
+      a {
+        color: var(--blue);
+      }
+
+      header {
+        padding: 48px 24px 28px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+
+      .kicker {
+        color: var(--accent);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 12px;
+        font-weight: 700;
+        margin: 0 0 10px;
+      }
+
+      h1 {
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.15;
+        margin: 0 0 12px;
+        letter-spacing: -0.03em;
+      }
+
+      .lede {
+        color: var(--muted);
+        max-width: 72ch;
+        margin: 0;
+        font-size: 17px;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px 80px;
+      }
+
+      section {
+        margin: 28px 0;
+      }
+
+      h2 {
+        font-size: 22px;
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+      }
+
+      h3 {
+        font-size: 16px;
+        margin: 0 0 8px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .chip {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        box-shadow: var(--shadow);
+      }
+
+      .chip strong {
+        display: block;
+        color: var(--faint);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .chip span {
+        color: var(--text);
+        font-size: 13px;
+      }
+
+      .verdict {
+        background: linear-gradient(180deg, var(--panel-2), var(--panel));
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 22px 24px;
+      }
+
+      .verdict p {
+        margin: 8px 0 0;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+      }
+
+      @media (max-width: 920px) {
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 18px 18px 8px;
+        min-height: 100%;
+      }
+
+      .card.recommend {
+        border-color: rgba(107, 218, 145, 0.45);
+        box-shadow: 0 0 0 1px rgba(107, 218, 145, 0.12);
+      }
+
+      .card.warn {
+        border-color: rgba(255, 173, 102, 0.4);
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 999px;
+        margin-bottom: 10px;
+      }
+
+      .ok {
+        color: var(--green);
+        background: rgba(107, 218, 145, 0.12);
+      }
+
+      .mid {
+        color: var(--orange);
+        background: rgba(255, 173, 102, 0.12);
+      }
+
+      .no {
+        color: var(--red);
+        background: rgba(255, 127, 131, 0.12);
+      }
+
+      .info {
+        color: var(--cyan);
+        background: rgba(95, 225, 210, 0.12);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+        font-size: 13.5px;
+      }
+
+      th {
+        color: var(--faint);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        background: var(--panel-2);
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      td:first-child {
+        color: var(--text);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .fit-yes {
+        color: var(--green);
+      }
+
+      .fit-partial {
+        color: var(--orange);
+      }
+
+      .fit-no {
+        color: var(--red);
+      }
+
+      ul.pros,
+      ul.cons {
+        margin: 0 0 16px;
+        padding-left: 18px;
+      }
+
+      ul.pros li {
+        color: #c8f0d4;
+      }
+
+      ul.cons li {
+        color: #ffd0b8;
+      }
+
+      .stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 0;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        background: var(--panel-2);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      @media (max-width: 800px) {
+        .flow {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .flow div {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .flow strong {
+        display: block;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      footer {
+        color: var(--faint);
+        font-size: 13px;
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 24px 48px;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.92em;
+        color: var(--cyan);
+      }
+
+      .sources li {
+        margin-bottom: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <p class="kicker">Decisão de infraestrutura · Prospectly</p>
+      <h1>Render, Vercel ou Fly.io — onde o sistema inteiro cabe de verdade</h1>
+      <p class="lede">
+        Análise após sincronizar o repositório local com
+        <code>origin/main</code> via GitHub MCP. Conclusão: a Vercel é excelente para
+        <strong style="color: var(--text)">landing Next.js e SPA Vite</strong>, mas
+        <strong style="color: var(--text)">não hospeda o sistema completo</strong> sem
+        reescrever a API. A Render já encaixa. Fly.io é a terceira plataforma em que o
+        monorepo cabe nativamente e escala nos dois eixos.
+      </p>
+      <div class="meta">
+        <div class="chip">
+          <strong>Repo remoto</strong>
+          <span>Gleydsong/prospectly · main</span>
+        </div>
+        <div class="chip">
+          <strong>HEAD analisado</strong>
+          <span>574059a · PR #96 (Asaas checkout)</span>
+        </div>
+        <div class="chip">
+          <strong>Checkout local</strong>
+          <span>analysis/hosting-platforms = origin/main</span>
+        </div>
+        <div class="chip">
+          <strong>Produção atual</strong>
+          <span>Render Blueprint · Frankfurt</span>
+        </div>
+        <div class="chip">
+          <strong>Data</strong>
+          <span>31 ago 2026</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="verdict">
+        <h2>Veredito</h2>
+        <p>
+          <strong style="color: var(--text)">Não mover todo o Prospectly para a Vercel.</strong>
+          Landing (<code>apps/landing</code>, Next.js 15) e web (<code>apps/web</code>, Vite
+          estático) cabem bem. A API NestJS com Prisma, Redis, BullMQ in-process, webhooks
+          raw body, CSV de 5&nbsp;MB e Opportunity Finder/Qwen via Ollama é um processo
+          sempre ligado — o modelo da Vercel continua sendo Function com duração máxima,
+          corpo de 4,5&nbsp;MB e sem worker persistente.
+        </p>
+        <p>
+          <strong style="color: var(--text)">Manter a Render no curto prazo</strong> é o
+          caminho de menor risco: o blueprint já descreve API Docker, web estática, landing
+          Node, Postgres 16 e Key Value Redis. A plataforma já oferece escala vertical
+          (compute plan) e horizontal (até 100 instâncias; autoscaling no plano Pro+).
+        </p>
+        <p>
+          <strong style="color: var(--text)">Terceira alternativa recomendada: Fly.io.</strong>
+          É a única das três em que o Dockerfile atual (targets <code>api</code> e
+          <code>worker</code>) vira process groups, com
+          <code>fly scale count</code> (horizontal) e <code>fly scale vm</code> /
+          <code>fly scale memory</code> (vertical) independentes por processo. Também
+          admite GPU para Ollama/Qwen3 8B, que nem Vercel nem o blueprint atual da Render
+          cobrem.
+        </p>
+      </section>
+
+      <section>
+        <h2>O que o sistema é hoje</h2>
+        <p>
+          Monorepo pnpm com três apps implantáveis. Workers BullMQ ainda rodam
+          <em>no mesmo processo HTTP</em> da API em produção. O Compose já tem target
+          <code>worker</code>; o Blueprint da Render ainda não. Região: Frankfurt. Cookie
+          de refresh já é <code>SameSite=None; Secure</code> porque API e web estão em
+          hosts distintos em <code>onrender.com</code>.
+        </p>
+        <div class="flow">
+          <div>
+            <strong>Landing</strong>
+            Next.js 15 · Node na Render · SEO + waitlist proxy
+          </div>
+          <div>
+            <strong>Web</strong>
+            Vite SPA · static + rewrite <code>/* → /index.html</code>
+          </div>
+          <div>
+            <strong>API</strong>
+            NestJS Docker · JWT · Prisma · RLS · webhooks Asaas
+          </div>
+          <div>
+            <strong>Filas</strong>
+            BullMQ in-process · Redis <code>noeviction</code>
+          </div>
+          <div>
+            <strong>Dados</strong>
+            Postgres 16 basic-256mb · Redis starter
+          </div>
+        </div>
+        <div class="stack">
+          <span class="pill">prospecting</span>
+          <span class="pill">imports CSV 5 MB</span>
+          <span class="pill">website-analysis</span>
+          <span class="pill">scoring</span>
+          <span class="pill">opportunity-finder</span>
+          <span class="pill">Ollama / qwen3:8b</span>
+          <span class="pill">Asaas PIX + cartão</span>
+          <span class="pill">Google Places + OSM</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>Matriz de encaixe por peça</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Peça</th>
+              <th>Render (hoje)</th>
+              <th>Vercel (sistema inteiro)</th>
+              <th>Fly.io</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Landing Next.js</td>
+              <td class="fit-yes">Cabe. Serviço Node, <code>next start</code>.</td>
+              <td class="fit-yes">Encaixe nativo. Preview, CDN, ISR, Firewall.</td>
+              <td class="fit-yes">Cabe como Machine Node/Docker.</td>
+            </tr>
+            <tr>
+              <td>Web Vite SPA</td>
+              <td class="fit-yes">Static Site + rewrite. Já documentado.</td>
+              <td class="fit-yes">Static + rewrite. CDN global.</td>
+              <td class="fit-yes">Static via Tigris/nginx ou CDN à parte.</td>
+            </tr>
+            <tr>
+              <td>API NestJS longa</td>
+              <td class="fit-yes">Docker always-on. Health <code>/health/ready</code>.</td>
+              <td class="fit-no">Vira Function. Timeout, cold start, sem listen 3000 real.</td>
+              <td class="fit-yes">Dockerfile atual, <code>ROLE=api</code>.</td>
+            </tr>
+            <tr>
+              <td>BullMQ worker</td>
+              <td class="fit-partial">Cabe como Background Worker; ainda não no blueprint.</td>
+              <td class="fit-no">Não existe processo consumidor persistente. Cron/Workflow ≠ fila Redis.</td>
+              <td class="fit-yes">Process group <code>worker</code>, escala à parte.</td>
+            </tr>
+            <tr>
+              <td>Postgres 16 + RLS</td>
+              <td class="fit-yes">Managed. Plano atual 256&nbsp;MB é apertado.</td>
+              <td class="fit-partial">Marketplace (Neon etc.) + pooler obrigatório.</td>
+              <td class="fit-yes">Fly Postgres ou Neon externo.</td>
+            </tr>
+            <tr>
+              <td>Redis / BullMQ</td>
+              <td class="fit-yes">Key Value privado, <code>noeviction</code>.</td>
+              <td class="fit-partial">Upstash ok para cache; worker persistente continua faltando.</td>
+              <td class="fit-yes">Upstash ou Redis em Machine.</td>
+            </tr>
+            <tr>
+              <td>Webhooks raw body</td>
+              <td class="fit-yes">Express + <code>rawBody: true</code>.</td>
+              <td class="fit-partial">Viável, mas 4,5&nbsp;MB de teto no body.</td>
+              <td class="fit-yes">Mesmo runtime Node de hoje.</td>
+            </tr>
+            <tr>
+              <td>CSV 5&nbsp;MB</td>
+              <td class="fit-yes">Upload direto na API.</td>
+              <td class="fit-no">Limite de Function = 4,5&nbsp;MB. Quebra o default atual.</td>
+              <td class="fit-yes">Sem esse teto de Function.</td>
+            </tr>
+            <tr>
+              <td>Ollama / Qwen3 8B</td>
+              <td class="fit-no">Sem GPU no blueprint. IA local não está no Render.</td>
+              <td class="fit-no">Impossível. Sem GPU, sem processo de inferência local.</td>
+              <td class="fit-yes">Machines GPU + Ollama ao lado da API.</td>
+            </tr>
+            <tr>
+              <td>Escala vertical</td>
+              <td class="fit-yes">Troca de compute plan (0,5c–12c / 512&nbsp;MB–96&nbsp;GB).</td>
+              <td class="fit-partial">Memória da Function até 4&nbsp;GB / 2 vCPU (Pro).</td>
+              <td class="fit-yes"><code>fly scale vm</code> + <code>fly scale memory</code> por grupo.</td>
+            </tr>
+            <tr>
+              <td>Escala horizontal</td>
+              <td class="fit-yes">Até 100 instâncias. Autoscale só Pro+.</td>
+              <td class="fit-yes">Concorrência automática (até 30k Hobby/Pro) — mas de Functions.</td>
+              <td class="fit-yes"><code>fly scale count api=N worker=M</code> + autoscale por métrica.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Comparativo das três plataformas</h2>
+        <div class="grid-3">
+          <article class="card mid">
+            <span class="badge mid">Atual · cabe</span>
+            <h3>Render</h3>
+            <p>
+              Plataforma em que o Prospectly já está modelado. Web service Docker, static
+              site, Node, Postgres e Redis no mesmo projeto Frankfurt.
+            </p>
+            <p><strong style="color: var(--text)">Melhor para:</strong> ficar e extrair o worker.</p>
+          </article>
+          <article class="card warn">
+            <span class="badge no">Front only</span>
+            <h3>Vercel</h3>
+            <p>
+              Melhor CDN/DX do mercado para Next e estáticos. Fluid Compute alonga Functions
+              (até 800s / 1800s beta), mas não substitui Nest + BullMQ always-on.
+            </p>
+            <p><strong style="color: var(--text)">Melhor para:</strong> só landing + web, API fora.</p>
+          </article>
+          <article class="card recommend">
+            <span class="badge ok">Terceira · encaixa</span>
+            <h3>Fly.io</h3>
+            <p>
+              Docker-first, process groups iguais ao Compose, escala H e V por processo,
+              multi-região e GPU para Qwen. Custo operacional um pouco maior que a Render.
+            </p>
+            <p><strong style="color: var(--text)">Melhor para:</strong> sistema completo no futuro.</p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Render — prós e contras</h2>
+        <div class="grid-3">
+          <article class="card">
+            <span class="badge ok">Prós</span>
+            <ul class="pros">
+              <li>Blueprint já existe: API Docker, web static, landing Node, DB, Redis.</li>
+              <li>Processo always-on: Nest, Prisma, Helmet, raw webhooks e BullMQ funcionam sem adapter.</li>
+              <li>Escala vertical oficial: troca de compute plan (CPU/RAM).</li>
+              <li>Escala horizontal oficial: 1–100 instâncias; load balancer nas web services.</li>
+              <li>Background Worker nativo para o split documentado em <code>docs/deploy/workers.md</code>.</li>
+              <li>Rede privada entre API, Postgres e Key Value; Redis <code>noeviction</code> correto para BullMQ.</li>
+              <li><code>autoDeployTrigger: checksPass</code> já amarra CI do GitHub.</li>
+              <li>Domínio <code>prospectlyonboard.com</code> e cookie cross-site já operacionais.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge no">Contras</span>
+            <ul class="cons">
+              <li>Plano atual da API é <code>starter</code> (0,5 CPU / 512&nbsp;MB) com HTTP + filas no mesmo processo — aperto real.</li>
+              <li>Postgres <code>basic-256mb</code> / 5&nbsp;GB: teto cedo para CRM + buscas + RLS.</li>
+              <li>Autoscaling horizontal exige workspace Pro ou acima.</li>
+              <li>Worker dedicado ainda é proposta; escalar a API hoje escala também os consumers.</li>
+              <li>CDN/edge da landing e da SPA é mais fraco que o da Vercel.</li>
+              <li>Sem GPU: Opportunity Finder com Qwen3 8B local não mora aqui.</li>
+              <li>Cold start some no Starter pago, mas deploys e região única (Frankfurt) limitam latência BR.</li>
+              <li>Hosts <code>*.onrender.com</code> são public suffix — cookie exige <code>SameSite=None</code> até haver domínio próprio no app/API.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge info">Implicação</span>
+            <p>
+              A Render <em>já tem</em> os dois eixos de escala. O gap não é a plataforma, é
+              o desenho atual: worker inline + planos pequenos. Antes de migrar de
+              hospedeira, o maior ganho é subir compute da API/DB e publicar
+              <code>prospectly-worker</code>.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Vercel — prós e contras</h2>
+        <div class="grid-3">
+          <article class="card">
+            <span class="badge ok">Prós</span>
+            <ul class="pros">
+              <li>Landing Next.js 15 é cidadã de primeira classe (App Router, previews, rollback, Firewall).</li>
+              <li>SPA Vite vira Static com rewrite — mesmo padrão da Render, com CDN global melhor.</li>
+              <li>Fluid Compute: concorrência na mesma instância, menos cold start, <code>waitUntil</code>.</li>
+              <li>Duração de Function: Hobby 300s; Pro/Ent 800s (1800s beta) — melhor que o serverless antigo, ainda finito.</li>
+              <li>Escala horizontal automática de invocações (até 30&nbsp;000 Hobby/Pro).</li>
+              <li>Marketplace: Postgres (Neon) e Redis (Upstash) em poucos cliques.</li>
+              <li>Preview por PR acelera landing e web sem Blueprint extra.</li>
+              <li>Há guia oficial “Deploy NestJS to Vercel” — para APIs <em>adaptadas</em> a Functions, não para este runtime.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge no">Contras</span>
+            <ul class="cons">
+              <li>Documentação oficial: backends precisam abandonar “long-running background servers”.</li>
+              <li>BullMQ consumidor precisa de processo vivo + Redis persistente. Function morre no <code>maxDuration</code>.</li>
+              <li>Cron e Workflows da Vercel não substituem as quatro filas + reconciliadores atuais.</li>
+              <li>Body/response de Function = 4,5&nbsp;MB. CSV default do Prospectly = 5&nbsp;MB → 413.</li>
+              <li>Memória vertical da Function: no máximo 4&nbsp;GB / 2 vCPU no Pro. Sem “subir a máquina”.</li>
+              <li>Prisma em Function exige pooler; rajadas de conexão quebram Postgres pequeno.</li>
+              <li>Ollama/Qwen3 8B não roda. Opportunity Finder ficaria só no fallback determinístico ou API externa.</li>
+              <li>Docker na Vercel alimenta Functions/container images, não um <code>CMD node dist/main.js</code> always-on como o Dockerfile atual.</li>
+              <li>Webhook Asaas precisa responder 200 rápido; jobs longos de OSM/Overpass não cabem no request HTTP.</li>
+              <li>Migrar “tudo” implica reescrever API (fila → Workflow/QStash, uploads → S3, IA → provedor remoto).</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge info">Uso honesto</span>
+            <p>
+              Híbrido faz sentido: <strong style="color: var(--text)">Vercel = landing + web</strong>,
+              <strong style="color: var(--text)">Render ou Fly = API + worker + Postgres + Redis</strong>.
+              Isso pega o CDN/DX da Vercel sem fingir que Nest+BullMQ é serverless.
+              Cookie cross-site continua; o conserto estrutural é
+              <code>app.</code> + <code>api.</code> no mesmo eTLD+1.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Terceira alternativa: Fly.io</h2>
+        <p>
+          Escolhida porque o Prospectly <em>já é</em> um sistema de containers com dois
+          processos (<code>apps/api/Dockerfile</code> targets <code>api</code> e
+          <code>worker</code>, Compose profile <code>full</code>). Fly Machines são VMs
+          que rodam essa imagem. Escala horizontal e vertical são comandos de primeira
+          classe, por process group — o requisito pedido.
+        </p>
+        <div class="grid-3">
+          <article class="card">
+            <span class="badge ok">Prós</span>
+            <ul class="pros">
+              <li>Docker sem adapter: o Dockerfile de produção atual é o artefato de deploy.</li>
+              <li>Horizontal: <code>fly scale count api=3 worker=2</code> — HTTP e fila sobem separados.</li>
+              <li>Vertical: <code>fly scale vm performance-2x --process-group worker</code> e <code>fly scale memory</code>.</li>
+              <li>Autoscale por métrica e stop/start de Machines (capacidade de pico barata quando parada).</li>
+              <li>Health checks equivalentes a <code>/health/ready</code>.</li>
+              <li>Fly Postgres + Redis/Upstash; rede privada entre apps.</li>
+              <li>Multi-região (ex.: <code>gru</code> São Paulo + <code>fra</code>) sem trocar de produto.</li>
+              <li>GPU Machines para Ollama/Qwen3 8B no mesmo provedor da API — único dos três com esse encaixe.</li>
+              <li>Volumes se um dia houver cache OSM/modelos; sem volume, Machines continuam stateless como hoje.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge no">Contras</span>
+            <ul class="cons">
+              <li>Não está em produção hoje: DNS, secrets, webhooks Asaas e CI teriam cutover.</li>
+              <li>DX de preview por PR é mais fraca que Vercel (dá para montar, não é default).</li>
+              <li>Landing Next no Fly perde ISR/CDN/Firewall da Vercel, a menos que o front fique híbrido.</li>
+              <li>Fly Postgres é operacionalmente mais “você no comando” que o managed da Render.</li>
+              <li>Curva de <code>fly.toml</code>, process groups e IPs 6PN — maior que o Blueprint atual.</li>
+              <li>Preço de Machines always-on + GPU pode passar a Render Starter rápido (compensa só com carga/IA real).</li>
+              <li>Região BR (<code>gru</code>) vs dados hoje em Frankfurt: latência e LGPD/residência precisam de decisão explícita.</li>
+            </ul>
+          </article>
+          <article class="card">
+            <span class="badge info">Por que não Railway / Cloud Run / ECS</span>
+            <p>
+              Railway é parente da Render (bom DX, H+V mais limitado, sem GPU de primeira).
+              Cloud Run escala horizontalmente muito bem, mas CPU some sem request e worker
+              vira min-instances + outro serviço. ECS/Fargate tem os dois eixos e GPU, com
+              custo de operação AWS demais para o estágio atual. Fly.io é o meio-termo:
+              Docker que já temos + escala H/V + GPU sem virar plataforma interna.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Escala vertical vs horizontal no Prospectly</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Eixo</th>
+              <th>O que dói hoje</th>
+              <th>Render</th>
+              <th>Vercel</th>
+              <th>Fly.io</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Vertical</td>
+              <td>OSM/Overpass + Cheerio + Prisma + BullMQ no mesmo 512&nbsp;MB; Qwen 8B precisa de RAM/GPU.</td>
+              <td>Trocar plan da API/worker/DB.</td>
+              <td>Teto 4&nbsp;GB Function. Sem GPU.</td>
+              <td>VM maior só no worker ou só na API; GPU à parte.</td>
+            </tr>
+            <tr>
+              <td>Horizontal</td>
+              <td>Vários tenants buscando ao mesmo tempo; filas profundas.</td>
+              <td>N instâncias + LB. Sem worker split, replica também o consumer (risco de over-consume se mal configurado).</td>
+              <td>Milhares de invocações — inútil se cada uma não drena a fila.</td>
+              <td><code>scale count</code> por grupo; worker N, API M.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>O que teria de mudar para “ir para a Vercel”</h2>
+        <ol>
+          <li>Reescrever a API para o adapter de Functions (sem <code>app.listen</code> persistente).</li>
+          <li>Tirar processors do <code>AppModule</code> e trocar BullMQ por Workflows/QStash/outro worker fora da Vercel.</li>
+          <li>Colocar Prisma atrás de pooler; revisar RLS + conexões por invocação.</li>
+          <li>Baixar <code>CSV_MAX_FILE_SIZE_BYTES</code> para ≤ 4,5&nbsp;MB ou mandar upload direto a object storage.</li>
+          <li>Apontar Opportunity Finder / WhatsApp AI para API remota (OpenAI-compatible). Abandonar Ollama local.</li>
+          <li>Revalidar webhooks Asaas (200 rápido + trabalho assíncrono externo).</li>
+          <li>Recriar CORS, cookies e domínios. Landing e web na Vercel; API em outro host.</li>
+        </ol>
+        <p>
+          Isso não é troca de hospedeira. É redesign do runtime. Custo alto, ganho
+          concentrado no front.
+        </p>
+      </section>
+
+      <section>
+        <h2>Roteiro recomendado (sem migrar agora)</h2>
+        <ol>
+          <li>
+            <strong style="color: var(--text)">Agora na Render:</strong> medir CPU/RAM/fila em
+            <code>/api/v1/ops/metrics</code>. Se 512&nbsp;MB saturar, subir API para
+            <code>1c-2g</code> e Postgres para ≥ 1&nbsp;GB.
+          </li>
+          <li>
+            <strong style="color: var(--text)">Aprovar o worker:</strong> publicar
+            <code>prospectly-worker</code> (já especificado). Aí a escala horizontal da
+            Render passa a fazer sentido.
+          </li>
+          <li>
+            <strong style="color: var(--text)">Domínio próprio do app:</strong>
+            <code>app.prospectlyonboard.com</code> + <code>api.</code> no mesmo registrante,
+            cookie <code>Lax</code>, sem depender de public suffix.
+          </li>
+          <li>
+            <strong style="color: var(--text)">Híbrido opcional:</strong> mover só landing
+            (e depois web) para a Vercel. API permanece.
+          </li>
+          <li>
+            <strong style="color: var(--text)">Se a hospedeira da API for trocada:</strong>
+            destino é Fly.io, não Vercel. Levantar <code>fly.toml</code> com processes
+            <code>api</code>/<code>worker</code>, Postgres, Redis, secrets Asaas, cutover de
+            webhook e DNS. GPU só quando Qwen em produção for requisito, não default.
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>Fontes</h2>
+        <ul class="sources">
+          <li>
+            GitHub MCP · <code>Gleydsong/prospectly</code> main
+            <code>574059ab95fb704418badb51e1401e27fcb73c63</code> (PR #96) ·
+            <code>render.yaml</code> remoto idêntico ao checkout.
+          </li>
+          <li>
+            Código local alinhado: <code>render.yaml</code>, <code>apps/api/Dockerfile</code>,
+            <code>apps/api/src/app.module.ts</code>, <code>docs/deploy/render.md</code>,
+            <code>docs/deploy/workers.md</code>, <code>docker-compose.yml</code>.
+          </li>
+          <li>
+            <a href="https://vercel.com/docs/functions/limitations">Vercel Functions limits</a>
+            — duração, memória, body 4,5&nbsp;MB, concorrência.
+          </li>
+          <li>
+            <a href="https://vercel.com/docs/fluid-compute">Vercel Fluid Compute</a>
+            — híbrido serverless/server-like; ainda com max duration.
+          </li>
+          <li>
+            <a href="https://vercel.com/docs/frameworks/backend">Vercel Backends</a>
+            — adaptar-se a Functions; sem background server longo.
+          </li>
+          <li>
+            <a href="https://vercel.com/docs/frameworks/backend/nestjs">Deploy NestJS to Vercel</a>
+            — Nest como Function + limites padrão.
+          </li>
+          <li>
+            <a href="https://render.com/docs/scaling">Render Scaling</a>
+            — horizontal até 100; vertical = compute plan; autoscale Pro+.
+          </li>
+          <li>
+            <a href="https://render.com/docs/compute-plans">Render Compute Plans</a>
+            — <code>starter</code> = 0.5c-512mb; Postgres <code>basic-256mb</code>.
+          </li>
+          <li>
+            <a href="https://render.com/docs/background-workers">Render Background Workers</a>
+            — processo contínuo sem HTTP, o tipo certo para BullMQ.
+          </li>
+          <li>
+            <a href="https://fly.io/docs/apps/scale-count/">Fly scale count</a>
+            — escala horizontal por process group e região.
+          </li>
+          <li>
+            <a href="https://fly.io/docs/apps/scale-machine/">Fly scale machine</a>
+            — escala vertical (<code>vm</code> / <code>memory</code>) por grupo.
+          </li>
+          <li>
+            Render MCP nesta sessão: <em>unauthorized</em> — serviços vivos no dashboard
+            não foram listados; topologia veio do Blueprint + docs de deploy.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      Arquivo gerado para decisão interna. Não altera runtime. Branch
+      <code>analysis/hosting-platforms</code> a partir de <code>origin/main</code>.
+      A branch anterior <code>chore/remove-legacy-unused</code> permanece intacta no
+      commit local <code>3d244d9</code>.
+    </footer>
+  </body>
+</html>

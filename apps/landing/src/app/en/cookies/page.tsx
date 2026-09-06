@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'Cookie Policy',
   description: 'Cookies used by the Prospectly marketing site.',
+  alternates: landingAlternates('/en/cookies'),
 };
 
 export default function EnCookiesPage() {

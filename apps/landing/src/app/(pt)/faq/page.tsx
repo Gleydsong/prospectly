@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
 import { FaqPageView } from '@/components/faq-section';
 import { getFaqItems } from '@/lib/faq-content';
+import { landingAlternates } from '@/lib/seo';
 
 export const metadata: Metadata = {
   title: 'FAQ - Dúvidas sobre busca, planos e privacidade',
   description:
     'Respostas sobre Prospectly: filtro sem website, OpenStreetMap, Google Places, créditos e plano ilimitado, LGPD e como começar com 3 buscas grátis.',
+  alternates: landingAlternates('/faq'),
 };
 
 export default function FaqPage() {
