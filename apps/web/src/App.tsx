@@ -17,6 +17,7 @@ import { PipelinePage } from '@/pages/pipeline-page';
 import { SearchPage } from '@/pages/search-page';
 import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
+import { ReportsPage } from '@/pages/reports-page';
 import { WorkflowsPage } from '@/pages/workflows-page';
 
 const DashboardPage = lazy(() =>
@@ -161,6 +162,7 @@ export function App() {
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/:id" element={<CampaignDetailPage />} />
           <Route path="workflows" element={<WorkflowsPage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route
             path="credits"
             element={

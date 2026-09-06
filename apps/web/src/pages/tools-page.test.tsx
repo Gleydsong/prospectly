@@ -11,6 +11,7 @@ describe('ToolsPage', () => {
     expect(screen.getAllByRole('link', { name: /Busca de clientes/i }).length).toBeGreaterThan(0);
     expect(QUICK.some((tool) => tool.to === '/tools/opportunity-finder')).toBe(true);
     expect(ALL.some((tool) => tool.to === '/agents/whatsapp')).toBe(true);
+    expect(ALL.some((tool) => tool.to === '/reports')).toBe(true);
     expect(ALL.every((tool) => !QUICK.some((quick) => quick.to === tool.to))).toBe(true);
   });
 });

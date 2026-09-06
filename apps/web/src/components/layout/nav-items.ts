@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bot,
   CheckSquare,
   FileUp,
@@ -63,6 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/agents', labelKey: 'nav.agents', icon: Bot },
       { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
       { to: '/workflows', labelKey: 'nav.workflows', icon: Workflow },
+      { to: '/reports', labelKey: 'nav.reports', icon: BarChart3 },
       { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
     ],
   },
@@ -85,6 +87,7 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/agents/, labelKey: 'nav.conversas' },
   { pattern: /^\/campaigns/, labelKey: 'nav.campaigns' },
   { pattern: /^\/workflows/, labelKey: 'nav.workflows' },
+  { pattern: /^\/reports/, labelKey: 'nav.reports' },
   { pattern: /^\/tasks/, labelKey: 'nav.tasks' },
   { pattern: /^\/settings/, labelKey: 'nav.settings' },
 ];

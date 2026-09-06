@@ -26,6 +26,7 @@
     "themeToDark": "Switch to dark theme",
     "campaigns": "Campaigns",
     "workflows": "Flows",
+    "reports": "Reports",
     "agents": "Agents",
     "principal": "Home",
     "clientes": "Clients",
@@ -215,7 +216,9 @@
     "pipelineTitle": "Pipeline",
     "pipelineDesc": "See your funnel on a Kanban board.",
     "tasksTitle": "Tasks",
-    "tasksDesc": "Operational agenda and appointments."
+    "tasksDesc": "Operational agenda and appointments.",
+    "reportsTitle": "Reports",
+    "reportsDesc": "Funnel conversion from outbox events."
   },
   "support": {
     "eyebrow": "Support",
@@ -817,6 +820,43 @@
       "LOST": "Lost",
       "NO_RESPONSE": "No response",
       "OPT_OUT": "Opt-out"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Funnel conversion from the organization's durable events.",
+    "retentionNotice": "History follows outbox retention (90 days). Won and Lost use the current pipeline stages — reclassifying a stage rewrites the past.",
+    "loadError": "Could not load the report.",
+    "empty": "No events in this period.",
+    "breakdownTitle": "By source",
+    "fields": {
+      "period": "Period",
+      "source": "Source",
+      "sourceAll": "All sources",
+      "mineOnly": "Only my clients"
+    },
+    "periods": {
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days"
+    },
+    "kpis": {
+      "inflow": "Inflow",
+      "wins": "Won",
+      "losses": "Lost",
+      "winRate": "Win rate"
+    },
+    "columns": {
+      "source": "Source"
+    },
+    "sources": {
+      "MANUAL": "Manual",
+      "CSV_IMPORT": "CSV import",
+      "GOOGLE_PLACES": "Google Places",
+      "OPENSTREETMAP": "OpenStreetMap",
+      "YELP": "Yelp",
+      "REFERRAL": "Referral",
+      "OTHER": "Other"
     }
   },
   "workflows": {
