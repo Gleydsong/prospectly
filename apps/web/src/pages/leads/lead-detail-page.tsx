@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Workflow,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
@@ -212,17 +212,14 @@ export function LeadDetailPage() {
   const stages = orderedPipelineStages(pipelinesQuery.data);
   const funnelStages = stages.length > 0 ? stages : lead.stage ? [{ ...lead.stage, order: 0 }] : [];
 
-  const outreachLead: WhatsAppOutreachModalLead = useMemo(
-    () => ({
-      id: lead.id,
-      companyName: lead.companyName,
-      phone: lead.phone,
-      whatsapp: lead.whatsapp,
-      stageId: lead.stage?.id,
-      doNotContact: lead.doNotContact,
-    }),
-    [lead.id, lead.companyName, lead.phone, lead.whatsapp, lead.stage?.id, lead.doNotContact],
-  );
+  const outreachLead: WhatsAppOutreachModalLead = {
+    id: lead.id,
+    companyName: lead.companyName,
+    phone: lead.phone,
+    whatsapp: lead.whatsapp,
+    stageId: lead.stage?.id,
+    doNotContact: lead.doNotContact,
+  };
 
   const openWhatsApp = () => {
     setIsWhatsAppModalOpen(true);

@@ -107,9 +107,8 @@ export function WhatsAppOutreachModal({
           setAdvancePipeline(false);
         }
       }
-      setScheduleFollowUp(sequenceStage === 'FIRST_MESSAGE' || sequenceStage === 'FOLLOW_UP_1');
     }
-  }, [isOpen, lead?.id, initialStage]);
+  }, [isOpen, lead, initialStage, stages]);
 
   // Adjust follow-up default when sequence stage changes
   useEffect(() => {
