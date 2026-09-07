@@ -102,6 +102,16 @@ export async function createActivity(
   return data;
 }
 
+export async function addLeadTags(leadId: string, tags: string[]): Promise<LeadDetail> {
+  const { data } = await api.post<LeadDetail>(`/leads/${leadId}/tags`, { tags });
+  return data;
+}
+
+export async function removeLeadTag(leadId: string, tagId: string): Promise<LeadDetail> {
+  const { data } = await api.delete<LeadDetail>(`/leads/${leadId}/tags/${tagId}`);
+  return data;
+}
+
 export const EXPORTABLE_LEAD_COLUMNS = [
   'id',
   'companyName',

@@ -14,6 +14,11 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   INSTAGRAM: 'Instagram',
   MEETING: 'Reunião',
   NOTE: 'Nota',
+  TASK: 'Tarefa',
+  PROPOSAL_SENT: 'Proposta enviada',
+  STATUS_CHANGED: 'Status',
+  OWNER_CHANGED: 'Responsável',
+  STAGE_CHANGED: 'Funil',
 };
 
 type SearchImportStatus = NonNullable<SearchImportSummary['items']>[number]['status'];

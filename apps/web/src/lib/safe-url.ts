@@ -79,6 +79,32 @@ export function sanitizeMailtoHref(email: string | null | undefined): string | n
   return `mailto:${trimmed}`;
 }
 
+/** tel: only digits, optional leading +, after stripping common separators. */
+export function sanitizeTelHref(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || /[?#&<>"'\\]/.test(trimmed)) return null;
+  if (!/^[+\d][\d\s().-]*$/.test(trimmed)) return null;
+  const normalized = trimmed.replace(/[^\d+]/g, '');
+  const digits = normalized.replace(/\D/g, '');
+  if (digits.length < 8) return null;
+  return `tel:${normalized}`;
+}
+
+/** Google Maps search for a postal query we encode ourselves. */
+export function buildGoogleMapsSearchUrl(query: string | null | undefined): string | null {
+  const q = query?.trim();
+  if (!q) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+}
+
+/** Google web search for company + city we encode ourselves. */
+export function buildGoogleWebSearchUrl(query: string | null | undefined): string | null {
+  const q = query?.trim();
+  if (!q) return null;
+  return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+}
+
 const PIX_PNG_PREFIX = 'data:image/png;base64,';
 
 /** PIX QR: only png data URLs (or raw base64 that we prefix). */
