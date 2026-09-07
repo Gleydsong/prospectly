@@ -1,4 +1,4 @@
-import { ArrowLeft, Workflow } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Workflow } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -9,6 +9,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  CrmDailyFocus,
+  WhatsAppOutreachModal,
+  type WhatsAppOutreachModalLead,
+} from '@/features/agents/components';
 import { useCrmApply, useCrmSuggest } from '@/features/agents/hooks';
 import type { CrmActionCode } from '@/features/agents/api';
 import { fetchLead, fetchLeads } from '@/features/leads/api';
@@ -24,6 +29,7 @@ export function AgentsCrmPage() {
   const [leadSearch, setLeadSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionOk, setActionOk] = useState<string | null>(null);
+  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
 
   const suggest = useCrmSuggest(leadId);
   const apply = useCrmApply();
@@ -97,42 +103,48 @@ export function AgentsCrmPage() {
       />
 
       {!leadId ? (
-        <Card>
-          <CardHeader title={t('agents.pickLead')} />
-          <CardContent className="space-y-3">
-            <Input
-              label={t('agents.searchLead')}
-              placeholder={t('agents.searchLeadPlaceholder')}
-              value={leadQuery}
-              onChange={(event) => setLeadQuery(event.target.value)}
-            />
-            {leadsPicker.isLoading ? (
-              <Skeleton className="h-32" />
-            ) : (
-              <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-                {(leadsPicker.data?.data ?? []).map((lead) => (
-                  <li key={lead.id}>
-                    <button
-                      type="button"
-                      className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2 text-left hover:border-[color:var(--border-strong)]"
-                      onClick={() => selectLead(lead.id)}
-                    >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium text-[color:var(--ink)]">
-                          {lead.companyName}
+        <div className="space-y-6">
+          <CrmDailyFocus
+            onSelectLeadForWhatsApp={(lead) => setWhatsAppModalLead(lead)}
+          />
+
+          <Card>
+            <CardHeader title={t('agents.pickLead')} />
+            <CardContent className="space-y-3">
+              <Input
+                label={t('agents.searchLead')}
+                placeholder={t('agents.searchLeadPlaceholder')}
+                value={leadQuery}
+                onChange={(event) => setLeadQuery(event.target.value)}
+              />
+              {leadsPicker.isLoading ? (
+                <Skeleton className="h-32" />
+              ) : (
+                <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+                  {(leadsPicker.data?.data ?? []).map((lead) => (
+                    <li key={lead.id}>
+                      <button
+                        type="button"
+                        className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2 text-left hover:border-[color:var(--border-strong)]"
+                        onClick={() => selectLead(lead.id)}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-[color:var(--ink)]">
+                            {lead.companyName}
+                          </span>
+                          <span className="block truncate text-xs text-[color:var(--ink-muted)]">
+                            {[lead.city, lead.segment].filter(Boolean).join(' · ') || '—'}
+                          </span>
                         </span>
-                        <span className="block truncate text-xs text-[color:var(--ink-muted)]">
-                          {[lead.city, lead.segment].filter(Boolean).join(' · ') || '—'}
-                        </span>
-                      </span>
-                      <span className="text-xs text-[color:var(--ink-muted)]">score {lead.score}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                        <span className="text-xs text-[color:var(--ink-muted)]">score {lead.score}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -210,6 +222,25 @@ export function AgentsCrmPage() {
                       {t('agents.crm.openLead')}
                     </Button>
                   </Link>
+                  {preselected.data?.phone || preselected.data?.whatsapp ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        setWhatsAppModalLead({
+                          id: suggest.data.leadId,
+                          companyName: suggest.data.companyName,
+                          phone: preselected.data?.phone,
+                          whatsapp: preselected.data?.whatsapp,
+                          stageId: suggest.data.currentStage?.id,
+                          doNotContact: preselected.data?.doNotContact,
+                        })
+                      }
+                    >
+                      <MessageCircle className="h-4 w-4" aria-hidden />
+                      {t('agents.whatsapp.open')}
+                    </Button>
+                  ) : null}
                   {suggest.data.canApplyStage ? (
                     <Button
                       size="sm"
@@ -226,6 +257,12 @@ export function AgentsCrmPage() {
           ) : null}
         </div>
       )}
+
+      <WhatsAppOutreachModal
+        lead={whatsAppModalLead}
+        isOpen={Boolean(whatsAppModalLead)}
+        onClose={() => setWhatsAppModalLead(null)}
+      />
     </div>
   );
 }

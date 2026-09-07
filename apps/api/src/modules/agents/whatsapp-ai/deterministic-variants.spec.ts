@@ -41,4 +41,49 @@ describe('buildDeterministicWhatsappVariants', () => {
     expect(a[0]?.id).not.toBe(b[0]?.id);
     expect(b.every((item) => item.body.includes('Ana'))).toBe(true);
   });
+
+  it('generates follow-up copy when sequenceStage is FOLLOW_UP_1', () => {
+    const variants = buildDeterministicWhatsappVariants(
+      {
+        companyName: 'Clínica Sorriso',
+        city: 'Recife',
+        senderName: 'Carlos',
+        sequenceStage: 'FOLLOW_UP_1',
+      },
+      3,
+    );
+
+    expect(variants).toHaveLength(3);
+    expect(variants.some((v) => v.body.match(/conseguiu ver|mensagem anterior|passando só pra|lembrete/i))).toBe(true);
+  });
+
+  it('generates breakup copy when sequenceStage is BREAKUP', () => {
+    const variants = buildDeterministicWhatsappVariants(
+      {
+        companyName: 'Boutique Flor',
+        city: 'Recife',
+        senderName: 'Carlos',
+        sequenceStage: 'BREAKUP',
+      },
+      3,
+    );
+
+    expect(variants).toHaveLength(3);
+    expect(variants.some((v) => v.body.match(/não vou insistir|último contato|prioridade agora|fico à disposição/i))).toBe(true);
+  });
+
+  it('tailors dor_site when audit signals show missing whatsapp on site', () => {
+    const variants = buildDeterministicWhatsappVariants(
+      {
+        companyName: 'Advocacia Silva',
+        website: 'https://silva.adv.br',
+        auditSignals: { hasWhatsappOnSite: false },
+      },
+      5,
+    );
+
+    const dor = variants.find((v) => v.angle === 'dor_site');
+    expect(dor?.body).toMatch(/botão de WhatsApp|WhatsApp direto no site|canal direto de WhatsApp/i);
+  });
 });
+

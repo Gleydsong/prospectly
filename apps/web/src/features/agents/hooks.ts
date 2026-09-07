@@ -4,8 +4,11 @@ import {
   applyCrmAction,
   buildWhatsappFirstMessage,
   fetchAgentsCatalog,
+  fetchCrmDailyFocus,
   fetchWhatsappVariants,
+  recordWhatsappOutreach,
   suggestCrmAction,
+  type WhatsappSequenceStage,
 } from './api';
 
 export function useAgentsCatalog() {
@@ -29,6 +32,13 @@ export function useCrmApply() {
   });
 }
 
+export function useCrmDailyFocus() {
+  return useQuery({
+    queryKey: ['agents', 'crm', 'daily-focus'],
+    queryFn: fetchCrmDailyFocus,
+  });
+}
+
 export function useWhatsappFirstMessage(leadId: string | undefined, templateId: string | undefined) {
   return useQuery({
     queryKey: ['agents', 'whatsapp', 'first-message', leadId, templateId],
@@ -41,10 +51,22 @@ export function useWhatsappFirstMessage(leadId: string | undefined, templateId: 
   });
 }
 
-export function useWhatsappVariants(leadId: string | undefined, count = 4, seed = 0) {
+export function useWhatsappVariants(
+  leadId: string | undefined,
+  count = 4,
+  seed = 0,
+  sequenceStage: WhatsappSequenceStage = 'FIRST_MESSAGE',
+) {
   return useQuery({
-    queryKey: ['agents', 'whatsapp', 'variants', leadId, count, seed],
-    queryFn: () => fetchWhatsappVariants({ leadId: leadId!, count, seed }),
+    queryKey: ['agents', 'whatsapp', 'variants', leadId, count, seed, sequenceStage],
+    queryFn: () => fetchWhatsappVariants({ leadId: leadId!, count, seed, sequenceStage }),
     enabled: Boolean(leadId),
   });
 }
+
+export function useWhatsappRecordOutreach() {
+  return useMutation({
+    mutationFn: recordWhatsappOutreach,
+  });
+}
+

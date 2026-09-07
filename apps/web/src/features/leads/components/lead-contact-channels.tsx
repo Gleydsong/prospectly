@@ -1,5 +1,4 @@
 import { ExternalLink, Globe, Mail, MessageCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import { sanitizeExternalUrl, sanitizeMailtoHref } from '@/lib/safe-url';
@@ -38,6 +37,28 @@ const RECOMMENDED_ACTION_LABELS: Record<string, string> = {
   NURTURE: 'Nutrir relacionamento',
 };
 
+export const INTERNAL_CRM_ACTION_CODES = new Set([
+  'RESPECT_DNC',
+  'ENRICH_CONTACT',
+  'RUN_WEBSITE_ANALYSIS',
+  'PRIORITIZE_OUTREACH',
+  'ADVANCE_PIPELINE',
+  'ENRICH_PROFILE',
+  'NURTURE',
+  'FOLLOW_UP_OVERDUE',
+]);
+
+const INTERNAL_CRM_ACTION_LABELS = new Set(
+  Object.values(RECOMMENDED_ACTION_LABELS).map((label) => label.toLowerCase()),
+);
+
+export function isInternalCrmAction(action: string): boolean {
+  const trimmed = action.trim();
+  if (INTERNAL_CRM_ACTION_CODES.has(trimmed.toUpperCase())) return true;
+  if (INTERNAL_CRM_ACTION_LABELS.has(trimmed.toLowerCase())) return true;
+  return false;
+}
+
 export function humanizeRecommendedAction(action: string): string {
   const key = action.trim();
   return RECOMMENDED_ACTION_LABELS[key] ?? key;
@@ -46,12 +67,13 @@ export function humanizeRecommendedAction(action: string): string {
 /**
  * Mensagem sugerida para outreach (contexto do lead + ação recomendada).
  * Sem chamada LLM extra no MVP — usa regras/score já calculados.
+ * Ações internas do sistema CRM (ex: ADVANCE_PIPELINE) nunca vazam para o cliente.
  */
 export function buildWhatsAppOutreachMessage(lead: LeadContactChannelInput): string {
   const city = lead.city?.trim() ? ` em ${lead.city.trim()}` : '';
-  const tip = lead.recommendedAction?.trim()
-    ? humanizeRecommendedAction(lead.recommendedAction)
-    : undefined;
+  const rawAction = lead.recommendedAction?.trim();
+  const isInternal = rawAction ? isInternalCrmAction(rawAction) : true;
+  const tip = !isInternal && rawAction ? humanizeRecommendedAction(rawAction) : undefined;
   if (tip) {
     return `Olá! Vi a ${lead.companyName}${city} e queria compartilhar uma ideia: ${tip} Posso enviar mais detalhes?`;
   }
@@ -80,28 +102,20 @@ function channelClass(tone: ChannelTone): string {
 interface LeadContactChannelsProps {
   lead: LeadContactChannelInput;
   className?: string;
+  onOpenWhatsAppModal?: () => void;
 }
 
 /**
  * Chips de contato acionáveis: mailto, website e WhatsApp (wa.me + mensagem).
  * Sem verificação oficial “tem WhatsApp?” — Cloud API não oferece isso.
  */
-export function LeadContactChannels({ lead, className }: LeadContactChannelsProps) {
-  const { t } = useTranslation();
+export function LeadContactChannels({ lead, className, onOpenWhatsAppModal }: LeadContactChannelsProps) {
   const blocked = Boolean(lead.doNotContact);
   const email = lead.email?.trim() || null;
   const emailHref = email ? sanitizeMailtoHref(email) : null;
   const websiteHref = lead.website ? sanitizeExternalUrl(lead.website) : null;
   const whatsappRaw = (lead.whatsapp?.trim() || lead.phone?.trim() || '') || null;
-  const recommendedAction = lead.recommendedAction?.trim();
-  const message = buildWhatsAppOutreachMessage({
-    ...lead,
-    recommendedAction: recommendedAction
-      ? t(`scoreExplain.actions.${recommendedAction}`, {
-          defaultValue: humanizeRecommendedAction(recommendedAction),
-        })
-      : recommendedAction,
-  });
+  const message = buildWhatsAppOutreachMessage(lead);
   const whatsappHref =
     !blocked && whatsappRaw ? buildWhatsAppHref(whatsappRaw, message) : null;
 
@@ -167,7 +181,20 @@ export function LeadContactChannels({ lead, className }: LeadContactChannelsProp
           </span>
         )}
 
-        {whatsappHref ? (
+        {whatsappTone === 'ready' && onOpenWhatsAppModal ? (
+          <button
+            type="button"
+            onClick={onOpenWhatsAppModal}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors',
+              channelClass(whatsappTone),
+            )}
+            title="Abrir assistente de abordagem WhatsApp"
+          >
+            <MessageCircle className="h-3 w-3" aria-hidden />
+            WhatsApp
+          </button>
+        ) : whatsappHref ? (
           <a
             href={whatsappHref}
             target="_blank"

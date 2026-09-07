@@ -3,10 +3,15 @@ import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  WhatsAppOutreachModal,
+  type WhatsAppOutreachModalLead,
+} from '@/features/agents/components';
 import { fetchPipelineBoard, fetchStageLeads, moveLeadToStage } from '@/features/pipeline/api';
 import { cn } from '@/lib/utils';
 import type { LeadListItem, PipelineBoardStage } from '@/types';
@@ -25,6 +30,7 @@ export function PipelinePage() {
   const [overStageId, setOverStageId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [loadingMoreStageId, setLoadingMoreStageId] = useState<string | null>(null);
+  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
   const moveSelectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
 
   const move = useMutation({
@@ -186,6 +192,15 @@ export function PipelinePage() {
                         stageName,
                       });
                     }}
+                    onOpenWhatsApp={(leadItem) =>
+                      setWhatsAppModalLead({
+                        id: leadItem.id,
+                        companyName: leadItem.companyName,
+                        phone: leadItem.phone,
+                        stageId: stage.id,
+                        doNotContact: leadItem.doNotContact,
+                      })
+                    }
                   />
                 ))
               )}
@@ -209,6 +224,13 @@ export function PipelinePage() {
           </section>
         ))}
       </div>
+
+      <WhatsAppOutreachModal
+        lead={whatsAppModalLead}
+        stages={stages.map((s) => ({ id: s.id, name: s.name }))}
+        isOpen={Boolean(whatsAppModalLead)}
+        onClose={() => setWhatsAppModalLead(null)}
+      />
     </div>
   );
 }
@@ -223,6 +245,7 @@ function LeadCard({
   onDragStart,
   onDragEnd,
   onMove,
+  onOpenWhatsApp,
 }: {
   lead: LeadListItem;
   stages: PipelineBoardStage[];
@@ -233,6 +256,7 @@ function LeadCard({
   onDragStart: () => void;
   onDragEnd: () => void;
   onMove: (stageId: string, stageName: string) => void;
+  onOpenWhatsApp: (lead: LeadListItem) => void;
 }) {
   const { t } = useTranslation();
   const otherStages = stages.filter((stage) => stage.id !== currentStageId);
@@ -244,12 +268,28 @@ function LeadCard({
       onDragEnd={onDragEnd}
       className={cn('cursor-grab space-y-2 p-3 hover:shadow-md', dragging && 'opacity-50')}
     >
-      <Link
-        to={`/leads/${lead.id}`}
-        className="block text-sm font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)]"
-      >
-        {lead.companyName}
-      </Link>
+      <div className="flex items-start justify-between gap-1">
+        <Link
+          to={`/leads/${lead.id}`}
+          className="block text-sm font-medium text-[color:var(--ink)] hover:text-[color:var(--accent)] truncate flex-1"
+        >
+          {lead.companyName}
+        </Link>
+        {lead.phone && !lead.doNotContact ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenWhatsApp(lead);
+            }}
+            title={t('agents.whatsapp.open')}
+            className="text-[color:var(--ink-muted)] hover:text-brand-400 p-0.5 rounded-control hover:bg-[color:var(--surface-hover)] shrink-0"
+            data-testid={`kanban-whatsapp-${lead.id}`}
+          >
+            <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ) : null}
+      </div>
       <p className="text-xs text-[color:var(--ink-muted)]">{lead.city ?? '—'}</p>
       <div className="flex items-center justify-between">
         <ScoreBadge score={lead.score} />

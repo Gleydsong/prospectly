@@ -9,12 +9,19 @@ function makePrisma(overrides: Record<string, unknown> = {}) {
   return {
     lead: {
       findFirst: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      update: jest.fn().mockResolvedValue({ id: 'lead-1' }),
+    },
+    leadActivity: {
+      create: jest.fn().mockResolvedValue({ id: 'act-1' }),
     },
     user: {
       findUnique: jest.fn().mockResolvedValue({ name: 'Ana Vendedora' }),
     },
     task: {
       count: jest.fn().mockResolvedValue(0),
+      create: jest.fn().mockResolvedValue({ id: 'task-1' }),
+      findMany: jest.fn().mockResolvedValue([]),
     },
     pipeline: {
       findFirst: jest.fn(),
@@ -265,4 +272,114 @@ describe('AgentsService', () => {
       expect(result.variants[0]?.body).toBe('IA direto');
     });
   });
+
+  describe('recordOutreach', () => {
+    it('records WhatsApp activity, optionally moves stage and schedules follow-up task', async () => {
+      const prisma = makePrisma();
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue({
+        id: 'lead-1',
+        companyName: 'Boutique Paris',
+        doNotContact: false,
+      });
+
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      const result = await service.recordOutreach('org-1', 'user-1', {
+        leadId: 'lead-1',
+        messageBody: 'Olá! Vi a Boutique Paris...',
+        variantId: 'fallback-direto-1',
+        advanceStageId: 'stage-contacted',
+        scheduleFollowUpDays: 2,
+      });
+
+      expect(prisma.leadActivity.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          organizationId: 'org-1',
+          leadId: 'lead-1',
+          userId: 'user-1',
+          type: 'WHATSAPP',
+          description: expect.stringContaining('Olá! Vi a Boutique Paris...'),
+        }),
+      });
+
+      expect(pipelines.moveLeadToStage).toHaveBeenCalledWith(
+        'org-1',
+        'lead-1',
+        'stage-contacted',
+        'user-1',
+      );
+
+      expect(prisma.task.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          organizationId: 'org-1',
+          leadId: 'lead-1',
+          createdById: 'user-1',
+          assigneeId: 'user-1',
+          title: expect.stringContaining('Boutique Paris'),
+        }),
+      });
+
+      expect(result.recorded).toBe(true);
+    });
+
+    it('rejects DNC leads when recording outreach', async () => {
+      const prisma = makePrisma();
+      (prisma.lead.findFirst as jest.Mock).mockResolvedValue({
+        id: 'lead-1',
+        companyName: 'DNC Co',
+        doNotContact: true,
+      });
+
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      await expect(
+        service.recordOutreach('org-1', 'user-1', {
+          leadId: 'lead-1',
+          messageBody: 'test',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('dailyFocus', () => {
+    it('aggregates overdue tasks, hot leads and stale leads', async () => {
+      const prisma = makePrisma();
+      (prisma.task.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'task-1',
+          title: 'Ligar para João',
+          dueAt: new Date(Date.now() - 3600000),
+          lead: { id: 'lead-1', companyName: 'Oficina Central', phone: '11999999999' },
+        },
+      ]);
+      (prisma.lead.findMany as jest.Mock)
+        .mockResolvedValueOnce([
+          {
+            id: 'lead-2',
+            companyName: 'Dentista Top',
+            score: 85,
+            status: 'NEW',
+            phone: '11888888888',
+            updatedAt: new Date(),
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'lead-3',
+            companyName: 'Mercado Bom',
+            score: 55,
+            status: 'IN_PROGRESS',
+            phone: '11777777777',
+            updatedAt: new Date(Date.now() - 10 * 86400000),
+          },
+        ]);
+
+      const service = new AgentsService(prisma as never, pipelines, templates, ollama);
+      const result = await service.dailyFocus('org-1');
+
+      expect(result.items.length).toBeGreaterThanOrEqual(1);
+      expect(result.items.some((i) => i.reason === 'OVERDUE_TASK')).toBe(true);
+      expect(result.items.some((i) => i.reason === 'HOT_NEW_LEAD')).toBe(true);
+      expect(result.items.some((i) => i.reason === 'STALE_PIPELINE')).toBe(true);
+    });
+  });
 });
+

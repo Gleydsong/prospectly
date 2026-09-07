@@ -17,6 +17,7 @@ import { OllamaChatClient } from './whatsapp-ai/ollama-chat.client';
 import {
   clampVariantCount,
   normalizeSeed,
+  type WhatsappSequenceStage,
   type WhatsappVariantSource,
 } from './whatsapp-ai/whatsapp-ai.types';
 
@@ -215,6 +216,7 @@ export class AgentsService {
     leadId: string,
     count?: number,
     seed?: number,
+    sequenceStage?: WhatsappSequenceStage,
   ) {
     const lead = await this.loadLead(organizationId, leadId);
     const phoneRaw = (lead.phone ?? lead.whatsapp)?.trim() || null;
@@ -231,6 +233,19 @@ export class AgentsService {
 
     const variantCount = clampVariantCount(count);
     const generationSeed = normalizeSeed(seed);
+    const latestAnalysis = lead.websiteRecord?.analyses?.[0];
+    const auditSignals = latestAnalysis
+      ? {
+          hasWhatsappOnSite: latestAnalysis.hasWhatsapp,
+          isMobileFriendly: latestAnalysis.hasViewport,
+          isSlow:
+            typeof latestAnalysis.responseTimeMs === 'number'
+              ? latestAnalysis.responseTimeMs > 3000
+              : null,
+          seoHealthScore: latestAnalysis.seoHealthScore,
+        }
+      : null;
+
     const leadContext = {
       companyName: lead.companyName,
       tradeName: lead.tradeName,
@@ -238,6 +253,8 @@ export class AgentsService {
       segment: lead.segment,
       website: lead.website,
       senderName: actor?.name?.trim() || null,
+      sequenceStage: sequenceStage ?? 'FIRST_MESSAGE',
+      auditSignals,
     };
 
     const fromOllama = await this.ollama.generateVariants(
@@ -257,9 +274,205 @@ export class AgentsService {
       digits: digits || null,
       source,
       seed: generationSeed,
+      sequenceStage: sequenceStage ?? 'FIRST_MESSAGE',
       variants,
       autoSend: false as const,
       messageSent: false as const,
+    };
+  }
+
+  async recordOutreach(
+    organizationId: string,
+    actorUserId: string,
+    dto: {
+      leadId: string;
+      messageBody: string;
+      variantId?: string;
+      sequenceStage?: 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
+      advanceStageId?: string;
+      scheduleFollowUpDays?: number;
+    },
+  ) {
+    const lead = await this.loadLead(organizationId, dto.leadId);
+    if (lead.doNotContact) {
+      throw new BadRequestException('Lead is marked do-not-contact.');
+    }
+
+    const snippet =
+      dto.messageBody.length > 80 ? dto.messageBody.slice(0, 77) + '...' : dto.messageBody;
+
+    const activity = await this.prisma.leadActivity.create({
+      data: {
+        organizationId,
+        leadId: lead.id,
+        userId: actorUserId,
+        type: 'WHATSAPP',
+        description: `Abordagem enviada via WhatsApp: "${snippet}"`,
+        metadata: {
+          variantId: dto.variantId ?? null,
+          sequenceStage: dto.sequenceStage ?? null,
+          body: dto.messageBody,
+          advanceStageId: dto.advanceStageId ?? null,
+          scheduleFollowUpDays: dto.scheduleFollowUpDays ?? null,
+        },
+      },
+    });
+
+    let advancedStageName: string | null = null;
+    if (dto.advanceStageId && dto.advanceStageId !== lead.stageId) {
+      const moved = await this.pipelines.moveLeadToStage(
+        organizationId,
+        lead.id,
+        dto.advanceStageId,
+        actorUserId,
+      );
+      advancedStageName = moved.stage?.name ?? null;
+    }
+
+    let followUpTaskId: string | null = null;
+    if (dto.scheduleFollowUpDays && dto.scheduleFollowUpDays > 0) {
+      const dueAt = new Date(Date.now() + dto.scheduleFollowUpDays * 24 * 60 * 60 * 1000);
+      const createdTask = await this.prisma.task.create({
+        data: {
+          organizationId,
+          leadId: lead.id,
+          createdById: actorUserId,
+          assigneeId: actorUserId,
+          title: `Follow-up WhatsApp: ${lead.companyName}`,
+          description: `Acompanhar retorno da abordagem de WhatsApp enviada em ${new Date().toLocaleDateString('pt-BR')}.`,
+          dueAt,
+          priority: 'MEDIUM',
+          status: 'OPEN',
+        },
+      });
+      followUpTaskId = createdTask.id;
+    }
+
+    await this.prisma.lead.update({
+      where: { id: lead.id },
+      data: { updatedAt: new Date() },
+    });
+
+    return {
+      recorded: true,
+      activityId: activity.id,
+      leadId: lead.id,
+      advancedStageId: dto.advanceStageId ?? null,
+      advancedStageName,
+      followUpTaskId,
+    };
+  }
+
+  async dailyFocus(organizationId: string) {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [overdueTasks, hotLeads, staleLeads] = await Promise.all([
+      this.prisma.task.findMany({
+        where: {
+          organizationId,
+          status: { in: ['OPEN', 'IN_PROGRESS'] },
+          dueAt: { lt: now },
+        },
+        include: {
+          lead: {
+            select: { id: true, companyName: true, phone: true, whatsapp: true, score: true },
+          },
+        },
+        orderBy: { dueAt: 'asc' },
+        take: 5,
+      }),
+      this.prisma.lead.findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          doNotContact: false,
+          score: { gte: 70 },
+          status: { in: ['NEW', 'TO_REVIEW', 'QUALIFIED'] },
+        },
+        include: {
+          stage: { select: { id: true, name: true } },
+          owner: { select: { id: true, name: true } },
+        },
+        orderBy: { score: 'desc' },
+        take: 5,
+      }),
+      this.prisma.lead.findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          doNotContact: false,
+          updatedAt: { lt: sevenDaysAgo },
+          stage: { isWon: false, isLost: false },
+        },
+        include: {
+          stage: { select: { id: true, name: true } },
+          owner: { select: { id: true, name: true } },
+        },
+        orderBy: { updatedAt: 'asc' },
+        take: 5,
+      }),
+    ]);
+
+    type FocusItem = {
+      leadId: string;
+      companyName: string;
+      reason: 'OVERDUE_TASK' | 'HOT_NEW_LEAD' | 'STALE_PIPELINE';
+      description: string;
+      score?: number | null;
+      phone?: string | null;
+      stageName?: string | null;
+      taskId?: string | null;
+    };
+
+    const items: FocusItem[] = [];
+    const seenLeads = new Set<string>();
+
+    for (const t of overdueTasks) {
+      if (!t.lead || seenLeads.has(t.lead.id)) continue;
+      seenLeads.add(t.lead.id);
+      items.push({
+        leadId: t.lead.id,
+        companyName: t.lead.companyName,
+        reason: 'OVERDUE_TASK',
+        description: `Tarefa em atraso: "${t.title}"`,
+        score: t.lead.score,
+        phone: t.lead.phone ?? t.lead.whatsapp,
+        taskId: t.id,
+      });
+    }
+
+    for (const l of hotLeads) {
+      if (seenLeads.has(l.id)) continue;
+      seenLeads.add(l.id);
+      items.push({
+        leadId: l.id,
+        companyName: l.companyName,
+        reason: 'HOT_NEW_LEAD',
+        description: `Score alto (${l.score}) pronto para 1º contato`,
+        score: l.score,
+        phone: l.phone ?? l.whatsapp,
+        stageName: l.stage?.name ?? null,
+      });
+    }
+
+    for (const l of staleLeads) {
+      if (seenLeads.has(l.id)) continue;
+      seenLeads.add(l.id);
+      items.push({
+        leadId: l.id,
+        companyName: l.companyName,
+        reason: 'STALE_PIPELINE',
+        description: `Sem movimentação há mais de 7 dias`,
+        score: l.score,
+        phone: l.phone ?? l.whatsapp,
+        stageName: l.stage?.name ?? null,
+      });
+    }
+
+    return {
+      items: items.slice(0, 10),
+      totalCount: items.length,
     };
   }
 
@@ -273,7 +486,15 @@ export class AgentsService {
             analyses: {
               orderBy: { createdAt: 'desc' },
               take: 1,
-              select: { id: true, status: true },
+              select: {
+                id: true,
+                status: true,
+                hasWhatsapp: true,
+                hasViewport: true,
+                responseTimeMs: true,
+                seoHealthScore: true,
+                https: true,
+              },
             },
           },
         },

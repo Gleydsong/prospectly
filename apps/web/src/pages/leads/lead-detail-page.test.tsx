@@ -45,6 +45,17 @@ vi.mock('@/features/tasks/hooks', () => ({
 
 vi.mock('@/features/scoring/api', () => ({ requestLeadWebsiteAnalysis: vi.fn() }));
 
+vi.mock('@/features/agents/hooks', () => ({
+  useCrmSuggest: () => ({ data: null, isLoading: false, isError: false }),
+  useCrmApply: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useWhatsappVariants: () => ({
+    data: { variants: [], digits: '5511999887766' },
+    isLoading: false,
+    isError: false,
+  }),
+  useWhatsappRecordOutreach: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 vi.mock('@/features/pipeline/api', () => ({
   fetchPipelines: (...args: unknown[]) => mocks.fetchPipelines(...args),
   moveLeadToStage: (...args: unknown[]) => mocks.moveLeadToStage(...args),
@@ -275,5 +286,16 @@ describe('LeadDetailPage', () => {
     expect(screen.getByText(/arquivado/i)).toBeVisible();
     expect(screen.queryByLabelText('Código antigo')).not.toBeInTheDocument();
     expect(screen.getByLabelText('NIF')).toBeInTheDocument();
+  });
+
+  it('abre o modal de abordagem de WhatsApp ao clicar em Chamar no WhatsApp', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: /chamar no whatsapp/i }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /mensagem whatsapp: medic saúde/i }),
+    ).toBeInTheDocument();
   });
 });

@@ -20,6 +20,15 @@ vi.mock('@/features/pipeline/api', () => ({
   moveLeadToStage: mocks.moveLeadToStage,
 }));
 
+vi.mock('@/features/agents/hooks', () => ({
+  useWhatsappVariants: () => ({
+    data: { variants: [], digits: '351912345678' },
+    isLoading: false,
+    isError: false,
+  }),
+  useWhatsappRecordOutreach: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
 function Wrapper({ children }: PropsWithChildren) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -147,5 +156,38 @@ describe('PipelinePage', () => {
       expect(mocks.fetchStageLeads).toHaveBeenCalledWith('stage-a', { limit: 50, offset: 1 });
     });
     expect(await within(column).findByText('Padaria Norte')).toBeInTheDocument();
+  });
+
+  it('opens WhatsApp outreach modal from kanban card', async () => {
+    const user = userEvent.setup();
+    mocks.fetchPipelineBoard.mockResolvedValue({
+      ...boardFixture,
+      stages: [
+        {
+          ...boardFixture.stages[0],
+          leads: [
+            {
+              ...boardFixture.stages[0].leads[0],
+              phone: '+351912345678',
+            },
+          ],
+        },
+        boardFixture.stages[1],
+      ],
+    });
+
+    render(
+      <Wrapper>
+        <PipelinePage />
+      </Wrapper>,
+    );
+
+    const whatsappBtn = await screen.findByTestId('kanban-whatsapp-lead-1');
+    await user.click(whatsappBtn);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /mensagem whatsapp: café central/i }),
+    ).toBeInTheDocument();
   });
 });

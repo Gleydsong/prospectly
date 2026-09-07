@@ -9,6 +9,7 @@ import {
   AgentsCrmApplyDto,
   AgentsLeadDto,
   AgentsWhatsappFirstMessageDto,
+  AgentsWhatsappRecordOutreachDto,
   AgentsWhatsappVariantsDto,
 } from './dto/agents.dto';
 
@@ -22,6 +23,12 @@ export class AgentsController {
   @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER', 'VIEWER')
   catalog() {
     return this.agents.catalog();
+  }
+
+  @Get('crm/daily-focus')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER', 'VIEWER')
+  dailyFocus(@CurrentOrg() organizationId: string) {
+    return this.agents.dailyFocus(organizationId);
   }
 
   @Post('crm/suggest')
@@ -68,6 +75,18 @@ export class AgentsController {
       dto.leadId,
       dto.count,
       dto.seed,
+      dto.sequenceStage,
     );
   }
+
+  @Post('whatsapp/record-outreach')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  recordOutreach(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: AgentsWhatsappRecordOutreachDto,
+  ) {
+    return this.agents.recordOutreach(organizationId, user.id, dto);
+  }
 }
+

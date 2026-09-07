@@ -37,17 +37,29 @@ export class OllamaChatClient {
       this.config.get<string>('whatsappAi.baseUrl') ?? 'http://127.0.0.1:11434'
     ).replace(/\/$/, '');
     const model = this.config.get<string>('whatsappAi.model') ?? 'qwen3:8b';
-    const timeoutMs = Number(this.config.get<number>('whatsappAi.timeoutMs') ?? 30000);
+    const rawTimeout = Number(this.config.get<number>('whatsappAi.timeoutMs') ?? 15000);
+    const timeoutMs = Number.isFinite(rawTimeout) && rawTimeout > 0 ? Math.min(rawTimeout, 15000) : 15000;
     const apiKey = this.config.get<string>('whatsappAi.apiKey') ?? '';
     const generationSeed = Number.isFinite(seed) ? Math.abs(Math.floor(seed)) : 0;
 
     const angles = WHATSAPP_VARIANT_ANGLES.slice(0, count);
+    const stage = lead.sequenceStage ?? 'FIRST_MESSAGE';
+    const stageInstruction =
+      stage === 'FOLLOW_UP_1'
+        ? 'Você escreve uma mensagem de 1º follow-up suave (48h após primeiro contato sem resposta), lembrando da mensagem anterior de forma breve e sem cobrança.'
+        : stage === 'FOLLOW_UP_2'
+          ? 'Você escreve uma mensagem de 2º follow-up com agregação de valor para o nicho (96h após sem resposta), rápida e objetiva.'
+          : stage === 'BREAKUP'
+            ? 'Você escreve uma mensagem de encerramento educada (break-up message), tirando a pressão e deixando a porta aberta.'
+            : 'Você escreve 1ª mensagens de WhatsApp em português do Brasil para prospecção B2B local (negócios de rua/cidade).';
+
     const system = [
-      'Você escreve 1ª mensagens de WhatsApp em português do Brasil para prospecção B2B local (negócios de rua/cidade).',
+      stageInstruction,
       'Responda APENAS JSON válido: {"variants":[{"angle":"...","body":"..."}]}',
       'Boas práticas: 3 linhas no máximo; personalize com dados reais; uma pergunta suave no fim;',
       'não peça reunião longa no 1º contacto; sem links, anexos, urgência falsa ou emojis excessivos;',
       'sem inventar telefone/email/preço/resultados; tom humano e profissional.',
+      'Se houver auditSignals com falhas (ex: sem botão de WhatsApp ou lento), aproveite esse gancho no ângulo dor_site.',
       'Estrutura: (1) contexto da empresa/cidade (2) motivo relevante (3) pergunta aberta de baixo compromisso.',
       `Se senderName existir, apresente-se com esse nome (utilizador logado). Não use outro nome.`,
       `Use exatamente estes ângulos nesta ordem: ${angles.join(', ')}.`,
@@ -64,6 +76,8 @@ export class OllamaChatClient {
           segment: lead.segment ?? null,
           website: lead.website ?? null,
           senderName: lead.senderName ?? null,
+          sequenceStage: stage,
+          auditSignals: lead.auditSignals ?? null,
           seed: generationSeed,
           angles,
         }),
@@ -87,6 +101,7 @@ export class OllamaChatClient {
           model,
           stream: false,
           format: 'json',
+          think: false,
           options: {
             temperature: 0.85,
             seed: generationSeed,
@@ -123,7 +138,11 @@ export class OllamaChatClient {
     seed = 0,
   ): WhatsappVariant[] | null {
     try {
-      const parsed = JSON.parse(content) as {
+      const sanitized = content
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/, '')
+        .trim();
+      const parsed = JSON.parse(sanitized) as {
         variants?: Array<{ angle?: string; body?: string }>;
       };
       const list = Array.isArray(parsed.variants) ? parsed.variants : [];

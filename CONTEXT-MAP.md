@@ -8,9 +8,14 @@
 - [Workflows](./docs/domain/workflows/CONTEXT.md): guarda Fluxos da organização que reagem a DomainEvents com definição allowlisted
 - [Reports](./docs/domain/reports/CONTEXT.md): lê DomainEvents da organização e mostra conversão do funil na janela rolling
 - [Custom fields](./docs/domain/custom-fields/CONTEXT.md): guarda definições da organização de dados tipados no cliente potencial
+- [Agents](./docs/domain/agents/CONTEXT.md): fornece copiloto CRM e variantes de abordagem WhatsApp assistidas
 
 ## Relacionamentos
 
+- **Agents → Organizations**: sugestões e abordagens pertencem estritamente à organização da sessão
+- **Agents → Leads**: avalia sinais técnicos (WebsiteAnalysis), dados de contato e DNC para sugerir ações e gerar mensagens
+- **Agents → Pipelines**: o copiloto pode aplicar transição de estágio e registrar avanços após contato confirmado
+- **Agents → Tasks**: inspeciona tarefas atrasadas e permite agendamento direto de follow-ups
 - **Billing → Organizations**: benefícios adquiridos pertencem a uma organização, independentemente da pessoa que realizou o pagamento
 - **Billing → Usage**: o saldo adquirido financia o uso de funcionalidades cobradas por créditos
 - **Events → Organizations**: cada DomainEvent pertence à organização da sessão; nunca chega `organizationId` do cliente

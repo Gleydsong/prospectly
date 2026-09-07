@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Workflow,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
@@ -26,6 +26,11 @@ import {
   buildWhatsAppHref,
   buildWhatsAppOutreachMessage,
 } from '@/features/leads/components/lead-contact-channels';
+import {
+  CrmCopilotCard,
+  WhatsAppOutreachModal,
+  type WhatsAppOutreachModalLead,
+} from '@/features/agents/components';
 import { CopyButton } from '@/features/leads/components/lead-copy-button';
 import { LeadOpportunityCard } from '@/features/leads/components/lead-opportunity-card';
 import { LeadOriginAudit } from '@/features/leads/components/lead-origin-audit';
@@ -87,6 +92,7 @@ export function LeadDetailPage() {
   } | null>(null);
   const [addingEmail, setAddingEmail] = useState(false);
   const [emailDraft, setEmailDraft] = useState('');
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
 
   const createActivity = useCreateActivity(id);
   const createTask = useCreateTaskForLead(id);
@@ -206,8 +212,20 @@ export function LeadDetailPage() {
   const stages = orderedPipelineStages(pipelinesQuery.data);
   const funnelStages = stages.length > 0 ? stages : lead.stage ? [{ ...lead.stage, order: 0 }] : [];
 
+  const outreachLead: WhatsAppOutreachModalLead = useMemo(
+    () => ({
+      id: lead.id,
+      companyName: lead.companyName,
+      phone: lead.phone,
+      whatsapp: lead.whatsapp,
+      stageId: lead.stage?.id,
+      doNotContact: lead.doNotContact,
+    }),
+    [lead.id, lead.companyName, lead.phone, lead.whatsapp, lead.stage?.id, lead.doNotContact],
+  );
+
   const openWhatsApp = () => {
-    if (whatsappHref) window.open(whatsappHref, '_blank', 'noopener,noreferrer');
+    setIsWhatsAppModalOpen(true);
   };
 
   const completeTask = async (task: Task) => {
@@ -246,7 +264,7 @@ export function LeadDetailPage() {
           <LeadStatusBadge status={lead.status} />
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
-          {whatsappHref ? (
+          {whatsappRaw ? (
             <Button size="sm" onClick={openWhatsApp}>
               <MessageCircle className="h-4 w-4" aria-hidden />
               Chamar no WhatsApp
@@ -267,7 +285,7 @@ export function LeadDetailPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate(`/agents/whatsapp?leadId=${lead.id}`)}
+            onClick={() => setIsWhatsAppModalOpen(true)}
           >
             Abordagem
           </Button>
@@ -524,6 +542,11 @@ export function LeadDetailPage() {
         </div>
 
         <div className="space-y-4 lg:col-span-2">
+          <CrmCopilotCard
+            leadId={lead.id}
+            onOpenWhatsApp={whatsappRaw && !lead.doNotContact ? openWhatsApp : undefined}
+          />
+
           <LeadOpportunityCard
             score={lead.score}
             snapshot={latestScore}
@@ -574,6 +597,13 @@ export function LeadDetailPage() {
           />
         </div>
       </div>
+
+      <WhatsAppOutreachModal
+        lead={outreachLead}
+        stages={funnelStages}
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+      />
     </div>
   );
 }

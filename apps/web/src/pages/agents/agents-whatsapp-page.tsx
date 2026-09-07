@@ -1,8 +1,8 @@
-import { ArrowLeft, Copy, ExternalLink, MessageCircle, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, Copy, ExternalLink, MessageCircle, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -11,12 +11,21 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useWhatsappFirstMessage, useWhatsappVariants } from '@/features/agents/hooks';
+import type { WhatsappSequenceStage } from '@/features/agents/api';
+import { useWhatsappFirstMessage, useWhatsappRecordOutreach, useWhatsappVariants } from '@/features/agents/hooks';
 import { useMessageTemplates } from '@/features/campaigns/hooks';
 import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
 import { fetchLead, fetchLeads } from '@/features/leads/api';
+import { fetchPipelines } from '@/features/pipeline/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+const SEQUENCE_STAGES: { id: WhatsappSequenceStage; labelKey: string }[] = [
+  { id: 'FIRST_MESSAGE', labelKey: 'agents.whatsapp.stages.FIRST_MESSAGE' },
+  { id: 'FOLLOW_UP_1', labelKey: 'agents.whatsapp.stages.FOLLOW_UP_1' },
+  { id: 'FOLLOW_UP_2', labelKey: 'agents.whatsapp.stages.FOLLOW_UP_2' },
+  { id: 'BREAKUP', labelKey: 'agents.whatsapp.stages.BREAKUP' },
+];
 
 function buildWaLink(digits: string | null | undefined, body: string): string | null {
   if (!digits) return null;
@@ -25,11 +34,13 @@ function buildWaLink(digits: string | null | undefined, body: string): string | 
 
 export function AgentsWhatsappPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const leadId = searchParams.get('leadId') ?? undefined;
 
   const [leadQuery, setLeadQuery] = useState('');
   const [leadSearch, setLeadSearch] = useState('');
+  const [sequenceStage, setSequenceStage] = useState<WhatsappSequenceStage>('FIRST_MESSAGE');
   const [templateId, setTemplateId] = useState<string>('');
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [previewBody, setPreviewBody] = useState('');
@@ -38,8 +49,18 @@ export function AgentsWhatsappPage() {
   const [showSavedTemplates, setShowSavedTemplates] = useState(false);
   const [generation, setGeneration] = useState(0);
 
+  // CRM confirmation fields
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [recordActivity, setRecordActivity] = useState(true);
+  const [advancePipeline, setAdvancePipeline] = useState(false);
+  const [newStageId, setNewStageId] = useState<string>('');
+  const [scheduleFollowUp, setScheduleFollowUp] = useState(true);
+  const [recordSuccess, setRecordSuccess] = useState<string | null>(null);
+  const [recordError, setRecordError] = useState<string | null>(null);
+
   const templates = useMessageTemplates({ page: 1, pageSize: 50 });
-  const variants = useWhatsappVariants(leadId, 4, generation);
+  const variants = useWhatsappVariants(leadId, 4, generation, sequenceStage);
+  const recordOutreach = useWhatsappRecordOutreach();
   const message = useWhatsappFirstMessage(
     leadId && showSavedTemplates && templateId ? leadId : undefined,
     templateId || undefined,
@@ -50,6 +71,17 @@ export function AgentsWhatsappPage() {
     queryFn: () => fetchLead(leadId!),
     enabled: Boolean(leadId),
   });
+
+  const pipelines = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: fetchPipelines,
+    enabled: Boolean(leadId),
+  });
+
+  const allStages = useMemo(() => {
+    const list = pipelines.data ?? [];
+    return list.flatMap((p) => p.stages ?? []);
+  }, [pipelines.data]);
 
   const leadsPicker = useQuery({
     queryKey: ['agents', 'whatsapp', 'lead-picker', leadSearch],
@@ -68,6 +100,26 @@ export function AgentsWhatsappPage() {
     const timer = window.setTimeout(() => setLeadSearch(leadQuery.trim()), 250);
     return () => window.clearTimeout(timer);
   }, [leadQuery]);
+
+  useEffect(() => {
+    if (allStages.length > 0 && !newStageId) {
+      const currentStageId = preselected.data?.stage?.id;
+      const currentIndex = allStages.findIndex((s) => s.id === currentStageId);
+      const nextStage =
+        currentIndex >= 0 && currentIndex + 1 < allStages.length
+          ? allStages[currentIndex + 1]
+          : allStages.find((s) => /contatad|contacted/i.test(s.name)) ??
+            allStages.find((s) => s.id !== currentStageId);
+      if (nextStage) {
+        setNewStageId(nextStage.id);
+        setAdvancePipeline(true);
+      }
+    }
+  }, [allStages, preselected.data?.stage?.id, newStageId]);
+
+  useEffect(() => {
+    setScheduleFollowUp(sequenceStage === 'FIRST_MESSAGE' || sequenceStage === 'FOLLOW_UP_1');
+  }, [sequenceStage]);
 
   useEffect(() => {
     const list = templates.data?.data ?? [];
@@ -108,7 +160,11 @@ export function AgentsWhatsappPage() {
     setPreviewTouched(false);
     setSelectedVariantId('');
     setShowSavedTemplates(false);
+    setShowConfirmation(false);
+    setRecordSuccess(null);
+    setRecordError(null);
     setGeneration(0);
+    setSequenceStage('FIRST_MESSAGE');
     setSearchParams({ leadId: id });
   }
 
@@ -120,6 +176,39 @@ export function AgentsWhatsappPage() {
       window.setTimeout(() => setCopyOk(false), 2000);
     } catch {
       // ignore
+    }
+  }
+
+  function handleOpenWhatsApp() {
+    setShowConfirmation(true);
+  }
+
+  async function handleConfirmRecord() {
+    if (!leadId) return;
+    setRecordError(null);
+    setRecordSuccess(null);
+    try {
+      await recordOutreach.mutateAsync({
+        leadId,
+        messageBody: previewBody,
+        variantId: selectedVariantId || undefined,
+        sequenceStage,
+        advanceStageId: advancePipeline && newStageId ? newStageId : undefined,
+        scheduleFollowUpDays: scheduleFollowUp ? 2 : undefined,
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leads'] }),
+        queryClient.invalidateQueries({ queryKey: ['lead', leadId] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline'] }),
+        queryClient.invalidateQueries({ queryKey: ['agents', 'crm'] }),
+        queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+      ]);
+
+      setRecordSuccess(t('agents.whatsapp.recordSuccess'));
+      window.setTimeout(() => setRecordSuccess(null), 4000);
+    } catch (err) {
+      setRecordError(getApiErrorMessage(err) ?? t('agents.whatsapp.recordError'));
     }
   }
 
@@ -200,6 +289,35 @@ export function AgentsWhatsappPage() {
               action={<MessageCircle className="h-5 w-5 text-brand-300" aria-hidden />}
             />
             <CardContent className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[color:var(--ink-muted)]">
+                  {t('agents.whatsapp.stageLabel')}
+                </label>
+                <div className="flex flex-wrap gap-1 rounded-control bg-[color:var(--surface-subtle)] p-1">
+                  {SEQUENCE_STAGES.map((stg) => (
+                    <button
+                      key={stg.id}
+                      type="button"
+                      data-testid={`sequence-tab-${stg.id}`}
+                      className={cn(
+                        'flex-1 rounded-control px-2.5 py-1.5 text-xs font-medium transition-all text-center',
+                        sequenceStage === stg.id
+                          ? 'bg-brand-600 text-white shadow-sm'
+                          : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-card)] hover:text-[color:var(--ink)]',
+                      )}
+                      onClick={() => {
+                        setSequenceStage(stg.id);
+                        setPreviewTouched(false);
+                        setSelectedVariantId('');
+                        setGeneration(0);
+                      }}
+                    >
+                      {t(stg.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2">
                 {variants.data?.source ? (
                   <span
@@ -339,7 +457,12 @@ export function AgentsWhatsappPage() {
                   {t('agents.whatsapp.copy')}
                 </Button>
                 {waLink ? (
-                  <a href={waLink} target="_blank" rel="noreferrer noopener">
+                  <a
+                    href={waLink}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    onClick={handleOpenWhatsApp}
+                  >
                     <Button size="sm" data-testid="whatsapp-open">
                       <ExternalLink className="h-4 w-4" aria-hidden />
                       {t('agents.whatsapp.open')}
@@ -350,12 +473,118 @@ export function AgentsWhatsappPage() {
                     {t('agents.whatsapp.open')}
                   </Button>
                 )}
+                {!showConfirmation ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowConfirmation(true)}
+                    className="text-xs text-[color:var(--ink-muted)]"
+                  >
+                    {t('agents.whatsapp.confirmRecordTitle')}
+                  </Button>
+                ) : null}
                 <Link to={`/leads/${leadId}`}>
                   <Button size="sm" variant="ghost">
                     {t('agents.crm.openLead')}
                   </Button>
                 </Link>
               </div>
+
+              {showConfirmation ? (
+                <div className="mt-4 rounded-panel border border-brand-500/30 bg-brand-500/5 p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-brand-300">
+                      {t('agents.whatsapp.confirmRecordTitle')}
+                    </h4>
+                    <span className="text-[11px] text-[color:var(--ink-muted)]">
+                      {t('agents.whatsapp.openedExternal')}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-[color:var(--ink)]">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={recordActivity}
+                        onChange={(e) => setRecordActivity(e.target.checked)}
+                        className="rounded border-[color:var(--border)] text-brand-600 focus:ring-brand-500"
+                      />
+                      <span>{t('agents.whatsapp.recordActivity')}</span>
+                    </label>
+
+                    {allStages.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-2 pl-6">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={advancePipeline}
+                            onChange={(e) => setAdvancePipeline(e.target.checked)}
+                            className="rounded border-[color:var(--border)] text-brand-600 focus:ring-brand-500"
+                          />
+                          <span>{t('agents.whatsapp.advanceStage')}</span>
+                        </label>
+                        {advancePipeline ? (
+                          <select
+                            value={newStageId}
+                            onChange={(e) => setNewStageId(e.target.value)}
+                            className="h-7 rounded border border-[color:var(--border)] bg-[color:var(--surface-card)] px-2 text-xs text-[color:var(--ink)]"
+                          >
+                            {allStages.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    <div className="pl-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={scheduleFollowUp}
+                          onChange={(e) => setScheduleFollowUp(e.target.checked)}
+                          className="rounded border-[color:var(--border)] text-brand-600 focus:ring-brand-500"
+                        />
+                        <span>{t('agents.whatsapp.scheduleFollowUp')}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {recordError ? (
+                    <p className="text-xs text-red-300" role="alert">
+                      {recordError}
+                    </p>
+                  ) : null}
+
+                  {recordSuccess ? (
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-300" role="status">
+                      <Check className="h-4 w-4" aria-hidden />
+                      <span>{recordSuccess}</span>
+                    </div>
+                  ) : null}
+
+                  <div className="flex justify-end gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowConfirmation(false)}
+                    >
+                      {t('common.cancel', { defaultValue: 'Cancelar' })}
+                    </Button>
+                    <Button
+                      size="sm"
+                      loading={recordOutreach.isPending}
+                      disabled={!recordActivity}
+                      onClick={() => void handleConfirmRecord()}
+                      data-testid="confirm-outreach-crm-button"
+                    >
+                      {t('agents.whatsapp.confirmAndSave')}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
