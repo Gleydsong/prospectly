@@ -22,5 +22,7 @@ describe('PINO_REDACT_PATHS', () => {
     expect(PINO_REDACT_PATHS).toContain('req.headers["asaas-access-token"]');
     expect(PINO_REDACT_PATHS).toContain('req.body.customFieldValues');
     expect(PINO_REDACT_PATHS).toContain('*.customFieldValues');
+    expect(PINO_REDACT_PATHS).toContain('*.refreshTokenEncrypted');
+    expect(PINO_REDACT_PATHS).toContain('req.query.code');
   });
 });

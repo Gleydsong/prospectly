@@ -18,6 +18,7 @@ describe('AccountExportService', () => {
       search: { findMany: jest.fn().mockResolvedValue([]) },
       opportunityRun: { findMany: jest.fn().mockResolvedValue([]) },
       aiRun: { findMany: jest.fn().mockResolvedValue([]) },
+      googleConnection: { findMany: jest.fn().mockResolvedValue([]) },
       lead: { findMany: jest.fn() },
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
@@ -27,9 +28,18 @@ describe('AccountExportService', () => {
 
     expect(payload.subject.id).toBe('u1');
     expect(prisma.lead.findMany).not.toHaveBeenCalled();
-    expect(prisma.search.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: 'u1' } }),
+    expect(prisma.googleConnection.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'u1' },
+        select: {
+          organizationId: true,
+          googleEmail: true,
+          connectedAt: true,
+          revokedAt: true,
+        },
+      }),
     );
+    expect(payload.googleConnections).toEqual([]);
     expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'privacy.data_exported', entityId: 'u1' }),
     );

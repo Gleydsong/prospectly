@@ -1057,5 +1057,19 @@
       "select": "Select",
       "date": "Date"
     }
+  },
+  "googleConnection": {
+    "title": "Google connection",
+    "description": "Connect your Gmail and Calendar for read-only ingest. Prospectly does not send mail. This is not the organization webhook in Tools.",
+    "connect": "Connect Google",
+    "disconnect": "Disconnect",
+    "connectedAs": "Connected as {{email}}",
+    "disconnected": "No Google account connected.",
+    "viewerHint": "Viewers cannot connect a mailbox.",
+    "connectedFlash": "Gmail and Calendar connected.",
+    "callbackError": "Could not finish the Google connection.",
+    "error": "Could not update the Google connection.",
+    "revoke": "Revoke Google",
+    "revokeConfirm": "Revoke this member's Google connection? History on the lead card stays."
   }
 }

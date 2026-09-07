@@ -1057,5 +1057,19 @@
       "select": "Lista",
       "date": "Data"
     }
+  },
+  "googleConnection": {
+    "title": "Conexão Google",
+    "description": "Liga o teu Gmail e Calendar em leitura. Não envia mensagens. Não é o webhook da organização em Ferramentas.",
+    "connect": "Ligar Google",
+    "disconnect": "Desligar",
+    "connectedAs": "Ligado como {{email}}",
+    "disconnected": "Nenhuma conta Google ligada.",
+    "viewerHint": "Quem só vê a organização não pode ligar uma caixa de correio.",
+    "connectedFlash": "Gmail e Calendar ligados.",
+    "callbackError": "Não foi possível concluir a ligação Google.",
+    "error": "Não foi possível atualizar a Conexão Google.",
+    "revoke": "Revogar Google",
+    "revokeConfirm": "Revogar a Conexão Google deste membro? O histórico na ficha permanece."
   }
 }
