@@ -54,6 +54,9 @@ const AgentsWhatsappPage = lazy(() =>
   import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
 );
 const ToolsPage = lazy(() => import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })));
+const CustomFieldsPage = lazy(() =>
+  import('@/pages/custom-fields-page').then((m) => ({ default: m.CustomFieldsPage })),
+);
 const OpportunityFinderPage = lazy(() =>
   import('@/pages/opportunity-finder-page').then((m) => ({ default: m.OpportunityFinderPage })),
 );
@@ -118,6 +121,14 @@ export function App() {
             element={
               <LazyPage>
                 <OpportunityFinderPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="custom-fields"
+            element={
+              <LazyPage>
+                <CustomFieldsPage />
               </LazyPage>
             }
           />

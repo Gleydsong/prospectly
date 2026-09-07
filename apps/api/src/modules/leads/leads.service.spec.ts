@@ -186,6 +186,36 @@ describe('LeadsService', () => {
     );
   });
 
+  it('update merges custom field values through CustomFieldsService', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      organizationId: 'org1',
+      companyName: 'Café',
+      city: 'Lisboa',
+      state: 'PT',
+      customFieldValues: { keep: 1 },
+    });
+    prisma.lead.update.mockResolvedValue({ id: 'lead-1', tags: [] });
+    const customFields = { mergeValues: jest.fn().mockResolvedValue({ keep: 1, nif: '123' }) };
+    const service = new LeadsService(
+      prisma,
+      makeIngestion(),
+      makeEntitlements() as never,
+      undefined,
+      customFields as never,
+    );
+
+    await service.update('org1', 'lead-1', { customFieldValues: { nif: '123' } });
+
+    expect(customFields.mergeValues).toHaveBeenCalledWith('org1', { keep: 1 }, { nif: '123' });
+    expect(prisma.lead.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ customFieldValues: { keep: 1, nif: '123' } }),
+      }),
+    );
+  });
+
   it('list with an explicit empty ids list returns no rows instead of the whole org', async () => {
     const prisma = makePrisma();
     const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
@@ -202,6 +232,28 @@ describe('LeadsService', () => {
     expect(result.meta.total).toBe(0);
     expect(prisma.lead.findMany).not.toHaveBeenCalled();
     expect(prisma.lead.count).not.toHaveBeenCalled();
+  });
+
+  it('list search q does not query customFieldValues and omits them from rows', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(1);
+    prisma.lead.findMany.mockResolvedValue([
+      { id: 'lead-1', tags: [], customFieldValues: { nif: 'secret-nif' } },
+    ]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    const result = await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      q: 'secret-nif',
+    });
+
+    expect(JSON.stringify(prisma.lead.findMany.mock.calls[0]?.[0]?.where)).not.toMatch(
+      /customFieldValues/,
+    );
+    expect(result.data[0]).not.toHaveProperty('customFieldValues');
   });
 
   it('list with ids constrains to those leads inside the tenant', async () => {

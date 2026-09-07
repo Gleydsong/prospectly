@@ -1,6 +1,6 @@
 import { ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import { LeadStatus } from '@prisma/client';
-import { IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
 
 import { CreateLeadDto } from './create-lead.dto';
 
@@ -18,4 +18,11 @@ export class UpdateLeadDto extends PartialType(
   @IsArray()
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Partial map of custom field id → value. null or empty string removes the key.',
+  })
+  @IsOptional()
+  @IsObject()
+  customFieldValues?: Record<string, string | number | null>;
 }

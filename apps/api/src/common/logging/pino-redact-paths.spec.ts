@@ -20,5 +20,7 @@ describe('PINO_REDACT_PATHS', () => {
     expect(PINO_REDACT_PATHS).toContain('req.headers["x-abacate-webhook-secret"]');
     expect(PINO_REDACT_PATHS).toContain('req.headers["x-webhook-secret"]');
     expect(PINO_REDACT_PATHS).toContain('req.headers["asaas-access-token"]');
+    expect(PINO_REDACT_PATHS).toContain('req.body.customFieldValues');
+    expect(PINO_REDACT_PATHS).toContain('*.customFieldValues');
   });
 });

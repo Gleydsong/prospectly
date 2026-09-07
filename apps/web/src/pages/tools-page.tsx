@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
+import { canManageOrg } from '@/features/settings/can-manage-org';
+import { useAuthStore } from '@/stores/auth.store';
 
 export const QUICK = [
   { to: '/tools/opportunity-finder', titleKey: 'tools.opportunityTitle', descKey: 'tools.opportunityDesc' },
@@ -18,6 +20,10 @@ export const ALL = [
   { to: '/reports', titleKey: 'tools.reportsTitle', descKey: 'tools.reportsDesc' },
   { to: '/pipeline', titleKey: 'tools.pipelineTitle', descKey: 'tools.pipelineDesc' },
   { to: '/tasks', titleKey: 'tools.tasksTitle', descKey: 'tools.tasksDesc' },
+] as const;
+
+export const ORG_SCHEMA = [
+  { to: '/custom-fields', titleKey: 'tools.customFieldsTitle', descKey: 'tools.customFieldsDesc' },
 ] as const;
 
 function ToolCard({
@@ -54,6 +60,8 @@ function ToolCard({
 
 export function ToolsPage() {
   const { t } = useTranslation();
+  const role = useAuthStore((state) => state.user?.role);
+  const catalog = canManageOrg(role) ? [...ALL, ...ORG_SCHEMA] : [...ALL];
 
   return (
     <div className="space-y-8">
@@ -81,7 +89,7 @@ export function ToolsPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-bold text-[color:var(--ink)]">{t('tools.available')}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {ALL.map((tool) => (
+          {catalog.map((tool) => (
             <ToolCard
               key={`${tool.to}-${tool.titleKey}`}
               to={tool.to}

@@ -81,6 +81,7 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/leads/, labelKey: 'nav.clientes' },
   { pattern: /^\/pipeline/, labelKey: 'nav.pipeline' },
   { pattern: /^\/tools/, labelKey: 'nav.ferramentas' },
+  { pattern: /^\/custom-fields/, labelKey: 'customFields.title' },
   { pattern: /^\/support/, labelKey: 'nav.suporte' },
   { pattern: /^\/agents\/crm/, labelKey: 'agents.crm.title' },
   { pattern: /^\/agents\/whatsapp/, labelKey: 'agents.whatsapp.title' },

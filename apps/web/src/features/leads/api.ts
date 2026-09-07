@@ -67,7 +67,12 @@ export async function createLead(input: CreateLeadInput): Promise<LeadDetail> {
   return data;
 }
 
-export async function updateLead(id: string, input: Partial<CreateLeadInput>): Promise<LeadDetail> {
+export async function updateLead(
+  id: string,
+  input: Partial<CreateLeadInput> & {
+    customFieldValues?: Record<string, string | number | null>;
+  },
+): Promise<LeadDetail> {
   const { data } = await api.patch<LeadDetail>(`/leads/${id}`, input);
   return data;
 }

@@ -7,6 +7,7 @@
 - [Views](./docs/domain/views/CONTEXT.md): guarda listas inteligentes da organização sobre clientes potenciais
 - [Workflows](./docs/domain/workflows/CONTEXT.md): guarda Fluxos da organização que reagem a DomainEvents com definição allowlisted
 - [Reports](./docs/domain/reports/CONTEXT.md): lê DomainEvents da organização e mostra conversão do funil na janela rolling
+- [Custom fields](./docs/domain/custom-fields/CONTEXT.md): guarda definições da organização de dados tipados no cliente potencial
 
 ## Relacionamentos
 
@@ -22,3 +23,5 @@
 - **Reports → Organizations**: cada leitura pertence à organização da sessão; nunca chega `organizationId` do cliente
 - **Reports → Events**: Relatórios agrega `OutboxEvent` (`lead.created`, `lead.stage_changed`); não cria DomainEvent
 - **Reports → Pipeline**: Ganho/Perdido usa as flags atuais de `PipelineStage`, não o snapshot da Principal
+- **Custom fields → Organizations**: cada definição pertence à organização da sessão
+- **Custom fields → Lead**: o valor vive no JSONB do Lead; a definição não copia PII

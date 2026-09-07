@@ -41,6 +41,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const workflowVersionB = randomUUID();
   const workflowStepRunA = randomUUID();
   const workflowStepRunB = randomUUID();
+  const customFieldA = randomUUID();
+  const customFieldB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -131,6 +133,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${workflowStepRunA}, ${orgA}, ${workflowA}, ${workflowVersionA}, ${outboxEventA}, ${leadA}, 0, 'APPLIED'::"WorkflowStepRunOutcome", NOW()),
           (${workflowStepRunB}, ${orgB}, ${workflowB}, ${workflowVersionB}, ${outboxEventB}, ${leadB}, 0, 'SKIPPED'::"WorkflowStepRunOutcome", NOW())
       `;
+      await tx.$executeRaw`
+        INSERT INTO "CustomFieldDefinition"
+          (id, "organizationId", name, type, position, options, "createdAt", "updatedAt")
+        VALUES
+          (${customFieldA}, ${orgA}, 'NIF A', 'TEXT'::"CustomFieldType", 0, '[]'::jsonb, NOW(), NOW()),
+          (${customFieldB}, ${orgB}, 'NIF B', 'TEXT'::"CustomFieldType", 0, '[]'::jsonb, NOW(), NOW())
+      `;
     });
   });
 
@@ -139,6 +148,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "CustomFieldDefinition" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
       await tx.$executeRawUnsafe(
         `DELETE FROM "WorkflowStepRun" WHERE "organizationId" IN ($1, $2)`,
         orgA,
@@ -330,6 +344,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
             (id, "organizationId", "workflowId", "workflowVersionId", "eventId", "leadId", "stepIndex", outcome, "createdAt")
           VALUES
             (${foreignRunId}, ${orgB}, ${workflowB}, ${workflowVersionB}, ${outboxEventB}, ${leadB}, 1, 'APPLIED'::"WorkflowStepRunOutcome", NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates custom field definitions by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "CustomFieldDefinition" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: customFieldA }]);
+  });
+
+  it('rejects a cross-tenant custom field insert', async () => {
+    const foreignFieldId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "CustomFieldDefinition"
+            (id, "organizationId", name, type, position, options, "createdAt", "updatedAt")
+          VALUES
+            (${foreignFieldId}, ${orgB}, 'Leaked', 'TEXT'::"CustomFieldType", 1, '[]'::jsonb, NOW(), NOW())
         `;
       }),
     ).rejects.toThrow();

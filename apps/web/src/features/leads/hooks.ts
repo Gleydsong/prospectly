@@ -55,7 +55,11 @@ export function useCreateLead() {
 export function useUpdateLead(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: Partial<CreateLeadInput>) => updateLead(id, input),
+    mutationFn: (
+      input: Partial<CreateLeadInput> & {
+        customFieldValues?: Record<string, string | number | null>;
+      },
+    ) => updateLead(id, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['leads'] });
     },
