@@ -10,16 +10,25 @@ import { AgentsWhatsappPage } from './agents-whatsapp-page';
 
 const mocks = vi.hoisted(() => ({
   useWhatsappVariants: vi.fn(),
+  recordOutreachMutateAsync: vi.fn(),
 }));
 
 vi.mock('@/features/agents/hooks', () => ({
   useWhatsappVariants: (...args: unknown[]) => mocks.useWhatsappVariants(...args),
+  useWhatsappRecordOutreach: () => ({
+    mutateAsync: mocks.recordOutreachMutateAsync,
+    isPending: false,
+  }),
   useWhatsappFirstMessage: () => ({
     data: undefined,
     isLoading: false,
     isError: false,
     error: null,
   }),
+}));
+
+vi.mock('@/features/pipeline/api', () => ({
+  fetchPipelines: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/features/campaigns/hooks', () => ({
@@ -150,6 +159,46 @@ describe('AgentsWhatsappPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('whatsapp-preview')).toHaveValue('Oi! Falo com o Salão Resenha.');
+    });
+  });
+
+  it('allows switching sequence stage and records outreach in CRM', async () => {
+    const user = userEvent.setup();
+    mocks.recordOutreachMutateAsync.mockResolvedValue({
+      leadId: 'lead-1',
+      activityId: 'act-1',
+      stageChanged: false,
+      taskCreated: true,
+      sequenceStage: 'FOLLOW_UP_1',
+    });
+
+    render(
+      <Wrapper>
+        <AgentsWhatsappPage />
+      </Wrapper>,
+    );
+
+    const followUpTab = await screen.findByTestId('sequence-tab-FOLLOW_UP_1');
+    await user.click(followUpTab);
+
+    await waitFor(() => {
+      const lastCall = mocks.useWhatsappVariants.mock.calls.at(-1);
+      expect(lastCall?.[3]).toBe('FOLLOW_UP_1');
+    });
+
+    const openConfirmBtn = screen.getByRole('button', { name: /registrar abordagem no crm/i });
+    await user.click(openConfirmBtn);
+
+    const saveBtn = await screen.findByTestId('confirm-outreach-crm-button');
+    await user.click(saveBtn);
+
+    await waitFor(() => {
+      expect(mocks.recordOutreachMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          leadId: 'lead-1',
+          sequenceStage: 'FOLLOW_UP_1',
+        }),
+      );
     });
   });
 });

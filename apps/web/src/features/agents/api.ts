@@ -55,6 +55,12 @@ export type WhatsappFirstMessageResult = {
   messageSent: false;
 };
 
+export type WhatsappSequenceStage =
+  | 'FIRST_MESSAGE'
+  | 'FOLLOW_UP_1'
+  | 'FOLLOW_UP_2'
+  | 'BREAKUP';
+
 export type WhatsappVariantAngle =
   | 'direto'
   | 'curiosidade'
@@ -76,9 +82,44 @@ export type WhatsappVariantsResult = {
   digits: string | null;
   source: 'ollama' | 'fallback';
   seed?: number;
+  sequenceStage?: WhatsappSequenceStage;
   variants: WhatsappVariant[];
   autoSend: false;
   messageSent: false;
+};
+
+export type RecordOutreachInput = {
+  leadId: string;
+  messageBody: string;
+  variantId?: string;
+  sequenceStage?: 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
+  advanceStageId?: string;
+  scheduleFollowUpDays?: number;
+};
+
+export type RecordOutreachResult = {
+  recorded: boolean;
+  activityId: string;
+  leadId: string;
+  advancedStageId: string | null;
+  advancedStageName: string | null;
+  followUpTaskId: string | null;
+};
+
+export type DailyFocusItem = {
+  leadId: string;
+  companyName: string;
+  reason: 'OVERDUE_TASK' | 'HOT_NEW_LEAD' | 'STALE_PIPELINE';
+  description: string;
+  score?: number | null;
+  phone?: string | null;
+  stageName?: string | null;
+  taskId?: string | null;
+};
+
+export type DailyFocusResult = {
+  items: DailyFocusItem[];
+  totalCount: number;
 };
 
 export async function fetchAgentsCatalog(): Promise<{ data: AgentCatalogItem[] }> {
@@ -114,7 +155,26 @@ export async function fetchWhatsappVariants(input: {
   leadId: string;
   count?: number;
   seed?: number;
+  sequenceStage?: WhatsappSequenceStage;
 }): Promise<WhatsappVariantsResult> {
-  const { data } = await api.post<WhatsappVariantsResult>('/agents/whatsapp/variants', input);
+  const { data } = await api.post<WhatsappVariantsResult>('/agents/whatsapp/variants', input, {
+    timeout: 35_000,
+  });
   return data;
 }
+
+export async function recordWhatsappOutreach(
+  input: RecordOutreachInput,
+): Promise<RecordOutreachResult> {
+  const { data } = await api.post<RecordOutreachResult>(
+    '/agents/whatsapp/record-outreach',
+    input,
+  );
+  return data;
+}
+
+export async function fetchCrmDailyFocus(): Promise<DailyFocusResult> {
+  const { data } = await api.get<DailyFocusResult>('/agents/crm/daily-focus');
+  return data;
+}
+

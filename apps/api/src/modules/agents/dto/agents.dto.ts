@@ -57,4 +57,47 @@ export class AgentsWhatsappVariantsDto {
   @IsInt()
   @Min(0)
   seed?: number;
+
+  @ApiPropertyOptional({
+    description: 'Sequence stage for the message',
+    enum: ['FIRST_MESSAGE', 'FOLLOW_UP_1', 'FOLLOW_UP_2', 'BREAKUP'],
+    default: 'FIRST_MESSAGE',
+  })
+  @IsOptional()
+  sequenceStage?: 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
 }
+
+export class AgentsWhatsappRecordOutreachDto {
+  @ApiProperty()
+  @IsUUID('4')
+  leadId!: string;
+
+  @ApiProperty({ description: 'The text sent or opened in WhatsApp' })
+  messageBody!: string;
+
+  @ApiPropertyOptional({ description: 'The variant id used, if any' })
+  @IsOptional()
+  variantId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Sequence stage for the message',
+    enum: ['FIRST_MESSAGE', 'FOLLOW_UP_1', 'FOLLOW_UP_2', 'BREAKUP'],
+    default: 'FIRST_MESSAGE',
+  })
+  @IsOptional()
+  sequenceStage?: 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
+
+  @ApiPropertyOptional({ description: 'Stage to move the lead to (e.g. Contacted)' })
+  @IsOptional()
+  @IsUUID('4')
+  advanceStageId?: string;
+
+  @ApiPropertyOptional({ description: 'Schedule follow-up task in N days (1-30)', minimum: 1, maximum: 30 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  scheduleFollowUpDays?: number;
+}
+

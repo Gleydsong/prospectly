@@ -17,6 +17,19 @@ export type WhatsappVariant = {
   body: string;
 };
 
+export type WhatsappSequenceStage =
+  | 'FIRST_MESSAGE'
+  | 'FOLLOW_UP_1'
+  | 'FOLLOW_UP_2'
+  | 'BREAKUP';
+
+export type LeadAuditSignals = {
+  hasWhatsappOnSite?: boolean | null;
+  isMobileFriendly?: boolean | null;
+  isSlow?: boolean | null;
+  seoHealthScore?: number | null;
+};
+
 /** Context for personalizing variants. senderName = logged-in user (never invent). */
 export type LeadContextForWhatsappAi = {
   companyName: string;
@@ -25,6 +38,8 @@ export type LeadContextForWhatsappAi = {
   segment?: string | null;
   website?: string | null;
   senderName?: string | null;
+  sequenceStage?: WhatsappSequenceStage | null;
+  auditSignals?: LeadAuditSignals | null;
 };
 
 export const ANGLE_LABELS: Record<WhatsappVariantAngle, string> = {

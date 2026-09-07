@@ -30,8 +30,22 @@ describe('lead-contact-channels', () => {
       recommendedAction: 'PRIORITIZE_OUTREACH',
     });
     expect(msg).not.toContain('PRIORITIZE_OUTREACH');
-    expect(msg).toContain('Priorizar contato comercial');
+    expect(msg).not.toContain('Priorizar contato comercial');
+    expect(msg).toContain('Café da Ana - am');
+    expect(msg).toContain('gostaria de conversar');
     expect(buildWhatsAppHref('+5592984863168', msg)).not.toContain('PRIORITIZE_OUTREACH');
+  });
+
+  it('does not leak ADVANCE_PIPELINE action code into WhatsApp message', () => {
+    const msg = buildWhatsAppOutreachMessage({
+      companyName: 'Boutique Flor',
+      city: 'Lisboa',
+      recommendedAction: 'ADVANCE_PIPELINE',
+    });
+    expect(msg).not.toContain('ADVANCE_PIPELINE');
+    expect(msg).not.toContain('Avançar no funil');
+    expect(msg).toContain('Boutique Flor');
+    expect(msg).toContain('gostaria de conversar');
   });
 
   it('builds wa.me href with encoded text', () => {
