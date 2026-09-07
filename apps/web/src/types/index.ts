@@ -128,6 +128,7 @@ export interface LeadDetail extends LeadListItem {
   dataCollectedAt?: string | null;
   lastVerifiedAt?: string | null;
   missingFields?: string[];
+  customFieldValues?: Record<string, string | number | null>;
   lastContactAt?: string | null;
   nextContactAt?: string | null;
   contacts: LeadContact[];

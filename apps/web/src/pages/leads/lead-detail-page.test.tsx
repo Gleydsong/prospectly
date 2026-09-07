@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import '@/i18n';
+import i18n from '@/i18n';
+import { useAuthStore } from '@/stores/auth.store';
+import { Role } from '@/types';
+
 import { LeadDetailPage } from './lead-detail-page';
 
 const mocks = vi.hoisted(() => ({
@@ -14,15 +17,21 @@ const mocks = vi.hoisted(() => ({
   createActivity: vi.fn(),
   updateTask: vi.fn(),
   fetchTasks: vi.fn(),
+  useCustomFields: vi.fn(),
+  updateLead: vi.fn(),
 }));
 
 vi.mock('@/features/leads/hooks', () => ({
   useLead: (...args: unknown[]) => mocks.useLead(...args),
   useLeadActivities: () => ({ data: { data: [] }, isLoading: false }),
   useCreateActivity: () => ({ mutateAsync: mocks.createActivity, isPending: false }),
-  useUpdateLead: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateLead: () => ({ mutateAsync: mocks.updateLead, isPending: false }),
   useAddLeadTags: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useRemoveLeadTag: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+
+vi.mock('@/features/custom-fields/hooks', () => ({
+  useCustomFields: () => mocks.useCustomFields(),
 }));
 
 vi.mock('@/features/tasks/api', () => ({
@@ -40,6 +49,41 @@ vi.mock('@/features/pipeline/api', () => ({
   fetchPipelines: (...args: unknown[]) => mocks.fetchPipelines(...args),
   moveLeadToStage: (...args: unknown[]) => mocks.moveLeadToStage(...args),
 }));
+
+const TEXT_FIELD = {
+  id: 'field-nif',
+  name: 'NIF',
+  type: 'text' as const,
+  position: 0,
+  archivedAt: null,
+  options: [],
+};
+
+const ARCHIVED_FIELD = {
+  id: 'field-old',
+  name: 'Código antigo',
+  type: 'text' as const,
+  position: 1,
+  archivedAt: '2026-09-01T00:00:00.000Z',
+  options: [],
+};
+
+function setUser(role: Role) {
+  useAuthStore.setState({
+    user: {
+      id: 'u1',
+      email: 'a@b.com',
+      name: 'Ana',
+      role,
+      emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+      organizationId: 'org1',
+      organizationName: 'Acme',
+      locale: 'pt',
+    },
+    accessToken: 'token',
+    bootstrapped: true,
+  });
+}
 
 function renderPage() {
   const client = new QueryClient({
@@ -78,13 +122,18 @@ const baseLead = {
   website: null,
   email: null,
   notes: null,
+  customFieldValues: {} as Record<string, string | number | null>,
   createdAt: '2026-08-15T01:00:00.000Z',
   updatedAt: '2026-08-15T01:00:00.000Z',
 };
 
 describe('LeadDetailPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('pt');
     vi.clearAllMocks();
+    setUser(Role.MEMBER);
+    mocks.useCustomFields.mockReturnValue({ data: [], isLoading: false });
+    mocks.updateLead.mockResolvedValue({});
     mocks.useLead.mockReturnValue({
       data: baseLead,
       isLoading: false,
@@ -177,5 +226,54 @@ describe('LeadDetailPage', () => {
       type: 'TASK',
       description: 'Tarefa concluída: Retornar ligação',
     });
+  });
+
+  it('lets MEMBER save custom field values on the record', async () => {
+    mocks.useCustomFields.mockReturnValue({ data: [TEXT_FIELD], isLoading: false });
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.type(screen.getByLabelText('NIF'), '123');
+    await user.click(screen.getByRole('button', { name: 'Guardar campos' }));
+
+    await waitFor(() => {
+      expect(mocks.updateLead).toHaveBeenCalledWith({
+        customFieldValues: { 'field-nif': '123' },
+      });
+    });
+  });
+
+  it('lets VIEWER read values without save controls', () => {
+    setUser(Role.VIEWER);
+    mocks.useCustomFields.mockReturnValue({ data: [TEXT_FIELD], isLoading: false });
+    mocks.useLead.mockReturnValue({
+      ...mocks.useLead(),
+      data: { ...mocks.useLead().data, customFieldValues: { 'field-nif': 'PT123' } },
+    });
+    renderPage();
+
+    expect(screen.getByText(/PT123/)).toBeVisible();
+    expect(screen.queryByLabelText('NIF')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar campos' })).not.toBeInTheDocument();
+  });
+
+  it('keeps archived field values read-only on the record', () => {
+    mocks.useCustomFields.mockReturnValue({
+      data: [TEXT_FIELD, ARCHIVED_FIELD],
+      isLoading: false,
+    });
+    mocks.useLead.mockReturnValue({
+      ...mocks.useLead(),
+      data: {
+        ...mocks.useLead().data,
+        customFieldValues: { 'field-old': 'LEGACY' },
+      },
+    });
+    renderPage();
+
+    expect(screen.getByText(/Código antigo: LEGACY/)).toBeVisible();
+    expect(screen.getByText(/arquivado/i)).toBeVisible();
+    expect(screen.queryByLabelText('Código antigo')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('NIF')).toBeInTheDocument();
   });
 });

@@ -36,6 +36,7 @@ import {
 import { LeadTagManager } from '@/features/leads/components/lead-tag-manager';
 import { LeadWebsiteGap } from '@/features/leads/components/lead-website-gap';
 import { WebsiteAnalysisPanel } from '@/features/leads/components/website-analysis-panel';
+import { LeadCustomFieldsCard } from '@/features/custom-fields/lead-custom-fields-card';
 import {
   useAddLeadTags,
   useCreateActivity,
@@ -300,7 +301,8 @@ export function LeadDetailPage() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+        <div className="space-y-4 lg:col-span-1">
+          <Card>
           <CardHeader title="Informações" />
           <CardContent className="space-y-4 text-sm">
             <div>
@@ -517,6 +519,9 @@ export function LeadDetailPage() {
             </LeadOriginAudit>
           </CardContent>
         </Card>
+
+          <LeadCustomFieldsCard leadId={lead.id} values={lead.customFieldValues} />
+        </div>
 
         <div className="space-y-4 lg:col-span-2">
           <LeadOpportunityCard

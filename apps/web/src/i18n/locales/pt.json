@@ -218,7 +218,9 @@
     "tasksTitle": "Tarefas",
     "tasksDesc": "Agenda operacional e compromissos.",
     "reportsTitle": "Relatórios",
-    "reportsDesc": "Conversão do funil a partir dos eventos do outbox."
+    "reportsDesc": "Conversão do funil a partir dos eventos do outbox.",
+    "customFieldsTitle": "Campos personalizados",
+    "customFieldsDesc": "Defina dados tipados da organização para preencher na ficha do cliente potencial."
   },
   "support": {
     "eyebrow": "Suporte",
@@ -982,6 +984,41 @@
         "dor_site": "Dor do site",
         "oferta_leve": "Oferta leve"
       }
+    }
+  },
+  "customFields": {
+    "title": "Campos personalizados",
+    "subtitle": "Schema da organização. Os valores vivem na ficha do cliente potencial, não na alta nem na lista.",
+    "backToTools": "Voltar às ferramentas",
+    "error": "Não foi possível guardar o campo. Tente de novo.",
+    "readOnlyNotice": "Apenas leitura. Quem gere a organização define o schema.",
+    "createTitle": "Novo campo",
+    "name": "Nome",
+    "type": "Tipo",
+    "create": "Criar campo",
+    "firstOption": "Primeira opção",
+    "activeTitle": "Campos ativos",
+    "empty": "Nenhum campo ativo.",
+    "moveUp": "Subir",
+    "renamePrompt": "Novo nome do campo",
+    "rename": "Renomear",
+    "archive": "Arquivar",
+    "archivedTitle": "Arquivados",
+    "unarchive": "Desarquivar",
+    "optionsTitle": "Opções",
+    "addOption": "Adicionar opção",
+    "archiveOption": "Arquivar opção",
+    "unarchiveOption": "Desarquivar opção",
+    "renameOptionPrompt": "Novo nome da opção",
+    "leadTitle": "Campos personalizados",
+    "emptyValue": "Sem valor",
+    "archivedReadOnly": "arquivado",
+    "saveValues": "Guardar campos",
+    "types": {
+      "text": "Texto",
+      "number": "Número",
+      "select": "Lista",
+      "date": "Data"
     }
   }
 }

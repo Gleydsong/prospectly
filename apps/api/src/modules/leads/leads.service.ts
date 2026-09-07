@@ -12,6 +12,7 @@ import { escapeCsvCell } from '../../common/csv/escape-csv-cell';
 import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EntitlementService } from '../billing/entitlement.service';
+import { CustomFieldsService } from '../custom-fields/custom-fields.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
@@ -48,6 +49,7 @@ export class LeadsService {
     private readonly leadIngestion: LeadIngestionService,
     private readonly entitlements: EntitlementService,
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
+    @Optional() private readonly customFields?: CustomFieldsService,
   ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
@@ -170,8 +172,19 @@ export class LeadsService {
       await this.assertNotDuplicate(organizationId, { domain, email: dto.email, phone }, id);
     }
 
-    const { tags, ...rest } = dto;
+    const { tags, customFieldValues, ...rest } = dto;
     void tags;
+    let nextValues: Prisma.InputJsonObject | undefined;
+    if (customFieldValues !== undefined) {
+      if (!this.customFields) {
+        throw new BadRequestException('Custom fields are not available');
+      }
+      nextValues = await this.customFields.mergeValues(
+        organizationId,
+        existing.customFieldValues,
+        customFieldValues,
+      );
+    }
 
     try {
       const lead = await this.prisma.lead.update({
@@ -182,6 +195,7 @@ export class LeadsService {
           phone,
           probableDuplicateKey,
           ...(domain !== undefined ? { domain } : {}),
+          ...(nextValues !== undefined ? { customFieldValues: nextValues } : {}),
         },
         include: LEAD_INCLUDE,
       });
@@ -197,7 +211,7 @@ export class LeadsService {
           .onLeadUpsert(organizationId, id, lead.website)
           .catch(() => undefined);
       }
-      return this.serialize(lead);
+      return this.serialize(lead, true);
     } catch (error) {
       if (this.isUniqueConstraintViolation(error)) {
         throw new ConflictException('Possible duplicate of an existing lead');
@@ -558,6 +572,7 @@ export class LeadsService {
     if (!detailed) {
       delete serialized.scores;
       delete serialized.websiteRecord;
+      delete serialized.customFieldValues;
     } else {
       serialized.missingFields = collectMissingLeadFields(serialized);
     }

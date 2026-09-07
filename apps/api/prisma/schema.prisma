@@ -356,6 +356,7 @@ model Organization {
   workflows           Workflow[]
   workflowVersions    WorkflowVersion[]
   workflowStepRuns    WorkflowStepRun[]
+  customFieldDefinitions CustomFieldDefinition[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -491,6 +492,7 @@ model Lead {
   rating       Float?
   reviewCount  Int?
   openingHours Json?
+  customFieldValues Json @default("{}")
 
   source             LeadSource      @default(MANUAL)
   externalId         String?
@@ -571,6 +573,31 @@ model Tag {
 
   @@unique([organizationId, name])
   @@index([organizationId])
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  SELECT
+  DATE
+}
+
+model CustomFieldDefinition {
+  id             String          @id @default(uuid())
+  organizationId String
+  name           String
+  type           CustomFieldType
+  position       Int
+  options        Json            @default("[]")
+  archivedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Unique (organizationId, name) among active rows is a partial unique index in SQL.
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, position])
 }
 
 model LeadTag {

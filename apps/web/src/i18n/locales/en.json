@@ -218,7 +218,9 @@
     "tasksTitle": "Tasks",
     "tasksDesc": "Operational agenda and appointments.",
     "reportsTitle": "Reports",
-    "reportsDesc": "Funnel conversion from outbox events."
+    "reportsDesc": "Funnel conversion from outbox events.",
+    "customFieldsTitle": "Custom fields",
+    "customFieldsDesc": "Define organization-typed data to fill on the lead record."
   },
   "support": {
     "eyebrow": "Support",
@@ -982,6 +984,41 @@
         "dor_site": "Website pain",
         "oferta_leve": "Light offer"
       }
+    }
+  },
+  "customFields": {
+    "title": "Custom fields",
+    "subtitle": "Organization schema. Values live on the lead record, not on create or the list.",
+    "backToTools": "Back to tools",
+    "error": "Could not save the field. Please try again.",
+    "readOnlyNotice": "Read only. Organization managers define the schema.",
+    "createTitle": "New field",
+    "name": "Name",
+    "type": "Type",
+    "create": "Create field",
+    "firstOption": "First option",
+    "activeTitle": "Active fields",
+    "empty": "No active fields.",
+    "moveUp": "Move up",
+    "renamePrompt": "New field name",
+    "rename": "Rename",
+    "archive": "Archive",
+    "archivedTitle": "Archived",
+    "unarchive": "Unarchive",
+    "optionsTitle": "Options",
+    "addOption": "Add option",
+    "archiveOption": "Archive option",
+    "unarchiveOption": "Unarchive option",
+    "renameOptionPrompt": "New option label",
+    "leadTitle": "Custom fields",
+    "emptyValue": "No value",
+    "archivedReadOnly": "archived",
+    "saveValues": "Save fields",
+    "types": {
+      "text": "Text",
+      "number": "Number",
+      "select": "Select",
+      "date": "Date"
     }
   }
 }

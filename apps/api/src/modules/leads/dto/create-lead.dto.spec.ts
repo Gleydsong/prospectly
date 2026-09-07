@@ -47,4 +47,23 @@ describe('CreateLeadDto / UpdateLeadDto identity fields', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('rejects customFieldValues on create and allows them on update', async () => {
+    await expect(
+      pipe.transform(
+        {
+          companyName: 'Loja Manual',
+          customFieldValues: { 'field-1': 'x' },
+        },
+        { type: 'body', metatype: CreateLeadDto },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      pipe.transform(
+        { customFieldValues: { 'field-1': 'x' } },
+        { type: 'body', metatype: UpdateLeadDto },
+      ),
+    ).resolves.toEqual({ customFieldValues: { 'field-1': 'x' } });
+  });
 });
