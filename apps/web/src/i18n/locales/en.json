@@ -622,6 +622,14 @@
     "layoutKanban": "Kanban",
     "kanbanLabel": "Board by status",
     "columns": "Columns",
+    "customFieldFilter": "Custom field",
+    "customFieldFilterNone": "No custom field filter",
+    "customFieldOpEq": "Equals",
+    "customFieldOpGte": "Greater or equal",
+    "customFieldOpLte": "Less or equal",
+    "customFieldOpOlder": "Older than N days",
+    "customFieldOpWithin": "Within the last N days",
+    "customFieldArchivedSuffix": "archived",
     "column": {
       "companyName": "Company",
       "city": "City",
@@ -988,7 +996,7 @@
   },
   "customFields": {
     "title": "Custom fields",
-    "subtitle": "Organization schema. Values live on the lead record, not on create or the list.",
+    "subtitle": "Organization schema. Values live on the lead; a View can show columns and filters.",
     "backToTools": "Back to tools",
     "error": "Could not save the field. Please try again.",
     "readOnlyNotice": "Read only. Organization managers define the schema.",

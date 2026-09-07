@@ -42,7 +42,7 @@ export const LEAD_VIEW_COLUMN_KEYS = [
   'website',
 ] as const;
 
-export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
+export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewBuiltinColumn[] = [
   'companyName',
   'city',
   'status',
@@ -51,7 +51,10 @@ export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
   'tags',
 ];
 
-export type LeadViewColumnKey = (typeof LEAD_VIEW_COLUMN_KEYS)[number];
+export const MAX_LEAD_VIEW_COLUMNS = LEAD_VIEW_COLUMN_KEYS.length + 40;
+
+export type LeadViewBuiltinColumn = (typeof LEAD_VIEW_COLUMN_KEYS)[number];
+export type LeadViewColumnKey = LeadViewBuiltinColumn | string;
 export type LeadViewLayout = 'table' | 'kanban';
 
 export type LeadViewDefinitionKey = (typeof LEAD_VIEW_DEFINITION_KEYS)[number];
@@ -120,6 +123,14 @@ function assertBoundedString(key: string, value: unknown, max: number): string {
   return trimmed;
 }
 
+export function isBuiltinLeadViewColumn(column: string): column is LeadViewBuiltinColumn {
+  return COLUMN_KEYS.has(column);
+}
+
+export function collectCustomFieldColumnIds(columns: string[] | undefined): string[] {
+  return (columns ?? []).filter((column) => UUID_RE.test(column) && !COLUMN_KEYS.has(column));
+}
+
 function parseSort(raw: Record<string, unknown>, definition: LeadViewDefinition): void {
   if (raw.sortBy !== undefined) {
     if (typeof raw.sortBy !== 'string' || !SORT_FIELDS.has(raw.sortBy)) {
@@ -146,12 +157,12 @@ function parseDisplay(raw: Record<string, unknown>, definition: LeadViewDefiniti
     if (!Array.isArray(raw.columns) || raw.columns.length === 0) {
       throw new InvalidLeadViewDefinitionError('columns must be a non-empty array');
     }
-    if (raw.columns.length > LEAD_VIEW_COLUMN_KEYS.length) {
+    if (raw.columns.length > MAX_LEAD_VIEW_COLUMNS) {
       throw new InvalidLeadViewDefinitionError('columns has too many entries');
     }
     const seen = new Set<string>();
     for (const column of raw.columns) {
-      if (typeof column !== 'string' || !COLUMN_KEYS.has(column)) {
+      if (typeof column !== 'string' || (!COLUMN_KEYS.has(column) && !UUID_RE.test(column))) {
         throw new InvalidLeadViewDefinitionError(
           `Unknown column: ${typeof column === 'string' ? column : String(column)}`,
         );
