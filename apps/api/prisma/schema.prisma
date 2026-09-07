@@ -302,6 +302,7 @@ model User {
   consents             ConsentRecord[]
   savedViews           SavedView[]
   workflows            Workflow[]
+  googleConnections    GoogleConnection[]
 
   @@index([email])
 }
@@ -357,6 +358,7 @@ model Organization {
   workflowVersions    WorkflowVersion[]
   workflowStepRuns    WorkflowStepRun[]
   customFieldDefinitions CustomFieldDefinition[]
+  googleConnections      GoogleConnection[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -1087,6 +1089,32 @@ model MessageTemplate {
   campaigns    Campaign[]
 
   @@index([organizationId, category])
+}
+
+// ---------- Communications (Gmail/Calendar ingest) ----------
+
+/// Per-user Google mailbox/calendar OAuth. Not Integration (org webhook).
+model GoogleConnection {
+  id                    String    @id @default(uuid())
+  organizationId        String
+  userId                String
+  googleSubject         String
+  googleEmail           String
+  refreshTokenEncrypted String?
+  scopes                String
+  connectedAt           DateTime  @default(now())
+  revokedAt             DateTime?
+  lastSyncAt            DateTime?
+  lastError             String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, revokedAt])
+  @@index([userId])
 }
 
 // ---------- Platform ----------

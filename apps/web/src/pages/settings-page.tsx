@@ -14,6 +14,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { changeEmail, getProfile, updateProfile } from '@/features/auth/api';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { IntegrationsSettingsCard } from '@/features/settings/integrations-settings-card';
+import { GoogleConnectionSettingsCard } from '@/features/google-connections/google-connection-settings-card';
+import {
+  fetchOrgGoogleConnections,
+  revokeGoogleConnection,
+} from '@/features/google-connections/api';
 import { InviteMemberModal } from '@/features/settings/invite-member-modal';
 import { SettingsShell } from '@/features/settings/settings-shell';
 import { parseSettingsTab } from '@/features/settings/settings-tabs';
@@ -105,6 +110,21 @@ export function SettingsPage() {
     queryKey: ['organizations', 'members'],
     queryFn: fetchOrganizationMembers,
     enabled: manage,
+  });
+
+  const orgGoogleConnections = useQuery({
+    queryKey: ['google-connections', 'org'],
+    queryFn: fetchOrgGoogleConnections,
+    enabled: manage,
+  });
+
+  const googleConnectedUserIds = new Set(
+    (orgGoogleConnections.data ?? []).map((row) => row.userId),
+  );
+
+  const revokeGoogle = useMutation({
+    mutationFn: revokeGoogleConnection,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['google-connections'] }),
   });
 
   const saveProfile = useMutation({
@@ -391,6 +411,7 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        <GoogleConnectionSettingsCard role={user?.role} />
       </div>
 
       <div className="space-y-6" hidden={tab !== 'team'}>
@@ -436,6 +457,20 @@ export function SettingsPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
+                      {manage && googleConnectedUserIds.has(member.user.id) ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (window.confirm(t('googleConnection.revokeConfirm'))) {
+                              revokeGoogle.mutate(member.user.id);
+                            }
+                          }}
+                        >
+                          {t('googleConnection.revoke')}
+                        </Button>
+                      ) : null}
                       {manage && member.user.id !== user?.id ? (
                         <>
                           <Select

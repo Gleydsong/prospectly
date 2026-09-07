@@ -7,6 +7,7 @@ const makePrisma = () => {
     user: { findUnique: jest.fn(), update: jest.fn() },
     organizationMember: { findMany: jest.fn(), count: jest.fn(), deleteMany: jest.fn() },
     refreshToken: { updateMany: jest.fn() },
+    googleConnection: { updateMany: jest.fn() },
     lead: { updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
@@ -27,6 +28,11 @@ describe('AccountErasureService', () => {
     await service.eraseAccount('u1', 'org-1');
 
     expect(prisma.refreshToken.updateMany).toHaveBeenCalled();
+    expect(prisma.googleConnection.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ refreshTokenEncrypted: null }),
+      }),
+    );
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

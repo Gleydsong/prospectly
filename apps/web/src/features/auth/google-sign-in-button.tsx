@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { googleAuth, type AuthResponse } from '@/features/auth/api';
+import { GOOGLE_SIGN_IN_SCOPES } from '@/features/auth/google-sign-in-scopes';
 import { getApiErrorMessage } from '@/lib/api';
 
 type GoogleSignInButtonProps = {
@@ -51,7 +52,7 @@ function GoogleSignInButtonInner({
   const [loading, setLoading] = useState(false);
 
   const login = useGoogleLogin({
-    scope: 'openid email profile',
+    scope: GOOGLE_SIGN_IN_SCOPES,
     onSuccess: async (tokenResponse) => {
       if (!tokenResponse.access_token) {
         onError?.(t('auth.googleError'));

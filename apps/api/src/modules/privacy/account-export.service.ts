@@ -35,7 +35,7 @@ export class AccountExportService {
         throw new NotFoundException('User not found');
       }
 
-      const [memberships, consents, requests, searches, opportunityRuns, aiRuns] =
+      const [memberships, consents, requests, searches, opportunityRuns, aiRuns, googleConnections] =
         await Promise.all([
           this.prisma.organizationMember.findMany({
             where: { userId },
@@ -113,6 +113,16 @@ export class AccountExportService {
               completedAt: true,
             },
           }),
+          this.prisma.googleConnection.findMany({
+            where: { userId },
+            orderBy: { connectedAt: 'desc' },
+            select: {
+              organizationId: true,
+              googleEmail: true,
+              connectedAt: true,
+              revokedAt: true,
+            },
+          }),
         ]);
 
       await this.audit.log({
@@ -136,6 +146,7 @@ export class AccountExportService {
         searches,
         opportunityRuns,
         aiRuns,
+        googleConnections,
       };
     });
   }

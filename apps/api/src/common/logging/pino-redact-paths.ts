@@ -43,6 +43,9 @@ export const PINO_REDACT_PATHS = [
   '*.apiKey',
   '*.api_key',
   '*.client_secret',
+  '*.refreshTokenEncrypted',
+  'req.query.code',
+  'req.query.state',
 ] as const;
 
 export const PINO_REDACT_CENSOR = '[REDACTED]';

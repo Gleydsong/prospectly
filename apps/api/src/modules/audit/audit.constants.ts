@@ -29,6 +29,9 @@ export const AUDIT_ACTIONS = {
   WORKFLOW_PUBLISHED: 'workflow.published',
   WORKFLOW_PAUSED: 'workflow.paused',
   WORKFLOW_ARCHIVED: 'workflow.archived',
+  GOOGLE_CONNECTION_CONNECTED: 'google_connection.connected',
+  GOOGLE_CONNECTION_DISCONNECTED: 'google_connection.disconnected',
+  GOOGLE_CONNECTION_REVOKED: 'google_connection.revoked',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

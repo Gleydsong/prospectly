@@ -50,6 +50,10 @@ export class AccountErasureService {
           where: { userId, revokedAt: null },
           data: { revokedAt: now },
         });
+        await tx.googleConnection.updateMany({
+          where: { userId, revokedAt: null },
+          data: { refreshTokenEncrypted: null, revokedAt: now, lastError: 'account_erased' },
+        });
         await tx.lead.updateMany({ where: { ownerId: userId }, data: { ownerId: null } });
         await tx.organizationMember.deleteMany({ where: { userId } });
         await tx.user.update({

@@ -9,6 +9,7 @@
 - [Reports](./docs/domain/reports/CONTEXT.md): lê DomainEvents da organização e mostra conversão do funil na janela rolling
 - [Custom fields](./docs/domain/custom-fields/CONTEXT.md): guarda definições da organização de dados tipados no cliente potencial
 - [Agents](./docs/domain/agents/CONTEXT.md): fornece copiloto CRM e variantes de abordagem WhatsApp assistidas
+- [Communications](./docs/domain/communications/CONTEXT.md): associa e-mail e eventos de calendário da Conexão Google de uma pessoa ao cliente potencial
 
 ## Relacionamentos
 
@@ -30,3 +31,6 @@
 - **Reports → Pipeline**: Ganho/Perdido usa as flags atuais de `PipelineStage`, não o snapshot da Principal
 - **Custom fields → Organizations**: cada definição pertence à organização da sessão
 - **Custom fields → Lead**: o valor vive no JSONB do Lead; a definição não copia PII
+- **Communications → Organizations**: cada Conexão Google e cada Comunicação sincronizada pertencem à organização da sessão
+- **Communications → User**: a Conexão Google é da pessoa; não reutiliza Integration nem Sign-In
+- **Communications → Lead**: a Comunicação sincronizada casa no cliente potencial; não é LeadActivity nem DomainEvent
