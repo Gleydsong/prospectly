@@ -1,10 +1,13 @@
-import { LeadSource, LeadStatus, type Prisma } from '@prisma/client';
+import { CustomFieldType, LeadSource, LeadStatus, type Prisma } from '@prisma/client';
 
 export const FILTER_MAX_DEPTH = 3;
 export const FILTER_MAX_NODES = 20;
 export const FILTER_MAX_CHILDREN = 8;
 export const RELATIVE_DAYS_MIN = 1;
 export const RELATIVE_DAYS_MAX = 365;
+export const CUSTOM_FIELD_FILTER_PREFIX = 'custom:';
+const CUSTOM_FIELD_NUMBER_ABS = 1_000_000_000_000;
+const CUSTOM_FIELD_TEXT_MAX = 500;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LEAD_STATUSES = new Set<string>(Object.values(LeadStatus));
@@ -47,7 +50,15 @@ export type LeadFilterLeaf =
   | { field: 'hasWebsite'; op: 'eq'; value: boolean }
   | { field: 'score'; op: 'gte' | 'lte'; value: number }
   | { field: 'lastContactAt'; op: 'older_than' | 'within'; days: number }
-  | { field: 'createdAt'; op: 'older_than' | 'within'; days: number };
+  | { field: 'createdAt'; op: 'older_than' | 'within'; days: number }
+  | CustomFieldFilterLeaf;
+
+export type CustomFieldFilterLeaf =
+  | { field: `custom:${string}`; op: 'eq'; value: string | number }
+  | { field: `custom:${string}`; op: 'gte' | 'lte'; value: number }
+  | { field: `custom:${string}`; op: 'older_than' | 'within'; days: number };
+
+export type CustomFieldFilterCatalog = ReadonlyMap<string, CustomFieldType>;
 
 export type LeadFilterNode = LeadFilterGroup | LeadFilterLeaf;
 
@@ -90,7 +101,9 @@ function parseGroup(
     throw new InvalidLeadFilterError('Filter group must not be empty');
   }
   if (raw.nodes.length > FILTER_MAX_CHILDREN) {
-    throw new InvalidLeadFilterError(`Filter group cannot have more than ${FILTER_MAX_CHILDREN} nodes`);
+    throw new InvalidLeadFilterError(
+      `Filter group cannot have more than ${FILTER_MAX_CHILDREN} nodes`,
+    );
   }
   const op = raw.op as 'and' | 'or';
   return {
@@ -111,7 +124,11 @@ function parseEqLeaf(raw: Record<string, unknown>): LeadFilterLeaf {
     throw new InvalidLeadFilterError(`${field} must use value, not days`);
   }
   if (field === 'q' || field === 'category' || field === 'segment' || field === 'city') {
-    return { field, op: 'eq', value: assertBoundedString(field, raw.value, field === 'q' ? 200 : 120) };
+    return {
+      field,
+      op: 'eq',
+      value: assertBoundedString(field, raw.value, field === 'q' ? 200 : 120),
+    };
   }
   if (field === 'status') {
     if (typeof raw.value !== 'string' || !LEAD_STATUSES.has(raw.value)) {
@@ -153,6 +170,93 @@ function parseScoreLeaf(raw: Record<string, unknown>): LeadFilterLeaf {
     throw new InvalidLeadFilterError('score must be an integer between 0 and 100');
   }
   return { field: 'score', op: raw.op, value: raw.value };
+}
+
+export function customFieldFilterField(id: string): string {
+  return `${CUSTOM_FIELD_FILTER_PREFIX}${id}`;
+}
+
+export function customFieldIdFromFilterField(field: string): string | null {
+  if (!field.startsWith(CUSTOM_FIELD_FILTER_PREFIX)) {
+    return null;
+  }
+  const id = field.slice(CUSTOM_FIELD_FILTER_PREFIX.length);
+  return UUID_RE.test(id) ? id : null;
+}
+
+export function isCustomFieldFilterLeaf(node: LeadFilterLeaf): node is CustomFieldFilterLeaf {
+  return customFieldIdFromFilterField(node.field) !== null;
+}
+
+function parseRelativeDays(raw: Record<string, unknown>, label: string): number {
+  if (raw.value !== undefined) {
+    throw new InvalidLeadFilterError(`${label} must use days, not value`);
+  }
+  if (
+    typeof raw.days !== 'number' ||
+    !Number.isInteger(raw.days) ||
+    raw.days < RELATIVE_DAYS_MIN ||
+    raw.days > RELATIVE_DAYS_MAX
+  ) {
+    throw new InvalidLeadFilterError(
+      `days must be an integer between ${RELATIVE_DAYS_MIN} and ${RELATIVE_DAYS_MAX}`,
+    );
+  }
+  return raw.days;
+}
+
+function assertFiniteNumber(value: unknown, label: string): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    Math.abs(value) > CUSTOM_FIELD_NUMBER_ABS
+  ) {
+    throw new InvalidLeadFilterError(`${label} must be a finite number`);
+  }
+  return value;
+}
+
+function parseCustomFieldLeaf(raw: Record<string, unknown>, field: string): CustomFieldFilterLeaf {
+  const customField = field as `custom:${string}`;
+  if (raw.op === 'contains') {
+    throw new InvalidLeadFilterError('custom field does not support contains');
+  }
+  if (
+    raw.op !== 'eq' &&
+    raw.op !== 'gte' &&
+    raw.op !== 'lte' &&
+    raw.op !== 'older_than' &&
+    raw.op !== 'within'
+  ) {
+    throw new InvalidLeadFilterError(
+      'custom field only supports eq, gte, lte, older_than or within',
+    );
+  }
+  if (raw.op === 'older_than' || raw.op === 'within') {
+    return { field: customField, op: raw.op, days: parseRelativeDays(raw, 'custom field') };
+  }
+  if (raw.days !== undefined) {
+    throw new InvalidLeadFilterError('custom field must use value, not days');
+  }
+  if (raw.op === 'gte' || raw.op === 'lte') {
+    return {
+      field: customField,
+      op: raw.op,
+      value: assertFiniteNumber(raw.value, 'custom field range value'),
+    };
+  }
+  if (typeof raw.value === 'number') {
+    return {
+      field: customField,
+      op: 'eq',
+      value: assertFiniteNumber(raw.value, 'custom field value'),
+    };
+  }
+  return {
+    field: customField,
+    op: 'eq',
+    value: assertBoundedString('value', raw.value, CUSTOM_FIELD_TEXT_MAX),
+  };
 }
 
 function parseRelativeLeaf(raw: Record<string, unknown>): LeadFilterLeaf {
@@ -197,6 +301,9 @@ function parseLeaf(raw: Record<string, unknown>): LeadFilterLeaf {
   }
   if (RELATIVE_FIELDS.has(raw.field)) {
     return parseRelativeLeaf(raw);
+  }
+  if (customFieldIdFromFilterField(raw.field)) {
+    return parseCustomFieldLeaf(raw, raw.field);
   }
   throw new InvalidLeadFilterError(`Unknown filter field: ${raw.field}`);
 }
@@ -246,7 +353,135 @@ function relativeCutoff(days: number, now: Date): Date {
   return new Date(now.getTime() - days * MS_PER_DAY);
 }
 
+function utcCalendarDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function addUtcCalendarDays(day: string, delta: number): string {
+  const year = Number(day.slice(0, 4));
+  const month = Number(day.slice(5, 7));
+  const date = Number(day.slice(8, 10));
+  return new Date(Date.UTC(year, month - 1, date + delta)).toISOString().slice(0, 10);
+}
+
+function relativeCalendarCutoff(days: number, now: Date): string {
+  return addUtcCalendarDays(utcCalendarDay(now), -days);
+}
+
+function compileCustomFieldLeaf(node: CustomFieldFilterLeaf, now: Date): Prisma.LeadWhereInput {
+  const id = customFieldIdFromFilterField(node.field);
+  if (!id) {
+    throw new InvalidLeadFilterError(`Unknown filter field: ${node.field}`);
+  }
+  switch (node.op) {
+    case 'eq':
+      return { customFieldValues: { path: [id], equals: node.value } };
+    case 'gte':
+      return { customFieldValues: { path: [id], gte: node.value } };
+    case 'lte':
+      return { customFieldValues: { path: [id], lte: node.value } };
+    case 'within':
+      return { customFieldValues: { path: [id], gte: relativeCalendarCutoff(node.days, now) } };
+    case 'older_than':
+      return { customFieldValues: { path: [id], lt: relativeCalendarCutoff(node.days, now) } };
+  }
+}
+
+export function walkLeadFilterLeaves(
+  node: LeadFilterNode,
+  visit: (leaf: LeadFilterLeaf) => void,
+): void {
+  if ('nodes' in node) {
+    for (const child of node.nodes) {
+      walkLeadFilterLeaves(child, visit);
+    }
+    return;
+  }
+  visit(node);
+}
+
+export function hasCustomFieldLeaves(node: LeadFilterNode): boolean {
+  let found = false;
+  walkLeadFilterLeaves(node, (leaf) => {
+    if (isCustomFieldFilterLeaf(leaf)) {
+      found = true;
+    }
+  });
+  return found;
+}
+
+export function collectCustomFieldFilterIds(node: LeadFilterNode): string[] {
+  const ids: string[] = [];
+  walkLeadFilterLeaves(node, (leaf) => {
+    const id = customFieldIdFromFilterField(leaf.field);
+    if (id) {
+      ids.push(id);
+    }
+  });
+  return ids;
+}
+
+function assertCustomFieldLeafMatchesType(
+  leaf: CustomFieldFilterLeaf,
+  type: CustomFieldType,
+): void {
+  if (type === CustomFieldType.TEXT) {
+    if (leaf.op !== 'eq' || typeof leaf.value !== 'string') {
+      throw new InvalidLeadFilterError('Custom field operator is not allowed for this type');
+    }
+    return;
+  }
+  if (type === CustomFieldType.SELECT) {
+    if (leaf.op !== 'eq' || typeof leaf.value !== 'string' || !UUID_RE.test(leaf.value)) {
+      throw new InvalidLeadFilterError('Custom field operator is not allowed for this type');
+    }
+    return;
+  }
+  if (type === CustomFieldType.NUMBER) {
+    if (leaf.op !== 'eq' && leaf.op !== 'gte' && leaf.op !== 'lte') {
+      throw new InvalidLeadFilterError('Custom field operator is not allowed for this type');
+    }
+    if (typeof leaf.value !== 'number') {
+      throw new InvalidLeadFilterError('Custom field value does not match field type');
+    }
+    return;
+  }
+  if (leaf.op === 'older_than' || leaf.op === 'within') {
+    return;
+  }
+  if (
+    leaf.op !== 'eq' ||
+    typeof leaf.value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(leaf.value)
+  ) {
+    throw new InvalidLeadFilterError('Custom field operator is not allowed for this type');
+  }
+}
+
+export function assertCustomFieldFilter(
+  node: LeadFilterNode,
+  catalog: CustomFieldFilterCatalog,
+): void {
+  walkLeadFilterLeaves(node, (leaf) => {
+    if (!isCustomFieldFilterLeaf(leaf)) {
+      return;
+    }
+    const id = customFieldIdFromFilterField(leaf.field);
+    if (!id) {
+      throw new InvalidLeadFilterError('Unknown custom field');
+    }
+    const type = catalog.get(id);
+    if (!type) {
+      throw new InvalidLeadFilterError('Unknown custom field');
+    }
+    assertCustomFieldLeafMatchesType(leaf, type);
+  });
+}
+
 function compileLeaf(node: LeadFilterLeaf, now: Date): Prisma.LeadWhereInput {
+  if (isCustomFieldFilterLeaf(node)) {
+    return compileCustomFieldLeaf(node, now);
+  }
   switch (node.field) {
     case 'q':
       return {
@@ -272,9 +507,7 @@ function compileLeaf(node: LeadFilterLeaf, now: Date): Prisma.LeadWhereInput {
     case 'tagId':
       return { tags: { some: { tagId: node.value } } };
     case 'hasWebsite':
-      return node.value
-        ? { website: { not: null } }
-        : { OR: [{ website: null }, { website: '' }] };
+      return node.value ? { website: { not: null } } : { OR: [{ website: null }, { website: '' }] };
     case 'score':
       return { score: node.op === 'gte' ? { gte: node.value } : { lte: node.value } };
     case 'lastContactAt':

@@ -622,6 +622,14 @@
     "layoutKanban": "Kanban",
     "kanbanLabel": "Quadro por status",
     "columns": "Colunas",
+    "customFieldFilter": "Campo personalizado",
+    "customFieldFilterNone": "Sem filtro de campo",
+    "customFieldOpEq": "Igual a",
+    "customFieldOpGte": "Maior ou igual",
+    "customFieldOpLte": "Menor ou igual",
+    "customFieldOpOlder": "Anterior a N dias",
+    "customFieldOpWithin": "Nos últimos N dias",
+    "customFieldArchivedSuffix": "arquivado",
     "column": {
       "companyName": "Empresa",
       "city": "Cidade",
@@ -1017,7 +1025,7 @@
   },
   "customFields": {
     "title": "Campos personalizados",
-    "subtitle": "Schema da organização. Os valores vivem na ficha do cliente potencial, não na alta nem na lista.",
+    "subtitle": "Schema da organização. Os valores vivem no cliente potencial; a Vista pode mostrar colunas e filtros.",
     "backToTools": "Voltar às ferramentas",
     "error": "Não foi possível guardar o campo. Tente de novo.",
     "readOnlyNotice": "Apenas leitura. Quem gere a organização define o schema.",

@@ -16,8 +16,10 @@ import { CustomFieldsService } from '../custom-fields/custom-fields.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
+  assertCustomFieldFilter,
   coerceLeadFilter,
   compileLeadFilter,
+  hasCustomFieldLeaves,
   InvalidLeadFilterError,
 } from './domain/lead-filter-ast';
 import {
@@ -56,7 +58,7 @@ export class LeadsService {
     if (query.ids && query.ids.length === 0) {
       return paginate([], 0, query.page, query.pageSize);
     }
-    const where = this.buildListWhere(organizationId, query);
+    const where = await this.buildListWhere(organizationId, query);
 
     const [total, leads] = await Promise.all([
       this.prisma.lead.count({ where }),
@@ -96,7 +98,7 @@ export class LeadsService {
     >,
     take: number,
   ): Promise<{ ids: string[]; total: number }> {
-    const where = this.buildListWhere(organizationId, query);
+    const where = await this.buildListWhere(organizationId, query);
     const [total, rows] = await Promise.all([
       this.prisma.lead.count({ where }),
       this.prisma.lead.findMany({
@@ -311,7 +313,7 @@ export class LeadsService {
         csv,
       };
     }
-    const where = this.buildListWhere(organizationId, dto);
+    const where = await this.buildListWhere(organizationId, dto);
 
     const leads = await this.prisma.lead.findMany({
       where,
@@ -380,7 +382,7 @@ export class LeadsService {
     };
   }
 
-  private buildListWhere(
+  private async buildListWhere(
     organizationId: string,
     query: Pick<
       QueryLeadsDto,
@@ -398,17 +400,22 @@ export class LeadsService {
       | 'filter'
       | 'ids'
     >,
-  ): Prisma.LeadWhereInput {
+  ): Promise<Prisma.LeadWhereInput> {
     const tenant: Prisma.LeadWhereInput = { organizationId, deletedAt: null };
     if (query.ids && query.ids.length === 0) {
       return { ...tenant, id: { in: [] } };
     }
     if (query.filter !== undefined) {
       try {
+        const node = coerceLeadFilter(query.filter);
+        if (hasCustomFieldLeaves(node)) {
+          const catalog = await this.loadCustomFieldCatalog(organizationId);
+          assertCustomFieldFilter(node, catalog);
+        }
         return {
           AND: [
             tenant,
-            compileLeadFilter(coerceLeadFilter(query.filter)),
+            compileLeadFilter(node),
             ...(query.ids?.length ? [{ id: { in: query.ids } }] : []),
           ],
         };
@@ -450,6 +457,14 @@ export class LeadsService {
           }
         : {}),
     };
+  }
+
+  private async loadCustomFieldCatalog(organizationId: string) {
+    const rows = await this.prisma.customFieldDefinition.findMany({
+      where: { organizationId },
+      select: { id: true, type: true },
+    });
+    return new Map(rows.map((row) => [row.id, row.type]));
   }
 
   private toCsv(columns: ExportableLeadColumn[], rows: Array<Record<string, unknown>>): string {
@@ -572,7 +587,6 @@ export class LeadsService {
     if (!detailed) {
       delete serialized.scores;
       delete serialized.websiteRecord;
-      delete serialized.customFieldValues;
     } else {
       serialized.missingFields = collectMissingLeadFields(serialized);
     }

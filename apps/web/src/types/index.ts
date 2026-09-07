@@ -97,6 +97,7 @@ export interface LeadListItem {
   owner?: LeadOwner | null;
   stage?: LeadStage | null;
   tags: Tag[];
+  customFieldValues?: Record<string, string | number | null>;
   createdAt: string;
   updatedAt: string;
 }
@@ -128,7 +129,6 @@ export interface LeadDetail extends LeadListItem {
   dataCollectedAt?: string | null;
   lastVerifiedAt?: string | null;
   missingFields?: string[];
-  customFieldValues?: Record<string, string | number | null>;
   lastContactAt?: string | null;
   nextContactAt?: string | null;
   contacts: LeadContact[];
@@ -320,8 +320,33 @@ export interface PipelineStageLeadsPage {
 }
 
 export const BRAZILIAN_STATE_CODES = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
+  'TO',
 ] as const;
 
 export type BrazilianStateCode = (typeof BRAZILIAN_STATE_CODES)[number];

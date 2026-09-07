@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { SavedViewVisibility } from '@prisma/client';
+import { CustomFieldType, SavedViewVisibility } from '@prisma/client';
 
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { AuditService } from '../../audit/audit.service';
@@ -14,6 +14,9 @@ const makePrisma = () => {
       findFirst: jest.fn(),
       update: jest.fn(),
     },
+    customFieldDefinition: {
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
   return prisma as unknown as PrismaService & {
     savedView: {
@@ -22,6 +25,7 @@ const makePrisma = () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    customFieldDefinition: { findMany: jest.Mock };
   };
 };
 
@@ -268,5 +272,42 @@ describe('SavedViewsService', () => {
       NotFoundException,
     );
     expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a Vista that references an unknown custom field', async () => {
+    const prisma = makePrisma();
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await expect(
+      service.create('org-a', owner, {
+        name: 'NIF',
+        definition: {
+          columns: ['companyName', '11111111-1111-4111-8111-111111111111'],
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.savedView.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps an archived custom field column and filter on a Vista', async () => {
+    const fieldId = '33333333-3333-4333-8333-333333333333';
+    const definition = {
+      filter: { field: `custom:${fieldId}`, op: 'eq' as const, value: 'legacy' },
+      columns: ['companyName', fieldId],
+    };
+    const prisma = makePrisma();
+    prisma.customFieldDefinition.findMany.mockResolvedValue([
+      { id: fieldId, type: CustomFieldType.TEXT },
+    ]);
+    prisma.savedView.create.mockResolvedValue({ ...row, definition });
+    const service = new SavedViewsService(prisma, makeLeads(), makeAudit());
+
+    await service.create('org-a', owner, { name: 'Legacy NIF', definition });
+
+    expect(prisma.savedView.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ definition }),
+      }),
+    );
   });
 });

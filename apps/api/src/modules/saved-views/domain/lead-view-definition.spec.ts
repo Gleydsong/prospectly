@@ -116,8 +116,33 @@ describe('parseLeadViewDefinition', () => {
     expect(() => parseLeadViewDefinition({ columns: ['companyName', 'phone'] })).toThrow(
       'Unknown column',
     );
-    expect(() =>
-      parseLeadViewDefinition({ columns: ['companyName', 'companyName'] }),
-    ).toThrow('duplicates');
+    expect(() => parseLeadViewDefinition({ columns: ['companyName', 'companyName'] })).toThrow(
+      'duplicates',
+    );
+  });
+
+  it('accepts a custom field definition id as a table column', () => {
+    expect(
+      parseLeadViewDefinition({
+        columns: ['companyName', '11111111-1111-4111-8111-111111111111'],
+      }),
+    ).toEqual({
+      columns: ['companyName', '11111111-1111-4111-8111-111111111111'],
+    });
+  });
+
+  it('accepts an archived custom field still present in a saved filter AST', () => {
+    expect(
+      parseLeadViewDefinition({
+        filter: {
+          field: 'custom:33333333-3333-4333-8333-333333333333',
+          op: 'eq',
+          value: 'legacy',
+        },
+        columns: ['companyName', '33333333-3333-4333-8333-333333333333'],
+      }),
+    ).toMatchObject({
+      columns: ['companyName', '33333333-3333-4333-8333-333333333333'],
+    });
   });
 });

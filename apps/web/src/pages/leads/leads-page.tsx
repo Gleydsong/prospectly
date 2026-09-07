@@ -27,6 +27,10 @@ import {
 import { getApiErrorMessage } from '@/lib/api';
 import { getLeadStatusLabel } from '@/lib/lead-status';
 import { useBillingStatus } from '@/features/billing/hooks';
+import { useCustomFields } from '@/features/custom-fields/hooks';
+import { formatCustomFieldValue } from '@/features/custom-fields/format-custom-field-value';
+import { opsForType, pickerCustomFields } from '@/features/custom-fields/lead-list-custom-fields';
+import type { CustomFieldDefinition } from '@/features/custom-fields/api';
 import { useDeleteLead, useLeads } from '@/features/leads/hooks';
 import {
   useArchiveSavedView,
@@ -43,9 +47,13 @@ import {
   DEFAULT_LEAD_VIEW_COLUMNS,
   definitionFromFilters,
   hydrateLeadListFilters,
+  isBuiltinLeadViewColumn,
   leadExportFiltersFromList,
   leadsQueryFromFilters,
   LEAD_VIEW_COLUMN_KEYS,
+  toggleLeadViewColumn,
+  type CustomFieldFilterOp,
+  type CustomFieldListFilter,
   type LastContactOp,
   type LeadViewColumnKey,
   type LeadViewLayout,
@@ -58,7 +66,34 @@ import { LeadSource, LeadStatus, Role, type LeadListItem } from '@/types';
 import { LeadFormModal } from './lead-form-modal';
 import { LeadsKanban } from './leads-kanban';
 
-function LeadColumnValue({ column, lead }: { column: LeadViewColumnKey; lead: LeadListItem }) {
+function columnLabel(
+  column: LeadViewColumnKey,
+  fields: CustomFieldDefinition[],
+  t: (key: string) => string,
+): string {
+  if (isBuiltinLeadViewColumn(column)) {
+    return t(`leads.column.${column}`);
+  }
+  return fields.find((field) => field.id === column)?.name ?? column;
+}
+
+function LeadColumnValue({
+  column,
+  lead,
+  fields,
+}: {
+  column: LeadViewColumnKey;
+  lead: LeadListItem;
+  fields: CustomFieldDefinition[];
+}) {
+  if (!isBuiltinLeadViewColumn(column)) {
+    const field = fields.find((item) => item.id === column);
+    return (
+      <span className="text-[color:var(--ink-muted)]">
+        {formatCustomFieldValue(field, lead.customFieldValues?.[column])}
+      </span>
+    );
+  }
   switch (column) {
     case 'companyName':
       return (
@@ -111,6 +146,111 @@ function LeadColumnValue({ column, lead }: { column: LeadViewColumnKey; lead: Le
   }
 }
 
+function CustomFieldFilterValue({
+  fields,
+  filter,
+  onChange,
+}: {
+  fields: CustomFieldDefinition[];
+  filter: CustomFieldListFilter;
+  onChange: (next: CustomFieldListFilter) => void;
+}) {
+  const { t } = useTranslation();
+  const field = fields.find((item) => item.id === filter.fieldId);
+  const ops = field ? opsForType(field.type) : (['eq'] as [CustomFieldFilterOp]);
+  const op: CustomFieldFilterOp = ops.includes(filter.op) ? filter.op : ops[0];
+  const relative = op === 'older_than' || op === 'within';
+
+  return (
+    <>
+      {ops.length > 1 ? (
+        <Select
+          value={op}
+          onChange={(event) => {
+            const nextOp = event.target.value as CustomFieldFilterOp;
+            onChange({
+              fieldId: filter.fieldId,
+              op: nextOp,
+              value: nextOp === 'older_than' || nextOp === 'within' ? undefined : '',
+              days: DEFAULT_LAST_CONTACT_DAYS,
+            });
+          }}
+          aria-label={t('leads.customFieldFilter')}
+        >
+          {ops.map((item) => (
+            <option key={item} value={item}>
+              {t(
+                item === 'eq'
+                  ? 'leads.customFieldOpEq'
+                  : item === 'gte'
+                    ? 'leads.customFieldOpGte'
+                    : item === 'lte'
+                      ? 'leads.customFieldOpLte'
+                      : item === 'older_than'
+                        ? 'leads.customFieldOpOlder'
+                        : 'leads.customFieldOpWithin',
+              )}
+            </option>
+          ))}
+        </Select>
+      ) : null}
+      {relative ? (
+        <Input
+          type="number"
+          min={1}
+          max={365}
+          value={filter.days ?? DEFAULT_LAST_CONTACT_DAYS}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            onChange({
+              ...filter,
+              op,
+              days: Number.isInteger(next)
+                ? Math.min(365, Math.max(1, next))
+                : DEFAULT_LAST_CONTACT_DAYS,
+            });
+          }}
+          aria-label={t('leads.lastContactDays')}
+        />
+      ) : field?.type === 'select' ? (
+        <Select
+          value={typeof filter.value === 'string' ? filter.value : ''}
+          onChange={(event) => onChange({ ...filter, op, value: event.target.value })}
+          aria-label={field.name}
+        >
+          <option value="">—</option>
+          {field.options
+            .filter((option) => !option.archivedAt || option.id === filter.value)
+            .map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
+              </option>
+            ))}
+        </Select>
+      ) : (
+        <Input
+          type={field?.type === 'number' ? 'number' : field?.type === 'date' ? 'date' : 'text'}
+          value={filter.value === undefined ? '' : String(filter.value)}
+          onChange={(event) => {
+            const raw = event.target.value;
+            if (field?.type === 'number') {
+              const parsed = Number(raw);
+              onChange({
+                ...filter,
+                op,
+                value: raw === '' || !Number.isFinite(parsed) ? '' : parsed,
+              });
+            } else {
+              onChange({ ...filter, op, value: raw });
+            }
+          }}
+          aria-label={field?.name ?? t('leads.customFieldFilter')}
+        />
+      )}
+    </>
+  );
+}
+
 export function LeadsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -143,6 +283,7 @@ export function LeadsPage() {
   const [lastContactDays, setLastContactDays] = useState(DEFAULT_LAST_CONTACT_DAYS);
   const [layout, setLayout] = useState<LeadViewLayout>('table');
   const [columns, setColumns] = useState<LeadViewColumnKey[]>([...DEFAULT_LEAD_VIEW_COLUMNS]);
+  const [customFilters, setCustomFilters] = useState<CustomFieldListFilter[]>([]);
   const [extras, setExtras] = useState<LeadViewDefinition>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
@@ -160,6 +301,8 @@ export function LeadsPage() {
   const billing = useBillingStatus();
   const canExportCsv = Boolean(billing.data?.canExportCsv);
   const canSaveView = user?.role !== Role.VIEWER;
+  const customFieldsQuery = useCustomFields();
+  const customFields = customFieldsQuery.data ?? [];
   const viewsQuery = useSavedViews();
   const selectedFromList = viewsQuery.data?.find((view) => view.id === viewId);
   const selectedQuery = useSavedView(viewId && !selectedFromList ? viewId : undefined);
@@ -187,6 +330,7 @@ export function LeadsPage() {
     setLastContactDays(DEFAULT_LAST_CONTACT_DAYS);
     setLayout('table');
     setColumns([...DEFAULT_LEAD_VIEW_COLUMNS]);
+    setCustomFilters([]);
     setExtras({});
   }, [viewId]);
 
@@ -205,6 +349,7 @@ export function LeadsPage() {
     setLastContactDays(hydrated.lastContactDays);
     setLayout(hydrated.layout);
     setColumns(hydrated.columns);
+    setCustomFilters(hydrated.customFilters);
     setExtras(hydrated.extras);
     setPage(1);
     // Reapply only when the selected view identity or server timestamp changes.
@@ -231,6 +376,7 @@ export function LeadsPage() {
         lastContactDays,
         layout,
         columns,
+        customFilters,
         extras,
       },
       page,
@@ -285,6 +431,7 @@ export function LeadsPage() {
       lastContactDays,
       layout,
       columns,
+      customFilters,
       extras,
     });
     try {
@@ -361,6 +508,7 @@ export function LeadsPage() {
           lastContactDays,
           layout,
           columns,
+          customFilters,
           extras,
         }),
         ...(reportBucket && idsQuery.isSuccess ? { ids: idsQuery.data?.ids ?? [] } : {}),
@@ -490,7 +638,7 @@ export function LeadsPage() {
               Buscar
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[220px_120px]">
+          <div className="flex flex-wrap items-end gap-3">
             <Select
               value={lastContactOp}
               onChange={(event) => {
@@ -519,6 +667,49 @@ export function LeadsPage() {
                   );
                 }}
                 aria-label={t('leads.lastContactDays')}
+              />
+            ) : null}
+            <Select
+              value={customFilters[0]?.fieldId ?? ''}
+              onChange={(event) => {
+                setPage(1);
+                const fieldId = event.target.value;
+                if (!fieldId) {
+                  setCustomFilters([]);
+                  return;
+                }
+                const field = customFields.find((item) => item.id === fieldId);
+                const op: CustomFieldFilterOp = field ? opsForType(field.type)[0] : 'eq';
+                setCustomFilters([
+                  {
+                    fieldId,
+                    op,
+                    value: '',
+                    days: DEFAULT_LAST_CONTACT_DAYS,
+                  },
+                ]);
+              }}
+              aria-label={t('leads.customFieldFilter')}
+            >
+              <option value="">{t('leads.customFieldFilterNone')}</option>
+              {pickerCustomFields(
+                customFields,
+                customFilters.map((item) => item.fieldId),
+              ).map((field) => (
+                <option key={field.id} value={field.id}>
+                  {field.name}
+                  {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
+                </option>
+              ))}
+            </Select>
+            {customFilters[0] ? (
+              <CustomFieldFilterValue
+                fields={customFields}
+                filter={customFilters[0]}
+                onChange={(next) => {
+                  setPage(1);
+                  setCustomFilters([next]);
+                }}
               />
             ) : null}
           </div>
@@ -565,17 +756,28 @@ export function LeadsPage() {
                       onChange={() => {
                         if (column === 'companyName') return;
                         setPage(1);
-                        setColumns((current) => {
-                          if (current.includes(column)) {
-                            return current.filter((value) => value !== column);
-                          }
-                          return LEAD_VIEW_COLUMN_KEYS.filter(
-                            (key) => key === column || current.includes(key),
-                          );
-                        });
+                        setColumns((current) => toggleLeadViewColumn(current, column));
                       }}
                     />
                     {t(`leads.column.${column}`)}
+                  </label>
+                ))}
+                {pickerCustomFields(customFields, columns).map((field) => (
+                  <label
+                    key={field.id}
+                    className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-[color:var(--border)]"
+                      checked={columns.includes(field.id)}
+                      onChange={() => {
+                        setPage(1);
+                        setColumns((current) => toggleLeadViewColumn(current, field.id));
+                      }}
+                    />
+                    {field.name}
+                    {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
                   </label>
                 ))}
               </fieldset>
@@ -723,7 +925,7 @@ export function LeadsPage() {
                   <tr className="border-b border-[color:var(--border)] text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
                     {columns.map((column) => (
                       <th key={column} scope="col" className="px-5 py-3 font-medium">
-                        {t(`leads.column.${column}`)}
+                        {columnLabel(column, customFields, t)}
                       </th>
                     ))}
                     <th scope="col" className="px-5 py-3 font-medium">
@@ -740,7 +942,7 @@ export function LeadsPage() {
                     >
                       {columns.map((column) => (
                         <td key={column} className="px-5 py-3">
-                          <LeadColumnValue column={column} lead={lead} />
+                          <LeadColumnValue column={column} lead={lead} fields={customFields} />
                         </td>
                       ))}
                       <td className="px-3 py-3 text-right">

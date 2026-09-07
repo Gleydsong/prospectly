@@ -9,9 +9,15 @@ import { Prisma, type Role, SavedViewVisibility } from '@prisma/client';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUDIT_ACTIONS } from '../../audit/audit.constants';
 import { AuditService } from '../../audit/audit.service';
+import {
+  assertCustomFieldFilter,
+  collectCustomFieldFilterIds,
+  InvalidLeadFilterError,
+} from '../../leads/domain/lead-filter-ast';
 import { LeadsService } from '../../leads/leads.service';
 import { copiedSavedViewName } from '../domain/copied-saved-view-name';
 import {
+  collectCustomFieldColumnIds,
   InvalidLeadViewDefinitionError,
   parseLeadViewDefinition,
   type LeadViewDefinition,
@@ -33,7 +39,7 @@ export class SavedViewsService {
 
   async create(organizationId: string, actor: Actor, dto: CreateSavedViewDto) {
     this.assertCanWrite(actor);
-    const definition = this.parseDefinition(dto.definition);
+    const definition = await this.parseDefinition(organizationId, dto.definition);
     const view = await this.prisma.savedView.create({
       data: {
         organizationId,
@@ -76,7 +82,9 @@ export class SavedViewsService {
     const view = await this.requireVisible(organizationId, actor, id, { includeArchived: true });
     this.assertCanMutate(view, actor);
     const definition =
-      dto.definition === undefined ? undefined : this.parseDefinition(dto.definition);
+      dto.definition === undefined
+        ? undefined
+        : await this.parseDefinition(organizationId, dto.definition);
     const updated = await this.prisma.savedView.update({
       where: { id: view.id },
       data: {
@@ -119,7 +127,7 @@ export class SavedViewsService {
   async duplicate(organizationId: string, actor: Actor, id: string) {
     this.assertCanWrite(actor);
     const source = await this.requireVisible(organizationId, actor, id, { includeArchived: true });
-    const definition = this.parseDefinition(source.definition);
+    const definition = await this.parseDefinition(organizationId, source.definition);
     const copy = await this.prisma.savedView.create({
       data: {
         organizationId,
@@ -143,7 +151,7 @@ export class SavedViewsService {
 
   async preview(organizationId: string, actor: Actor, id: string) {
     const view = await this.requireVisible(organizationId, actor, id, { includeArchived: false });
-    const definition = this.parseDefinition(view.definition);
+    const definition = await this.parseDefinition(organizationId, view.definition);
     const result = await this.leads.list(organizationId, {
       page: 1,
       pageSize: 1,
@@ -154,14 +162,46 @@ export class SavedViewsService {
     return { total: result.meta.total };
   }
 
-  private parseDefinition(raw: unknown): LeadViewDefinition {
+  private async parseDefinition(organizationId: string, raw: unknown): Promise<LeadViewDefinition> {
     try {
-      return parseLeadViewDefinition(raw);
+      const definition = parseLeadViewDefinition(raw);
+      await this.assertCustomFieldRefs(organizationId, definition);
+      return definition;
     } catch (error) {
-      if (error instanceof InvalidLeadViewDefinitionError) {
+      if (
+        error instanceof InvalidLeadViewDefinitionError ||
+        error instanceof InvalidLeadFilterError
+      ) {
         throw new BadRequestException(error.message);
       }
       throw error;
+    }
+  }
+
+  private async assertCustomFieldRefs(
+    organizationId: string,
+    definition: LeadViewDefinition,
+  ): Promise<void> {
+    const ids = [
+      ...collectCustomFieldColumnIds(definition.columns),
+      ...(definition.filter ? collectCustomFieldFilterIds(definition.filter) : []),
+    ];
+    if (ids.length === 0) {
+      return;
+    }
+    const unique = [...new Set(ids)];
+    const rows = await this.prisma.customFieldDefinition.findMany({
+      where: { organizationId, id: { in: unique } },
+      select: { id: true, type: true },
+    });
+    const catalog = new Map(rows.map((row) => [row.id, row.type]));
+    for (const id of unique) {
+      if (!catalog.has(id)) {
+        throw new BadRequestException('Unknown custom field');
+      }
+    }
+    if (definition.filter) {
+      assertCustomFieldFilter(definition.filter, catalog);
     }
   }
 

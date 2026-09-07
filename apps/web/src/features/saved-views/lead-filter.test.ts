@@ -17,6 +17,7 @@ function filters(overrides: Partial<LeadListFilters> = {}): LeadListFilters {
     lastContactDays: 14,
     layout: 'table',
     columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
+    customFilters: [],
     extras: {},
     ...overrides,
   };
@@ -117,6 +118,7 @@ describe('hydrateLeadListFilters', () => {
       lastContactDays: 14,
       layout: 'table',
       columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
+      customFilters: [],
       extras: {},
     });
   });
@@ -132,6 +134,27 @@ describe('hydrateLeadListFilters', () => {
       hasWebsite: 'no',
       layout: 'kanban',
       columns: ['companyName', 'status'],
+    });
+  });
+
+  it('round-trips a custom field column and number filter', () => {
+    const fieldId = '11111111-1111-4111-8111-111111111111';
+    const definition = definitionFromFilters(
+      filters({
+        columns: ['companyName', fieldId],
+        customFilters: [{ fieldId, op: 'gte', value: 10 }],
+      }),
+    );
+    expect(definition).toEqual({
+      filter: {
+        op: 'and',
+        nodes: [{ field: `custom:${fieldId}`, op: 'gte', value: 10 }],
+      },
+      columns: ['companyName', fieldId],
+    });
+    expect(hydrateLeadListFilters(definition)).toMatchObject({
+      columns: ['companyName', fieldId],
+      customFilters: [{ fieldId, op: 'gte', value: 10 }],
     });
   });
 });

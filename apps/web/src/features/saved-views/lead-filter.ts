@@ -10,18 +10,19 @@ type LeadFilterLeaf = Exclude<LeadFilterNode, LeadFilterGroup>;
 export type LastContactOp = '' | 'older_than' | 'within';
 export type HasWebsiteFilter = '' | 'yes' | 'no';
 export type LeadViewLayout = 'table' | 'kanban';
-export type LeadViewColumnKey =
-  | 'companyName'
-  | 'city'
-  | 'status'
-  | 'score'
-  | 'owner'
-  | 'tags'
-  | 'segment'
-  | 'email'
-  | 'website';
+export type BuiltinLeadViewColumnKey =
+  'companyName' | 'city' | 'status' | 'score' | 'owner' | 'tags' | 'segment' | 'email' | 'website';
+export type LeadViewColumnKey = BuiltinLeadViewColumnKey | string;
+export type CustomFieldFilterOp = 'eq' | 'gte' | 'lte' | 'older_than' | 'within';
 
-export const LEAD_VIEW_COLUMN_KEYS: LeadViewColumnKey[] = [
+export type CustomFieldListFilter = {
+  fieldId: string;
+  op: CustomFieldFilterOp;
+  value?: string | number;
+  days?: number;
+};
+
+export const LEAD_VIEW_COLUMN_KEYS: BuiltinLeadViewColumnKey[] = [
   'companyName',
   'city',
   'status',
@@ -33,7 +34,7 @@ export const LEAD_VIEW_COLUMN_KEYS: LeadViewColumnKey[] = [
   'website',
 ];
 
-export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
+export const DEFAULT_LEAD_VIEW_COLUMNS: BuiltinLeadViewColumnKey[] = [
   'companyName',
   'city',
   'status',
@@ -43,6 +44,8 @@ export const DEFAULT_LEAD_VIEW_COLUMNS: LeadViewColumnKey[] = [
 ];
 
 export const KANBAN_PAGE_SIZE = 50;
+export const CUSTOM_FIELD_FILTER_PREFIX = 'custom:';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type LeadListFilters = {
   q: string;
@@ -53,6 +56,7 @@ export type LeadListFilters = {
   lastContactDays: number;
   layout: LeadViewLayout;
   columns: LeadViewColumnKey[];
+  customFilters: CustomFieldListFilter[];
   extras: LeadViewDefinition;
 };
 
@@ -68,8 +72,47 @@ export function emptyLeadListFilters(): LeadListFilters {
     lastContactDays: DEFAULT_LAST_CONTACT_DAYS,
     layout: 'table',
     columns: [...DEFAULT_LEAD_VIEW_COLUMNS],
+    customFilters: [],
     extras: {},
   };
+}
+
+export function customFieldFilterField(id: string): string {
+  return `${CUSTOM_FIELD_FILTER_PREFIX}${id}`;
+}
+
+export function customFieldIdFromFilterField(field: string): string | null {
+  if (!field.startsWith(CUSTOM_FIELD_FILTER_PREFIX)) {
+    return null;
+  }
+  const id = field.slice(CUSTOM_FIELD_FILTER_PREFIX.length);
+  return UUID_RE.test(id) ? id : null;
+}
+
+export function isBuiltinLeadViewColumn(column: string): column is BuiltinLeadViewColumnKey {
+  return (LEAD_VIEW_COLUMN_KEYS as string[]).includes(column);
+}
+
+export function isCustomFieldColumnId(column: string): boolean {
+  return UUID_RE.test(column);
+}
+
+export function toggleLeadViewColumn(
+  current: LeadViewColumnKey[],
+  column: LeadViewColumnKey,
+): LeadViewColumnKey[] {
+  if (column === 'companyName') {
+    return current;
+  }
+  if (current.includes(column)) {
+    return current.filter((value) => value !== column);
+  }
+  if (isBuiltinLeadViewColumn(column)) {
+    const builtins = LEAD_VIEW_COLUMN_KEYS.filter((key) => key === column || current.includes(key));
+    const custom = current.filter((key) => !isBuiltinLeadViewColumn(key));
+    return [...builtins, ...custom];
+  }
+  return [...current, column];
 }
 
 function isGroup(node: LeadFilterNode): node is LeadFilterGroup {
@@ -85,10 +128,22 @@ function clampDays(value: number): number {
 
 function needsAst(filters: LeadListFilters): boolean {
   const distinctOr =
-    Boolean(filters.status) &&
-    Boolean(filters.statusOr) &&
-    filters.status !== filters.statusOr;
-  return distinctOr || Boolean(filters.lastContactOp);
+    Boolean(filters.status) && Boolean(filters.statusOr) && filters.status !== filters.statusOr;
+  return distinctOr || Boolean(filters.lastContactOp) || hasCompleteCustomFilters(filters);
+}
+
+function isCompleteCustomFilter(item: CustomFieldListFilter): boolean {
+  if (!UUID_RE.test(item.fieldId)) {
+    return false;
+  }
+  if (item.op === 'older_than' || item.op === 'within') {
+    return true;
+  }
+  return item.value !== undefined && item.value !== '';
+}
+
+function hasCompleteCustomFilters(filters: LeadListFilters): boolean {
+  return filters.customFilters.some(isCompleteCustomFilter);
 }
 
 function applyLeaf(leaf: LeadFilterLeaf, filters: LeadListFilters): void {
@@ -130,8 +185,22 @@ function applyLeaf(leaf: LeadFilterLeaf, filters: LeadListFilters): void {
       if (typeof leaf.value === 'number' && leaf.op === 'gte') filters.extras.minScore = leaf.value;
       if (typeof leaf.value === 'number' && leaf.op === 'lte') filters.extras.maxScore = leaf.value;
       break;
-    default:
-      break;
+    default: {
+      const fieldId = customFieldIdFromFilterField(leaf.field);
+      if (!fieldId) break;
+      const op = leaf.op as CustomFieldFilterOp;
+      if (op === 'older_than' || op === 'within') {
+        filters.customFilters.push({
+          fieldId,
+          op,
+          days: typeof leaf.days === 'number' ? clampDays(leaf.days) : DEFAULT_LAST_CONTACT_DAYS,
+        });
+        break;
+      }
+      if (typeof leaf.value === 'string' || typeof leaf.value === 'number') {
+        filters.customFilters.push({ fieldId, op: op || 'eq', value: leaf.value });
+      }
+    }
   }
 }
 
@@ -159,8 +228,9 @@ function applyDisplay(definition: LeadViewDefinition, filters: LeadListFilters):
     filters.layout = definition.layout;
   }
   if (Array.isArray(definition.columns) && definition.columns.length > 0) {
-    filters.columns = definition.columns.filter((column): column is LeadViewColumnKey =>
-      LEAD_VIEW_COLUMN_KEYS.includes(column as LeadViewColumnKey),
+    filters.columns = definition.columns.filter(
+      (column): column is LeadViewColumnKey =>
+        isBuiltinLeadViewColumn(column) || isCustomFieldColumnId(column),
     );
     if (!filters.columns.includes('companyName')) {
       filters.columns = ['companyName', ...filters.columns];
@@ -175,7 +245,9 @@ function isDefaultColumns(columns: LeadViewColumnKey[]): boolean {
   );
 }
 
-function displayDefinition(filters: LeadListFilters): Pick<LeadViewDefinition, 'layout' | 'columns'> {
+function displayDefinition(
+  filters: LeadListFilters,
+): Pick<LeadViewDefinition, 'layout' | 'columns'> {
   return {
     ...(filters.layout === 'kanban' ? { layout: 'kanban' as const } : {}),
     ...(isDefaultColumns(filters.columns) ? {} : { columns: filters.columns }),
@@ -229,6 +301,29 @@ function extrasLeaves(extras: LeadViewDefinition): LeadFilterNode[] {
   return nodes;
 }
 
+function customFilterLeaves(filters: CustomFieldListFilter[]): LeadFilterNode[] {
+  const nodes: LeadFilterNode[] = [];
+  for (const item of filters) {
+    if (!isCompleteCustomFilter(item)) {
+      continue;
+    }
+    if (item.op === 'older_than' || item.op === 'within') {
+      nodes.push({
+        field: customFieldFilterField(item.fieldId),
+        op: item.op,
+        days: clampDays(item.days ?? DEFAULT_LAST_CONTACT_DAYS),
+      });
+      continue;
+    }
+    nodes.push({
+      field: customFieldFilterField(item.fieldId),
+      op: item.op,
+      value: item.value,
+    });
+  }
+  return nodes;
+}
+
 export function definitionFromFilters(filters: LeadListFilters): LeadViewDefinition {
   const extras = { ...filters.extras };
   delete extras.filter;
@@ -270,6 +365,7 @@ export function definitionFromFilters(filters: LeadListFilters): LeadViewDefinit
   }
 
   nodes.push(...extrasLeaves(extras));
+  nodes.push(...customFilterLeaves(filters.customFilters));
 
   if (filters.lastContactOp) {
     nodes.push({

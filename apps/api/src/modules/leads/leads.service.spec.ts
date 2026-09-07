@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { CustomFieldType } from '@prisma/client';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { LeadIngestionService } from './lead-ingestion.service';
@@ -19,6 +20,7 @@ const makePrisma = () => {
     leadActivity: { create: jest.fn() },
     organizationMember: { findUnique: jest.fn() },
     task: { deleteMany: jest.fn() },
+    customFieldDefinition: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(async (operations: unknown[]) => Promise.all(operations)),
   };
   return prisma as unknown as PrismaService & {
@@ -31,6 +33,7 @@ const makePrisma = () => {
     };
     organizationMember: { findUnique: jest.Mock };
     task: { deleteMany: jest.Mock };
+    customFieldDefinition: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
 };
@@ -234,7 +237,7 @@ describe('LeadsService', () => {
     expect(prisma.lead.count).not.toHaveBeenCalled();
   });
 
-  it('list search q does not query customFieldValues and omits them from rows', async () => {
+  it('list search q does not query customFieldValues and still returns them for columns', async () => {
     const prisma = makePrisma();
     prisma.lead.count.mockResolvedValue(1);
     prisma.lead.findMany.mockResolvedValue([
@@ -253,7 +256,79 @@ describe('LeadsService', () => {
     expect(JSON.stringify(prisma.lead.findMany.mock.calls[0]?.[0]?.where)).not.toMatch(
       /customFieldValues/,
     );
-    expect(result.data[0]).not.toHaveProperty('customFieldValues');
+    expect(result.data[0]).toEqual(
+      expect.objectContaining({ customFieldValues: { nif: 'secret-nif' } }),
+    );
+  });
+
+  it('list number custom field filter compiles a JSON path bound', async () => {
+    const fieldId = '11111111-1111-4111-8111-111111111111';
+    const prisma = makePrisma();
+    prisma.customFieldDefinition.findMany.mockResolvedValue([
+      { id: fieldId, type: CustomFieldType.NUMBER },
+    ]);
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      filter: { field: `custom:${fieldId}`, op: 'gte', value: 10 },
+    });
+
+    expect(prisma.lead.findMany.mock.calls[0]?.[0]?.where).toEqual(
+      expect.objectContaining({
+        AND: expect.arrayContaining([{ customFieldValues: { path: [fieldId], gte: 10 } }]),
+      }),
+    );
+  });
+
+  it('list unknown custom field filter is rejected', async () => {
+    const prisma = makePrisma();
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await expect(
+      service.list('org1', {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+        filter: {
+          field: 'custom:99999999-9999-4999-8999-999999999999',
+          op: 'eq',
+          value: 'x',
+        },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
+  });
+
+  it('list still applies a filter on an archived custom field', async () => {
+    const fieldId = '33333333-3333-4333-8333-333333333333';
+    const prisma = makePrisma();
+    prisma.customFieldDefinition.findMany.mockResolvedValue([
+      { id: fieldId, type: CustomFieldType.TEXT },
+    ]);
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      filter: { field: `custom:${fieldId}`, op: 'eq', value: 'legacy' },
+    });
+
+    expect(prisma.lead.findMany.mock.calls[0]?.[0]?.where).toEqual(
+      expect.objectContaining({
+        AND: expect.arrayContaining([{ customFieldValues: { path: [fieldId], equals: 'legacy' } }]),
+      }),
+    );
   });
 
   it('list with ids constrains to those leads inside the tenant', async () => {

@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   exportLeadsCsv: vi.fn(),
   downloadCsvFile: vi.fn(),
   useFunnelConversionLeads: vi.fn(),
+  useCustomFields: vi.fn(),
 }));
 
 vi.mock('@/features/leads/hooks', () => ({
@@ -40,6 +41,10 @@ vi.mock('@/features/billing/hooks', () => ({
 
 vi.mock('@/features/reports/hooks', () => ({
   useFunnelConversionLeads: (...args: unknown[]) => mocks.useFunnelConversionLeads(...args),
+}));
+
+vi.mock('@/features/custom-fields/hooks', () => ({
+  useCustomFields: (...args: unknown[]) => mocks.useCustomFields(...args),
 }));
 
 vi.mock('@/features/saved-views/hooks', () => ({
@@ -155,6 +160,11 @@ describe('LeadsPage saved views', () => {
       data: undefined,
       isLoading: false,
       isSuccess: false,
+      isError: false,
+    });
+    mocks.useCustomFields.mockReturnValue({
+      data: [],
+      isLoading: false,
       isError: false,
     });
   });
@@ -557,10 +567,9 @@ describe('LeadsPage saved views', () => {
       '/reports',
     );
     await waitFor(() => {
-      expect(mocks.useLeads).toHaveBeenCalledWith(
-        expect.objectContaining({ ids: ['lead-jan'] }),
-        { enabled: true },
-      );
+      expect(mocks.useLeads).toHaveBeenCalledWith(expect.objectContaining({ ids: ['lead-jan'] }), {
+        enabled: true,
+      });
     });
   });
 
@@ -628,5 +637,130 @@ describe('LeadsPage saved views', () => {
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(expect.anything(), { enabled: false });
     });
+  });
+
+  it('lets an ephemeral list show an active custom field column and hides archived pickers', async () => {
+    const nifId = '11111111-1111-4111-8111-111111111111';
+    const archivedId = '33333333-3333-4333-8333-333333333333';
+    mocks.useCustomFields.mockReturnValue({
+      data: [
+        {
+          id: nifId,
+          name: 'NIF',
+          type: 'number',
+          position: 0,
+          archivedAt: null,
+          options: [],
+        },
+        {
+          id: archivedId,
+          name: 'Legacy',
+          type: 'text',
+          position: 1,
+          archivedAt: '2026-09-01T00:00:00.000Z',
+          options: [],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useLeads.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'l1',
+            companyName: 'Padaria Central',
+            city: 'Lisboa',
+            status: LeadStatus.NEW,
+            source: 'MANUAL',
+            score: 40,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: null,
+            customFieldValues: { [nifId]: 12 },
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
+
+    expect(screen.getByRole('checkbox', { name: 'NIF' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: /Legacy/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: 'NIF' }));
+
+    expect(screen.getByRole('columnheader', { name: 'NIF' })).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  it('keeps an archived custom field column already on a Vista', async () => {
+    const archivedId = '33333333-3333-4333-8333-333333333333';
+    const archivedView: SavedView = {
+      ...viewFixture,
+      id: 'view-legacy',
+      name: 'Legacy NIF',
+      definition: { columns: ['companyName', archivedId] },
+    };
+    mocks.useSavedViews.mockReturnValue({
+      data: [archivedView],
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useCustomFields.mockReturnValue({
+      data: [
+        {
+          id: archivedId,
+          name: 'NIF antigo',
+          type: 'text',
+          position: 0,
+          archivedAt: '2026-09-01T00:00:00.000Z',
+          options: [],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useLeads.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'l1',
+            companyName: 'Padaria Central',
+            city: 'Lisboa',
+            status: LeadStatus.NEW,
+            source: 'MANUAL',
+            score: 40,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: null,
+            customFieldValues: { [archivedId]: 'PT123' },
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads?view=view-legacy'],
+      withGoogle: false,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('columnheader', { name: 'NIF antigo' })).toBeInTheDocument();
+    });
+    expect(screen.getByText('PT123')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /NIF antigo/ })).toBeChecked();
   });
 });
