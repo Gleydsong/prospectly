@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  addLeadTags,
   createActivity,
   createLead,
   deleteLead,
@@ -8,6 +9,7 @@ import {
   fetchLeadActivities,
   fetchLeads,
   fetchTags,
+  removeLeadTag,
   updateLead,
   type CreateActivityInput,
   type CreateLeadInput,
@@ -80,6 +82,28 @@ export function useCreateActivity(leadId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['leads', leadId, 'activities'] });
       void queryClient.invalidateQueries({ queryKey: ['leads', leadId] });
+    },
+  });
+}
+
+export function useAddLeadTags(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tags: string[]) => addLeadTags(leadId, tags),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['tags'] });
+    },
+  });
+}
+
+export function useRemoveLeadTag(leadId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tagId: string) => removeLeadTag(leadId, tagId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['tags'] });
     },
   });
 }
