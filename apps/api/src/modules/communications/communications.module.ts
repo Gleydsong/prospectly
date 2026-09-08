@@ -21,6 +21,6 @@ import { GmailIngestService } from './gmail-ingest.service';
       useFactory: (config: ConfigService) => new GmailHttpAdapter(config),
     },
   ],
-  exports: [CommunicationsService, GmailIngestService],
+  exports: [CommunicationsService, GmailIngestService, BullModule],
 })
 export class CommunicationsModule {}
