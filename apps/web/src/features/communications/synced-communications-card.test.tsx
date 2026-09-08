@@ -55,6 +55,20 @@ describe('groupEmailsByThread', () => {
     expect(threads[0]?.latest.subject).toBe('Outro');
     expect(threads[1]?.messages).toHaveLength(2);
   });
+
+  it('does not mix calendar events into email threads', () => {
+    const threads = groupEmailsByThread([
+      mail({}),
+      {
+        ...mail({ id: 'evt', externalId: 'evt-1', threadId: null, subject: 'Kickoff' }),
+        channel: 'CALENDAR',
+        direction: 'EVENT',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-1',
+      },
+    ]);
+    expect(threads).toHaveLength(1);
+    expect(threads[0]?.latest.channel).toBe('EMAIL');
+  });
 });
 
 describe('SyncedCommunicationsCard', () => {
@@ -66,8 +80,8 @@ describe('SyncedCommunicationsCard', () => {
   it('shows empty state and still renders for DNC leads', () => {
     mocks.useSyncedCommunications.mockReturnValue({ data: { data: [] }, isLoading: false });
     renderWithProviders(<SyncedCommunicationsCard leadId="lead-1" />, { withGoogle: false });
-    expect(screen.getByText('E-mails sincronizados')).toBeInTheDocument();
-    expect(screen.getByText(/ainda não há e-mails/i)).toBeInTheDocument();
+    expect(screen.getByText('Comunicações sincronizadas')).toBeInTheDocument();
+    expect(screen.getByText(/ainda não há e-mails nem eventos/i)).toBeInTheDocument();
   });
 
   it('lists a thread with open-in-Gmail link', () => {
@@ -81,5 +95,50 @@ describe('SyncedCommunicationsCard', () => {
       'href',
       'https://mail.google.com/mail/u/0/#all/thread-1',
     );
+  });
+
+  it('lists past and future events with Open in Calendar', () => {
+    mocks.useSyncedCommunications.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'past',
+            channel: 'CALENDAR' as const,
+            externalId: 'evt-past',
+            threadId: null,
+            occurredAt: '2026-08-01T10:00:00.000Z',
+            direction: 'EVENT' as const,
+            from: ['ana@gmail.com'],
+            to: ['lead@acme.com'],
+            cc: [],
+            subject: 'Kickoff',
+            snippet: 'Sala 2',
+            htmlLink: 'https://www.google.com/calendar/event?eid=evt-past',
+          },
+          {
+            id: 'future',
+            channel: 'CALENDAR' as const,
+            externalId: 'evt-future',
+            threadId: null,
+            occurredAt: '2026-10-01T10:00:00.000Z',
+            direction: 'EVENT' as const,
+            from: ['ana@gmail.com'],
+            to: ['lead@acme.com'],
+            cc: [],
+            subject: 'Demo',
+            snippet: '',
+            htmlLink: 'https://www.google.com/calendar/event?eid=evt-future',
+          },
+        ],
+      },
+      isLoading: false,
+    });
+    renderWithProviders(<SyncedCommunicationsCard leadId="lead-1" />, { withGoogle: false });
+    expect(screen.getByText('Kickoff')).toBeInTheDocument();
+    expect(screen.getByText('Demo')).toBeInTheDocument();
+    const links = screen.getAllByRole('link', { name: /abrir no calendar/i });
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute('href', 'https://www.google.com/calendar/event?eid=evt-past');
+    expect(links[1]).toHaveAttribute('href', 'https://www.google.com/calendar/event?eid=evt-future');
   });
 });

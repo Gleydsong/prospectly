@@ -1073,9 +1073,10 @@
     "revokeConfirm": "Revoke this member's Google connection? History on the lead card stays."
   },
   "syncedCommunications": {
-    "title": "Synced email",
-    "empty": "No matched email on this lead yet.",
+    "title": "Synced communications",
+    "empty": "No matched email or events on this lead yet.",
     "openInGmail": "Open in Gmail",
+    "openInCalendar": "Open in Calendar",
     "noSubject": "(no subject)",
     "messageCount": "{{count}} messages"
   }

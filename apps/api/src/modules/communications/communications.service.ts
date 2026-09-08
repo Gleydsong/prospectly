@@ -29,6 +29,21 @@ export type PersistEmailInput = {
   now?: Date;
 };
 
+export type PersistEventInput = {
+  organizationId: string;
+  leadId: string;
+  connectionId: string;
+  externalId: string;
+  occurredAt: Date;
+  from: string[];
+  to: string[];
+  cc: string[];
+  subject: string;
+  snippet: string;
+  htmlLink: string;
+  now?: Date;
+};
+
 export type SyncedCommunicationView = {
   id: string;
   channel: 'EMAIL' | 'CALENDAR';
@@ -61,7 +76,7 @@ export class CommunicationsService {
       100,
       Number.isFinite(Number(pageSize)) && Number(pageSize) > 0 ? Math.floor(Number(pageSize)) : 50,
     );
-    const where = { organizationId, leadId, channel: 'EMAIL' as const };
+    const where = { organizationId, leadId };
     const [total, rows] = await Promise.all([
       this.prisma.syncedCommunication.count({ where }),
       this.prisma.syncedCommunication.findMany({
@@ -75,12 +90,45 @@ export class CommunicationsService {
   }
 
   async persistEmail(input: PersistEmailInput): Promise<'created' | 'duplicate'> {
+    return this.persistRow({
+      ...input,
+      channel: 'EMAIL',
+      threadId: input.threadId,
+    });
+  }
+
+  async persistEvent(input: PersistEventInput): Promise<'created' | 'duplicate'> {
+    return this.persistRow({
+      ...input,
+      channel: 'CALENDAR',
+      direction: 'EVENT',
+      threadId: null,
+    });
+  }
+
+  private async persistRow(input: {
+    organizationId: string;
+    leadId: string;
+    connectionId: string;
+    channel: 'EMAIL' | 'CALENDAR';
+    externalId: string;
+    threadId: string | null;
+    occurredAt: Date;
+    direction: 'IN' | 'OUT' | 'EVENT';
+    from: string[];
+    to: string[];
+    cc: string[];
+    subject: string;
+    snippet: string;
+    htmlLink: string;
+    now?: Date;
+  }): Promise<'created' | 'duplicate'> {
     try {
       await this.prisma.syncedCommunication.create({
         data: {
           organizationId: input.organizationId,
           leadId: input.leadId,
-          channel: 'EMAIL',
+          channel: input.channel,
           externalId: input.externalId,
           threadId: input.threadId,
           occurredAt: input.occurredAt,

@@ -39,3 +39,19 @@ export function directionFromSender(
   const connected = normalizeEmail(connectionEmail);
   return fromAddresses.some((address) => normalizeEmail(address) === connected) ? 'OUT' : 'IN';
 }
+
+export function connectionIsOrganizerOrAccepted(input: {
+  connectionEmail: string;
+  organizerEmail?: string;
+  attendees: Array<{ email: string; responseStatus?: string }>;
+}): boolean {
+  const connected = normalizeEmail(input.connectionEmail);
+  if (!connected) return false;
+  if (input.organizerEmail && normalizeEmail(input.organizerEmail) === connected) {
+    return true;
+  }
+  return input.attendees.some(
+    (attendee) =>
+      normalizeEmail(attendee.email) === connected && attendee.responseStatus === 'accepted',
+  );
+}

@@ -35,6 +35,7 @@ export type SyncedThread = {
 export function groupEmailsByThread(items: SyncedCommunication[]): SyncedThread[] {
   const map = new Map<string, SyncedCommunication[]>();
   for (const item of items) {
+    if (item.channel !== 'EMAIL') continue;
     const key = item.threadId || item.externalId;
     const list = map.get(key) ?? [];
     list.push(item);

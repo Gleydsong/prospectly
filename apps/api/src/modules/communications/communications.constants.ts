@@ -19,3 +19,5 @@ export const GMAIL_BACKFILL_MS = 30 * 24 * 60 * 60 * 1000;
 export const GMAIL_INCREMENTAL_OVERLAP_MS = 60 * 60 * 1000;
 export const GMAIL_SYNC_MAX_MESSAGES = 250;
 export const GMAIL_SWEEP_EVERY_MS = 15 * 60 * 1000;
+export const CALENDAR_SYNC_MAX_EVENTS = 250;
+export const CALENDAR_FUTURE_WINDOW_MS = 180 * 24 * 60 * 60 * 1000;

@@ -1073,9 +1073,10 @@
     "revokeConfirm": "Revogar a Conexão Google deste membro? O histórico na ficha permanece."
   },
   "syncedCommunications": {
-    "title": "E-mails sincronizados",
-    "empty": "Ainda não há e-mails casados neste cliente potencial.",
+    "title": "Comunicações sincronizadas",
+    "empty": "Ainda não há e-mails nem eventos casados neste cliente potencial.",
     "openInGmail": "Abrir no Gmail",
+    "openInCalendar": "Abrir no Calendar",
     "noSubject": "(sem assunto)",
     "messageCount": "{{count}} mensagens"
   }

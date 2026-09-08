@@ -22,6 +22,7 @@ const makePrisma = () => ({
   },
   leadActivity: { create: jest.fn() },
   outboxEvent: { create: jest.fn() },
+  task: { create: jest.fn() },
 });
 
 const sample = {
@@ -69,6 +70,89 @@ describe('CommunicationsService', () => {
     expect(prisma.outboxEvent.create).not.toHaveBeenCalled();
   });
 
+  it('persists a past calendar event and advances lastContactAt without nextContactAt or Task', async () => {
+    const prisma = makePrisma();
+    const service = new CommunicationsService(prisma as never);
+    await expect(
+      service.persistEvent({
+        organizationId: ORG,
+        leadId: LEAD,
+        connectionId: CONN,
+        externalId: 'evt-1',
+        occurredAt: PAST,
+        from: ['ana@gmail.com'],
+        to: ['lead@acme.com'],
+        cc: [],
+        subject: 'Kickoff',
+        snippet: 'Sala 2',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-1',
+        now: NOW,
+      }),
+    ).resolves.toBe('created');
+    expect(prisma.syncedCommunication.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          channel: 'CALENDAR',
+          direction: 'EVENT',
+          externalId: 'evt-1',
+          threadId: null,
+        }),
+      }),
+    );
+    expect(prisma.lead.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { lastContactAt: PAST },
+      }),
+    );
+    expect(prisma.lead.updateMany.mock.calls[0][0].data).not.toHaveProperty('nextContactAt');
+    expect(prisma.leadActivity.create).not.toHaveBeenCalled();
+    expect(prisma.task.create).not.toHaveBeenCalled();
+  });
+
+  it('shows a future calendar event without writing lastContactAt or nextContactAt', async () => {
+    const prisma = makePrisma();
+    const service = new CommunicationsService(prisma as never);
+    await service.persistEvent({
+      organizationId: ORG,
+      leadId: LEAD,
+      connectionId: CONN,
+      externalId: 'evt-future',
+      occurredAt: FUTURE,
+      from: ['ana@gmail.com'],
+      to: ['lead@acme.com'],
+      cc: [],
+      subject: 'Demo',
+      snippet: '',
+      htmlLink: 'https://www.google.com/calendar/event?eid=evt-future',
+      now: NOW,
+    });
+    expect(prisma.syncedCommunication.create).toHaveBeenCalled();
+    expect(prisma.lead.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('dedupes the same Google event id on the same Lead', async () => {
+    const prisma = makePrisma();
+    prisma.syncedCommunication.create.mockRejectedValue({ code: 'P2002' });
+    const service = new CommunicationsService(prisma as never);
+    await expect(
+      service.persistEvent({
+        organizationId: ORG,
+        leadId: LEAD,
+        connectionId: CONN,
+        externalId: 'evt-1',
+        occurredAt: PAST,
+        from: ['ana@gmail.com'],
+        to: ['lead@acme.com'],
+        cc: [],
+        subject: 'Kickoff',
+        snippet: '',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-1',
+        now: NOW,
+      }),
+    ).resolves.toBe('duplicate');
+    expect(prisma.lead.updateMany).not.toHaveBeenCalled();
+  });
+
   it('dedupes the same Google message id on the same Lead', async () => {
     const prisma = makePrisma();
     prisma.syncedCommunication.create.mockRejectedValue({ code: 'P2002' });
@@ -84,7 +168,7 @@ describe('CommunicationsService', () => {
     expect(prisma.lead.updateMany).not.toHaveBeenCalled();
   });
 
-  it('lists emails for a readable lead including DNC and hides soft-deleted leads', async () => {
+  it('lists emails and calendar events for a readable lead including DNC and hides soft-deleted leads', async () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValueOnce({ id: LEAD }).mockResolvedValueOnce(null);
     prisma.syncedCommunication.findMany.mockResolvedValue([
@@ -106,6 +190,10 @@ describe('CommunicationsService', () => {
     const service = new CommunicationsService(prisma as never);
     const listed = await service.listForLead(ORG, LEAD);
     expect(listed.data[0]?.snippet).toBe('Segue');
+    expect(prisma.syncedCommunication.count.mock.calls[0][0].where).toEqual({
+      organizationId: ORG,
+      leadId: LEAD,
+    });
     await expect(service.listForLead(ORG, 'gone')).rejects.toBeInstanceOf(NotFoundException);
   });
 
