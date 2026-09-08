@@ -3,6 +3,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,6 +12,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { runWithTenant } from '../../common/prisma/tenant-context';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
+import { GmailIngestService } from '../communications/gmail-ingest.service';
 import { GOOGLE_OAUTH_PORT, type GoogleOAuthPort } from './google-oauth.port';
 import { createGoogleOAuthState, parseGoogleOAuthState } from './oauth-state';
 import { encryptRefreshToken } from './token-crypto';
@@ -39,13 +41,15 @@ function isActive(row: { refreshTokenEncrypted: string | null; revokedAt: Date |
   return Boolean(row.refreshTokenEncrypted) && !row.revokedAt;
 }
 
-function toMineView(row: {
-  googleEmail: string;
-  connectedAt: Date;
-  lastError: string | null;
-  refreshTokenEncrypted: string | null;
-  revokedAt: Date | null;
-} | null): GoogleConnectionView {
+function toMineView(
+  row: {
+    googleEmail: string;
+    connectedAt: Date;
+    lastError: string | null;
+    refreshTokenEncrypted: string | null;
+    revokedAt: Date | null;
+  } | null,
+): GoogleConnectionView {
   if (!row || !isActive(row)) {
     return { connected: false, googleEmail: null, connectedAt: null, lastError: null };
   }
@@ -64,6 +68,7 @@ export class GoogleConnectionsService {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
     @Inject(GOOGLE_OAUTH_PORT) private readonly google: GoogleOAuthPort,
+    @Optional() private readonly gmailIngest?: GmailIngestService,
   ) {}
 
   async getMine(organizationId: string, userId: string): Promise<GoogleConnectionView> {
@@ -142,11 +147,7 @@ export class GoogleConnectionsService {
     return { connected: false, googleEmail: null, connectedAt: null, lastError: null };
   }
 
-  async revoke(
-    organizationId: string,
-    actorUserId: string,
-    targetUserId: string,
-  ): Promise<void> {
+  async revoke(organizationId: string, actorUserId: string, targetUserId: string): Promise<void> {
     if (actorUserId === targetUserId) {
       await this.disconnect(organizationId, targetUserId);
       return;
@@ -241,6 +242,7 @@ export class GoogleConnectionsService {
       entityId: row.id,
       metadata: { googleEmail: tokens.googleEmail },
     });
+    void this.gmailIngest?.enqueueConnection(organizationId, row.id).catch(() => undefined);
     return toMineView(row);
   }
 

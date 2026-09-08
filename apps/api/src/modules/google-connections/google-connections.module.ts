@@ -1,11 +1,13 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
+import { CommunicationsModule } from '../communications/communications.module';
 import { GoogleOAuthHttpAdapter } from './google-oauth.adapter';
 import { GOOGLE_OAUTH_PORT } from './google-oauth.port';
 import { GoogleConnectionsController } from './google-connections.controller';
 import { GoogleConnectionsService } from './google-connections.service';
 
 @Module({
+  imports: [forwardRef(() => CommunicationsModule)],
   controllers: [GoogleConnectionsController],
   providers: [
     GoogleConnectionsService,

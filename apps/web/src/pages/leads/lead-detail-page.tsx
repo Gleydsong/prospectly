@@ -42,6 +42,7 @@ import { LeadTagManager } from '@/features/leads/components/lead-tag-manager';
 import { LeadWebsiteGap } from '@/features/leads/components/lead-website-gap';
 import { WebsiteAnalysisPanel } from '@/features/leads/components/website-analysis-panel';
 import { LeadCustomFieldsCard } from '@/features/custom-fields/lead-custom-fields-card';
+import { SyncedCommunicationsCard } from '@/features/communications/synced-communications-card';
 import {
   useAddLeadTags,
   useCreateActivity,
@@ -580,6 +581,8 @@ export function LeadDetailPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          <SyncedCommunicationsCard leadId={lead.id} />
 
           <LeadActivityHub
             activities={activitiesQuery.data?.data ?? []}

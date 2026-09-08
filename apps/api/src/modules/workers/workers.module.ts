@@ -15,6 +15,9 @@ import { OpportunityFinderModule } from '../opportunity-finder/opportunity-finde
 import { OpportunityFinderProcessor } from '../opportunity-finder/opportunity-finder.processor';
 import { OutboxModule } from '../outbox/outbox.module';
 import { OutboxProcessor } from '../outbox/outbox.processor';
+import { CommunicationsModule } from '../communications/communications.module';
+import { GmailIngestProcessor } from '../communications/gmail-ingest.processor';
+import { GmailSyncScheduler } from '../communications/gmail-sync.scheduler';
 import { WorkflowsModule } from '../workflows/workflows.module';
 
 /**
@@ -32,6 +35,7 @@ import { WorkflowsModule } from '../workflows/workflows.module';
     PrivacyRetentionModule,
     OutboxModule,
     WorkflowsModule,
+    CommunicationsModule,
   ],
   providers: [
     ProspectingProcessor,
@@ -41,6 +45,8 @@ import { WorkflowsModule } from '../workflows/workflows.module';
     OpportunityFinderProcessor,
     RetentionProcessor,
     OutboxProcessor,
+    GmailIngestProcessor,
+    GmailSyncScheduler,
   ],
 })
 export class WorkersModule {}

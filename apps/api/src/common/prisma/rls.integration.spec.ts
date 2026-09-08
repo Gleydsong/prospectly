@@ -45,6 +45,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const customFieldB = randomUUID();
   const googleConnectionA = randomUUID();
   const googleConnectionB = randomUUID();
+  const syncedCommunicationA = randomUUID();
+  const syncedCommunicationB = randomUUID();
   const slugA = `rls-a-${orgA.slice(0, 8)}`;
   const slugB = `rls-b-${orgB.slice(0, 8)}`;
 
@@ -149,6 +151,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${googleConnectionA}, ${orgA}, ${userA}, 'sub-a', 'a@gmail.test', 'cipher-a', 'gmail.readonly', NOW(), NOW(), NOW()),
           (${googleConnectionB}, ${orgB}, ${userB}, 'sub-b', 'b@gmail.test', 'cipher-b', 'gmail.readonly', NOW(), NOW(), NOW())
       `;
+      await tx.$executeRaw`
+        INSERT INTO "SyncedCommunication"
+          (id, "organizationId", "leadId", channel, "externalId", "threadId", "occurredAt", direction, "fromAddresses", "toAddresses", "ccAddresses", subject, snippet, "htmlLink", "ingestedByConnectionId", "createdAt", "updatedAt")
+        VALUES
+          (${syncedCommunicationA}, ${orgA}, ${leadA}, 'EMAIL'::"SyncedCommunicationChannel", 'msg-a', 'thread-a', NOW(), 'IN'::"SyncedCommunicationDirection", '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'Hello A', 'snippet-a', 'https://mail.google.com/mail/u/0/#all/thread-a', ${googleConnectionA}, NOW(), NOW()),
+          (${syncedCommunicationB}, ${orgB}, ${leadB}, 'EMAIL'::"SyncedCommunicationChannel", 'msg-b', 'thread-b', NOW(), 'IN'::"SyncedCommunicationDirection", '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'Hello B', 'snippet-b', 'https://mail.google.com/mail/u/0/#all/thread-b', ${googleConnectionB}, NOW(), NOW())
+      `;
     });
   });
 
@@ -157,6 +166,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
 
     await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "SyncedCommunication" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
       await tx.$executeRawUnsafe(
         `DELETE FROM "GoogleConnection" WHERE "organizationId" IN ($1, $2)`,
         orgA,
@@ -399,6 +413,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
             (id, "organizationId", "userId", "googleSubject", "googleEmail", scopes, "createdAt", "updatedAt")
           VALUES
             (${foreignConnectionId}, ${orgB}, ${userA}, 'sub-leak', 'leak@gmail.test', 'gmail.readonly', NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates synced communications by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "SyncedCommunication" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: syncedCommunicationA }]);
+  });
+
+  it('rejects a cross-tenant synced communication insert', async () => {
+    const foreignId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "SyncedCommunication"
+            (id, "organizationId", "leadId", channel, "externalId", "occurredAt", direction, "fromAddresses", "toAddresses", "ccAddresses", subject, snippet, "htmlLink", "createdAt", "updatedAt")
+          VALUES
+            (${foreignId}, ${orgB}, ${leadB}, 'EMAIL'::"SyncedCommunicationChannel", 'msg-leak', NOW(), 'IN'::"SyncedCommunicationDirection", '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, 'Leak', 'nope', 'https://mail.google.com/mail/u/0/#all/x', NOW(), NOW())
         `;
       }),
     ).rejects.toThrow();

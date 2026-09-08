@@ -9,6 +9,7 @@ import { PROSPECTING_QUEUE } from '../prospecting/prospecting.constants';
 import { SCORING_QUEUE } from '../scoring/scoring.constants';
 import { WEBSITE_ANALYSIS_QUEUE } from '../website-analysis/website-analysis.constants';
 import { OPPORTUNITY_FINDER_QUEUE } from '../opportunity-finder/opportunity-finder.constants';
+import { GMAIL_SYNC_QUEUE } from '../communications/communications.constants';
 import { OUTBOX_QUEUE } from '../outbox/outbox.constants';
 import { MetricsService } from './metrics.service';
 import { OpsMetricsGuard } from './ops-metrics.guard';
@@ -20,6 +21,7 @@ const OPS_QUEUES = [
   WEBSITE_ANALYSIS_QUEUE,
   OPPORTUNITY_FINDER_QUEUE,
   OUTBOX_QUEUE,
+  GMAIL_SYNC_QUEUE,
 ] as const;
 
 @ApiTags('ops')
@@ -34,6 +36,7 @@ export class OpsMetricsController {
     @InjectQueue(WEBSITE_ANALYSIS_QUEUE) private readonly websiteAnalysisQueue: Queue,
     @InjectQueue(OPPORTUNITY_FINDER_QUEUE) private readonly opportunityFinderQueue: Queue,
     @InjectQueue(OUTBOX_QUEUE) private readonly outboxQueue: Queue,
+    @InjectQueue(GMAIL_SYNC_QUEUE) private readonly gmailSyncQueue: Queue,
   ) {}
 
   @Get()
@@ -68,6 +71,8 @@ export class OpsMetricsController {
         return this.opportunityFinderQueue;
       case OUTBOX_QUEUE:
         return this.outboxQueue;
+      case GMAIL_SYNC_QUEUE:
+        return this.gmailSyncQueue;
     }
   }
 

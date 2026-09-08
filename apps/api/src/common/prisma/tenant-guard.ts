@@ -43,6 +43,7 @@ export const TENANT_MODELS = new Set([
   'WorkflowStepRun',
   'CustomFieldDefinition',
   'GoogleConnection',
+  'SyncedCommunication',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

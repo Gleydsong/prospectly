@@ -40,6 +40,14 @@ describe('assertTenantOperation', () => {
     expect(args.where).toEqual({ id: 'conn-1', organizationId: 'org-1' });
   });
 
+  it('applies tenant scope to synced communications', () => {
+    const args = { where: { id: 'sc-1' } };
+    runWithTenant('org-1', () => {
+      assertTenantOperation('SyncedCommunication', 'findFirst', args);
+    });
+    expect(args.where).toEqual({ id: 'sc-1', organizationId: 'org-1' });
+  });
+
   it('applies tenant scope to monthly checkout attempts', () => {
     const args = { where: { id: 'attempt-1' } };
     runWithTenant('org-1', () => {
