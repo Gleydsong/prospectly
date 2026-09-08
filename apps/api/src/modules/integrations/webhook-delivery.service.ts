@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -14,6 +15,11 @@ import type {
   LeadStageChangedPayload,
   TaskCompletedPayload,
 } from '../outbox/outbox.constants';
+import { decryptWebhookSigningSecret } from './webhook-secret-crypto';
+import {
+  WEBHOOK_SIGNATURE_HEADER,
+  buildWebhookSignatureHeader,
+} from './webhook-signature';
 
 const WEBHOOK_USER_AGENT = 'Prospectly-Webhook/1';
 const WEBHOOK_TIMEOUT_MS = 15_000;
@@ -21,6 +27,7 @@ const WEBHOOK_TIMEOUT_MS = 15_000;
 type WebhookConfig = {
   url: string;
   label?: string;
+  signingSecretCiphertext?: string;
 };
 
 export type DeliverOutboxEventInput = {
@@ -46,6 +53,7 @@ export class WebhookDeliveryService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
@@ -79,11 +87,14 @@ export class WebhookDeliveryService {
       data: event.payload,
     });
 
+    const signingSecret = this.decryptSigningSecret(config, event.organizationId);
+
     try {
       await this.postJson(url, body, {
         eventId: event.id,
         eventType: event.type,
         organizationId: event.organizationId,
+        signingSecret,
       });
       this.metrics?.recordWebhookProcessed();
       return { delivered: true };
@@ -93,10 +104,29 @@ export class WebhookDeliveryService {
     }
   }
 
+  private decryptSigningSecret(
+    config: Partial<WebhookConfig>,
+    organizationId: string,
+  ): string | null {
+    const ciphertext =
+      typeof config.signingSecretCiphertext === 'string' ? config.signingSecretCiphertext.trim() : '';
+    if (!ciphertext) return null;
+    const key = this.config.get<string>('google.tokenEncryptionKey')?.trim() ?? '';
+    if (!key) {
+      throw new Error('Webhook signing secret encryption is not configured');
+    }
+    return decryptWebhookSigningSecret(ciphertext, key, organizationId);
+  }
+
   private async postJson(
     url: string,
     body: string,
-    context: { eventId: string; eventType: string; organizationId: string },
+    context: {
+      eventId: string;
+      eventType: string;
+      organizationId: string;
+      signingSecret: string | null;
+    },
   ): Promise<void> {
     let safe;
     try {
@@ -110,17 +140,26 @@ export class WebhookDeliveryService {
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Content-Length': String(Buffer.byteLength(body)),
+      'User-Agent': WEBHOOK_USER_AGENT,
+      'X-Prospectly-Event-Id': context.eventId,
+      'X-Prospectly-Event-Type': context.eventType,
+    };
+    if (context.signingSecret) {
+      const unixSeconds = Math.floor(Date.now() / 1000);
+      headers[WEBHOOK_SIGNATURE_HEADER] = buildWebhookSignatureHeader(
+        context.signingSecret,
+        body,
+        unixSeconds,
+      );
+    }
 
     try {
       const response = await fetchWithPinnedDns(safe.url.toString(), safe.addresses, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': String(Buffer.byteLength(body)),
-          'User-Agent': WEBHOOK_USER_AGENT,
-          'X-Prospectly-Event-Id': context.eventId,
-          'X-Prospectly-Event-Type': context.eventType,
-        },
+        headers,
         body,
         signal: controller.signal,
       });

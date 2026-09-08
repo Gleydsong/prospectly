@@ -514,7 +514,7 @@
       "fullPolicy": "View full policy"
     },
     "integrationsTitle": "Integrations",
-    "integrationsDesc": "Generic webhook to sync events with your CRM (stub).",
+    "integrationsDesc": "Generic webhook to sync events with your CRM. The signing secret is shown once.",
     "webhookUrl": "Webhook URL",
     "webhookLabel": "Label (optional)",
     "webhookSave": "Save webhook",
@@ -522,7 +522,23 @@
     "webhookError": "Could not save webhook.",
     "webhookEmpty": "No webhook configured yet.",
     "webhookEnabled": "Enabled",
-    "webhookDisabled": "Disabled"
+    "webhookDisabled": "Disabled",
+    "webhookSecretCreated": "Signing secret",
+    "webhookSecretWarning": "Copy it now. It will not be shown again. Use it to verify the X-Prospectly-Signature header.",
+    "webhookSecretRotated": "Signing secret rotated.",
+    "webhookRotate": "Rotate secret",
+    "webhookHasSecret": "Signing secret is configured.",
+    "webhookNoSecret": "Save the webhook to generate a signing secret.",
+    "webhookCopySecret": "Copy secret",
+    "webhookRotateError": "Could not rotate the signing secret.",
+    "deliveriesTitle": "Deliveries",
+    "deliveriesEmpty": "No deliveries in this period (90 days).",
+    "deliverySkipped": "Skipped",
+    "deliveryDelivered": "Sent",
+    "skipNoWebhook": "Webhook disabled",
+    "skipMissingUrl": "Missing URL",
+    "deliveryAttempts": "Attempts",
+    "deliveryError": "Last error"
   },
   "billing": {
     "pixTitle": "Pay with PIX",

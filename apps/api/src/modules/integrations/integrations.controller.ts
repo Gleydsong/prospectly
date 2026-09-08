@@ -35,6 +35,21 @@ export class IntegrationsController {
     return this.integrations.upsertWebhook(organizationId, user.id, dto);
   }
 
+  @Post('webhook/rotate-secret')
+  @Roles('OWNER', 'ADMIN')
+  rotateWebhookSecret(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.integrations.rotateWebhookSecret(organizationId, user.id);
+  }
+
+  @Get('webhook/deliveries')
+  @Roles('OWNER', 'ADMIN')
+  listWebhookDeliveries(@CurrentOrg() organizationId: string) {
+    return this.integrations.listDeliveries(organizationId);
+  }
+
   @Get('plugins/tokens')
   @Roles('OWNER', 'ADMIN')
   listPluginTokens(@CurrentOrg() organizationId: string) {

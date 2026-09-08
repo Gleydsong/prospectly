@@ -23,6 +23,8 @@ describe('PINO_REDACT_PATHS', () => {
     expect(PINO_REDACT_PATHS).toContain('req.body.customFieldValues');
     expect(PINO_REDACT_PATHS).toContain('*.customFieldValues');
     expect(PINO_REDACT_PATHS).toContain('*.refreshTokenEncrypted');
+    expect(PINO_REDACT_PATHS).toContain('*.signingSecret');
+    expect(PINO_REDACT_PATHS).toContain('*.signingSecretCiphertext');
     expect(PINO_REDACT_PATHS).toContain('req.query.code');
   });
 });
