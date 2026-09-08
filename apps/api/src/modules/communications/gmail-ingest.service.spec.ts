@@ -17,6 +17,7 @@ const connection = {
 describe('GmailIngestService', () => {
   const makeDeps = () => {
     const persistEmail = jest.fn().mockResolvedValue('created');
+    const persistEvent = jest.fn().mockResolvedValue('created');
     const prisma = {
       googleConnection: {
         findFirst: jest.fn().mockResolvedValue(connection),
@@ -46,15 +47,19 @@ describe('GmailIngestService', () => {
         },
       ]),
     };
+    const calendar = {
+      listEvents: jest.fn().mockResolvedValue([]),
+    };
     const queue = { add: jest.fn().mockResolvedValue(undefined) };
     const service = new GmailIngestService(
       prisma as never,
       { get: () => KEY } as never,
-      { persistEmail } as never,
+      { persistEmail, persistEvent } as never,
       gmail as never,
+      calendar as never,
       queue as never,
     );
-    return { service, prisma, gmail, persistEmail, queue };
+    return { service, prisma, gmail, calendar, persistEmail, persistEvent, queue };
   };
 
   it('matches from/to/cc, persists once, and skips BCC-only addresses', async () => {
@@ -120,5 +125,64 @@ describe('GmailIngestService', () => {
     await service.syncConnection('org-1', 'conn-1', NOW);
     expect(prisma.lead.findMany.mock.calls[0][0].where).not.toHaveProperty('doNotContact');
     expect(persistEmail).toHaveBeenCalledWith(expect.objectContaining({ leadId: 'lead-dnc' }));
+  });
+
+  it('persists accepted/organizer calendar events and skips declined or cancelled', async () => {
+    const { service, persistEvent, calendar } = makeDeps();
+    calendar.listEvents.mockResolvedValue([
+      {
+        externalId: 'evt-ok',
+        occurredAt: PAST,
+        status: 'confirmed',
+        organizerEmail: 'ana@gmail.com',
+        attendees: [{ email: 'lead@acme.com', responseStatus: 'accepted' }],
+        subject: 'Kickoff',
+        snippet: 'Sala 2',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-ok',
+      },
+      {
+        externalId: 'evt-declined',
+        occurredAt: PAST,
+        status: 'confirmed',
+        organizerEmail: 'lead@acme.com',
+        attendees: [{ email: 'ana@gmail.com', responseStatus: 'declined' }],
+        subject: 'Skip',
+        snippet: '',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-declined',
+      },
+      {
+        externalId: 'evt-cancelled',
+        occurredAt: PAST,
+        status: 'cancelled',
+        organizerEmail: 'ana@gmail.com',
+        attendees: [{ email: 'lead@acme.com', responseStatus: 'accepted' }],
+        subject: 'Dead',
+        snippet: '',
+        htmlLink: 'https://www.google.com/calendar/event?eid=evt-cancelled',
+      },
+    ]);
+    await service.syncConnection('org-1', 'conn-1', NOW);
+    expect(persistEvent).toHaveBeenCalledTimes(1);
+    expect(persistEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leadId: 'lead-1',
+        externalId: 'evt-ok',
+        now: NOW,
+      }),
+    );
+  });
+
+  it('passes a future window to Calendar without putting snippets in the job payload', async () => {
+    const { service, calendar, queue } = makeDeps();
+    await service.syncConnection('org-1', 'conn-1', NOW);
+    expect(calendar.listEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accessToken: 'access',
+        timeMin: expect.any(Date),
+        timeMax: new Date(NOW.getTime() + 180 * 24 * 60 * 60 * 1000),
+      }),
+    );
+    await service.enqueueConnection('org-1', 'conn-1');
+    expect(JSON.stringify(queue.add.mock.calls.at(-1)?.[1])).not.toContain('Kickoff');
   });
 });

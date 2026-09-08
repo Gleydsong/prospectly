@@ -9,6 +9,7 @@ import { isDuplicateJobError } from '../../common/workers/durable-job';
 import { decryptRefreshToken } from '../google-connections/token-crypto';
 import { CommunicationsService } from './communications.service';
 import {
+  CALENDAR_FUTURE_WINDOW_MS,
   GMAIL_BACKFILL_MS,
   GMAIL_INCREMENTAL_OVERLAP_MS,
   GMAIL_SYNC_JOB_OPTIONS,
@@ -16,8 +17,14 @@ import {
   SYNC_GMAIL_CONNECTION_JOB,
   type SyncGmailConnectionJobData,
 } from './communications.constants';
+import { CALENDAR_PORT, type CalendarEventMetadata, type CalendarPort } from './calendar.port';
 import { GMAIL_PORT, type GmailMessageMetadata, type GmailPort } from './gmail.port';
-import { directionFromSender, matchLeadIdsForAddresses, normalizeEmail } from './match-lead-email';
+import {
+  connectionIsOrganizerOrAccepted,
+  directionFromSender,
+  matchLeadIdsForAddresses,
+  normalizeEmail,
+} from './match-lead-email';
 
 @Injectable()
 export class GmailIngestService {
@@ -28,6 +35,7 @@ export class GmailIngestService {
     private readonly config: ConfigService,
     private readonly communications: CommunicationsService,
     @Inject(GMAIL_PORT) private readonly gmail: GmailPort,
+    @Inject(CALENDAR_PORT) private readonly calendar: CalendarPort,
     @InjectQueue(GMAIL_SYNC_QUEUE)
     private readonly queue: Queue<SyncGmailConnectionJobData>,
   ) {}
@@ -88,9 +96,20 @@ export class GmailIngestService {
         ? new Date(connection.lastSyncAt.getTime() - GMAIL_INCREMENTAL_OVERLAP_MS)
         : new Date(now.getTime() - GMAIL_BACKFILL_MS);
       const messages = await this.gmail.listMessages({ accessToken, after });
+      const events = await this.calendar.listEvents({
+        accessToken,
+        timeMin: after,
+        timeMax: new Date(now.getTime() + CALENDAR_FUTURE_WINDOW_MS),
+      });
       const maps = await this.loadMatchMaps(
         organizationId,
-        messages.flatMap((message) => [...message.from, ...message.to, ...message.cc]),
+        [
+          ...messages.flatMap((message) => [...message.from, ...message.to, ...message.cc]),
+          ...events.flatMap((event) => [
+            event.organizerEmail,
+            ...event.attendees.map((attendee) => attendee.email),
+          ]),
+        ],
       );
       for (const message of messages) {
         await this.persistMatched(
@@ -98,6 +117,16 @@ export class GmailIngestService {
           connection.id,
           connection.googleEmail,
           message,
+          maps,
+          now,
+        );
+      }
+      for (const event of events) {
+        await this.persistMatchedEvent(
+          organizationId,
+          connection.id,
+          connection.googleEmail,
+          event,
           maps,
           now,
         );
@@ -145,6 +174,54 @@ export class GmailIngestService {
         subject: message.subject,
         snippet: message.snippet,
         htmlLink: message.htmlLink,
+        now,
+      });
+    }
+  }
+
+  private async persistMatchedEvent(
+    organizationId: string,
+    connectionId: string,
+    connectionEmail: string,
+    event: CalendarEventMetadata,
+    maps: {
+      leadIdByEmail: Map<string, string>;
+      contactLeadIdsByEmail: Map<string, string[]>;
+    },
+    now: Date,
+  ): Promise<void> {
+    if (event.status === 'cancelled') return;
+    if (
+      !connectionIsOrganizerOrAccepted({
+        connectionEmail,
+        organizerEmail: event.organizerEmail,
+        attendees: event.attendees,
+      })
+    ) {
+      return;
+    }
+    const leadIds = matchLeadIdsForAddresses({
+      addresses: [event.organizerEmail, ...event.attendees.map((attendee) => attendee.email)],
+      leadIdByEmail: maps.leadIdByEmail,
+      contactLeadIdsByEmail: maps.contactLeadIdsByEmail,
+    });
+    const from = event.organizerEmail ? [event.organizerEmail] : [];
+    const to = event.attendees
+      .map((attendee) => attendee.email)
+      .filter((email) => email && email !== event.organizerEmail);
+    for (const leadId of leadIds) {
+      await this.communications.persistEvent({
+        organizationId,
+        leadId,
+        connectionId,
+        externalId: event.externalId,
+        occurredAt: event.occurredAt,
+        from,
+        to,
+        cc: [],
+        subject: event.subject,
+        snippet: event.snippet,
+        htmlLink: event.htmlLink,
         now,
       });
     }

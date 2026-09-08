@@ -1,4 +1,5 @@
 import {
+  connectionIsOrganizerOrAccepted,
   directionFromSender,
   extractEmailsFromHeader,
   matchLeadIdsForAddresses,
@@ -78,5 +79,39 @@ describe('directionFromSender', () => {
   it('marks outbound when the connected mailbox is From', () => {
     expect(directionFromSender(['Ana@Gmail.com'], 'ana@gmail.com')).toBe('OUT');
     expect(directionFromSender(['lead@acme.com'], 'ana@gmail.com')).toBe('IN');
+  });
+});
+
+describe('connectionIsOrganizerOrAccepted', () => {
+  it('accepts the connected organizer regardless of attendee RSVP', () => {
+    expect(
+      connectionIsOrganizerOrAccepted({
+        connectionEmail: 'Ana@Gmail.com',
+        organizerEmail: 'ana@gmail.com',
+        attendees: [{ email: 'lead@acme.com', responseStatus: 'needsAction' }],
+      }),
+    ).toBe(true);
+  });
+
+  it('accepts when the connected person RSVP accepted', () => {
+    expect(
+      connectionIsOrganizerOrAccepted({
+        connectionEmail: 'ana@gmail.com',
+        organizerEmail: 'lead@acme.com',
+        attendees: [{ email: 'Ana@Gmail.com', responseStatus: 'accepted' }],
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects declined, tentative and unanswered invites', () => {
+    for (const responseStatus of ['declined', 'tentative', 'needsAction']) {
+      expect(
+        connectionIsOrganizerOrAccepted({
+          connectionEmail: 'ana@gmail.com',
+          organizerEmail: 'lead@acme.com',
+          attendees: [{ email: 'ana@gmail.com', responseStatus }],
+        }),
+      ).toBe(false);
+    }
   });
 });
