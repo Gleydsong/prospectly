@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bullmq';
 import { MODULE_METADATA } from '@nestjs/common/constants';
 
 import { ImportsProcessor } from '../imports/imports.processor';
@@ -49,5 +50,11 @@ describe('WorkersModule', () => {
     expect(imports).toContain(OutboxModule);
     expect(imports).toContain(WorkflowsModule);
     expect(imports).toContain(CommunicationsModule);
+
+    const communicationExports = Reflect.getMetadata(
+      MODULE_METADATA.EXPORTS,
+      CommunicationsModule,
+    ) as unknown[];
+    expect(communicationExports).toContain(BullModule);
   });
 });
