@@ -135,6 +135,25 @@ describe('GoogleConnectionsService', () => {
     });
   });
 
+  it('enqueues a Gmail sync with connection id only after connect', async () => {
+    const prisma = makePrisma();
+    const google = makeGoogle();
+    const gmailIngest = { enqueueConnection: jest.fn().mockResolvedValue(undefined) };
+    prisma.googleConnection.upsert.mockResolvedValue(connectedRow);
+    const service = new GoogleConnectionsService(
+      prisma as never,
+      makeConfig() as never,
+      { log: jest.fn().mockResolvedValue(undefined) } as never,
+      google as never,
+      gmailIngest as never,
+    );
+    const state = createGoogleOAuthState({ userId: 'u1', organizationId: 'org-1' }, JWT_SECRET);
+    await service.completeFromCallback('auth-code', state);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(gmailIngest.enqueueConnection).toHaveBeenCalledWith('org-1', 'conn-1');
+    expect(JSON.stringify(gmailIngest.enqueueConnection.mock.calls)).not.toContain('snippet');
+  });
+
   it('rejects a bad OAuth state', async () => {
     const service = new GoogleConnectionsService(
       makePrisma() as never,

@@ -1071,5 +1071,12 @@
     "error": "Could not update the Google connection.",
     "revoke": "Revoke Google",
     "revokeConfirm": "Revoke this member's Google connection? History on the lead card stays."
+  },
+  "syncedCommunications": {
+    "title": "Synced email",
+    "empty": "No matched email on this lead yet.",
+    "openInGmail": "Open in Gmail",
+    "noSubject": "(no subject)",
+    "messageCount": "{{count}} messages"
   }
 }

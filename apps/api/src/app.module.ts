@@ -35,6 +35,7 @@ import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { CustomFieldsModule } from './modules/custom-fields/custom-fields.module';
+import { CommunicationsModule } from './modules/communications/communications.module';
 import { GoogleConnectionsModule } from './modules/google-connections/google-connections.module';
 import { ProspectingModule } from './modules/prospecting/prospecting.module';
 import { ImportsModule } from './modules/imports/imports.module';
@@ -114,6 +115,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     ReportsModule,
     CustomFieldsModule,
     GoogleConnectionsModule,
+    CommunicationsModule,
     ProspectingModule,
     ImportsModule,
     GeoModule,

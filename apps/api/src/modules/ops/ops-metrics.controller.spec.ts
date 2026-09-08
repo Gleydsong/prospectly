@@ -29,6 +29,7 @@ describe('OpsMetricsController', () => {
       makeQueue(counts) as never,
       makeQueue(counts) as never,
       makeQueue(counts) as never,
+      makeQueue(counts) as never,
     );
 
     const snapshot = await controller.getMetrics();
@@ -43,6 +44,7 @@ describe('OpsMetricsController', () => {
     });
     expect(snapshot.queues.prospecting).toEqual(counts);
     expect(snapshot.queues.outbox).toEqual(counts);
+    expect(snapshot.queues['gmail-sync']).toEqual(counts);
     expect(snapshot.redis).toEqual({ status: 'up' });
     expect(snapshot.process.pid).toBe(process.pid);
   });
@@ -64,6 +66,7 @@ describe('OpsMetricsController', () => {
 
     const controller = new OpsMetricsController(
       new MetricsService(),
+      downQueue as never,
       downQueue as never,
       downQueue as never,
       downQueue as never,

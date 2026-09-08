@@ -1071,5 +1071,12 @@
     "error": "Não foi possível atualizar a Conexão Google.",
     "revoke": "Revogar Google",
     "revokeConfirm": "Revogar a Conexão Google deste membro? O histórico na ficha permanece."
+  },
+  "syncedCommunications": {
+    "title": "E-mails sincronizados",
+    "empty": "Ainda não há e-mails casados neste cliente potencial.",
+    "openInGmail": "Abrir no Gmail",
+    "noSubject": "(sem assunto)",
+    "messageCount": "{{count}} mensagens"
   }
 }

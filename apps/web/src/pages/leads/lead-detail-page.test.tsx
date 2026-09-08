@@ -30,6 +30,10 @@ vi.mock('@/features/leads/hooks', () => ({
   useRemoveLeadTag: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
+vi.mock('@/features/communications/hooks', () => ({
+  useSyncedCommunications: () => ({ data: { data: [] }, isLoading: false }),
+}));
+
 vi.mock('@/features/custom-fields/hooks', () => ({
   useCustomFields: () => mocks.useCustomFields(),
 }));

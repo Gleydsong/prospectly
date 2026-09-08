@@ -359,6 +359,7 @@ model Organization {
   workflowStepRuns    WorkflowStepRun[]
   customFieldDefinitions CustomFieldDefinition[]
   googleConnections      GoogleConnection[]
+  syncedCommunications   SyncedCommunication[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -525,6 +526,7 @@ model Lead {
   contacts      LeadContact[]
   tags          LeadTag[]
   activities         LeadActivity[]
+  syncedCommunications SyncedCommunication[]
   tasks              Task[]
   websiteRecord      Website?
   scores             LeadScore[]
@@ -1111,10 +1113,51 @@ model GoogleConnection {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingestedCommunications SyncedCommunication[]
 
   @@unique([organizationId, userId])
   @@index([organizationId, revokedAt])
   @@index([userId])
+}
+
+enum SyncedCommunicationChannel {
+  EMAIL
+  CALENDAR
+}
+
+enum SyncedCommunicationDirection {
+  IN
+  OUT
+  EVENT
+}
+
+/// Matched Gmail/Calendar metadata on a Lead. Not LeadActivity and not mailbox body.
+model SyncedCommunication {
+  id                     String                         @id @default(uuid())
+  organizationId         String
+  leadId                 String
+  channel                SyncedCommunicationChannel
+  externalId             String
+  threadId               String?
+  occurredAt             DateTime
+  direction              SyncedCommunicationDirection
+  fromAddresses          Json
+  toAddresses            Json
+  ccAddresses            Json
+  subject                String
+  snippet                String
+  htmlLink               String
+  ingestedByConnectionId String?
+  createdAt              DateTime                       @default(now())
+  updatedAt              DateTime                       @updatedAt
+
+  organization         Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead                 Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ingestedByConnection GoogleConnection? @relation(fields: [ingestedByConnectionId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, leadId, channel, externalId])
+  @@index([organizationId, leadId, occurredAt])
+  @@index([leadId, occurredAt])
 }
 
 // ---------- Platform ----------

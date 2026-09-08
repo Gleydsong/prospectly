@@ -7,6 +7,7 @@ import { PROSPECTING_QUEUE } from '../prospecting/prospecting.constants';
 import { SCORING_QUEUE } from '../scoring/scoring.constants';
 import { WEBSITE_ANALYSIS_QUEUE } from '../website-analysis/website-analysis.constants';
 import { OPPORTUNITY_FINDER_QUEUE } from '../opportunity-finder/opportunity-finder.constants';
+import { GMAIL_SYNC_QUEUE } from '../communications/communications.constants';
 import { OUTBOX_QUEUE } from '../outbox/outbox.constants';
 import { MetricsInterceptor } from './metrics.interceptor';
 import { MetricsService } from './metrics.service';
@@ -23,6 +24,7 @@ import { OpsMetricsGuard } from './ops-metrics.guard';
       { name: WEBSITE_ANALYSIS_QUEUE },
       { name: OPPORTUNITY_FINDER_QUEUE },
       { name: OUTBOX_QUEUE },
+      { name: GMAIL_SYNC_QUEUE },
     ),
   ],
   controllers: [OpsMetricsController],
