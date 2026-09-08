@@ -44,6 +44,8 @@ export const PINO_REDACT_PATHS = [
   '*.api_key',
   '*.client_secret',
   '*.refreshTokenEncrypted',
+  '*.signingSecret',
+  '*.signingSecretCiphertext',
   'req.query.code',
   'req.query.state',
 ] as const;

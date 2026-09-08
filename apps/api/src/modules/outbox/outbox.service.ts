@@ -297,6 +297,7 @@ export class OutboxService {
           processedAt: new Date(),
           failedAt: null,
           lastError: null,
+          skipReason: delivery.delivered ? null : delivery.reason,
         },
       });
       this.logger.log({

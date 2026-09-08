@@ -10,6 +10,7 @@
 - [Custom fields](./docs/domain/custom-fields/CONTEXT.md): guarda definições da organização de dados tipados no cliente potencial
 - [Agents](./docs/domain/agents/CONTEXT.md): fornece copiloto CRM e variantes de abordagem WhatsApp assistidas
 - [Communications](./docs/domain/communications/CONTEXT.md): associa e-mail e eventos de calendário da Conexão Google de uma pessoa ao cliente potencial
+- [Integrations](./docs/domain/integrations/CONTEXT.md): liga a organização a um Webhook de saída para DomainEvents
 
 ## Relacionamentos
 
@@ -34,3 +35,6 @@
 - **Communications → Organizations**: cada Conexão Google e cada Comunicação sincronizada pertencem à organização da sessão
 - **Communications → User**: a Conexão Google é da pessoa; não reutiliza Integration nem Sign-In
 - **Communications → Lead**: a Comunicação sincronizada casa no cliente potencial; não é LeadActivity nem DomainEvent
+- **Integrations → Organizations**: o Webhook de saída pertence à organização da sessão; nunca chega `organizationId` do cliente
+- **Integrations → Events**: a Entrega consome OutboxEvent já persistido; não cria DomainEvent
+- **Integrations ↛ Communications**: Conexão Google não é Integration

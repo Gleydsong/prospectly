@@ -11,10 +11,13 @@ import {
   createPluginToken,
   fetchIntegrations,
   fetchPluginTokens,
+  fetchWebhookDeliveries,
   revokePluginToken,
+  rotateWebhookSecret,
   upsertWebhookIntegration,
 } from '@/features/integrations/api';
 import { getApiErrorMessage } from '@/lib/api';
+import type { WebhookDelivery } from '@/types';
 
 export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) {
   const { t } = useTranslation();
@@ -28,6 +31,9 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const [enabled, setEnabled] = useState(true);
   const [webhookMessage, setWebhookMessage] = useState<string | null>(null);
   const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [generatedSigningSecret, setGeneratedSigningSecret] = useState<string | null>(null);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+  const [hasSigningSecret, setHasSigningSecret] = useState(false);
 
   const [webhookHydrated, setWebhookHydrated] = useState(false);
 
@@ -43,6 +49,12 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
     enabled: canManage,
   });
 
+  const deliveries = useQuery({
+    queryKey: ['webhook-deliveries'],
+    queryFn: fetchWebhookDeliveries,
+    enabled: canManage,
+  });
+
   useEffect(() => {
     if (webhookHydrated || !integrations.data) return;
     const webhook = integrations.data.find((item) => item.provider === 'WEBHOOK');
@@ -50,6 +62,7 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
       setUrl(webhook.url ?? '');
       setLabel(webhook.label ?? '');
       setEnabled(webhook.status === 'ENABLED');
+      setHasSigningSecret(Boolean(webhook.hasSigningSecret));
     }
     setWebhookHydrated(true);
   }, [integrations.data, webhookHydrated]);
@@ -73,6 +86,15 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
     return () => window.clearTimeout(timeout);
   }, [generatedToken]);
 
+  useEffect(() => {
+    if (!generatedSigningSecret) return undefined;
+    const timeout = window.setTimeout(() => {
+      setGeneratedSigningSecret(null);
+      setCopiedSecret(false);
+    }, 15_000);
+    return () => window.clearTimeout(timeout);
+  }, [generatedSigningSecret]);
+
   const revokeToken = useMutation({
     mutationFn: revokePluginToken,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] }),
@@ -81,14 +103,35 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const saveWebhook = useMutation({
     mutationFn: () =>
       upsertWebhookIntegration({ url: url.trim(), label: label.trim() || undefined, enabled }),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setWebhookMessage(t('settings.webhookSaved'));
       setWebhookError(null);
+      setHasSigningSecret(Boolean(data.hasSigningSecret));
+      if (data.signingSecret) {
+        setGeneratedSigningSecret(data.signingSecret);
+      }
       await queryClient.invalidateQueries({ queryKey: ['integrations'] });
     },
     onError: (err) => {
       setWebhookMessage(null);
       setWebhookError(getApiErrorMessage(err) || t('settings.webhookError'));
+    },
+  });
+
+  const rotateSecret = useMutation({
+    mutationFn: rotateWebhookSecret,
+    onSuccess: async (data) => {
+      setWebhookMessage(t('settings.webhookSecretRotated'));
+      setWebhookError(null);
+      setHasSigningSecret(true);
+      if (data.signingSecret) {
+        setGeneratedSigningSecret(data.signingSecret);
+      }
+      await queryClient.invalidateQueries({ queryKey: ['integrations'] });
+    },
+    onError: (err) => {
+      setWebhookMessage(null);
+      setWebhookError(getApiErrorMessage(err) || t('settings.webhookRotateError'));
     },
   });
 
@@ -219,18 +262,108 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
             onCheckedChange={setEnabled}
             label={enabled ? t('settings.webhookEnabled') : t('settings.webhookDisabled')}
           />
+          <p className="text-xs text-[color:var(--ink-muted)]">
+            {hasSigningSecret ? t('settings.webhookHasSecret') : t('settings.webhookNoSecret')}
+          </p>
+          {generatedSigningSecret ? (
+            <Alert tone="warning" title={t('settings.webhookSecretCreated')}>
+              <p>{t('settings.webhookSecretWarning')}</p>
+              <div className="mt-3 flex gap-2">
+                <code className="min-w-0 flex-1 overflow-x-auto rounded-control bg-[color:var(--surface-card)] px-3 py-2 text-xs text-[color:var(--ink)]">
+                  {generatedSigningSecret}
+                </code>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(generatedSigningSecret)
+                      .then(() => setCopiedSecret(true))
+                  }
+                >
+                  {copiedSecret ? t('settings.copied') : t('settings.webhookCopySecret')}
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
           {webhookMessage ? <Alert tone="success">{webhookMessage}</Alert> : null}
           {webhookError ? <Alert tone="error">{webhookError}</Alert> : null}
-          <Button
-            type="button"
-            loading={saveWebhook.isPending}
-            disabled={!url.trim()}
-            onClick={() => saveWebhook.mutate()}
-          >
-            {t('settings.webhookSave')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              loading={saveWebhook.isPending}
+              disabled={!url.trim()}
+              onClick={() => saveWebhook.mutate()}
+            >
+              {t('settings.webhookSave')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              loading={rotateSecret.isPending}
+              disabled={!hasSigningSecret}
+              onClick={() => rotateSecret.mutate()}
+            >
+              {t('settings.webhookRotate')}
+            </Button>
+          </div>
+
+          <div className="border-t border-[color:var(--border)] pt-4">
+            <h3 className="text-sm font-semibold text-[color:var(--ink)]">{t('settings.deliveriesTitle')}</h3>
+            {!deliveries.isLoading && !deliveries.data?.length ? (
+              <p className="mt-2 text-sm text-[color:var(--ink-muted)]">{t('settings.deliveriesEmpty')}</p>
+            ) : null}
+            {deliveries.data?.length ? (
+              <ul className="mt-3 divide-y divide-[color:var(--border)]">
+                {deliveries.data.map((row) => (
+                  <li key={row.id} className="py-3 text-sm">
+                    <DeliveryRow row={row} />
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function DeliveryRow({ row }: { row: WebhookDelivery }) {
+  const { t } = useTranslation();
+  const skipped = Boolean(row.skipReason);
+  const statusLabel = skipped
+    ? t('settings.deliverySkipped')
+    : row.status === 'PROCESSED'
+      ? t('settings.deliveryDelivered')
+      : row.status;
+  const skipLabel =
+    row.skipReason === 'no_active_webhook'
+      ? t('settings.skipNoWebhook')
+      : row.skipReason === 'missing_url'
+        ? t('settings.skipMissingUrl')
+        : row.skipReason;
+  const error = row.lastError ? row.lastError.slice(0, 120) : null;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-medium text-[color:var(--ink)]">{row.type}</span>
+        <span className="text-xs text-[color:var(--ink-muted)]">
+          {new Date(row.createdAt).toLocaleString()}
+        </span>
+      </div>
+      <p className="text-xs text-[color:var(--ink-muted)]">
+        {statusLabel}
+        {skipped && skipLabel ? ` · ${skipLabel}` : null}
+        {` · ${t('settings.deliveryAttempts')}: ${row.attempts}`}
+      </p>
+      {error && !skipped ? (
+        <p className="text-xs text-red-600">
+          {t('settings.deliveryError')}: {error}
+        </p>
+      ) : null}
     </div>
   );
 }

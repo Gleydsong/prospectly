@@ -514,7 +514,7 @@
       "fullPolicy": "Ver política completa"
     },
     "integrationsTitle": "Integrações",
-    "integrationsDesc": "Webhook genérico para sincronizar eventos com o seu CRM (versão inicial).",
+    "integrationsDesc": "Webhook genérico para sincronizar eventos com o seu CRM. O segredo de assinatura aparece só uma vez.",
     "webhookUrl": "URL do webhook",
     "webhookLabel": "Rótulo (opcional)",
     "webhookSave": "Salvar webhook",
@@ -522,7 +522,23 @@
     "webhookError": "Não foi possível salvar o webhook.",
     "webhookEmpty": "Ainda não há webhook configurado.",
     "webhookEnabled": "Ativo",
-    "webhookDisabled": "Inativo"
+    "webhookDisabled": "Inativo",
+    "webhookSecretCreated": "Segredo de assinatura",
+    "webhookSecretWarning": "Copie agora. Ele não será mostrado de novo. Use-o para verificar o header X-Prospectly-Signature.",
+    "webhookSecretRotated": "Segredo rotacionado.",
+    "webhookRotate": "Rotar segredo",
+    "webhookHasSecret": "Segredo de assinatura configurado.",
+    "webhookNoSecret": "Salve o webhook para gerar o segredo de assinatura.",
+    "webhookCopySecret": "Copiar segredo",
+    "webhookRotateError": "Não foi possível rotar o segredo.",
+    "deliveriesTitle": "Entregas",
+    "deliveriesEmpty": "Ainda não há entregas neste período (90 dias).",
+    "deliverySkipped": "Omissão",
+    "deliveryDelivered": "Enviado",
+    "skipNoWebhook": "Webhook desligado",
+    "skipMissingUrl": "URL em falta",
+    "deliveryAttempts": "Tentativas",
+    "deliveryError": "Último erro"
   },
   "billing": {
     "pixTitle": "Pague com PIX",

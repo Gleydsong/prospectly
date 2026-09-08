@@ -1225,6 +1225,7 @@ model OutboxEvent {
   status          OutboxEventStatus @default(PENDING)
   attempts        Int               @default(0)
   lastError       String?
+  skipReason      String?
   jobDispatchedAt DateTime?
   processedAt     DateTime?
   failedAt        DateTime?

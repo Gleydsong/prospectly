@@ -466,4 +466,65 @@ describe('OutboxService', () => {
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
     });
   });
+
+  it('persists Omissão skipReason when the webhook is skipped', async () => {
+    const prisma = makePrisma();
+    const webhookDelivery = makeWebhookDelivery();
+    webhookDelivery.deliverOutboxEvent.mockResolvedValue({
+      delivered: false,
+      reason: 'no_active_webhook',
+    });
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-skip',
+      type: LEAD_STAGE_CHANGED_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 1,
+      correlationId: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      attempts: 1,
+      payload: { leadId: 'lead-1', toStageId: 'stage-b' },
+    });
+    const service = makeService(prisma, makeQueue(), webhookDelivery);
+
+    await service.process('evt-skip');
+
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-skip' },
+      data: expect.objectContaining({
+        status: OutboxEventStatus.PROCESSED,
+        skipReason: 'no_active_webhook',
+        lastError: null,
+      }),
+    });
+  });
+
+  it('clears skipReason when the webhook POST succeeds', async () => {
+    const prisma = makePrisma();
+    const webhookDelivery = makeWebhookDelivery();
+    webhookDelivery.deliverOutboxEvent.mockResolvedValue({ delivered: true });
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-ok',
+      type: LEAD_STAGE_CHANGED_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 1,
+      correlationId: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      attempts: 1,
+      payload: { leadId: 'lead-1', toStageId: 'stage-b' },
+    });
+    const service = makeService(prisma, makeQueue(), webhookDelivery);
+
+    await service.process('evt-ok');
+
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-ok' },
+      data: expect.objectContaining({
+        status: OutboxEventStatus.PROCESSED,
+        skipReason: null,
+      }),
+    });
+  });
 });
+
