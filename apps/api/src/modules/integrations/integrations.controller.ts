@@ -4,8 +4,6 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
 import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { CreateWebhookIntegrationDto } from './dto/create-webhook-integration.dto';
-import { IntegrationsService } from './integrations.service';
 import { PluginAccessService } from './plugin-access.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { runWithTenant } from '../../common/prisma/tenant-context';
@@ -14,41 +12,7 @@ import { runWithTenant } from '../../common/prisma/tenant-context';
 @ApiBearerAuth()
 @Controller({ path: 'integrations', version: '1' })
 export class IntegrationsController {
-  constructor(
-    private readonly integrations: IntegrationsService,
-    private readonly plugins: PluginAccessService,
-  ) {}
-
-  @Get()
-  @Roles('OWNER', 'ADMIN')
-  list(@CurrentOrg() organizationId: string) {
-    return this.integrations.list(organizationId);
-  }
-
-  @Post('webhook')
-  @Roles('OWNER', 'ADMIN')
-  upsertWebhook(
-    @CurrentOrg() organizationId: string,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateWebhookIntegrationDto,
-  ) {
-    return this.integrations.upsertWebhook(organizationId, user.id, dto);
-  }
-
-  @Post('webhook/rotate-secret')
-  @Roles('OWNER', 'ADMIN')
-  rotateWebhookSecret(
-    @CurrentOrg() organizationId: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.integrations.rotateWebhookSecret(organizationId, user.id);
-  }
-
-  @Get('webhook/deliveries')
-  @Roles('OWNER', 'ADMIN')
-  listWebhookDeliveries(@CurrentOrg() organizationId: string) {
-    return this.integrations.listDeliveries(organizationId);
-  }
+  constructor(private readonly plugins: PluginAccessService) {}
 
   @Get('plugins/tokens')
   @Roles('OWNER', 'ADMIN')

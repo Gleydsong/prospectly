@@ -27,17 +27,10 @@ describe('OutboxService', () => {
     },
   });
 
-  const makeWebhookDelivery = () => ({
-    deliverOutboxEvent: jest
-      .fn()
-      .mockResolvedValue({ delivered: false, reason: 'no_active_webhook' }),
-  });
-
   const makeService = (
     prisma: ReturnType<typeof makePrisma>,
     queue = makeQueue(),
-    webhookDelivery = makeWebhookDelivery(),
-  ) => new OutboxService(prisma as never, queue as never, webhookDelivery as never);
+  ) => new OutboxService(prisma as never, queue as never);
 
   it('appends lead.stage_changed without contact PII and with 90-day retention', async () => {
     const prisma = makePrisma();
@@ -301,10 +294,8 @@ describe('OutboxService', () => {
     });
   });
 
-  it('delivers tenant webhook when processing lead.stage_changed', async () => {
+  it('marks lead.stage_changed PROCESSED after validating the payload', async () => {
     const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
-    webhookDelivery.deliverOutboxEvent.mockResolvedValue({ delivered: true });
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
     prisma.outboxEvent.findUnique.mockResolvedValue({
       id: 'evt-1',
@@ -316,15 +307,15 @@ describe('OutboxService', () => {
       attempts: 1,
       payload: { leadId: 'lead-1', toStageId: 'stage-b' },
     });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
+    const service = makeService(prisma);
     await service.process('evt-1');
-    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'evt-1',
-        organizationId: 'org-1',
-        type: LEAD_STAGE_CHANGED_TYPE,
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-1' },
+      data: expect.objectContaining({
+        status: OutboxEventStatus.PROCESSED,
+        lastError: null,
       }),
-    );
+    });
     expect(OUTBOX_QUEUE).toBe('outbox');
   });
 
@@ -362,7 +353,6 @@ describe('OutboxService', () => {
 
   it('processes lead.created without requiring stage fields', async () => {
     const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
     prisma.outboxEvent.findUnique.mockResolvedValue({
       id: 'evt-created',
@@ -379,17 +369,10 @@ describe('OutboxService', () => {
         stageId: null,
       },
     });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
+    const service = makeService(prisma);
 
     await service.process('evt-created');
 
-    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'evt-created',
-        organizationId: 'org-1',
-        type: LEAD_CREATED_TYPE,
-      }),
-    );
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: 'evt-created' },
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
@@ -398,7 +381,6 @@ describe('OutboxService', () => {
 
   it('processes lead.do_not_contact_set without requiring stage fields', async () => {
     const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
     prisma.outboxEvent.findUnique.mockResolvedValue({
       id: 'evt-dnc',
@@ -414,17 +396,10 @@ describe('OutboxService', () => {
         campaignId: 'c1',
       },
     });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
+    const service = makeService(prisma);
 
     await service.process('evt-dnc');
 
-    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'evt-dnc',
-        organizationId: 'org-1',
-        type: LEAD_DO_NOT_CONTACT_SET_TYPE,
-      }),
-    );
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: 'evt-dnc' },
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
@@ -433,7 +408,6 @@ describe('OutboxService', () => {
 
   it('processes task.completed without requiring lead stage fields', async () => {
     const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
     prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
     prisma.outboxEvent.findUnique.mockResolvedValue({
       id: 'evt-task',
@@ -450,80 +424,13 @@ describe('OutboxService', () => {
         campaignStageId: 'stage-1',
       },
     });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
+    const service = makeService(prisma);
 
     await service.process('evt-task');
 
-    expect(webhookDelivery.deliverOutboxEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: 'evt-task',
-        organizationId: 'org-1',
-        type: TASK_COMPLETED_TYPE,
-      }),
-    );
     expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
       where: { id: 'evt-task' },
       data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
-    });
-  });
-
-  it('persists Omissão skipReason when the webhook is skipped', async () => {
-    const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
-    webhookDelivery.deliverOutboxEvent.mockResolvedValue({
-      delivered: false,
-      reason: 'no_active_webhook',
-    });
-    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
-    prisma.outboxEvent.findUnique.mockResolvedValue({
-      id: 'evt-skip',
-      type: LEAD_STAGE_CHANGED_TYPE,
-      organizationId: 'org-1',
-      schemaVersion: 1,
-      correlationId: null,
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      attempts: 1,
-      payload: { leadId: 'lead-1', toStageId: 'stage-b' },
-    });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
-
-    await service.process('evt-skip');
-
-    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
-      where: { id: 'evt-skip' },
-      data: expect.objectContaining({
-        status: OutboxEventStatus.PROCESSED,
-        skipReason: 'no_active_webhook',
-        lastError: null,
-      }),
-    });
-  });
-
-  it('clears skipReason when the webhook POST succeeds', async () => {
-    const prisma = makePrisma();
-    const webhookDelivery = makeWebhookDelivery();
-    webhookDelivery.deliverOutboxEvent.mockResolvedValue({ delivered: true });
-    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
-    prisma.outboxEvent.findUnique.mockResolvedValue({
-      id: 'evt-ok',
-      type: LEAD_STAGE_CHANGED_TYPE,
-      organizationId: 'org-1',
-      schemaVersion: 1,
-      correlationId: null,
-      createdAt: new Date('2026-01-01T00:00:00.000Z'),
-      attempts: 1,
-      payload: { leadId: 'lead-1', toStageId: 'stage-b' },
-    });
-    const service = makeService(prisma, makeQueue(), webhookDelivery);
-
-    await service.process('evt-ok');
-
-    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
-      where: { id: 'evt-ok' },
-      data: expect.objectContaining({
-        status: OutboxEventStatus.PROCESSED,
-        skipReason: null,
-      }),
     });
   });
 });

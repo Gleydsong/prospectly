@@ -253,31 +253,6 @@ export interface DashboardFilters {
   segment?: string;
 }
 
-export interface IntegrationWebhook {
-  id: string;
-  provider: string;
-  status: string;
-  url: string | null;
-  label: string | null;
-  hasSigningSecret: boolean;
-  signingSecret?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type WebhookSkipReason = 'no_active_webhook' | 'missing_url';
-
-export interface WebhookDelivery {
-  id: string;
-  type: string;
-  createdAt: string;
-  status: string;
-  attempts: number;
-  lastError: string | null;
-  skipReason: string | null;
-  processedAt: string | null;
-}
-
 export interface LeadExportResult {
   filename: string;
   rowCount: number;
