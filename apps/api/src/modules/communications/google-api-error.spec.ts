@@ -3,7 +3,10 @@ import {
   CALENDAR_LIST_FAILED,
   GMAIL_API_DISABLED,
   GMAIL_LIST_FAILED,
+  GMAIL_SYNC_FAILED,
+  GOOGLE_TOKEN_REFRESH_FAILED,
   googleApiFailureCode,
+  toPublicSyncErrorCode,
 } from './google-api-error';
 
 describe('googleApiFailureCode', () => {
@@ -37,6 +40,18 @@ describe('googleApiFailureCode', () => {
     await expect(
       googleApiFailureCode(res, CALENDAR_LIST_FAILED, CALENDAR_API_DISABLED),
     ).resolves.toBe(CALENDAR_API_DISABLED);
+  });
+
+  it('maps legacy adapter messages without keeping Google project text', () => {
+    expect(toPublicSyncErrorCode('Gmail list failed')).toBe(GMAIL_LIST_FAILED);
+    expect(toPublicSyncErrorCode('Calendar list failed')).toBe(CALENDAR_LIST_FAILED);
+    expect(toPublicSyncErrorCode('Google token refresh failed')).toBe(GOOGLE_TOKEN_REFRESH_FAILED);
+    expect(toPublicSyncErrorCode(GMAIL_API_DISABLED)).toBe(GMAIL_API_DISABLED);
+    expect(
+      toPublicSyncErrorCode(
+        'Gmail API has not been used in project prospecting-503316 before or it is disabled.',
+      ),
+    ).toBe(GMAIL_SYNC_FAILED);
   });
 
   it('falls back when the body is not Google JSON', async () => {

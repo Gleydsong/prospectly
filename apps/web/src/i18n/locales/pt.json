@@ -1055,6 +1055,8 @@
     "connect": "Ligar Google",
     "disconnect": "Desligar",
     "connectedAs": "Ligado como {{email}}",
+    "lastSynced": "Última sincronização: {{when}}",
+    "neverSynced": "Ainda não sincronizou. O worker tenta de novo em minutos.",
     "disconnected": "Nenhuma conta Google ligada.",
     "viewerHint": "Quem só vê a organização não pode ligar uma caixa de correio.",
     "connectedFlash": "Gmail e Calendar ligados.",

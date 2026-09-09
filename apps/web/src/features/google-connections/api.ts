@@ -4,6 +4,7 @@ export type GoogleConnectionView = {
   connected: boolean;
   googleEmail: string | null;
   connectedAt: string | null;
+  lastSyncAt: string | null;
   lastError: string | null;
 };
 

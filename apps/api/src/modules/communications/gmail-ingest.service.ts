@@ -67,6 +67,7 @@ export class GmailIngestService {
     for (const row of rows) {
       await this.enqueueConnection(row.organizationId, row.id);
     }
+    this.logger.log({ message: 'Gmail sync sweep enqueued', connections: rows.length });
   }
 
   async syncConnection(
@@ -270,7 +271,7 @@ export class GmailIngestService {
     try {
       await this.prisma.googleConnection.update({
         where: { id: connectionId },
-        data: { lastError },
+        data: { lastError: toPublicSyncErrorCode(lastError) },
       });
     } catch (error) {
       this.logger.warn({

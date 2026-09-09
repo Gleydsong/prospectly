@@ -72,9 +72,32 @@ describe('GoogleConnectionsService', () => {
       connected: false,
       googleEmail: null,
       connectedAt: null,
+      lastSyncAt: null,
       lastError: null,
     });
     expect(JSON.stringify(await service.getMine('org-1', 'u1'))).not.toContain('refresh');
+  });
+
+  it('maps a legacy Gmail list lastError to a public code without the raw Google text', async () => {
+    const prisma = makePrisma();
+    prisma.googleConnection.findUnique.mockResolvedValue({
+      ...connectedRow,
+      lastError: 'Gmail list failed',
+    });
+    const service = new GoogleConnectionsService(
+      prisma as never,
+      makeConfig() as never,
+      { log: jest.fn() } as never,
+      makeGoogle() as never,
+    );
+
+    await expect(service.getMine('org-1', 'u1')).resolves.toEqual({
+      connected: true,
+      googleEmail: 'ana@gmail.com',
+      connectedAt: '2026-09-07T12:00:00.000Z',
+      lastSyncAt: null,
+      lastError: 'gmail_list_failed',
+    });
   });
 
   it('builds an offline auth URL without send scopes', () => {

@@ -1,6 +1,7 @@
 export const GMAIL_SYNC_QUEUE = 'gmail-sync';
 export const SYNC_GMAIL_CONNECTION_JOB = 'sync-gmail-connection';
 export const SWEEP_GMAIL_CONNECTIONS_JOB = 'sweep-gmail-connections';
+export const SWEEP_GMAIL_CONNECTIONS_BOOT_JOB_ID = 'sweep-gmail-connections-boot';
 
 export type SyncGmailConnectionJobData = {
   organizationId: string;
