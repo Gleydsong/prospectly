@@ -1,29 +1,4 @@
 import { api } from '@/lib/api';
-import type { IntegrationWebhook, WebhookDelivery } from '@/types';
-
-export async function fetchIntegrations(): Promise<IntegrationWebhook[]> {
-  const { data } = await api.get<IntegrationWebhook[]>('/integrations');
-  return data;
-}
-
-export async function upsertWebhookIntegration(input: {
-  url: string;
-  enabled?: boolean;
-  label?: string;
-}): Promise<IntegrationWebhook> {
-  const { data } = await api.post<IntegrationWebhook>('/integrations/webhook', input);
-  return data;
-}
-
-export async function rotateWebhookSecret(): Promise<IntegrationWebhook> {
-  const { data } = await api.post<IntegrationWebhook>('/integrations/webhook/rotate-secret');
-  return data;
-}
-
-export async function fetchWebhookDeliveries(): Promise<WebhookDelivery[]> {
-  const { data } = await api.get<WebhookDelivery[]>('/integrations/webhook/deliveries');
-  return data;
-}
 
 export type PluginToken = {
   id: string;

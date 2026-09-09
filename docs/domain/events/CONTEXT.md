@@ -10,7 +10,7 @@ _Avoid_: AuditLog, LeadActivity, mensagem de fila, webhook inbound
 
 **OutboxEvent**:
 A linha PostgreSQL que guarda o DomainEvent e o estado de publicação (PENDING, PROCESSING, PROCESSED, FAILED, DEAD).
-_Avoid_: Inbox, BillingWebhookEvent, job Redis
+_Avoid_: Inbox, BillingWebhookEvent, job Redis, Webhook de saída
 
 **Aggregate**:
 A entidade de negócio à qual o fato se refere. Hoje o writer usa o Lead (`lead.stage_changed`, `lead.created`, `lead.do_not_contact_set`) e a Task (`task.completed`).
