@@ -29,6 +29,10 @@ describe('Billing environment configuration', () => {
     );
   });
 
+  it('treats missing ASAAS_ENABLED as disabled and does not require Asaas secrets', () => {
+    expect(() => validateEnv({ ...baseConfig })).not.toThrow();
+  });
+
   it('requires Asaas to be enabled when PIX routes to Asaas', () => {
     expect(() =>
       validateEnv({ ...baseConfig, PIX_PROVIDER: 'ASAAS', ASAAS_ENABLED: 'false' }),
