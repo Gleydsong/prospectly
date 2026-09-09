@@ -69,6 +69,13 @@ export function GoogleConnectionSettingsCard({ role }: { role: Role | string | u
         ) : (
           <p className="text-sm text-[color:var(--ink-muted)]">{t('googleConnection.disconnected')}</p>
         )}
+        {mine.data?.lastError ? (
+          <Alert tone="error">
+            {t(`googleConnection.syncErrors.${mine.data.lastError}`, {
+              defaultValue: t('googleConnection.syncErrorGeneric'),
+            })}
+          </Alert>
+        ) : null}
         {errorMessage ? <Alert tone="error">{errorMessage}</Alert> : null}
         {writable ? (
           <div className="flex justify-end gap-2">

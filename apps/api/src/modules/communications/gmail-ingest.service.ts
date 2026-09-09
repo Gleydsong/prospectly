@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpException, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import type { Queue } from 'bullmq';
@@ -19,6 +19,7 @@ import {
 } from './communications.constants';
 import { CALENDAR_PORT, type CalendarEventMetadata, type CalendarPort } from './calendar.port';
 import { GMAIL_PORT, type GmailMessageMetadata, type GmailPort } from './gmail.port';
+import { GMAIL_SYNC_FAILED, toPublicSyncErrorCode } from './google-api-error';
 import {
   connectionIsOrganizerOrAccepted,
   directionFromSender,
@@ -136,8 +137,8 @@ export class GmailIngestService {
         data: { lastSyncAt: now, lastError: null },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'gmail_sync_failed';
-      await this.markError(connection.id, message.slice(0, 180));
+      const message = publicSyncErrorCode(error);
+      await this.markError(connection.id, message);
       throw error;
     }
   }
@@ -279,4 +280,16 @@ export class GmailIngestService {
       });
     }
   }
+}
+
+export function publicSyncErrorCode(error: unknown): string {
+  if (error instanceof HttpException) {
+    const response = error.getResponse();
+    if (typeof response === 'string') return toPublicSyncErrorCode(response);
+    if (typeof response === 'object' && response && 'message' in response) {
+      const message = (response as { message: unknown }).message;
+      if (typeof message === 'string') return toPublicSyncErrorCode(message);
+    }
+  }
+  return GMAIL_SYNC_FAILED;
 }

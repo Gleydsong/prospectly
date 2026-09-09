@@ -79,4 +79,16 @@ describe('GoogleConnectionSettingsCard', () => {
     await user.click(await screen.findByRole('button', { name: 'Desligar' }));
     expect(mocks.disconnectGoogleConnection).toHaveBeenCalled();
   });
+
+  it('shows a Gmail API disabled error stored on the Conexão', async () => {
+    mocks.fetchMyGoogleConnection.mockResolvedValue({
+      connected: true,
+      googleEmail: 'ana@gmail.com',
+      connectedAt: '2026-09-07T12:00:00.000Z',
+      lastError: 'gmail_api_disabled',
+    });
+    renderWithProviders(<GoogleConnectionSettingsCard role={Role.OWNER} />, { withGoogle: false });
+
+    expect(await screen.findByText(/API Gmail não está ativada/i)).toBeInTheDocument();
+  });
 });

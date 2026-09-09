@@ -25,6 +25,7 @@ export const PINO_REDACT_PATHS = [
   'req.query.secret',
   'req.query.email',
   'req.headers["x-prospectly-ops-token"]',
+  'req.headers["x-prospectly-plugin-key"]',
   'req.headers["x-abacate-webhook-secret"]',
   'req.headers["x-webhook-secret"]',
   'req.headers["asaas-access-token"]',

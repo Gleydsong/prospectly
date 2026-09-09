@@ -17,6 +17,7 @@ describe('PINO_REDACT_PATHS', () => {
     expect(PINO_REDACT_PATHS).toContain('req.query.webhookSecret');
     expect(PINO_REDACT_PATHS).toContain('req.query.token');
     expect(PINO_REDACT_PATHS).toContain('req.headers["x-prospectly-ops-token"]');
+    expect(PINO_REDACT_PATHS).toContain('req.headers["x-prospectly-plugin-key"]');
     expect(PINO_REDACT_PATHS).toContain('req.headers["x-abacate-webhook-secret"]');
     expect(PINO_REDACT_PATHS).toContain('req.headers["x-webhook-secret"]');
     expect(PINO_REDACT_PATHS).toContain('req.headers["asaas-access-token"]');

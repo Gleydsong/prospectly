@@ -1,5 +1,8 @@
+import { BadGatewayException } from '@nestjs/common';
+
 import { encryptRefreshToken } from '../google-connections/token-crypto';
-import { GmailIngestService } from './gmail-ingest.service';
+import { GmailIngestService, publicSyncErrorCode } from './gmail-ingest.service';
+import { GMAIL_API_DISABLED, GMAIL_SYNC_FAILED } from './google-api-error';
 
 const KEY = 'aa'.repeat(32);
 const NOW = new Date('2026-09-07T12:00:00.000Z');
@@ -184,5 +187,25 @@ describe('GmailIngestService', () => {
     );
     await service.enqueueConnection('org-1', 'conn-1');
     expect(JSON.stringify(queue.add.mock.calls.at(-1)?.[1])).not.toContain('Kickoff');
+  });
+
+  it('stores gmail_api_disabled when Gmail list is blocked by Google', async () => {
+    const { service, gmail, prisma } = makeDeps();
+    gmail.listMessages.mockRejectedValue(new BadGatewayException(GMAIL_API_DISABLED));
+    await expect(service.syncConnection('org-1', 'conn-1', NOW)).rejects.toBeInstanceOf(
+      BadGatewayException,
+    );
+    expect(prisma.googleConnection.update).toHaveBeenCalledWith({
+      where: { id: 'conn-1' },
+      data: { lastError: GMAIL_API_DISABLED },
+    });
+  });
+
+  it('does not persist Google project ids or raw adapter messages as lastError', () => {
+    expect(
+      publicSyncErrorCode(
+        new Error('Gmail API has not been used in project prospecting-503316 before or it is disabled.'),
+      ),
+    ).toBe(GMAIL_SYNC_FAILED);
   });
 });

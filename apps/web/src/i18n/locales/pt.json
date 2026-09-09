@@ -1076,7 +1076,7 @@
   },
   "googleConnection": {
     "title": "Conexão Google",
-    "description": "Liga o teu Gmail e Calendar em leitura. Não envia mensagens. Não é o webhook da organização em Ferramentas.",
+    "description": "Liga o teu Gmail e Calendar em leitura. Não envia mensagens.",
     "connect": "Ligar Google",
     "disconnect": "Desligar",
     "connectedAs": "Ligado como {{email}}",
@@ -1085,6 +1085,15 @@
     "connectedFlash": "Gmail e Calendar ligados.",
     "callbackError": "Não foi possível concluir a ligação Google.",
     "error": "Não foi possível atualizar a Conexão Google.",
+    "syncErrorGeneric": "A sincronização com o Gmail/Calendar falhou. Tente desligar e ligar de novo.",
+    "syncErrors": {
+      "gmail_api_disabled": "A API Gmail não está ativada no projeto Google Cloud. Ative Gmail API e volte a sincronizar.",
+      "calendar_api_disabled": "A API Calendar não está ativada no projeto Google Cloud. Ative Google Calendar API e volte a sincronizar.",
+      "gmail_list_failed": "Não foi possível ler o Gmail agora.",
+      "calendar_list_failed": "Não foi possível ler o Calendar agora.",
+      "google_token_refresh_failed": "O Google recusou o refresh token. Desligue e ligue a Conexão Google de novo.",
+      "gmail_sync_failed": "A sincronização com o Gmail/Calendar falhou. Tente desligar e ligar de novo."
+    },
     "revoke": "Revogar Google",
     "revokeConfirm": "Revogar a Conexão Google deste membro? O histórico na ficha permanece."
   },
