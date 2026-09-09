@@ -36,6 +36,7 @@ describe('GoogleConnectionSettingsCard', () => {
       connected: false,
       googleEmail: null,
       connectedAt: null,
+      lastSyncAt: null,
       lastError: null,
     });
     mocks.startGoogleConnection.mockResolvedValue({ url: 'https://accounts.google.com/o/oauth2/v2/auth?x=1' });
@@ -52,6 +53,7 @@ describe('GoogleConnectionSettingsCard', () => {
       connected: false,
       googleEmail: null,
       connectedAt: null,
+      lastSyncAt: null,
       lastError: null,
     });
     renderWithProviders(<GoogleConnectionSettingsCard role={Role.VIEWER} />, { withGoogle: false });
@@ -65,12 +67,14 @@ describe('GoogleConnectionSettingsCard', () => {
       connected: true,
       googleEmail: 'ana@gmail.com',
       connectedAt: '2026-09-07T12:00:00.000Z',
+      lastSyncAt: null,
       lastError: null,
     });
     mocks.disconnectGoogleConnection.mockResolvedValue({
       connected: false,
       googleEmail: null,
       connectedAt: null,
+      lastSyncAt: null,
       lastError: null,
     });
     const user = userEvent.setup();
@@ -85,10 +89,25 @@ describe('GoogleConnectionSettingsCard', () => {
       connected: true,
       googleEmail: 'ana@gmail.com',
       connectedAt: '2026-09-07T12:00:00.000Z',
+      lastSyncAt: null,
       lastError: 'gmail_api_disabled',
     });
     renderWithProviders(<GoogleConnectionSettingsCard role={Role.OWNER} />, { withGoogle: false });
 
     expect(await screen.findByText(/API Gmail não está ativada/i)).toBeInTheDocument();
+  });
+
+  it('shows never synced and a mapped Gmail list error', async () => {
+    mocks.fetchMyGoogleConnection.mockResolvedValue({
+      connected: true,
+      googleEmail: 'ana@gmail.com',
+      connectedAt: '2026-09-07T12:00:00.000Z',
+      lastSyncAt: null,
+      lastError: 'gmail_list_failed',
+    });
+    renderWithProviders(<GoogleConnectionSettingsCard role={Role.OWNER} />, { withGoogle: false });
+
+    expect(await screen.findByText(/Ainda não sincronizou/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Não foi possível ler o Gmail agora/i)).toBeInTheDocument();
   });
 });

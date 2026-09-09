@@ -63,9 +63,18 @@ export function GoogleConnectionSettingsCard({ role }: { role: Role | string | u
         ) : null}
         {mine.isLoading ? <Skeleton className="h-16" /> : null}
         {mine.data?.connected ? (
-          <p className="text-sm text-[color:var(--ink)]">
-            {t('googleConnection.connectedAs', { email: mine.data.googleEmail })}
-          </p>
+          <>
+            <p className="text-sm text-[color:var(--ink)]">
+              {t('googleConnection.connectedAs', { email: mine.data.googleEmail })}
+            </p>
+            <p className="text-sm text-[color:var(--ink-muted)]">
+              {mine.data.lastSyncAt
+                ? t('googleConnection.lastSynced', {
+                    when: new Date(mine.data.lastSyncAt).toLocaleString(),
+                  })
+                : t('googleConnection.neverSynced')}
+            </p>
+          </>
         ) : (
           <p className="text-sm text-[color:var(--ink-muted)]">{t('googleConnection.disconnected')}</p>
         )}

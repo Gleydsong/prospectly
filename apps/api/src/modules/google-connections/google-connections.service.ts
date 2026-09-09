@@ -13,6 +13,7 @@ import { runWithTenant } from '../../common/prisma/tenant-context';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
 import { GmailIngestService } from '../communications/gmail-ingest.service';
+import { toPublicSyncErrorCode } from '../communications/google-api-error';
 import { GOOGLE_OAUTH_PORT, type GoogleOAuthPort } from './google-oauth.port';
 import { createGoogleOAuthState, parseGoogleOAuthState } from './oauth-state';
 import { encryptRefreshToken } from './token-crypto';
@@ -28,6 +29,7 @@ export type GoogleConnectionView = {
   connected: boolean;
   googleEmail: string | null;
   connectedAt: string | null;
+  lastSyncAt: string | null;
   lastError: string | null;
 };
 
@@ -35,6 +37,14 @@ export type OrgGoogleConnectionView = {
   userId: string;
   googleEmail: string;
   connectedAt: string;
+};
+
+const DISCONNECTED_VIEW: GoogleConnectionView = {
+  connected: false,
+  googleEmail: null,
+  connectedAt: null,
+  lastSyncAt: null,
+  lastError: null,
 };
 
 function isActive(row: { refreshTokenEncrypted: string | null; revokedAt: Date | null }): boolean {
@@ -45,19 +55,21 @@ function toMineView(
   row: {
     googleEmail: string;
     connectedAt: Date;
+    lastSyncAt: Date | null;
     lastError: string | null;
     refreshTokenEncrypted: string | null;
     revokedAt: Date | null;
   } | null,
 ): GoogleConnectionView {
   if (!row || !isActive(row)) {
-    return { connected: false, googleEmail: null, connectedAt: null, lastError: null };
+    return DISCONNECTED_VIEW;
   }
   return {
     connected: true,
     googleEmail: row.googleEmail,
     connectedAt: row.connectedAt.toISOString(),
-    lastError: row.lastError,
+    lastSyncAt: row.lastSyncAt ? row.lastSyncAt.toISOString() : null,
+    lastError: row.lastError ? toPublicSyncErrorCode(row.lastError) : null,
   };
 }
 
@@ -129,7 +141,7 @@ export class GoogleConnectionsService {
       where: { organizationId_userId: { organizationId, userId } },
     });
     if (!row || !isActive(row)) {
-      return { connected: false, googleEmail: null, connectedAt: null, lastError: null };
+      return DISCONNECTED_VIEW;
     }
     const now = new Date();
     await this.prisma.googleConnection.update({
@@ -144,7 +156,7 @@ export class GoogleConnectionsService {
       entityId: row.id,
       metadata: { googleEmail: row.googleEmail },
     });
-    return { connected: false, googleEmail: null, connectedAt: null, lastError: null };
+    return DISCONNECTED_VIEW;
   }
 
   async revoke(organizationId: string, actorUserId: string, targetUserId: string): Promise<void> {

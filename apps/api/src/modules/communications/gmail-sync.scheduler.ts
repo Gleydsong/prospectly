@@ -2,9 +2,11 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { Queue } from 'bullmq';
 
+import { isDuplicateJobError } from '../../common/workers/durable-job';
 import {
   GMAIL_SWEEP_EVERY_MS,
   GMAIL_SYNC_QUEUE,
+  SWEEP_GMAIL_CONNECTIONS_BOOT_JOB_ID,
   SWEEP_GMAIL_CONNECTIONS_JOB,
 } from './communications.constants';
 
@@ -15,6 +17,19 @@ export class GmailSyncScheduler implements OnModuleInit {
   constructor(@InjectQueue(GMAIL_SYNC_QUEUE) private readonly queue: Queue) {}
 
   async onModuleInit(): Promise<void> {
+    try {
+      await this.queue.add(
+        SWEEP_GMAIL_CONNECTIONS_JOB,
+        {},
+        {
+          jobId: SWEEP_GMAIL_CONNECTIONS_BOOT_JOB_ID,
+          removeOnComplete: 20,
+          removeOnFail: 50,
+        },
+      );
+    } catch (error) {
+      if (!isDuplicateJobError(error)) throw error;
+    }
     await this.queue.add(
       SWEEP_GMAIL_CONNECTIONS_JOB,
       {},
@@ -25,6 +40,6 @@ export class GmailSyncScheduler implements OnModuleInit {
         removeOnFail: 50,
       },
     );
-    this.logger.log('Gmail sync sweep registered (15m)');
+    this.logger.log('Gmail sync sweep registered (boot + 15m)');
   }
 }

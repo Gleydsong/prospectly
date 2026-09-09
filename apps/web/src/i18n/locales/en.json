@@ -1055,6 +1055,8 @@
     "connect": "Connect Google",
     "disconnect": "Disconnect",
     "connectedAs": "Connected as {{email}}",
+    "lastSynced": "Last sync: {{when}}",
+    "neverSynced": "Not synced yet. The worker retries within minutes.",
     "disconnected": "No Google account connected.",
     "viewerHint": "Viewers cannot connect a mailbox.",
     "connectedFlash": "Gmail and Calendar connected.",

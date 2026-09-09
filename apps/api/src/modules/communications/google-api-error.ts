@@ -16,6 +16,12 @@ export const PUBLIC_SYNC_ERROR_CODES = [
 
 const PUBLIC_SYNC_ERROR_CODE_SET = new Set<string>(PUBLIC_SYNC_ERROR_CODES);
 
+const LEGACY_SYNC_ERROR_MESSAGES: Record<string, string> = {
+  'Gmail list failed': GMAIL_LIST_FAILED,
+  'Calendar list failed': CALENDAR_LIST_FAILED,
+  'Google token refresh failed': GOOGLE_TOKEN_REFRESH_FAILED,
+};
+
 const DISABLED_REASONS = new Set(['accessNotConfigured', 'SERVICE_DISABLED', 'API_DISABLED']);
 
 type GoogleErrorBody = {
@@ -27,8 +33,10 @@ type GoogleErrorBody = {
   };
 };
 
-export function toPublicSyncErrorCode(raw: string): string {
-  return PUBLIC_SYNC_ERROR_CODE_SET.has(raw) ? raw : GMAIL_SYNC_FAILED;
+export function toPublicSyncErrorCode(raw: string | null | undefined): string {
+  if (!raw) return GMAIL_SYNC_FAILED;
+  if (PUBLIC_SYNC_ERROR_CODE_SET.has(raw)) return raw;
+  return LEGACY_SYNC_ERROR_MESSAGES[raw] ?? GMAIL_SYNC_FAILED;
 }
 
 export async function googleApiFailureCode(

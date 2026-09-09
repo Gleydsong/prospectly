@@ -39,6 +39,11 @@ export class GmailIngestProcessor extends WorkerHost {
         this.ingest.syncConnection(data.organizationId, data.connectionId),
       );
       this.metrics.recordJob(GMAIL_SYNC_QUEUE, 'completed', Date.now() - started);
+      this.logger.log({
+        message: 'Gmail sync completed',
+        organizationId: data.organizationId,
+        connectionId: data.connectionId,
+      });
     } catch (error) {
       const maxAttempts = job.opts.attempts ?? 1;
       const isFinalAttempt = job.attemptsMade + 1 >= maxAttempts;
