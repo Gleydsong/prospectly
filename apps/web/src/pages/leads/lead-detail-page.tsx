@@ -33,7 +33,6 @@ import {
 } from '@/features/agents/components';
 import { CopyButton } from '@/features/leads/components/lead-copy-button';
 import { LeadOpportunityCard } from '@/features/leads/components/lead-opportunity-card';
-import { LeadOriginAudit } from '@/features/leads/components/lead-origin-audit';
 import {
   LeadPipelineStepper,
   orderedPipelineStages,
@@ -65,7 +64,6 @@ import {
   sanitizeMailtoHref,
   sanitizeTelHref,
 } from '@/lib/safe-url';
-import { formatDateTime } from '@/lib/utils';
 import type { LeadStage, Task } from '@/types';
 
 export function LeadDetailPage() {
@@ -485,54 +483,6 @@ export function LeadDetailPage() {
                 void removeTag.mutateAsync(tagId);
               }}
             />
-
-            {lead.notes ? (
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
-                  Observações
-                </p>
-                <p className="whitespace-pre-wrap text-[color:var(--ink)]">{lead.notes}</p>
-              </div>
-            ) : null}
-
-            <LeadOriginAudit>
-              <dl className="space-y-2 text-sm text-[color:var(--ink)]">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[color:var(--ink-muted)]">Fonte</dt>
-                  <dd>{SOURCE_LABEL[lead.source] ?? 'Outra fonte'}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[color:var(--ink-muted)]">Coletado em</dt>
-                  <dd>{lead.dataCollectedAt ? formatDateTime(lead.dataCollectedAt) : '—'}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[color:var(--ink-muted)]">Última verificação</dt>
-                  <dd>{lead.lastVerifiedAt ? formatDateTime(lead.lastVerifiedAt) : '—'}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[color:var(--ink-muted)]">Confiança</dt>
-                  <dd>{lead.confidenceLevel ? CONFIDENCE_LABEL[lead.confidenceLevel] : '—'}</dd>
-                </div>
-              </dl>
-              {lead.missingFields &&
-              lead.missingFields.filter((field) => !CONTACT_MISSING_FIELDS.has(field)).length >
-                0 ? (
-                <div className="mt-3">
-                  <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
-                    Dados ausentes
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {lead.missingFields
-                      .filter((field) => !CONTACT_MISSING_FIELDS.has(field))
-                      .map((field) => (
-                        <Badge key={field} tone="amber">
-                          {MISSING_FIELD_LABEL[field] ?? field}
-                        </Badge>
-                      ))}
-                  </div>
-                </div>
-              ) : null}
-            </LeadOriginAudit>
           </CardContent>
         </Card>
 
@@ -607,31 +557,3 @@ export function LeadDetailPage() {
     </div>
   );
 }
-
-const SOURCE_LABEL: Record<string, string> = {
-  MANUAL: 'Manual',
-  CSV_IMPORT: 'Importação CSV',
-  GOOGLE_PLACES: 'Google Places',
-  OPENSTREETMAP: 'OpenStreetMap',
-  YELP: 'Yelp',
-  REFERRAL: 'Indicação',
-  OTHER: 'Outro',
-};
-
-const CONFIDENCE_LABEL: Record<string, string> = {
-  LOW: 'Baixa',
-  MEDIUM: 'Média',
-  HIGH: 'Alta',
-};
-
-const MISSING_FIELD_LABEL: Record<string, string> = {
-  phone: 'Telefone',
-  email: 'E-mail',
-  website: 'Site',
-  whatsapp: 'WhatsApp',
-  address: 'Endereço',
-  city: 'Cidade',
-  category: 'Categoria',
-};
-
-const CONTACT_MISSING_FIELDS = new Set(['email', 'website', 'whatsapp', 'phone']);

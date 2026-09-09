@@ -680,9 +680,6 @@ export class ProspectingService {
         : websiteFound
           ? ConfidenceLevel.MEDIUM
           : ConfidenceLevel.LOW,
-      notes: isGoogle
-        ? 'Importado do Google Places. Validação manual de website necessária.'
-        : 'Importado do OpenStreetMap. Validação manual de website necessária.',
       tags: noWebsiteReported ? ['sem-site'] : [],
     };
   }

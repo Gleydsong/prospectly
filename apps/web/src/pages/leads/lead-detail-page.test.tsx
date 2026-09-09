@@ -217,13 +217,21 @@ describe('LeadDetailPage', () => {
     expect(screen.getByText(/oportunidade de presença online/i)).toBeInTheDocument();
   });
 
-  it('esconde metadados técnicos até abrir a auditoria', async () => {
-    const user = userEvent.setup();
+  it('não exibe auditoria técnica nem observações no card de informações', () => {
+    mocks.useLead.mockReturnValue({
+      data: {
+        ...baseLead,
+        notes: 'Importado do Google Places. Validação manual de website necessária.',
+      },
+      isLoading: false,
+    });
     renderPage();
 
-    expect(screen.queryByText('Google Places')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Origem & Auditoria Técnica' }));
-    expect(screen.getByText('Google Places')).toBeVisible();
+    expect(screen.queryByText('Origem & Auditoria Técnica')).not.toBeInTheDocument();
+    expect(screen.queryByText('Observações')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Importado do Google Places. Validação manual de website necessária.'),
+    ).not.toBeInTheDocument();
   });
 
   it('conclui tarefa no checkbox e registra na timeline', async () => {
