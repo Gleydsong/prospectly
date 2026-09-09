@@ -29,13 +29,17 @@ A API guarda identificadores históricos de Stripe e AbacatePay. Contratos exist
 
 ## Assistente de sandbox
 
-1. Crie ou selecione a conta Sandbox do Asaas.
-2. Guarde a API key de Sandbox no gerenciador externo de secrets como `ASAAS_API_KEY`.
-3. Gere um token dedicado de webhook e grave o mesmo valor em `ASAAS_WEBHOOK_TOKEN`.
-4. Configure a URL de webhook Asaas como `/api/v1/billing/webhook/asaas` e envie o token em `asaas-access-token`.
-5. Mantenha `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. Esta branch usa `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true`. A API **não** sobe com essas flags se `ASAAS_API_KEY` ou `ASAAS_WEBHOOK_TOKEN` estiverem vazios.
-6. Homologue: criação e reuso de QR PIX, clique duplicado, autenticação de webhook e entrega duplicada, crédito de pacote, ativação mensal de exatamente 30 dias, estorno/chargeback, crédito hospedado, débito hospedado, recorrência mensal no cartão e recuperação de timeout ambíguo.
-7. Produção Asaas (`https://api.asaas.com/v3`) exige aprovação de conta, chave PIX após prova de vida, secrets de produção separados e um smoke financeiro controlado. Rollback é `PIX_PROVIDER=ABACATE` sem fallback silencioso. Webhooks históricos do AbacatePay continuam ativos.
+Roteiro completo (crédito, débito hospedado, recorrência, timeout, refund, chargeback) e wizard que **não persiste segredos**: [asaas-sandbox-homologation.md](./asaas-sandbox-homologation.md).
+
+```bash
+bash scripts/asaas-sandbox-homologation-wizard.sh
+```
+
+1. Conta e API Key só no Sandbox (`https://sandbox.asaas.com/`). Guarda `ASAAS_API_KEY` no Render, nunca no git.
+2. Token de webhook gerado no Asaas (32–255 chars) = `ASAAS_WEBHOOK_TOKEN`. Header `asaas-access-token`.
+3. URL: `https://prospectly-api.onrender.com/api/v1/billing/webhook/asaas`.
+4. `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. `ASAAS_ENABLED=true` neste Blueprint é o cutover PIX autorizado; unset no código continua `false`.
+5. Produção (`https://api.asaas.com/v3`) exige autorização explícita e smoke. Rollback PIX: `PIX_PROVIDER=ABACATE`.
 
 Ver [deploy na Render](../deploy/render.md) para ambiente e webhook.
 
