@@ -1,6 +1,11 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 
 import { CALENDAR_SYNC_MAX_EVENTS } from './communications.constants';
+import {
+  CALENDAR_API_DISABLED,
+  CALENDAR_LIST_FAILED,
+  googleApiFailureCode,
+} from './google-api-error';
 import type { CalendarEventMetadata, CalendarPort } from './calendar.port';
 import { normalizeEmail } from './match-lead-email';
 
@@ -45,7 +50,9 @@ export class CalendarHttpAdapter implements CalendarPort {
         { headers: { Authorization: `Bearer ${input.accessToken}` } },
       );
       if (!res.ok) {
-        throw new BadGatewayException('Calendar list failed');
+        throw new BadGatewayException(
+          await googleApiFailureCode(res, CALENDAR_LIST_FAILED, CALENDAR_API_DISABLED),
+        );
       }
       const body = (await res.json()) as CalendarListResponse;
       for (const item of body.items ?? []) {

@@ -2,6 +2,12 @@ import { BadGatewayException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { GMAIL_SYNC_MAX_MESSAGES } from './communications.constants';
+import {
+  GMAIL_API_DISABLED,
+  GMAIL_LIST_FAILED,
+  GOOGLE_TOKEN_REFRESH_FAILED,
+  googleApiFailureCode,
+} from './google-api-error';
 import type { GmailMessageMetadata, GmailPort } from './gmail.port';
 import { extractEmailsFromHeader } from './match-lead-email';
 
@@ -37,11 +43,11 @@ export class GmailHttpAdapter implements GmailPort {
       body,
     });
     if (!res.ok) {
-      throw new BadGatewayException('Google token refresh failed');
+      throw new BadGatewayException(GOOGLE_TOKEN_REFRESH_FAILED);
     }
     const tokens = (await res.json()) as { access_token?: string };
     if (!tokens.access_token) {
-      throw new BadGatewayException('Google token refresh failed');
+      throw new BadGatewayException(GOOGLE_TOKEN_REFRESH_FAILED);
     }
     return tokens.access_token;
   }
@@ -61,7 +67,9 @@ export class GmailHttpAdapter implements GmailPort {
         { headers: { Authorization: `Bearer ${input.accessToken}` } },
       );
       if (!listRes.ok) {
-        throw new BadGatewayException('Gmail list failed');
+        throw new BadGatewayException(
+          await googleApiFailureCode(listRes, GMAIL_LIST_FAILED, GMAIL_API_DISABLED),
+        );
       }
       const list = (await listRes.json()) as GmailListResponse;
       for (const row of list.messages ?? []) {

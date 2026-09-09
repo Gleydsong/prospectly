@@ -1076,7 +1076,7 @@
   },
   "googleConnection": {
     "title": "Google connection",
-    "description": "Connect your Gmail and Calendar for read-only ingest. Prospectly does not send mail. This is not the organization webhook in Tools.",
+    "description": "Connect your Gmail and Calendar for read-only ingest. Prospectly does not send mail.",
     "connect": "Connect Google",
     "disconnect": "Disconnect",
     "connectedAs": "Connected as {{email}}",
@@ -1085,6 +1085,15 @@
     "connectedFlash": "Gmail and Calendar connected.",
     "callbackError": "Could not finish the Google connection.",
     "error": "Could not update the Google connection.",
+    "syncErrorGeneric": "Gmail/Calendar sync failed. Disconnect and connect again.",
+    "syncErrors": {
+      "gmail_api_disabled": "Gmail API is not enabled on the Google Cloud project. Enable Gmail API and sync again.",
+      "calendar_api_disabled": "Calendar API is not enabled on the Google Cloud project. Enable Google Calendar API and sync again.",
+      "gmail_list_failed": "Could not read Gmail right now.",
+      "calendar_list_failed": "Could not read Calendar right now.",
+      "google_token_refresh_failed": "Google rejected the refresh token. Disconnect and connect the Google connection again.",
+      "gmail_sync_failed": "Gmail/Calendar sync failed. Disconnect and connect again."
+    },
     "revoke": "Revoke Google",
     "revokeConfirm": "Revoke this member's Google connection? History on the lead card stays."
   },
