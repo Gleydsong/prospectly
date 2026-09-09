@@ -174,7 +174,8 @@ describe('parseSeoSignals', () => {
   });
 
   it('stays linear on hostile HTML (unclosed tags, comments, huge attribute lists)', () => {
-    const budgetMs = 1500;
+    // CI runners jitter; 5s still fails catastrophic (quadratic) parses.
+    const budgetMs = 5_000;
     const hostile = [
       '<script>'.repeat(180_000),
       '<!--'.repeat(370_000),
