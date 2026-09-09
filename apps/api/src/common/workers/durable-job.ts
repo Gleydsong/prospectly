@@ -12,6 +12,24 @@ export function isDuplicateJobError(error: unknown): boolean {
   return DUPLICATE_JOB_RE.test(message);
 }
 
+/** BullMQ keeps completed/failed jobs with a custom jobId; re-adding that id is a no-op. */
+export type DurableJobSlot = {
+  getState(): Promise<string>;
+  remove(): Promise<unknown>;
+};
+
+export async function replaceFinishedDurableJob(
+  job: DurableJobSlot | undefined | null,
+): Promise<'free' | 'busy'> {
+  if (!job) return 'free';
+  const state = await job.getState();
+  if (state === 'completed' || state === 'failed') {
+    await job.remove();
+    return 'free';
+  }
+  return 'busy';
+}
+
 export function staleBefore(staleMs: number, now = Date.now()): Date {
   return new Date(now - staleMs);
 }

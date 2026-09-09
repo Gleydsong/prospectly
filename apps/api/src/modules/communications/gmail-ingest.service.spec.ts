@@ -53,7 +53,10 @@ describe('GmailIngestService', () => {
     const calendar = {
       listEvents: jest.fn().mockResolvedValue([]),
     };
-    const queue = { add: jest.fn().mockResolvedValue(undefined) };
+    const queue = {
+      add: jest.fn().mockResolvedValue(undefined),
+      getJob: jest.fn().mockResolvedValue(undefined),
+    };
     const service = new GmailIngestService(
       prisma as never,
       { get: () => KEY } as never,
@@ -113,6 +116,7 @@ describe('GmailIngestService', () => {
   it('enqueues connection ids only, never snippet', async () => {
     const { service, queue } = makeDeps();
     await service.enqueueConnection('org-1', 'conn-1', 'corr-1');
+    expect(queue.getJob).toHaveBeenCalledWith('gmail-sync-conn-1');
     expect(queue.add).toHaveBeenCalledWith(
       'sync-gmail-connection',
       { organizationId: 'org-1', connectionId: 'conn-1', correlationId: 'corr-1' },
@@ -120,6 +124,29 @@ describe('GmailIngestService', () => {
     );
     expect(JSON.stringify(queue.add.mock.calls[0][1])).not.toContain('texto');
     expect(JSON.stringify(queue.add.mock.calls[0][1])).not.toContain('Oi');
+  });
+
+  it('re-enqueues after a completed durable job so the 15m sweep can run again', async () => {
+    const { service, queue } = makeDeps();
+    const remove = jest.fn().mockResolvedValue(undefined);
+    queue.getJob.mockResolvedValue({ getState: async () => 'completed', remove });
+    await expect(service.enqueueConnection('org-1', 'conn-1')).resolves.toBe(true);
+    expect(remove).toHaveBeenCalled();
+    expect(queue.add).toHaveBeenCalledWith(
+      'sync-gmail-connection',
+      expect.objectContaining({ connectionId: 'conn-1' }),
+      expect.objectContaining({ jobId: 'gmail-sync-conn-1' }),
+    );
+  });
+
+  it('does not add a second job while one is still active', async () => {
+    const { service, queue } = makeDeps();
+    queue.getJob.mockResolvedValue({
+      getState: async () => 'active',
+      remove: jest.fn(),
+    });
+    await expect(service.enqueueConnection('org-1', 'conn-1')).resolves.toBe(false);
+    expect(queue.add).not.toHaveBeenCalled();
   });
 
   it('still matches DNC leads (doNotContact is not queried)', async () => {

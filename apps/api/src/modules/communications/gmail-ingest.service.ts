@@ -5,7 +5,7 @@ import type { Queue } from 'bullmq';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { runWithBypass } from '../../common/prisma/tenant-context';
-import { isDuplicateJobError } from '../../common/workers/durable-job';
+import { isDuplicateJobError, replaceFinishedDurableJob } from '../../common/workers/durable-job';
 import { decryptRefreshToken } from '../google-connections/token-crypto';
 import { CommunicationsService } from './communications.service';
 import {
@@ -45,15 +45,22 @@ export class GmailIngestService {
     organizationId: string,
     connectionId: string,
     correlationId?: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
+    const jobId = `gmail-sync-${connectionId}`;
+    const existing = await this.queue.getJob(jobId);
+    if ((await replaceFinishedDurableJob(existing)) === 'busy') {
+      return false;
+    }
     try {
       await this.queue.add(
         SYNC_GMAIL_CONNECTION_JOB,
         { organizationId, connectionId, correlationId },
-        { ...GMAIL_SYNC_JOB_OPTIONS, jobId: `gmail-sync-${connectionId}` },
+        { ...GMAIL_SYNC_JOB_OPTIONS, jobId },
       );
+      return true;
     } catch (error) {
       if (!isDuplicateJobError(error)) throw error;
+      return false;
     }
   }
 
@@ -64,10 +71,18 @@ export class GmailIngestService {
         select: { id: true, organizationId: true },
       }),
     );
+    let added = 0;
+    let skipped = 0;
     for (const row of rows) {
-      await this.enqueueConnection(row.organizationId, row.id);
+      if (await this.enqueueConnection(row.organizationId, row.id)) added += 1;
+      else skipped += 1;
     }
-    this.logger.log({ message: 'Gmail sync sweep enqueued', connections: rows.length });
+    this.logger.log({
+      message: 'Gmail sync sweep enqueued',
+      connections: rows.length,
+      added,
+      skipped,
+    });
   }
 
   async syncConnection(
