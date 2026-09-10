@@ -39,6 +39,7 @@ function createdEvent(leadId: string, at: Date, source = 'MANUAL') {
 function stageEvent(leadId: string, toStageId: string, at: Date) {
   return {
     type: 'lead.stage_changed',
+    schemaVersion: 1,
     createdAt: at,
     retainUntil: RETAIN_UNTIL,
     payload: {
@@ -47,6 +48,28 @@ function stageEvent(leadId: string, toStageId: string, at: Date) {
       toStageId,
       fromStageName: 'Proposta',
       toStageName: 'Ganho',
+    },
+  };
+}
+
+function stageEventV2(
+  leadId: string,
+  toStageId: string,
+  at: Date,
+  flags: { toStageIsWon: boolean; toStageIsLost: boolean },
+) {
+  return {
+    type: 'lead.stage_changed',
+    schemaVersion: 2,
+    createdAt: at,
+    retainUntil: RETAIN_UNTIL,
+    payload: {
+      leadId,
+      fromStageId: OTHER_STAGE,
+      toStageId,
+      fromStageName: 'Proposta',
+      toStageName: 'Ganho',
+      ...flags,
     },
   };
 }
@@ -212,6 +235,42 @@ describe('ReportsService', () => {
     ]);
     await expect(service.funnelConversion('org-1', { period: '30d' })).resolves.toEqual(
       expect.objectContaining({ wins: 0, winRate: 0 }),
+    );
+  });
+
+  it('keeps a v2 win after the destination stage loses isWon', async () => {
+    const prisma = makePrisma();
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      stageEventV2('lead-1', OTHER_STAGE, FEB_10, { toStageIsWon: true, toStageIsLost: false }),
+    ]);
+    prisma.lead.findMany.mockResolvedValue([
+      { id: 'lead-1', source: 'MANUAL', ownerId: 'owner-1', doNotContact: false },
+    ]);
+    const service = new ReportsService(prisma);
+
+    prisma.pipelineStage.findMany.mockResolvedValue([
+      { id: OTHER_STAGE, isWon: false, isLost: false },
+    ]);
+    await expect(service.funnelConversion('org-1', { period: '30d' })).resolves.toEqual(
+      expect.objectContaining({ wins: 1, losses: 0, winRate: 100 }),
+    );
+  });
+
+  it('does not count a v2 event as a win from current flags when the snapshot was not won', async () => {
+    const prisma = makePrisma();
+    prisma.outboxEvent.findMany.mockResolvedValue([
+      stageEventV2('lead-1', WON_STAGE, FEB_10, { toStageIsWon: false, toStageIsLost: false }),
+    ]);
+    prisma.lead.findMany.mockResolvedValue([
+      { id: 'lead-1', source: 'MANUAL', ownerId: 'owner-1', doNotContact: false },
+    ]);
+    prisma.pipelineStage.findMany.mockResolvedValue([
+      { id: WON_STAGE, isWon: true, isLost: false },
+    ]);
+    const service = new ReportsService(prisma);
+
+    await expect(service.funnelConversion('org-1', { period: '30d' })).resolves.toEqual(
+      expect.objectContaining({ wins: 0, losses: 0, winRate: 0 }),
     );
   });
 

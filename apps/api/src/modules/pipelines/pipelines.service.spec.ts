@@ -148,7 +148,12 @@ describe('PipelinesService', () => {
       stageId: 'stage-a',
       stage: { id: 'stage-a', name: 'A' },
     });
-    prisma.pipelineStage.findFirst.mockResolvedValue({ id: 'stage-b', name: 'B' });
+    prisma.pipelineStage.findFirst.mockResolvedValue({
+      id: 'stage-b',
+      name: 'B',
+      isWon: true,
+      isLost: false,
+    });
     prisma.lead.update.mockResolvedValue({
       id: 'lead-1',
       stageId: 'stage-b',
@@ -185,6 +190,8 @@ describe('PipelinesService', () => {
           toStageId: 'stage-b',
           fromStageName: 'A',
           toStageName: 'B',
+          toStageIsWon: true,
+          toStageIsLost: false,
         },
       }),
     );

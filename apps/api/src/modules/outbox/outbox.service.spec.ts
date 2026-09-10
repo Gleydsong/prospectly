@@ -54,18 +54,23 @@ describe('OutboxService', () => {
         toStageId: 'stage-b',
         fromStageName: 'A',
         toStageName: 'B',
+        toStageIsWon: true,
+        toStageIsLost: false,
       },
     });
 
     expect(result).toBe(created);
     const data = prisma.outboxEvent.create.mock.calls[0]?.[0]?.data;
     expect(data.type).toBe(LEAD_STAGE_CHANGED_TYPE);
+    expect(data.schemaVersion).toBe(2);
     expect(data.payload).toEqual({
       leadId: 'lead-1',
       fromStageId: 'stage-a',
       toStageId: 'stage-b',
       fromStageName: 'A',
       toStageName: 'B',
+      toStageIsWon: true,
+      toStageIsLost: false,
     });
     expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp/i);
     expect(data.idempotencyKey).toContain(LEAD_STAGE_CHANGED_TYPE);
@@ -108,6 +113,7 @@ describe('OutboxService', () => {
       ownerId: 'user-1',
       stageId: null,
     });
+    expect(data.schemaVersion).toBe(1);
     expect(JSON.stringify(data.payload)).not.toMatch(/email|phone|whatsapp/i);
     expect(data.status).toBe(OutboxEventStatus.PENDING);
   });
@@ -317,6 +323,49 @@ describe('OutboxService', () => {
       }),
     });
     expect(OUTBOX_QUEUE).toBe('outbox');
+  });
+
+  it('marks schemaVersion 2 lead.stage_changed PROCESSED when the snapshot flags are booleans', async () => {
+    const prisma = makePrisma();
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-v2',
+      type: LEAD_STAGE_CHANGED_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 2,
+      correlationId: null,
+      createdAt: new Date('2026-09-10T00:00:00.000Z'),
+      attempts: 1,
+      payload: {
+        leadId: 'lead-1',
+        toStageId: 'stage-b',
+        toStageName: 'B',
+        toStageIsWon: true,
+        toStageIsLost: false,
+      },
+    });
+    const service = makeService(prisma);
+    await service.process('evt-v2');
+    expect(prisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+      where: { id: 'evt-v2' },
+      data: expect.objectContaining({ status: OutboxEventStatus.PROCESSED }),
+    });
+  });
+
+  it('rejects schemaVersion 2 lead.stage_changed without frozen flags', async () => {
+    const prisma = makePrisma();
+    prisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.outboxEvent.findUnique.mockResolvedValue({
+      id: 'evt-v2-bad',
+      type: LEAD_STAGE_CHANGED_TYPE,
+      organizationId: 'org-1',
+      schemaVersion: 2,
+      correlationId: null,
+      attempts: 1,
+      payload: { leadId: 'lead-1', toStageId: 'stage-b', toStageName: 'B' },
+    });
+    const service = makeService(prisma);
+    await expect(service.process('evt-v2-bad')).rejects.toThrow(/payload/i);
   });
 
   it('reclaims stale PROCESSING even after 10 attempts', async () => {

@@ -10,4 +10,4 @@ A Principal continua a resumir o estado atual do funil (`Lead.status`, `createdA
 
 - Reusar `DashboardService` / snapshot de `Lead.status`: rejeitado — mistura cohort de criação com estado atual e não é o contrato de Relatórios.
 - Cubo ou tabela de factos: rejeitado no v1 — YAGNI até haver drill-down persistido (#137) ou créditos no relatório.
-- Congelar `isWon`/`isLost` no payload do evento: adiado — reclassificar etapa reescreve o passado neste corte.
+- Congelar `isWon`/`isLost` no payload do evento: adiado neste corte; aceite em [0015](./0015-freeze-won-lost-on-stage-changed.md).

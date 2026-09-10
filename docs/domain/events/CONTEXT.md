@@ -23,3 +23,9 @@ _Avoid_: jobId, correlationId
 **Dead-letter**:
 O estado DEAD depois do limite de tentativas, quando o fato permanece persistido sem novo dispatch automático.
 _Avoid_: delete, drop, retry infinito
+
+## Invariants
+
+- `lead.stage_changed` nasce com `schemaVersion` 2 e congela `toStageIsWon`/`toStageIsLost` no momento do fato. Eventos v1 no outbox não são reescritos.
+- `lead.created`, `lead.do_not_contact_set` e `task.completed` permanecem v1.
+- Relatórios: v2 classifica pelo snapshot; v1 segue as flags actuais da etapa.

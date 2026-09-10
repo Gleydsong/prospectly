@@ -830,7 +830,7 @@
   "reports": {
     "title": "Reports",
     "subtitle": "Funnel conversion from the organization's durable events.",
-    "retentionNotice": "History follows outbox retention (90 days). Won and Lost use the current pipeline stages — reclassifying a stage rewrites the past.",
+    "retentionNotice": "History follows outbox retention (90 days). New events freeze Won and Lost on the fact; reclassifying a stage only rewrites older (v1) events.",
     "loadError": "Could not load the report.",
     "empty": "No events in this period.",
     "openBucket": "View {{label}} ({{count}})",
