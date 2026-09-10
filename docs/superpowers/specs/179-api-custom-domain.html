@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spec #179 — Domínio próprio da API</title>
+  <style>
+    :root {
+      --ink: #18181b; --muted: #52525b; --bg: #f4f4f5; --card: #fff; --border: #e4e4e7;
+      --accent: #2563eb; --ok: #059669; --warn: #d97706; --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink); background: var(--bg); line-height: 1.55;
+    }
+    header { background: linear-gradient(135deg, #0f172a 0%, #0e7490 100%); color: #fff; padding: 2.5rem 1.25rem 2rem; }
+    header .wrap, main, footer { max-width: 920px; margin: 0 auto; }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.7rem; }
+    header p { margin: 0; opacity: 0.9; }
+    .badge {
+      display: inline-block; margin: 1rem 0.4rem 0 0; padding: 0.25rem 0.65rem; border-radius: 999px;
+      background: rgba(255,255,255,0.15); font-size: 0.8rem; font-weight: 600;
+    }
+    main { padding: 1.5rem 1.25rem 3rem; }
+    section {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem 1.35rem; margin-bottom: 1rem;
+    }
+    h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+    h3 { margin: 1rem 0 0.45rem; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .muted { color: var(--muted); }
+    ul { padding-left: 1.2rem; }
+    li { margin: 0.3rem 0; }
+    code, .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 0.5rem 0.45rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+    .tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; }
+    .tag-ok { background: #d1fae5; color: var(--ok); }
+    .tag-warn { background: #fef3c7; color: var(--warn); }
+    .tag-bad { background: #fee2e2; color: var(--danger); }
+    .tag-api { background: #dbeafe; color: #1d4ed8; }
+    label.row {
+      display: flex; align-items: flex-start; gap: 0.6rem; margin: 0.45rem 0; cursor: pointer;
+    }
+    .verdict { font-size: 1.15rem; font-weight: 700; margin: 0.4rem 0 0.2rem; }
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 0.8rem 0.9rem;
+      min-height: 5.5rem; white-space: pre-wrap;
+    }
+    footer { padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.85rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Spec #179 — Domínio próprio da API</h1>
+      <p>CNAME <code style="background:transparent;color:#fff">api.prospectlyonboard.com</code>, TLS, CORS, cookie Lax e redirect OAuth. Código no cliente só depois do health no host novo.</p>
+      <span class="badge">Issue #179</span>
+      <span class="badge">Branch feat/api-custom-domain</span>
+      <span class="badge">Wizard HITL</span>
+    </div>
+  </header>
+  <main>
+    <section>
+      <h2>O que esta entrega faz</h2>
+      <p class="muted">Ticket 1 é humano: DNS/TLS/OAuth/env. Esta PR traz o wizard, o runbook e um probe Playwright que faz skip se o CNAME ainda não existir. <strong>Não</strong> aponta o app de produção para o host novo — <code>dig</code> em 2026-09-10 não resolvia <code>api.prospectlyonboard.com</code>.</p>
+      <ul>
+        <li>Wizard: <code>./scripts/api-custom-domain-wizard.sh</code> — sem secrets no git nem na issue.</li>
+        <li>Cookie: <code>none</code> enquanto o app fala com <code>*.onrender.com</code>. <code>lax</code> só com app+api no mesmo site pai, no mesmo deploy (SEC-001).</li>
+        <li>CORS: lista explícita. Sem <code>*</code>. Parser aceita a origem do app.</li>
+        <li><code>GOOGLE_CLIENT_ID</code> com newline → <code>invalid_client</code>. Boot faz <code>trim</code>.</li>
+      </ul>
+      <p class="muted">Vocabulário: <strong>Conexão Google</strong> (redirect URI) ≠ Sign-In GIS. <strong>Worker</strong> interno. Produção Asaas fora.</p>
+    </section>
+
+    <section>
+      <h2>Demonstração — ordem do cutover</h2>
+      <p class="muted">Marca o que já está no ar. A combinação errada parte sessão ou OAuth.</p>
+      <label class="row"><input type="checkbox" id="dns" /> CNAME + TLS: <code>api.prospectlyonboard.com/health/ready</code> = 200</label>
+      <label class="row"><input type="checkbox" id="google" /> Google Console: URI novo <em>e</em> URI onrender (overlap)</label>
+      <label class="row"><input type="checkbox" id="app" /> <code>VITE_API_URL</code> = <code>https://api.prospectlyonboard.com/api/v1</code></label>
+      <label class="row"><input type="checkbox" id="lax" /> <code>REFRESH_COOKIE_SAME_SITE=lax</code></label>
+      <p class="verdict" id="verdict">—</p>
+      <h3>Log</h3>
+      <div class="log" id="log" aria-live="polite"></div>
+      <h3>Cookie / CORS neste estado</h3>
+      <table>
+        <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
+        <tbody>
+          <tr><td>SameSite</td><td id="samesite">none (produção actual)</td></tr>
+          <tr><td>Site</td><td id="site">cross-site (app.prospectlyonboard.com → onrender)</td></tr>
+          <tr><td>CORS</td><td id="cors">allowlist do app, credentials true, sem *</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Arquivos</h2>
+      <table>
+        <thead><tr><th>Arquivo</th><th>Mudança</th></tr></thead>
+        <tbody>
+          <tr><td><span class="path">scripts/api-custom-domain-wizard.sh</span></td><td><span class="tag tag-api">wizard</span> DNS, TLS, Google overlap, env, Asaas sandbox.</td></tr>
+          <tr><td><span class="path">docs/deploy/api-custom-domain.md</span></td><td>Runbook. Ticket 2 bloqueado sem health.</td></tr>
+          <tr><td><span class="path">cors-origins.ts</span></td><td>Parser + constantes do host canónico (env continua a mandar).</td></tr>
+          <tr><td><span class="path">env-string.ts</span></td><td>Trim de Client ID / redirect.</td></tr>
+          <tr><td><span class="path">api-custom-domain.probe.spec.ts</span></td><td>Playwright (config probe, sem Vite): skip sem DNS; health + CORS com o CNAME no ar.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>Pasta <code>docs/superpowers/specs/</code> · issue <a href="https://github.com/Gleydsong/prospectly/issues/179">#179</a>.</footer>
+  <script>
+    const ids = ["dns", "google", "app", "lax"];
+    const logEl = document.getElementById("log");
+    const verdictEl = document.getElementById("verdict");
+    const samesiteEl = document.getElementById("samesite");
+    const siteEl = document.getElementById("site");
+
+    function state() {
+      return Object.fromEntries(ids.map((id) => [id, document.getElementById(id).checked]));
+    }
+
+    function render() {
+      const s = state();
+      const lines = [];
+      let verdict = "Ainda no host onrender. Cookie none. Ticket 2 bloqueado.";
+      let klass = "";
+
+      if (s.lax && !s.app) {
+        verdict = "Sessão partida";
+        klass = "tag-bad";
+        lines.push("SameSite=Lax com o app ainda em prospectly-api.onrender.com: o browser não envia o cookie (cross-site).");
+      } else if (s.app && !s.dns) {
+        verdict = "App down";
+        klass = "tag-bad";
+        lines.push("VITE_API_URL no host novo sem CNAME/TLS: login, refresh e webhooks falham.");
+      } else if (s.app && s.dns && !s.google) {
+        verdict = "Conexão Google parte";
+        klass = "tag-warn";
+        lines.push("redirect_uri_mismatch ou invalid_client. Console precisa do URI novo; overlap mantém o onrender.");
+        lines.push("invalid_grant ≠ invalid_client — não rodes Client ID por um código gasto.");
+      } else if (s.dns && s.google && s.app && s.lax) {
+        verdict = "Cutover ok";
+        klass = "tag-ok";
+        lines.push("health 200. App same-site com a API. Cookie Lax + Secure, host-only.");
+        lines.push("CORS: origem exacta do app, credentials true. Webhook Asaas sandbox na URL nova.");
+        lines.push("Ticket 3 ainda pendente: desligar onrender no cliente e URI velho no Console.");
+      } else if (s.dns && !s.app) {
+        verdict = "TLS no ar; app ainda no onrender";
+        klass = "tag-warn";
+        lines.push("Overlap correcto. Não mudes SameSite. Ticket 2 pode começar no git depois deste health.");
+      } else {
+        lines.push("Corre ./scripts/api-custom-domain-wizard.sh. Não graves chaves na issue.");
+      }
+
+      if (s.lax && s.app && s.dns) {
+        samesiteEl.textContent = "lax + Secure, host-only, path /api/v1/auth";
+        siteEl.textContent = "same-site / cross-origin (app. + api. sob prospectlyonboard.com)";
+      } else {
+        samesiteEl.textContent = "none + Secure (public suffix onrender)";
+        siteEl.textContent = s.app && !s.dns
+          ? "app aponta para host morto"
+          : "cross-site (app.prospectlyonboard.com → prospectly-api.onrender.com)";
+      }
+
+      verdictEl.textContent = verdict;
+      verdictEl.className = "verdict " + klass;
+      logEl.textContent = lines.join("\n");
+    }
+
+    ids.forEach((id) => document.getElementById(id).addEventListener("change", render));
+    render();
+  </script>
+</body>
+</html>

@@ -55,6 +55,7 @@ O plugin da Render **não** cria custom domains — faça no Dashboard + DNS:
 
 3. Voltar ao Render e esperar verificação + HTTPS automático.
 4. Docs oficiais: [Namecheap DNS](https://render.com/docs/configure-namecheap-dns).
+5. API no mesmo zona DNS: ver [Domínio próprio da API](./api-custom-domain.md) (`api.prospectlyonboard.com`). Wizard: `./scripts/api-custom-domain-wizard.sh`.
 
 Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marcar a revisão como morta.
 
@@ -97,7 +98,7 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 - Custom domains: anexe no Dashboard e depois atualize CORS / URLs de frontend / endpoints de webhook.
 - `autoDeployTrigger: checksPass` espera o CI do GitHub em `main`.
 - **SEC-001:** faça deploy de API + web juntos (cookie de refresh + `withCredentials`). Não entregue um sem o outro.
-- **Cookie de refresh:** `onrender.com` é public suffix, então `prospectly-web.onrender.com` e `prospectly-api.onrender.com` são sites diferentes. Produção portanto usa `REFRESH_COOKIE_SAME_SITE=none` com `Secure` e mantém CSRF via `X-Requested-With`. O conserto estrutural é um par same-site como `app.prospectly.com` + `api.prospectly.com`, que pode voltar para `lax`. Não defina `Domain=.onrender.com`.
+- **Cookie de refresh:** `onrender.com` é public suffix, então hosts `*.onrender.com` são sites diferentes. Enquanto o app chamar `prospectly-api.onrender.com`, produção usa `REFRESH_COOKIE_SAME_SITE=none` com `Secure` e CSRF via `X-Requested-With`. Cutover same-site: [`api-custom-domain.md`](./api-custom-domain.md) (`app.prospectlyonboard.com` + `api.prospectlyonboard.com` → `lax`, cookie host-only). Não defina `Domain=.onrender.com`. Não passe para `lax` enquanto `VITE_API_URL` ainda for o host onrender.
 - **SEC-017:** configure SMTP para e-mails de verificação saírem da fila no-op; mutações críticas exigem `emailVerifiedAt`.
 
 ## Checklist pós-deploy

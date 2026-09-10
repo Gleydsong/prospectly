@@ -10,7 +10,8 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:api-domain": "playwright test --config playwright.probe.config.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
