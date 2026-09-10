@@ -1,7 +1,7 @@
 import { PROSPECTING_CATEGORIES, type ProspectingCategory } from '@prospectly/shared-types';
 
 import {
-  countryDisplayName,
+  formatLocalizedPlaceQuery,
   type ProspectingCountryCode,
 } from '../domain/search-provider';
 
@@ -26,17 +26,31 @@ const GOOGLE_TYPE_TO_CATEGORY: Record<string, ProspectingCategory> = {
   pharmacy: 'pharmacy',
   drugstore: 'pharmacy',
   hospital: 'hospital',
+  pizza_restaurant: 'restaurant',
+  steak_house: 'restaurant',
+  brazilian_restaurant: 'restaurant',
+  fast_food_restaurant: 'restaurant',
+  hamburger_restaurant: 'restaurant',
+  ice_cream_shop: 'cafe',
+  tea_house: 'cafe',
   doctor: 'clinic',
   dentist: 'clinic',
+  dental_clinic: 'clinic',
   medical_clinic: 'clinic',
+  physiotherapist: 'clinic',
+  medical_lab: 'clinic',
   supermarket: 'supermarket',
   grocery_store: 'supermarket',
+  grocery_or_supermarket: 'supermarket',
   butcher_shop: 'butcher',
   clothing_store: 'clothes',
+  shoe_store: 'clothes',
   hair_salon: 'hairdresser',
   hair_care: 'hairdresser',
   beauty_salon: 'hairdresser',
   barber_shop: 'hairdresser',
+  nail_salon: 'hairdresser',
+  spa: 'hairdresser',
   carpenter: 'carpenter',
   electrician: 'electrician',
   accounting: 'accountant',
@@ -80,10 +94,5 @@ export function mapCategoryToGoogleTextQuery(
 ): string {
   const normalized = category.trim().toLocaleLowerCase('pt-BR') as ProspectingCategory;
   const label = LABEL_BY_VALUE[normalized] ?? category.trim();
-  const countryName = countryDisplayName(country);
-  const place = [neighborhood?.trim(), city.trim(), region.trim(), countryName]
-    .filter((part): part is string => Boolean(part))
-    .join(', ');
-  const preposition = country === 'BR' || country === 'PT' ? 'em' : 'in';
-  return `${label} ${preposition} ${place}`;
+  return formatLocalizedPlaceQuery(label, city, region, country, neighborhood);
 }

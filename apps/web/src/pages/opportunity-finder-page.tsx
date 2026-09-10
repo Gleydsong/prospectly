@@ -21,7 +21,7 @@ import {
 import { useGeoCities, useGeoRegions } from '@/features/prospecting/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
-import { CREDIT_COSTS, type OpportunityCandidateView } from '@/types';
+import { CREDIT_COSTS, PROSPECTING_CATEGORIES, type OpportunityCandidateView } from '@/types';
 
 const GENERIC_AUDIENCE = /negócios locais brasileiros/i;
 
@@ -110,7 +110,15 @@ export function OpportunityFinderPage() {
         <CardContent className="space-y-5 p-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_2fr_1fr_1fr]">
             <Input id="opportunity-service" label="O que você vende?" placeholder="Ex.: criação de sites" value={service} maxLength={240} onChange={(event) => setService(event.target.value)} />
-            <Input id="opportunity-niche" label="Qual nicho deseja encontrar?" placeholder="Ex.: roupas no atacado" value={niche} maxLength={120} onChange={(event) => setNiche(event.target.value)} />
+            <Input
+              id="opportunity-niche"
+              list="opportunity-niche-options"
+              label="Qual nicho deseja encontrar?"
+              placeholder="Ex.: clínicas, pizzarias, salões de beleza"
+              value={niche}
+              maxLength={120}
+              onChange={(event) => setNiche(event.target.value)}
+            />
             <Select id="opportunity-state" label="Estado" value={state} onChange={(event) => { setState(event.target.value); setCity(''); }} disabled={regionsQuery.isLoading}>
               <option value="">Selecione</option>
               {(regionsQuery.data ?? []).map((region) => <option key={region.code} value={region.code}>{region.name}</option>)}
@@ -119,6 +127,23 @@ export function OpportunityFinderPage() {
               <option value="">Selecione</option>
               {(citiesQuery.data ?? []).map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
             </Select>
+          </div>
+          <datalist id="opportunity-niche-options">
+            {PROSPECTING_CATEGORIES.map((category) => (
+              <option key={category.value} value={category.label} />
+            ))}
+          </datalist>
+          <div className="flex flex-wrap gap-1.5" aria-label="Nichos com variantes de busca">
+            {PROSPECTING_CATEGORIES.map((category) => (
+              <button
+                key={category.value}
+                type="button"
+                className="rounded-full border border-[color:var(--line)] bg-[color:var(--surface-2)] px-2.5 py-1 text-xs font-medium text-[color:var(--ink-muted)] hover:border-[color:var(--ink)] hover:text-[color:var(--ink)]"
+                onClick={() => setNiche(category.label)}
+              >
+                {category.label}
+              </button>
+            ))}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="flex items-center gap-2 text-xs text-[color:var(--ink-muted)]"><ShieldCheck className="h-4 w-4" />Busca limitada ao Brasil. Cada execução consome {CREDIT_COSTS.opportunityFinder} créditos após as buscas grátis.</p>

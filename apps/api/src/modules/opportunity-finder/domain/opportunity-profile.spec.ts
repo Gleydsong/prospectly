@@ -13,6 +13,7 @@ const NICHE_CASES: Array<[string, ProspectingCategory]> = [
   ['drogarias', 'pharmacy'],
   ['hospitais', 'hospital'],
   ['clínicas odontológicas', 'clinic'],
+  ['clinicas', 'clinic'],
   ['supermercados', 'supermarket'],
   ['panificadoras', 'bakery'],
   ['açougues', 'butcher'],

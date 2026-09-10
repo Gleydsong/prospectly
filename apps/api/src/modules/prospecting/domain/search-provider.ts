@@ -41,6 +41,8 @@ export const COMBINED_SEARCH_PROVIDER = 'COMBINED';
 export interface SearchProviderInput {
   category: string;
   categories?: string[];
+  /** Optional free-text Places queries. When set, Google uses these instead of category labels. */
+  textQueries?: string[];
   city: string;
   /** Optional neighborhood/district used to narrow the search inside the city. */
   neighborhood?: string;
@@ -49,6 +51,21 @@ export interface SearchProviderInput {
   onlyWithoutWebsite: boolean;
   /** Upper bound of results the caller wants; providers may return fewer. */
   limit?: number;
+}
+
+export function formatLocalizedPlaceQuery(
+  phrase: string,
+  city: string,
+  region: string,
+  country: ProspectingCountryCode,
+  neighborhood?: string,
+): string {
+  const countryName = countryDisplayName(country);
+  const place = [neighborhood?.trim(), city.trim(), region.trim(), countryName]
+    .filter((part): part is string => Boolean(part))
+    .join(', ');
+  const preposition = country === 'BR' || country === 'PT' ? 'em' : 'in';
+  return `${phrase.trim()} ${preposition} ${place}`;
 }
 
 export interface SearchProvider {
