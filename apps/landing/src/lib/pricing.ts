@@ -37,3 +37,10 @@ export function appLoginUrl(offer?: CreditOffer): string {
 export function enterExplainerUrl(locale: Locale): string {
   return locale === 'en' ? '/en/enter' : '/entrar';
 }
+
+export const APP_ONBOARDING_URL = 'https://app.prospectlyonboard.com';
+
+export function appOnboardingUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? APP_ONBOARDING_URL;
+}
+

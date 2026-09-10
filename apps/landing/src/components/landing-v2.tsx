@@ -17,7 +17,7 @@ import {
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
 import { getHomeFaqItems } from '@/lib/faq-content';
-import { appLoginUrl, enterExplainerUrl } from '@/lib/pricing';
+import { appOnboardingUrl, enterExplainerUrl } from '@/lib/pricing';
 import { TEAM_EMAIL, type Locale } from '@/lib/i18n';
 import { CookieBanner } from '@/components/cookie-banner';
 import { BrandIntro } from '@/components/brand-intro';
@@ -54,8 +54,7 @@ function V2Brand() {
 
 export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'home' | 'how' | 'section' }) {
   const [open, setOpen] = useState(false);
-  const loginUrl = appLoginUrl();
-  const enterUrl = enterExplainerUrl(locale);
+  const onboardingUrl = appOnboardingUrl();
   const howUrl = '/como-funciona';
   const benefitsUrl = '/beneficios';
   const audienceUrl = '/para-quem-e';
@@ -79,15 +78,14 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
           <Link href={howUrl} aria-current={page === 'how' ? 'page' : undefined}>Como funciona</Link><a href={benefitsUrl}>Benefícios</a><a href={audienceUrl}>Para quem é</a><a href={faqUrl}>Dúvidas frequentes</a>
         </nav>
         <div className="landing-v2-header-actions">
-          <a href={loginUrl} className="landing-v2-login">Entrar</a>
-          <Link href={enterUrl} className="landing-v2-dark-button landing-v2-header-cta">Começar agora <ArrowRight weight="bold" aria-hidden /></Link>
+          <a href={onboardingUrl} className="landing-v2-dark-button landing-v2-header-cta">Começar agora <ArrowRight weight="bold" aria-hidden /></a>
           <button type="button" className="landing-v2-menu-button" aria-expanded={open} aria-controls="landing-v2-mobile-nav" aria-label={open ? 'Fechar menu' : 'Abrir menu'} onClick={() => setOpen((value) => !value)}>
             {open ? <X weight="bold" aria-hidden /> : <List weight="bold" aria-hidden />}
           </button>
         </div>
       </div>
       {open ? <nav id="landing-v2-mobile-nav" className="landing-v2-mobile-nav" aria-label="Navegação móvel">
-        <Link href={howUrl} onClick={close}>Como funciona</Link><a href={benefitsUrl} onClick={close}>Benefícios</a><a href={audienceUrl} onClick={close}>Para quem é</a><a href={faqUrl} onClick={close}>Dúvidas frequentes</a><a href={loginUrl} onClick={close}>Entrar</a>
+        <Link href={howUrl} onClick={close}>Como funciona</Link><a href={benefitsUrl} onClick={close}>Benefícios</a><a href={audienceUrl} onClick={close}>Para quem é</a><a href={faqUrl} onClick={close}>Dúvidas frequentes</a>
       </nav> : null}
     </header>
   );
