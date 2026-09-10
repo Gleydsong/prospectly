@@ -27,7 +27,7 @@ describe('CreditPurchaseService', () => {
       amountCentavos: 1499,
       currency: 'BRL',
       status: CreditPurchaseStatus.PENDING,
-      provider: PaymentProvider.ABACATE,
+      provider: PaymentProvider.ASAAS,
       paymentMethod: 'PIX',
     };
     const tx = {
@@ -80,7 +80,7 @@ describe('CreditPurchaseService', () => {
         html: expect.stringContaining('2.000'),
       }),
     );
-    expect(PaymentProvider.ABACATE).toBeDefined();
+    expect(PaymentProvider.ASAAS).toBeDefined();
   });
 
   it('does not complete a purchase already marked failed after abandonment', async () => {

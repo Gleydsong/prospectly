@@ -5,12 +5,11 @@ export type PlanAccessOrg = {
   planStatus: PlanStatus;
   currentPeriodEnd: Date | null;
   /** Open-ended card subscriptions stay active until cancelled; not bound to PIX period end. */
-  abacateSubscriptionId?: string | null;
   asaasSubscriptionId?: string | null;
 };
 
 function hasRecurringCardSubscription(org: PlanAccessOrg): boolean {
-  return Boolean(org.abacateSubscriptionId || org.asaasSubscriptionId);
+  return Boolean(org.asaasSubscriptionId);
 }
 
 /** ACTIVE paid access. LIFETIME never expires. Monthly PIX expires at currentPeriodEnd. */

@@ -7,7 +7,7 @@ const baseConfig = {
 };
 
 describe('Billing environment configuration', () => {
-  it.each(['ABACATE', 'ASAAS', 'DISABLED'])('accepts PIX_PROVIDER=%s', (pixProvider) => {
+  it.each(['ASAAS', 'DISABLED'])('accepts PIX_PROVIDER=%s', (pixProvider) => {
     expect(() =>
       validateEnv({
         ...baseConfig,
@@ -25,7 +25,10 @@ describe('Billing environment configuration', () => {
 
   it('rejects unknown PIX providers', () => {
     expect(() => validateEnv({ ...baseConfig, PIX_PROVIDER: 'AUTO' })).toThrow(
-      'PIX_PROVIDER must be ABACATE, ASAAS or DISABLED',
+      'PIX_PROVIDER must be ASAAS or DISABLED',
+    );
+    expect(() => validateEnv({ ...baseConfig, PIX_PROVIDER: 'ABACATE' })).toThrow(
+      'PIX_PROVIDER must be ASAAS or DISABLED',
     );
   });
 

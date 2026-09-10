@@ -17,7 +17,7 @@ Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN` (gerado no Asaas, 32–255 
 | --- | --- |
 | Código (`configuration.ts`) | `asaas.enabled` só se `ASAAS_ENABLED === 'true'`. Unset = false. |
 | `.env.example` / `render.yaml` | Cutover PIX autorizado: `ASAAS_ENABLED=true`, `PIX_PROVIDER=ASAAS`, **base Sandbox**. |
-| Produção financeira Asaas | Exige autorização explícita + smoke. Rollback: `PIX_PROVIDER=ABACATE`. |
+| Produção financeira Asaas | Exige autorização explícita + smoke. Rollback: `PIX_PROVIDER=DISABLED`. |
 
 ## Cenários obrigatórios (#81)
 

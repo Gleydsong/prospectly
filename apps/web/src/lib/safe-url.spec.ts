@@ -108,25 +108,17 @@ describe('sanitizePixQrSrc', () => {
 });
 
 describe('assignCheckoutRedirect', () => {
-  it('accepts AbacatePay https hosts', () => {
-    const assign = vi.fn();
-    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
-    assignCheckoutRedirect('https://app.abacatepay.com/pay/bill_1', 'ABACATE');
-    expect(assign).toHaveBeenCalledWith('https://app.abacatepay.com/pay/bill_1');
-    vi.unstubAllGlobals();
-  });
-
-  it('rejects a malicious host for card redirect', () => {
-    expect(() => assignCheckoutRedirect('https://evil.example/pay', 'ABACATE')).toThrow(
-      'Invalid AbacatePay redirect URL',
-    );
-  });
-
   it('accepts Asaas hosted checkout urls', () => {
     const assign = vi.fn();
     vi.stubGlobal('location', { assign, href: 'http://localhost/' });
     assignCheckoutRedirect('https://sandbox.asaas.com/i/pay_1', 'ASAAS');
     expect(assign).toHaveBeenCalledWith('https://sandbox.asaas.com/i/pay_1');
     vi.unstubAllGlobals();
+  });
+
+  it('rejects a malicious host for checkout redirect', () => {
+    expect(() => assignCheckoutRedirect('https://evil.example/pay', 'ASAAS')).toThrow(
+      'Invalid Asaas redirect URL',
+    );
   });
 });

@@ -20,12 +20,9 @@ export class BillingActivationService {
     currency: BillingCurrency;
     provider: PaymentProvider;
     stripeCustomerId?: string | null;
-    abacateCustomerId?: string | null;
-    abacatePaymentId?: string | null;
     tx?: Prisma.TransactionClient;
   }): Promise<{
     previousStripeSubscriptionId: string | null;
-    previousAbacateSubscriptionId: string | null;
   }> {
     const db = this.db(input.tx);
     const org = await db.organization.findUnique({
@@ -35,12 +32,10 @@ export class BillingActivationService {
       this.logger.warn(`activateLifetime: org ${input.organizationId} not found`);
       return {
         previousStripeSubscriptionId: null,
-        previousAbacateSubscriptionId: null,
       };
     }
 
     const previousStripeSubscriptionId = org.stripeSubscriptionId;
-    const previousAbacateSubscriptionId = org.abacateSubscriptionId;
 
     await db.organization.update({
       where: { id: input.organizationId },
@@ -51,14 +46,11 @@ export class BillingActivationService {
         paymentProvider: input.provider,
         currentPeriodEnd: null,
         stripeSubscriptionId: null,
-        abacateSubscriptionId: null,
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
-        ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacatePaymentId ? { abacatePaymentId: input.abacatePaymentId } : {}),
       },
     });
 
-    return { previousStripeSubscriptionId, previousAbacateSubscriptionId };
+    return { previousStripeSubscriptionId };
   }
 
   /**
@@ -69,7 +61,6 @@ export class BillingActivationService {
   async revokeLifetime(input: {
     organizationId: string;
     provider: PaymentProvider;
-    abacatePaymentId?: string | null;
     stripeCustomerId?: string | null;
     tx?: Prisma.TransactionClient;
   }): Promise<void> {
@@ -82,16 +73,6 @@ export class BillingActivationService {
       return;
     }
     if (org.plan !== OrgPlan.LIFETIME || org.paymentProvider !== input.provider) {
-      return;
-    }
-    if (
-      input.abacatePaymentId &&
-      org.abacatePaymentId &&
-      org.abacatePaymentId !== input.abacatePaymentId
-    ) {
-      this.logger.warn(
-        `revokeLifetime: payment ${input.abacatePaymentId} does not match org ${org.id}`,
-      );
       return;
     }
     if (
@@ -110,7 +91,6 @@ export class BillingActivationService {
       data: {
         plan: OrgPlan.FREE,
         planStatus: PlanStatus.CANCELED,
-        ...(input.provider === PaymentProvider.ABACATE ? { abacatePaymentId: null } : {}),
       },
     });
   }
@@ -121,8 +101,6 @@ export class BillingActivationService {
     provider: PaymentProvider;
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
-    abacateCustomerId?: string | null;
-    abacateSubscriptionId?: string | null;
     asaasSubscriptionId?: string | null;
     asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
@@ -198,10 +176,6 @@ export class BillingActivationService {
         paymentProvider: input.provider,
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
-        ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId !== undefined
-          ? { abacateSubscriptionId: input.abacateSubscriptionId }
-          : {}),
         ...(input.asaasSubscriptionId !== undefined
           ? { asaasSubscriptionId: input.asaasSubscriptionId }
           : {}),
@@ -217,8 +191,6 @@ export class BillingActivationService {
     provider?: PaymentProvider;
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
-    abacateCustomerId?: string | null;
-    abacateSubscriptionId?: string | null;
     asaasSubscriptionId?: string | null;
     asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
@@ -258,10 +230,6 @@ export class BillingActivationService {
         planStatus: input.status,
         ...(input.stripeCustomerId ? { stripeCustomerId: input.stripeCustomerId } : {}),
         ...(input.stripeSubscriptionId ? { stripeSubscriptionId: input.stripeSubscriptionId } : {}),
-        ...(input.abacateCustomerId ? { abacateCustomerId: input.abacateCustomerId } : {}),
-        ...(input.abacateSubscriptionId !== undefined
-          ? { abacateSubscriptionId: input.abacateSubscriptionId }
-          : {}),
         ...(input.asaasSubscriptionId !== undefined
           ? { asaasSubscriptionId: input.asaasSubscriptionId }
           : {}),

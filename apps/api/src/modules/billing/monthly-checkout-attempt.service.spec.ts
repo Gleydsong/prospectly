@@ -147,7 +147,7 @@ describe('MonthlyCheckoutAttemptService', () => {
       externalId: 'external_1',
       externalCheckoutId: 'bill_1',
       externalCustomerId: 'cust_1',
-      checkoutUrl: 'https://app.abacatepay.com/pay/bill_1',
+      checkoutUrl: 'https://sandbox.asaas.com/c/bill_1',
       attempts: 1,
       lastError: null,
       createdAt: new Date(),
@@ -159,7 +159,7 @@ describe('MonthlyCheckoutAttemptService', () => {
       checkout: {
         mode: 'redirect',
         provider: 'ASAAS',
-        url: 'https://app.abacatepay.com/pay/bill_1',
+        url: 'https://sandbox.asaas.com/c/bill_1',
         externalCheckoutId: 'bill_1',
         externalCustomerId: 'cust_1',
       },

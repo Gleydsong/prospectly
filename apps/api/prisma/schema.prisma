@@ -314,9 +314,6 @@ model Organization {
   paymentProvider       PaymentProvider?
   stripeCustomerId      String?          @unique
   stripeSubscriptionId  String?          @unique
-  abacateCustomerId     String?          @unique
-  abacateSubscriptionId String?          @unique
-  abacatePaymentId      String?          @unique
   asaasSubscriptionId  String?          @unique
   asaasPaymentId       String?          @unique
   plan                  OrgPlan          @default(FREE)
@@ -363,7 +360,6 @@ model Organization {
 
   @@index([planStatus])
   @@index([stripeCustomerId])
-  @@index([abacateCustomerId])
   @@index([asaasSubscriptionId])
   @@index([asaasPaymentId])
   @@index([paymentProvider])
@@ -1363,11 +1359,11 @@ model BillingProfile {
   @@index([asaasCustomerId])
 }
 
-/// Durable idempotency state for recurring AbacatePay checkout creation.
+/// Durable idempotency state for recurring Asaas checkout creation.
 model MonthlyCheckoutAttempt {
   id                 String                       @id @default(uuid())
   organizationId     String
-  provider           PaymentProvider              @default(ABACATE)
+  provider           PaymentProvider              @default(ASAAS)
   paymentMethod      BillingPaymentMethod
   product            String                       @default("MONTHLY_ACCESS")
   amountCentavos     Int                          @default(4999)

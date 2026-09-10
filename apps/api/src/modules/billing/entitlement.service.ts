@@ -54,7 +54,6 @@ export class EntitlementService {
         plan: true,
         planStatus: true,
         currentPeriodEnd: true,
-        abacateSubscriptionId: true,
         asaasSubscriptionId: true,
       },
     });
@@ -81,7 +80,6 @@ export class EntitlementService {
         plan: true,
         planStatus: true,
         currentPeriodEnd: true,
-        abacateSubscriptionId: true,
         asaasSubscriptionId: true,
       },
     });

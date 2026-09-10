@@ -149,12 +149,12 @@ describe('getApiErrorMessage', () => {
     const error = new AxiosError('fail');
     error.response = {
       status: 503,
-      data: { message: 'AbacatePay is not configured' },
+      data: { message: 'Asaas is not configured' },
       statusText: 'Service Unavailable',
       headers: {},
       config: {} as never,
     };
-    expect(getApiErrorMessage(error)).toBe('AbacatePay is not configured');
+    expect(getApiErrorMessage(error)).toBe('Asaas is not configured');
   });
 
   it('maps request timeouts instead of a generic unexpected error', () => {
