@@ -11,6 +11,21 @@ API HTTP e worker BullMQ são processos distintos. PostgreSQL é a fonte da verd
 
 `main.ts` força `ROLE=api`. `worker.ts` força `ROLE=worker`. `validateEnv` é role-aware: worker exige `DATABASE_URL`, `REDIS_URL` e `DATABASE_APP_URL` em produção; não exige JWT/billing.
 
+## Pool Prisma (P2028)
+
+API HTTP e worker **não** partilham um pool ilimitado. `PrismaService` injeta `connection_limit` / `pool_timeout` na URL se ainda não estiverem lá:
+
+| Processo | `ROLE` | `connection_limit` | `pool_timeout` |
+|----------|--------|--------------------|----------------|
+| API HTTP | `api` | 5 | 10s |
+| Worker BullMQ | `worker` | 3 | 10s |
+
+O processor de outbox corre com concorrência **2** (`OUTBOX_WORKER_CONCURRENCY`), abaixo do teto do worker, para um burst de `OutboxEvent` não esgotar o Postgres da API.
+
+Relatórios (só na API) usa `SET LOCAL statement_timeout = 8s` na transação de leitura. Timeout / `P2028` / `P2024` → HTTP **503** `REPORTS_QUERY_TIMEOUT` («Relatórios indisponível. Tente de novo.»), sem retry interno. Login e ficha não passam por essa transação.
+
+Wizard humano depois do merge: confirmar `max_connections` do `prospectly-db` no Render. Não inventar credenciais nem subir o teto no Git.
+
 Filas: prospecting, imports, scoring, website-analysis, opportunity-finder, privacy-retention, outbox.
 
 Composição:

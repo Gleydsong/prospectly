@@ -60,6 +60,7 @@ import {
 } from '@/features/saved-views/lead-filter';
 import type { ReportBucket, ReportPeriod } from '@/features/reports/api';
 import { useFunnelConversionLeads } from '@/features/reports/hooks';
+import { isReportsUnavailableError } from '@/features/reports/unavailable';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, LeadStatus, Role, type LeadListItem } from '@/types';
 
@@ -568,7 +569,9 @@ export function LeadsPage() {
           role="status"
         >
           {idsQuery.isError
-            ? t('reports.loadError')
+            ? isReportsUnavailableError(idsQuery.error)
+              ? t('reports.unavailable')
+              : t('reports.loadError')
             : idsQuery.isSuccess
               ? t('leads.reportBucketBanner', { count: idsQuery.data?.total ?? 0 })
               : t('leads.reportBucketLoading')}{' '}

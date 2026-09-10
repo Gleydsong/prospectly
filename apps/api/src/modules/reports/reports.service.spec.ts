@@ -1,6 +1,7 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
+import { REPORTS_POOL_MAX_WAIT_MS, REPORTS_STATEMENT_TIMEOUT_MS } from './reports-overload';
 import { ReportsService } from './reports.service';
 
 const NOW = new Date('2026-02-28T12:00:00.000Z');
@@ -17,11 +18,18 @@ const makePrisma = () => {
     pipelineStage: { findMany: jest.fn() },
     outboxEvent: { findMany: jest.fn() },
     lead: { findMany: jest.fn() },
+    $executeRaw: jest.fn().mockResolvedValue(undefined),
+    $transaction: jest.fn(),
   };
+  prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+    fn(prisma),
+  );
   return prisma as unknown as PrismaService & {
     pipelineStage: { findMany: jest.Mock };
     outboxEvent: { findMany: jest.Mock };
     lead: { findMany: jest.Mock };
+    $executeRaw: jest.Mock;
+    $transaction: jest.Mock;
   };
 };
 
@@ -332,5 +340,24 @@ describe('ReportsService', () => {
     await expect(
       service.funnelConversionLeads('org-1', { period: '30d', bucket: 'losses' }),
     ).resolves.toEqual(expect.objectContaining({ ids: [], total: 0 }));
+  });
+
+  it('maps a P2028 pool timeout to a recoverable 503 without retrying the query', async () => {
+    const prisma = makePrisma();
+    prisma.$transaction.mockRejectedValue({ code: 'P2028' });
+    const service = new ReportsService(prisma);
+
+    await expect(service.funnelConversion('org-1', { period: '30d' })).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      {
+        maxWait: REPORTS_POOL_MAX_WAIT_MS,
+        timeout: REPORTS_STATEMENT_TIMEOUT_MS + 1_000,
+      },
+    );
+    expect(prisma.outboxEvent.findMany).not.toHaveBeenCalled();
   });
 });

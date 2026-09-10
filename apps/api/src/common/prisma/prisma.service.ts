@@ -3,6 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
 import { MetricsService } from '../../modules/ops/metrics.service';
+import {
+  prismaConnectionLimit,
+  prismaProcessRole,
+  PRISMA_POOL_TIMEOUT_SECONDS,
+  withPrismaPoolParams,
+} from './prisma-pool';
 import { instrumentPrismaTransaction } from './prisma-transaction-metrics';
 import { extendPrismaClient } from './tenant-prisma';
 
@@ -12,7 +18,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const appUrl = config.get<string>('databaseAppUrl')?.trim();
     const ownerUrl = config.get<string>('databaseUrl')?.trim();
     const url = (appUrl && appUrl.length > 0 ? appUrl : undefined) ?? ownerUrl ?? process.env.DATABASE_URL;
-    super(url ? { datasources: { db: { url } } } : undefined);
+    const pooled = url
+      ? withPrismaPoolParams(url, {
+          connectionLimit: prismaConnectionLimit(prismaProcessRole()),
+          poolTimeoutSeconds: PRISMA_POOL_TIMEOUT_SECONDS,
+        })
+      : undefined;
+    super(pooled ? { datasources: { db: { url: pooled } } } : undefined);
     const extended = extendPrismaClient(this);
     instrumentPrismaTransaction(extended, () => metrics?.recordDbTransactionFailure());
     Object.defineProperty(extended, 'onModuleInit', {

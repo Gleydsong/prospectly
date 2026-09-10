@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spec #174 — P2028 pool Prisma</title>
+  <style>
+    :root {
+      --ink: #18181b; --muted: #52525b; --bg: #f4f4f5; --card: #fff; --border: #e4e4e7;
+      --accent: #2563eb; --ok: #059669; --warn: #d97706; --danger: #dc2626; --slot: #e4e4e7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink); background: var(--bg); line-height: 1.55;
+    }
+    header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: #fff; padding: 2.5rem 1.25rem 2rem; }
+    header .wrap, main, footer { max-width: 920px; margin: 0 auto; }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.7rem; letter-spacing: -0.02em; }
+    header p { margin: 0; opacity: 0.9; }
+    .badge {
+      display: inline-block; margin: 1rem 0.4rem 0 0; padding: 0.25rem 0.65rem; border-radius: 999px;
+      background: rgba(255,255,255,0.15); font-size: 0.8rem; font-weight: 600;
+    }
+    main { padding: 1.5rem 1.25rem 3rem; }
+    section {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem 1.35rem; margin-bottom: 1rem;
+    }
+    h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+    h3 { margin: 1rem 0 0.45rem; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .muted { color: var(--muted); }
+    ul { padding-left: 1.2rem; margin: 0.4rem 0; }
+    li { margin: 0.3rem 0; }
+    code, .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 0.5rem 0.45rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+    .tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; }
+    .tag-ok { background: #d1fae5; color: var(--ok); }
+    .tag-warn { background: #fef3c7; color: var(--warn); }
+    .tag-api { background: #dbeafe; color: #1d4ed8; }
+    .tag-web { background: #ede9fe; color: #6d28d9; }
+    .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 1rem; }
+    button {
+      border: 0; border-radius: 8px; padding: 0.55rem 0.9rem; font-weight: 650; cursor: pointer; font-size: 0.9rem;
+    }
+    button.primary { background: #1d4ed8; color: #fff; }
+    button.ghost { background: #e4e4e7; color: var(--ink); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .mode {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 0.75rem;
+    }
+    .mode button { border-radius: 0; background: transparent; }
+    .mode button[aria-pressed="true"] { background: #1e3a8a; color: #fff; }
+    .pools { display: grid; gap: 0.85rem; }
+    @media (min-width: 700px) { .pools { grid-template-columns: 1.2fr 0.8fr; } }
+    .pool { border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem; background: #fafafa; }
+    .pool h4 { margin: 0 0 0.45rem; font-size: 0.95rem; }
+    .slots { display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 2rem; }
+    .slot {
+      width: 1.55rem; height: 1.55rem; border-radius: 4px; background: var(--slot); border: 1px solid #d4d4d8;
+    }
+    .slot.http { background: #93c5fd; border-color: #3b82f6; }
+    .slot.report { background: #c4b5fd; border-color: #7c3aed; }
+    .slot.outbox { background: #fdba74; border-color: #ea580c; }
+    .slot.blocked { background: #fecaca; border-color: var(--danger); }
+    .apps { display: grid; gap: 0.5rem; }
+    .app {
+      border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.8rem; background: #fff;
+    }
+    .app strong { display: block; }
+    .app.ok { border-color: #6ee7b7; background: #ecfdf5; }
+    .app.fail { border-color: #fca5a5; background: #fef2f2; }
+    .app.warn { border-color: #fcd34d; background: #fffbeb; }
+    .legend { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.82rem; color: var(--muted); margin-top: 0.6rem; }
+    .legend i { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; margin-right: 0.25rem; vertical-align: -1px; }
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 0.8rem 0.9rem;
+      min-height: 4.5rem; white-space: pre-wrap;
+    }
+    footer { padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.85rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Spec #174 — Isolar pool Prisma (P2028)</h1>
+      <p>Relatórios e outbox deixam de esgotar o pool da API HTTP. Pico → Relatórios 503, login e ficha continuam.</p>
+      <span class="badge">Issue #174</span>
+      <span class="badge">Branch feat/p2028-prisma-pool</span>
+      <span class="badge">Sem réplica / sem cubo</span>
+    </div>
+  </header>
+  <main>
+    <section>
+      <h2>O que foi feito</h2>
+      <p class="muted">Problema: Relatórios (R4) e o worker de OutboxEvent partilhavam um pool Prisma sem teto. Sob carga o Postgres recusava conexões (<code>P2028</code>) e derrubava login/ficha junto com a agregação.</p>
+      <ul>
+        <li>API HTTP: <code>connection_limit=5</code>, <code>pool_timeout=10s</code> (não sobrescreve params já na URL).</li>
+        <li>Worker: <code>connection_limit=3</code> — menor que a API, para outbox não matar HTTP.</li>
+        <li>Outbox processor: concorrência <strong>2</strong> (&lt; pool 3), invariante testada.</li>
+        <li>Relatórios: <code>SET LOCAL statement_timeout = 8s</code> + <code>maxWait</code> 5s. <code>P2028</code>/<code>P2024</code>/timeout → <strong>503</strong> <code>REPORTS_QUERY_TIMEOUT</code>, copy «Relatórios indisponível. Tente de novo.» Sem retry interno.</li>
+        <li><code>P2028</code> continua métrica de transação <strong>inesperada</strong> (o 503 é lançado <em>fora</em> da <code>$transaction</code>).</li>
+        <li>UI Relatórios: copy recuperável + botão «Tentar novamente» (ação do utilizador, não loop).</li>
+      </ul>
+      <p class="muted">Wizard depois do merge: confirmar <code>max_connections</code> do Postgres no Render. Não inventar credenciais.</p>
+    </section>
+
+    <section>
+      <h2>Demonstração rápida — pico no pool</h2>
+      <p class="muted">Simulação no browser (não chama a API). Compare o pool <strong>antes</strong> (ilimitado/partilhado) com o recorte desta spec.</p>
+      <div class="mode" role="group" aria-label="Modo da simulação">
+        <button type="button" id="mode-before" aria-pressed="true">Antes — pool partilhado</button>
+        <button type="button" id="mode-after" aria-pressed="false">Depois — spec #174</button>
+      </div>
+      <div class="controls">
+        <button type="button" class="primary" id="sim-burst">Simular pico (Relatórios + outbox)</button>
+        <button type="button" class="ghost" id="sim-login">Pedir login / ficha</button>
+        <button type="button" class="ghost" id="sim-reset">Limpar</button>
+      </div>
+      <div class="pools">
+        <div>
+          <div class="pool" id="pool-api">
+            <h4>Pool da API HTTP <span id="api-cap"></span></h4>
+            <div class="slots" id="api-slots"></div>
+          </div>
+          <div class="pool" id="pool-worker" style="margin-top:0.75rem">
+            <h4>Pool do worker <span id="worker-cap"></span></h4>
+            <div class="slots" id="worker-slots"></div>
+          </div>
+          <div class="legend">
+            <span><i style="background:#93c5fd"></i> login/ficha</span>
+            <span><i style="background:#c4b5fd"></i> Relatórios</span>
+            <span><i style="background:#fdba74"></i> outbox</span>
+            <span><i style="background:#fecaca"></i> recusado (P2028)</span>
+          </div>
+        </div>
+        <div class="apps">
+          <div class="app" id="app-login"><strong>Login / ficha</strong><span id="login-status">à espera</span></div>
+          <div class="app" id="app-reports"><strong>Relatórios</strong><span id="reports-status">à espera</span></div>
+          <div class="app" id="app-outbox"><strong>Outbox worker</strong><span id="outbox-status">à espera</span></div>
+        </div>
+      </div>
+      <h3>Log</h3>
+      <div class="log" id="sim-log" aria-live="polite">Clique «Simular pico».</div>
+    </section>
+
+    <section>
+      <h2>Arquivos</h2>
+      <h3>API <span class="tag tag-api">apps/api</span></h3>
+      <table>
+        <thead><tr><th>Arquivo</th><th>Mudança</th></tr></thead>
+        <tbody>
+          <tr><td><span class="path">src/common/prisma/prisma-pool.ts</span></td><td><span class="tag tag-ok">NOVO</span> Teto API 5 / worker 3, <code>pool_timeout</code> 10s, sem sobrescrever URL.</td></tr>
+          <tr><td><span class="path">src/common/prisma/prisma.service.ts</span></td><td>Aplica o teto conforme <code>ROLE</code>.</td></tr>
+          <tr><td><span class="path">src/modules/reports/reports-overload.ts</span></td><td>Mapeia P2028/P2024/timeout → 503 recuperável.</td></tr>
+          <tr><td><span class="path">src/modules/reports/reports.service.ts</span></td><td><code>statement_timeout</code> local; catch fora da tx.</td></tr>
+          <tr><td><span class="path">src/modules/outbox/outbox.constants.ts</span></td><td><code>OUTBOX_WORKER_CONCURRENCY = 2</code>.</td></tr>
+          <tr><td><span class="path">.env.example</span> + <span class="path">docs/deploy/workers.md</span></td><td>Teto documentado; wizard Render explícito.</td></tr>
+        </tbody>
+      </table>
+      <h3>Web <span class="tag tag-web">apps/web</span></h3>
+      <table>
+        <thead><tr><th>Arquivo</th><th>Mudança</th></tr></thead>
+        <tbody>
+          <tr><td><span class="path">features/reports/hooks.ts</span></td><td><code>retry: false</code> — sem loop no React Query.</td></tr>
+          <tr><td><span class="path">pages/reports-page.tsx</span></td><td>503 <code>REPORTS_QUERY_TIMEOUT</code> → «Tente de novo» + refetch manual.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Fora desta entrega</h2>
+      <ul>
+        <li>Read replica, PgBouncer, cubo OLAP.</li>
+        <li>Mudar janela 7/30/90d ou <code>retainUntil</code>.</li>
+        <li>Specs irmãs #175–#182.</li>
+        <li>Ajuste de env no Render (wizard humano após o merge).</li>
+      </ul>
+      <p><a href="./index.html">← todas as specs</a> · <a href="https://github.com/Gleydsong/prospectly/issues/174">issue #174</a></p>
+    </section>
+  </main>
+  <footer>Demo estática da spec #174 · não usa Postgres real.</footer>
+  <script>
+    const state = { mode: 'before', api: [], worker: [], log: [] };
+
+    function cap() {
+      if (state.mode === 'before') return { api: 8, worker: 0, outboxJobs: 6, shared: true };
+      return { api: 5, worker: 3, outboxJobs: 2, shared: false };
+    }
+
+    function setApp(id, cls, text) {
+      const el = document.getElementById(id);
+      el.className = 'app ' + cls;
+      el.querySelector('span').textContent = text;
+    }
+
+    function renderSlots(el, used, total) {
+      el.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const s = document.createElement('div');
+        s.className = 'slot' + (used[i] ? ' ' + used[i] : '');
+        el.appendChild(s);
+      }
+    }
+
+    function paint() {
+      const c = cap();
+      document.getElementById('api-cap').textContent = c.shared
+        ? '(único, sem teto real — demo 8 slots)'
+        : '(connection_limit=5)';
+      document.getElementById('worker-cap').textContent = c.shared
+        ? '(inexistente — jobs no mesmo pool)'
+        : '(connection_limit=3, jobs≤2)';
+      document.getElementById('pool-worker').style.opacity = c.shared ? '0.45' : '1';
+      renderSlots(document.getElementById('api-slots'), state.api, c.api);
+      renderSlots(document.getElementById('worker-slots'), state.worker, c.shared ? 0 : c.worker);
+      document.getElementById('sim-log').textContent = state.log.join('\n') || 'Clique «Simular pico».';
+      document.getElementById('mode-before').setAttribute('aria-pressed', String(state.mode === 'before'));
+      document.getElementById('mode-after').setAttribute('aria-pressed', String(state.mode === 'after'));
+    }
+
+    function resetApps() {
+      setApp('app-login', '', 'à espera');
+      setApp('app-reports', '', 'à espera');
+      setApp('app-outbox', '', 'à espera');
+    }
+
+    function reset() {
+      state.api = [];
+      state.worker = [];
+      state.log = [];
+      resetApps();
+      paint();
+    }
+
+    function take(pool, kind, n) {
+      const c = cap();
+      const max = pool === 'api' ? c.api : c.worker;
+      const arr = pool === 'api' ? state.api : state.worker;
+      let got = 0;
+      for (let i = 0; i < n; i++) {
+        if (arr.length >= max) break;
+        arr.push(kind);
+        got++;
+      }
+      return got;
+    }
+
+    document.getElementById('mode-before').onclick = () => { state.mode = 'before'; reset(); };
+    document.getElementById('mode-after').onclick = () => { state.mode = 'after'; reset(); };
+    document.getElementById('sim-reset').onclick = reset;
+
+    document.getElementById('sim-burst').onclick = () => {
+      reset();
+      const c = cap();
+      if (c.shared) {
+        const reports = take('api', 'report', 5);
+        const outbox = take('api', 'outbox', c.outboxJobs);
+        const refused = (5 - reports) + (c.outboxJobs - outbox);
+        for (let i = 0; i < Math.min(2, c.api - state.api.length); i++) state.api.push('blocked');
+        setApp('app-reports', 'fail', 'P2028 — 500 genérico, pool cheio');
+        setApp('app-outbox', 'fail', outbox + ' jobs abertos; retries a competir pelo mesmo pool');
+        setApp('app-login', 'fail', 'login/ficha sem slot — org parada');
+        state.log = [
+          'ANTES: Relatórios + outbox no mesmo pool da API.',
+          'Relatórios segurou ' + reports + ' conexões; outbox ' + outbox + '.',
+          'Postgres recusou extras (P2028).',
+          'Login e ficha falham com o relatório.',
+        ];
+      } else {
+        take('api', 'report', 1);
+        const jobs = take('worker', 'outbox', c.outboxJobs);
+        setApp('app-reports', 'warn', '503 REPORTS_QUERY_TIMEOUT — Relatórios indisponível. Tente de novo.');
+        setApp('app-outbox', 'ok', jobs + ' jobs em paralelo (teto 2 < pool 3)');
+        setApp('app-login', 'ok', 'slots HTTP livres — login e ficha respondem');
+        state.log = [
+          'DEPOIS (#174): API pool=5 · worker pool=3 · outbox concurrency=2.',
+          'Relatórios estourou statement_timeout/P2028 → 503 recuperável, sem retry em loop.',
+          'Outbox não abre N transações = N eventos.',
+          'P2028 continua métrica inesperada; o 503 nasce fora da $transaction.',
+        ];
+      }
+      paint();
+    };
+
+    document.getElementById('sim-login').onclick = () => {
+      const c = cap();
+      if (c.shared) {
+        if (state.api.length >= c.api) {
+          state.api[state.api.length - 1] = 'blocked';
+          setApp('app-login', 'fail', 'P2028 — sem conexão');
+          state.log.push('Login recusado: pool único esgotado.');
+        } else {
+          take('api', 'http', 1);
+          setApp('app-login', 'ok', 'ok (ainda havia slot)');
+          state.log.push('Login obteve 1 conexão no pool partilhado.');
+        }
+      } else {
+        take('api', 'http', 1);
+        setApp('app-login', 'ok', 'ok — pool HTTP isolado do worker');
+        state.log.push('Login usou o pool da API (5). Worker não empresta estas conexões.');
+      }
+      paint();
+    };
+
+    reset();
+  </script>
+</body>
+</html>

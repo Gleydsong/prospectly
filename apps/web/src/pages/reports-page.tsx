@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import { reportLeadsPath, type ReportPeriod } from '@/features/reports/api';
 import { useFunnelConversion } from '@/features/reports/hooks';
+import { isReportsUnavailableError } from '@/features/reports/unavailable';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, Role } from '@/types';
 
@@ -88,7 +90,16 @@ export function ReportsPage() {
       {query.isLoading ? (
         <TableSkeleton rows={4} />
       ) : query.isError ? (
-        <Alert tone="error">{t('reports.loadError')}</Alert>
+        <Alert
+          tone="error"
+          action={
+            <Button type="button" variant="ghost" size="sm" onClick={() => void query.refetch()}>
+              {t('common.retry')}
+            </Button>
+          }
+        >
+          {isReportsUnavailableError(query.error) ? t('reports.unavailable') : t('reports.loadError')}
+        </Alert>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-4">

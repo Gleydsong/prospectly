@@ -5,10 +5,10 @@ import type { Job } from 'bullmq';
 import { runWithTenant } from '../../common/prisma/tenant-context';
 import { MetricsService } from '../ops/metrics.service';
 import { WorkflowExecutorService } from '../workflows/application/workflow-executor.service';
-import { OUTBOX_QUEUE, PUBLISH_OUTBOX_JOB, type PublishOutboxJobData } from './outbox.constants';
+import { OUTBOX_QUEUE, OUTBOX_PROCESSOR_OPTIONS, PUBLISH_OUTBOX_JOB, type PublishOutboxJobData } from './outbox.constants';
 import { OutboxService } from './outbox.service';
 
-@Processor(OUTBOX_QUEUE)
+@Processor(OUTBOX_QUEUE, OUTBOX_PROCESSOR_OPTIONS)
 export class OutboxProcessor extends WorkerHost {
   private readonly logger = new Logger(OutboxProcessor.name);
 
