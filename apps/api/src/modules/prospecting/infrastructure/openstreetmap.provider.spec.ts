@@ -58,6 +58,7 @@ describe('OpenStreetMapProvider', () => {
     ['carpenter', { craft: ['carpenter'] }],
     ['accountant', { office: ['accountant'] }],
     ['hotel', { tourism: ['hotel'] }],
+    ['clinic', { amenity: ['clinic', 'dentist', 'doctors'] }],
   ])('maps category %s to supported OSM commercial tags', (category, expected) => {
     expect(mapCategoryToOsmTags(category)).toEqual(expected);
   });

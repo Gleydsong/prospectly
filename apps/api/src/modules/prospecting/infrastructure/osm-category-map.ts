@@ -9,7 +9,7 @@ const CATEGORY_MAP: Readonly<Record<string, OsmTagMap>> = {
   pharmacy: { amenity: ['pharmacy'] },
   farmacia: { amenity: ['pharmacy'] },
   hospital: { amenity: ['hospital'] },
-  clinic: { amenity: ['clinic'] },
+  clinic: { amenity: ['clinic', 'dentist', 'doctors'] },
   clinica: { amenity: ['clinic'] },
   supermarket: { shop: ['supermarket'] },
   mercado: { shop: ['supermarket'] },
