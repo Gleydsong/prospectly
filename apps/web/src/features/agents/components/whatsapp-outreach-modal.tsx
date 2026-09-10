@@ -284,7 +284,7 @@ export function WhatsAppOutreachModal({
           <p className="text-xs text-red-300" role="alert">
             {getApiErrorMessage(variants.error) ?? t('agents.whatsapp.variantsError')}
           </p>
-        ) : (variants.data?.variants.length ?? 0) > 0 ? (
+        ) : (variants.data?.variants?.length ?? 0) > 0 ? (
           <div className="grid gap-2 sm:grid-cols-2 max-h-48 overflow-y-auto">
             {variants.data!.variants.map((item) => {
               const active = item.id === selectedVariantId;

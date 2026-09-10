@@ -428,7 +428,7 @@ export function SearchPage() {
                 disabled={!selectedCountry || regionsQuery.isLoading}
                 {...register('state')}
               >
-                <option value="">{regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}</option>
+                <option key="default-region" value="">{regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}</option>
                 {regions.map((region) => (
                   <option key={region.code} value={region.code}>
                     {selectedCountry === 'BR' ? `${region.code} — ${region.name}` : region.name}
@@ -444,7 +444,7 @@ export function SearchPage() {
                 disabled={!selectedRegion || citiesQuery.isLoading}
                 {...register('city')}
               >
-                <option value="">
+                <option key="default-city" value="">
                   {!selectedRegion
                     ? 'Selecione o estado'
                     : citiesQuery.isLoading
@@ -469,7 +469,7 @@ export function SearchPage() {
                 value=""
                 onChange={(event) => addCategory(event.target.value)}
               >
-                <option value="">Selecione o nicho</option>
+                <option key="default-niche" value="">Selecione o nicho</option>
                 {categoryOptions.map((category) => (
                   <option key={category.value} value={category.value} disabled={!category.available}>
                     {CATEGORY_LABEL[category.value] ?? category.label}

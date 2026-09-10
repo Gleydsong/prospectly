@@ -128,7 +128,7 @@ function LeadColumnValue({
     case 'tags':
       return (
         <div className="flex flex-wrap gap-1">
-          {lead.tags.slice(0, 3).map((tag) => (
+          {(lead.tags ?? []).slice(0, 3).map((tag) => (
             <Badge key={tag.id}>{tag.name}</Badge>
           ))}
         </div>
