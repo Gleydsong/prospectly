@@ -229,6 +229,7 @@ export function SearchPage() {
     PROSPECTING_CATEGORIES.map((category) => ({ ...category, available: true }));
   const plan = categoriesQuery.data?.plan ?? billingQuery.data?.plan;
   const availableCategoryCount = categoriesQuery.data?.availableCount ?? categoryOptions.length;
+  const creditBalance = billingQuery.data?.creditBalance ?? 0;
 
   const {
     register,
@@ -445,7 +446,7 @@ export function SearchPage() {
               >
                 <option value="">
                   {!selectedRegion
-                    ? 'Escolha o estado primeiro'
+                    ? 'Selecione o estado'
                     : citiesQuery.isLoading
                       ? 'Carregando…'
                       : 'Selecione a cidade'}
@@ -533,13 +534,20 @@ export function SearchPage() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[color:var(--border)] pt-3 text-xs text-[color:var(--ink-muted)]">
             <p className="flex items-center gap-1.5">
               {availableCategoryCount < categoryOptions.length ? (
-                <Lock className="h-3.5 w-3.5" aria-hidden />
+                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
               ) : null}
-              {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
-              {planLabel(plan)}
+              <span>
+                {availableCategoryCount} de {categoryOptions.length} nichos disponíveis no plano{' '}
+                {planLabel(plan)}
+                {creditBalance > 0 && availableCategoryCount < categoryOptions.length
+                  ? ` · Seus ${creditBalance} créditos podem ser usados nos nichos liberados.`
+                  : ''}
+              </span>
             </p>
             <Link to="/credits" className="font-semibold text-[color:var(--accent)] hover:underline">
-              Ver todos os planos →
+              {availableCategoryCount < categoryOptions.length
+                ? 'Desbloquear todos os nichos →'
+                : 'Ver todos os planos →'}
             </Link>
           </div>
         </CardContent>

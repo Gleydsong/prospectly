@@ -69,6 +69,8 @@ function ScoreRing({ score }: { score: number }) {
 function FindingItem({ finding }: { finding: SeoFinding }) {
   const [open, setOpen] = useState(false);
   const severity = SEVERITY_LABEL[finding.severity];
+  const tone = severity?.tone ?? 'slate';
+  const label = severity?.label ?? finding.severity;
   return (
     <li className="rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)]">
       <button
@@ -77,7 +79,7 @@ function FindingItem({ finding }: { finding: SeoFinding }) {
         aria-expanded={open}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
-        <Badge tone={severity.tone}>{severity.label}</Badge>
+        <Badge tone={tone}>{label}</Badge>
         <span className="min-w-0 flex-1 text-sm font-medium text-[color:var(--ink)]">{finding.title}</span>
         <ChevronDown
           className={cn('h-4 w-4 shrink-0 text-[color:var(--ink-muted)] transition-transform', open && 'rotate-180')}
@@ -119,6 +121,8 @@ interface SeoAuditSectionProps {
  */
 export function SeoAuditSection({ audit }: SeoAuditSectionProps) {
   const opportunity = SEO_OPPORTUNITY_LABEL[audit.opportunity];
+  const opportunityTone = opportunity?.tone ?? 'slate';
+  const opportunityLabel = opportunity?.label ?? audit.opportunity;
   const vectors = Object.entries(audit.vectors) as Array<
     [keyof SeoAudit['vectors'], SeoAudit['vectors'][keyof SeoAudit['vectors']]]
   >;
@@ -132,13 +136,13 @@ export function SeoAuditSection({ audit }: SeoAuditSectionProps) {
             SEO Health Score
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={opportunity.tone}>{opportunity.label}</Badge>
+            <Badge tone={opportunityTone}>{opportunityLabel}</Badge>
             <span className="text-xs text-[color:var(--ink-muted)]">Arquitetura: {audit.architecture}</span>
           </div>
         </div>
         <ul className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:min-w-[260px]">
           {vectors.map(([key, value]) => (
-            <li key={key} className="space-y-1">
+            <li key={String(key)} className="space-y-1">
               <div className="flex justify-between text-[11px] text-[color:var(--ink-muted)]">
                 <span>{VECTOR_LABEL[key]}</span>
                 <span className="tabular-nums">
@@ -160,7 +164,7 @@ export function SeoAuditSection({ audit }: SeoAuditSectionProps) {
         <div className="space-y-2">
           <p className="text-sm font-semibold text-[color:var(--ink)]">Sinais de oportunidade</p>
           <ul className="space-y-2">
-            {audit.topIssues.map((finding) => (
+            {audit.topIssues.map((finding: SeoFinding) => (
               <FindingItem key={finding.code} finding={finding} />
             ))}
           </ul>
@@ -176,7 +180,7 @@ export function SeoAuditSection({ audit }: SeoAuditSectionProps) {
             Quick wins (menos de 1h)
           </p>
           <ul className="space-y-1.5">
-            {audit.quickWins.map((finding) => (
+            {audit.quickWins.map((finding: SeoFinding) => (
               <li key={finding.code} className="text-sm text-[color:var(--ink)]">
                 <span className="font-medium">{finding.title}:</span>{' '}
                 <span className="text-[color:var(--ink-muted)]">{finding.fix}</span>

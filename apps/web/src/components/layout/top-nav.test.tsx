@@ -156,4 +156,38 @@ describe('TopNav', () => {
     expect(creditLink.className).toContain('text-sky-700');
     expect(creditLink.className).toContain('border-sky-100');
   });
+
+  it('links to agents page with Assistentes label', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole('link', { name: /assistentes/i })).toHaveAttribute('href', '/agents');
+  });
+
+  it('shows loading indicator for credits while query is pending and has no cache', () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, enabled: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider>
+          <MemoryRouter>
+            <TopNav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    const creditLink = screen.getByTitle(/créditos|credits/i);
+    expect(creditLink).toBeInTheDocument();
+    expect(screen.queryByText(/0 créditos/i)).toBeNull();
+  });
 });

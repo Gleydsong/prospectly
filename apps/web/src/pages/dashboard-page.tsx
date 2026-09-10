@@ -25,6 +25,7 @@ import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchDashboardSummary } from '@/features/dashboard/api';
 import { useLeads } from '@/features/leads/hooks';
+import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadStatus } from '@/types';
@@ -445,7 +446,8 @@ export function DashboardPage() {
               ) : (
                 leads.map((lead) => {
                   const companyInitials = getCompanyInitials(lead.companyName);
-                  const nicheOrSegment = lead.segment || lead.category || lead.tradeName || 'Geral';
+                  const rawNiche = lead.segment || lead.category || lead.tradeName || 'Geral';
+                  const nicheOrSegment = formatCategoryTag(rawNiche);
 
                   return (
                     <tr

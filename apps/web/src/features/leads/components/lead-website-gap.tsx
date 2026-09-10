@@ -5,15 +5,68 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { sanitizeExternalUrl } from '@/lib/safe-url';
 
+export function resolveWebsitePitch(
+  category?: string | null,
+  segment?: string | null,
+  city?: string | null,
+): string {
+  const norm = `${category ?? ''} ${segment ?? ''}`.toLowerCase();
+  const citySuffix = city?.trim() ? ` em ${city.trim()}` : '';
+
+  if (
+    norm.includes('restaurant') ||
+    norm.includes('bar') ||
+    norm.includes('cafe') ||
+    norm.includes('bakery') ||
+    norm.includes('lanche') ||
+    norm.includes('pizza') ||
+    norm.includes('comida') ||
+    norm.includes('gastronom')
+  ) {
+    return `Sem site cadastrado — argumento comercial para ofertar cardápio digital ou pedidos online${citySuffix}.`;
+  }
+
+  if (
+    norm.includes('hairdresser') ||
+    norm.includes('beauty') ||
+    norm.includes('salon') ||
+    norm.includes('salão') ||
+    norm.includes('cabeleireiro') ||
+    norm.includes('barbearia') ||
+    norm.includes('estetica') ||
+    norm.includes('estética') ||
+    norm.includes('dentist') ||
+    norm.includes('physio') ||
+    norm.includes('clinica') ||
+    norm.includes('clínica') ||
+    norm.includes('veterin') ||
+    norm.includes('spa') ||
+    norm.includes('gym') ||
+    norm.includes('academia')
+  ) {
+    return `Sem site cadastrado — argumento comercial para ofertar agendamento online ou catálogo de serviços${citySuffix}.`;
+  }
+
+  if (norm.includes('hotel') || norm.includes('hostel') || norm.includes('pousada')) {
+    return `Sem site cadastrado — argumento comercial para ofertar reservas diretas e presença online${citySuffix}.`;
+  }
+
+  return `Sem site cadastrado — argumento comercial para ofertar presença online no Google ou site institucional${citySuffix}.`;
+}
+
 export function LeadWebsiteGap({
   companyName,
   city,
+  category,
+  segment,
   googleHref,
   pending,
   onSaveUrl,
 }: {
   companyName: string;
   city?: string | null;
+  category?: string | null;
+  segment?: string | null;
   googleHref: string | null;
   pending?: boolean;
   onSaveUrl: (url: string) => void;
@@ -22,12 +75,13 @@ export function LeadWebsiteGap({
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const pitch = resolveWebsitePitch(category, segment, city);
+
   return (
     <div className="rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] p-3">
       <p className="text-sm font-medium text-[color:var(--ink)]">Oportunidade de presença online</p>
       <p className="mt-1 text-xs leading-relaxed text-[color:var(--ink-muted)]">
-        Sem site cadastrado — argumento comercial para ofertar cardápio digital ou presença online
-        {city ? ` em ${city}` : ''}.
+        {pitch}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {googleHref ? (
