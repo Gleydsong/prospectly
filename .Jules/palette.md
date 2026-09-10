@@ -1,0 +1,3 @@
+## 2023-10-27 - Form Control Accessibility
+**Learning:** Found a pattern across multiple basic form components (`Textarea`, `Select`, `Switch`) where error messages or descriptions were rendered but not programmatically associated with the input element using `aria-describedby`. This prevents screen readers from announcing context (like validation errors or helper text) when the input is focused.
+**Action:** Always ensure that any contextual text (errors, descriptions) rendered alongside an input has a unique `id` and is referenced by the input's `aria-describedby` attribute. Checked `Input` which already had it, and applied to other form controls.
