@@ -21,12 +21,12 @@ describe('isCheckoutConfirmed', () => {
           purpose: 'credits',
           offer: 'credits-2000',
           baselineCreditBalance: 400,
-          provider: 'ABACATE',
+          provider: 'ASAAS',
         },
         {
           plan: 'FREE',
           planStatus: 'INACTIVE',
-          paymentProvider: 'ABACATE',
+          paymentProvider: 'ASAAS',
           creditBalance: 2400,
           searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
           planCurrency: null,
@@ -43,7 +43,7 @@ describe('isCheckoutConfirmed', () => {
     const status = {
       plan: 'STARTER_MONTHLY' as const,
       planStatus: 'ACTIVE' as const,
-      paymentProvider: 'ABACATE' as const,
+      paymentProvider: 'ASAAS' as const,
       creditBalance: 400,
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
@@ -53,18 +53,12 @@ describe('isCheckoutConfirmed', () => {
       freeSearchLimit: 3,
     };
     expect(
-      isCheckoutConfirmed({ purpose: 'plan', plan: 'monthly', provider: 'ABACATE' }, status),
+      isCheckoutConfirmed({ purpose: 'plan', plan: 'monthly', provider: 'ASAAS' }, status),
     ).toBe(true);
     expect(
       isCheckoutConfirmed(
         { purpose: 'plan', plan: 'monthly', provider: 'ASAAS' },
-        { ...status, paymentProvider: 'ASAAS' },
-      ),
-    ).toBe(true);
-    expect(
-      isCheckoutConfirmed(
-        { purpose: 'plan', plan: 'monthly', provider: 'ASAAS' },
-        status,
+        { ...status, paymentProvider: 'STRIPE' },
       ),
     ).toBe(false);
   });

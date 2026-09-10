@@ -50,7 +50,7 @@ export class CreditPurchaseService {
         credits: pack.credits,
         amountCentavos: pack.amountCentavos,
         currency: 'BRL',
-        provider: input.provider ?? PaymentProvider.ABACATE,
+        provider: input.provider ?? PaymentProvider.ASAAS,
         paymentMethod:
           input.paymentMethod === 'card' ? BillingPaymentMethod.CARD : BillingPaymentMethod.PIX,
         externalId: input.externalId,

@@ -8,7 +8,7 @@
 # docs/deploy/workers.md e docs/adr/0006-separate-bullmq-worker.md.
 #
 # After first sync: fill sync:false secrets in the Dashboard, then set public URLs
-# (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Abacate webhook).
+# (FRONTEND_URL, CORS_ORIGINS, VITE_*, NEXT_PUBLIC_*, Asaas webhook).
 
 previews:
   generation: manual
@@ -82,20 +82,6 @@ projects:
                 sync: false
               - key: CORS_ORIGINS
                 sync: false
-              - key: ABACATE_API_KEY
-                sync: false
-              - key: ABACATE_WEBHOOK_SECRET
-                sync: false
-              - key: ABACATE_WEBHOOK_HMAC_KEY
-                sync: false
-              - key: ABACATE_SUCCESS_URL
-                sync: false
-              - key: ABACATE_CANCEL_URL
-                sync: false
-              - key: ABACATE_API_BASE_URL
-                value: https://api.abacatepay.com/v2
-              - key: ABACATE_HTTP_TIMEOUT_MS
-                value: '15000'
               - key: ASAAS_ENABLED
                 value: 'true'
               - key: PIX_PROVIDER

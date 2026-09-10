@@ -39,13 +39,13 @@ describe('role-aware environment validation', () => {
     expect(() => validateEnv(withoutAppUrl)).toThrow('DATABASE_APP_URL');
   });
 
-  it('keeps AbacatePay required for the API role in production', () => {
+  it('does not require AbacatePay for the API role in production', () => {
     expect(() =>
       validateEnv({
         ...apiConfig,
         NODE_ENV: 'production',
         DATABASE_APP_URL: workerProdConfig.DATABASE_APP_URL,
       }),
-    ).toThrow('Missing AbacatePay checkout configuration');
+    ).not.toThrow();
   });
 });

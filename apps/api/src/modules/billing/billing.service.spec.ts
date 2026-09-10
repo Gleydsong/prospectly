@@ -11,7 +11,6 @@ import { CreditPurchaseService } from './credit-purchase.service';
 import { EntitlementService } from './entitlement.service';
 import { AsaasCheckoutSwitchService } from './asaas-checkout-switch.service';
 import { MonthlyCheckoutAttemptService } from './monthly-checkout-attempt.service';
-import { AbacatePaymentProvider } from './infrastructure/abacate.payment-provider';
 import { AsaasClient, AsaasRequestError, AsaasStaleCustomerError } from './infrastructure/asaas.client';
 
 describe('BillingService', () => {
@@ -56,14 +55,6 @@ describe('BillingService', () => {
     },
   };
   prisma.$transaction = jest.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma));
-
-  const abacateProvider = {
-    createCheckout: jest.fn(),
-    createCreditCheckout: jest.fn(),
-    cancelSubscription: jest.fn(),
-    verifyAndParseWebhook: jest.fn(),
-    applyWebhookEvent: jest.fn(),
-  };
 
   const creditPurchases = {
     createPending: jest.fn(),
@@ -110,11 +101,9 @@ describe('BillingService', () => {
 
   const readConfig = (key: string) => {
     const map: Record<string, string | boolean> = {
-      'abacate.successUrl': 'https://app.test/success',
-      'abacate.cancelUrl': 'https://app.test/cancel',
       frontendUrl: 'https://app.test',
       'asaas.enabled': true,
-      'billing.pixProvider': 'ABACATE',
+      'billing.pixProvider': 'ASAAS',
     };
     return map[key];
   };
@@ -140,7 +129,6 @@ describe('BillingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: ConfigService, useValue: { get: configGet } },
         { provide: BillingActivationService, useValue: activation },
-        { provide: AbacatePaymentProvider, useValue: abacateProvider },
         { provide: AsaasClient, useValue: asaasClient },
         { provide: CreditPurchaseService, useValue: creditPurchases },
         { provide: EntitlementService, useValue: entitlements },
@@ -210,14 +198,14 @@ describe('BillingService', () => {
     );
   });
 
-  it('only lets billing administrators cancel an Abacate subscription', async () => {
+  it('only lets billing administrators cancel an Asaas subscription', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
       planStatus: PlanStatus.ACTIVE,
       planCurrency: 'BRL',
-      paymentProvider: PaymentProvider.ABACATE,
-      abacateSubscriptionId: 'sub_1',
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_1',
       currentPeriodEnd: null,
       deletedAt: null,
       creditBalance: 10,
@@ -243,26 +231,6 @@ describe('BillingService', () => {
     await expect(
       service.createCheckoutSession('org1', 'a@b.com', 'lifetime', 'BRL', 'pix'),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
-  });
-
-  it('allows PIX monthly cancel without an Abacate subscription id', async () => {
-    prisma.organization.findFirst.mockResolvedValue({
-      id: 'org1',
-      plan: OrgPlan.STARTER_MONTHLY,
-      planStatus: PlanStatus.ACTIVE,
-      planCurrency: 'BRL',
-      paymentProvider: PaymentProvider.ABACATE,
-      abacateSubscriptionId: null,
-      currentPeriodEnd: new Date('2026-09-14T00:00:00.000Z'),
-      deletedAt: null,
-      creditBalance: 0,
-    });
-    prisma.search.count.mockResolvedValue(1);
-
-    await expect(service.getOrganizationBilling('org1', 'OWNER')).resolves.toEqual(
-      expect.objectContaining({ canCancelSubscription: true }),
-    );
   });
 
   it('expires an overdue monthly plan before allowing more unlimited searches', async () => {
@@ -321,13 +289,12 @@ describe('BillingService', () => {
       id: 'org1',
       plan: OrgPlan.LIFETIME,
       planStatus: PlanStatus.ACTIVE,
-      paymentProvider: 'ABACATE',
+      paymentProvider: 'ASAAS',
       deletedAt: null,
     });
     await expect(
       service.createCheckoutSession('org1', 'a@b.com', 'monthly', 'BRL', 'card'),
     ).rejects.toBeInstanceOf(BadRequestException);
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
   it('creates a hosted Asaas card checkout for a credit package', async () => {
@@ -411,7 +378,6 @@ describe('BillingService', () => {
     expect(creditPurchases.attachPayment.mock.invocationCallOrder[0]).toBeLessThan(
       asaasClient.getPixQrCode.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
     );
-    expect(abacateProvider.createCreditCheckout).not.toHaveBeenCalled();
   });
 
   it('reuses the persisted Asaas PIX payment instead of creating another charge', async () => {
@@ -819,7 +785,6 @@ describe('BillingService', () => {
       'pay_pix_monthly_1',
       'cus_1',
     );
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
   it('replaces a stale Asaas customer before creating monthly PIX', async () => {
@@ -1007,7 +972,6 @@ describe('BillingService', () => {
     await expect(
       service.createCheckoutSession('org1', 'ana@example.com', 'monthly', 'BRL', 'pix'),
     ).rejects.toMatchObject({ status: 503 });
-    expect(abacateProvider.createCheckout).not.toHaveBeenCalled();
   });
 
   it('allows a free organization to search when purchased credits remain', async () => {

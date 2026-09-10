@@ -41,7 +41,7 @@ describe('BillingSuccessPage', () => {
       purpose: 'credits',
       offer: 'credits-2000',
       baselineCreditBalance: 400,
-      provider: 'ABACATE',
+      provider: 'ASAAS',
     });
     getBillingStatus.mockResolvedValue(unpaidStatus);
 
@@ -57,12 +57,12 @@ describe('BillingSuccessPage', () => {
       purpose: 'credits',
       offer: 'credits-2000',
       baselineCreditBalance: 400,
-      provider: 'ABACATE',
+      provider: 'ASAAS',
     });
     getBillingStatus.mockResolvedValue({
       plan: 'FREE',
       planStatus: 'INACTIVE',
-      paymentProvider: 'ABACATE',
+      paymentProvider: 'ASAAS',
       creditBalance: 2400,
       searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
       planCurrency: null,
@@ -79,11 +79,11 @@ describe('BillingSuccessPage', () => {
   });
 
   it('confirms the monthly plan after polling', async () => {
-    saveCheckoutIntent({ purpose: 'plan', plan: 'monthly', provider: 'ABACATE' });
+    saveCheckoutIntent({ purpose: 'plan', plan: 'monthly', provider: 'ASAAS' });
     getBillingStatus.mockResolvedValue({
       plan: 'STARTER_MONTHLY',
       planStatus: 'ACTIVE',
-      paymentProvider: 'ABACATE',
+      paymentProvider: 'ASAAS',
       creditBalance: 400,
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
@@ -105,7 +105,7 @@ describe('BillingSuccessPage', () => {
       purpose: 'credits',
       offer: 'credits-2000',
       baselineCreditBalance: 400,
-      provider: 'ABACATE',
+      provider: 'ASAAS',
     });
     getBillingStatus.mockResolvedValue(unpaidStatus);
 
@@ -127,7 +127,7 @@ describe('BillingSuccessPage', () => {
       purpose: 'credits',
       offer: 'credits-2000',
       baselineCreditBalance: 400,
-      provider: 'ABACATE',
+      provider: 'ASAAS',
     });
     getBillingStatus.mockRejectedValue(new Error('status failed'));
 

@@ -230,7 +230,7 @@ stage "Flags — não ligar produção"
 say "Código: ASAAS_ENABLED só fica true se a env for exatamente 'true'. Unset = false."
 say "Cutover PIX autorizado já usa ASAAS_ENABLED=true + URL Sandbox no render.yaml."
 step "Não mudes ASAAS_API_BASE_URL para https://api.asaas.com/v3 sem autorização humana + smoke."
-step "Rollback PIX: PIX_PROVIDER=ABACATE, sem fallback silencioso."
+step "Rollback PIX: PIX_PROVIDER=DISABLED, sem fallback silencioso."
 pause "Produção Asaas continua desligada neste roteiro?"
 
 stage "Perfil de cobrança (#76)"
