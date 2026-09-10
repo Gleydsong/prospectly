@@ -173,6 +173,22 @@ describe('WorkflowsService', () => {
     );
   });
 
+  it('refuses to create a Fluxo with more than 10 steps', async () => {
+    const prisma = makePrisma();
+    const service = new WorkflowsService(prisma, makeAudit());
+    const steps = Array.from({ length: 11 }, (_, index) => ({
+      type: 'add_tag',
+      tagName: `tag-${index}`,
+    }));
+    await expect(
+      service.create('org-a', owner, {
+        name: 'Storm',
+        definition: { trigger: { type: 'lead.created' }, steps },
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.workflow.create).not.toHaveBeenCalled();
+  });
+
   it('refuses to publish a Fluxo with no steps', async () => {
     const prisma = makePrisma();
     prisma.workflow.findFirst.mockResolvedValue({
