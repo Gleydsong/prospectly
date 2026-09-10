@@ -20,6 +20,7 @@ const makePrisma = () => ({
     count: jest.fn().mockResolvedValue(1),
     findMany: jest.fn().mockResolvedValue([]),
   },
+  googleConnection: { findFirst: jest.fn(), findUnique: jest.fn() },
   leadActivity: { create: jest.fn() },
   outboxEvent: { create: jest.fn() },
   task: { create: jest.fn() },
@@ -195,6 +196,39 @@ describe('CommunicationsService', () => {
       leadId: LEAD,
     });
     await expect(service.listForLead(ORG, 'gone')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.lead.findFirst).toHaveBeenCalledWith({
+      where: { id: LEAD, organizationId: ORG, deletedAt: null },
+      select: { id: true },
+    });
+    expect(prisma.googleConnection.findFirst).not.toHaveBeenCalled();
+    expect(prisma.googleConnection.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('lists casamentos after the colleague disconnected — visibility is the Lead ACL', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({ id: LEAD });
+    prisma.syncedCommunication.count.mockResolvedValue(1);
+    prisma.syncedCommunication.findMany.mockResolvedValue([
+      {
+        id: 'sc-kept',
+        channel: 'EMAIL',
+        externalId: 'msg-kept',
+        threadId: 'thread-kept',
+        occurredAt: PAST,
+        direction: 'IN',
+        fromAddresses: ['lead@acme.com'],
+        toAddresses: ['ana@gmail.com'],
+        ccAddresses: [],
+        subject: 'Ainda visível',
+        snippet: 'histórico da equipa',
+        htmlLink: 'https://mail.google.com/mail/u/0/#all/thread-kept',
+      },
+    ]);
+    const service = new CommunicationsService(prisma as never);
+    const listed = await service.listForLead(ORG, LEAD);
+    expect(listed.data).toHaveLength(1);
+    expect(listed.data[0]?.snippet).toBe('histórico da equipa');
+    expect(prisma.googleConnection.findFirst).not.toHaveBeenCalled();
   });
 
   it('does not stamp lastContactAt with now()', async () => {

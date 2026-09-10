@@ -1,6 +1,6 @@
 # Política de retenção (técnica)
 
-Última revisão: 2026-08-28  
+Última revisão: 2026-09-10  
 Prazos abaixo são **defaults de engenharia**. Obrigações fiscais/contábeis = `LEGAL_REVIEW_REQUIRED`.
 
 | Tipo | Retenção | Justificativa técnica | Ação após expiração |
@@ -13,6 +13,7 @@ Prazos abaixo são **defaults de engenharia**. Obrigações fiscais/contábeis =
 | User conta ativa | Enquanto membership existir | Prestação do SaaS | Anonimização self-service |
 | User anonimizado | Linha residual (e-mail `deleted+uuid@anonymized.invalid`) | Integridade FK / anti-reuso | Não reaproveitar para login |
 | Lead soft-deleted | Indefinido no código | Unique keys ainda ocupam identidade | **Não** é erasure LGPD; org deve decidir |
+| Comunicação sincronizada | Segue o Lead | Histórico da ficha (R6); não é outbox | Soft-delete esconde; hard-delete do Lead faz cascade. Job `privacy-retention` **não** apaga. Disconnect **não** apaga. |
 | Suppression hashes | Vida da organização | Impedir reimport após opt-out | Cascade delete da org |
 | ConsentRecord | Vida da conta | Evidência | Cascade user |
 | AuditLog | Indefinido no código | Segurança | Job **não** apaga. Proposta 12–24m: LEGAL_REVIEW |

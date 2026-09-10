@@ -91,6 +91,14 @@ describe('GmailIngestService', () => {
     );
   });
 
+  it('does not ingest when the Conexão Google is revoked or has no refresh token', async () => {
+    const { service, persistEmail, prisma, gmail } = makeDeps();
+    prisma.googleConnection.findFirst.mockResolvedValue(null);
+    await service.syncConnection('org-1', 'conn-1', NOW);
+    expect(gmail.listMessages).not.toHaveBeenCalled();
+    expect(persistEmail).not.toHaveBeenCalled();
+  });
+
   it('discards unmatched and colliding contact emails', async () => {
     const { service, persistEmail, prisma } = makeDeps();
     prisma.lead.findMany.mockResolvedValue([]);
