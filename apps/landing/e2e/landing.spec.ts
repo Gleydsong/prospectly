@@ -28,15 +28,19 @@ test.describe('landing routes', () => {
 });
 
 test.describe('landing navigation', () => {
-  test('home shows only the V2 header (no legacy SiteHeader)', async ({ page }) => {
+  test('home shows only the V2 header (no legacy SiteHeader)', async ({ page }, testInfo) => {
     await page.goto('/');
-    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toHaveCount(1);
+    if (testInfo.project.name === 'desktop-chromium') {
+      await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toHaveCount(1);
+      await expect(
+        page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Como funciona', exact: true }),
+      ).toBeVisible();
+    } else {
+      await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible();
+    }
     await expect(page.getByRole('banner')).toHaveCount(1);
     await expect(page.getByRole('link', { name: 'Preços', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Início', exact: true })).toHaveCount(0);
-    await expect(
-      page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Como funciona', exact: true }),
-    ).toBeVisible();
   });
 
   test('desktop navigation opens the benefits page', async ({ page }, testInfo) => {
@@ -47,21 +51,20 @@ test.describe('landing navigation', () => {
     await expect(page.getByRole('heading', { name: 'Menos volume. Mais chance de fechar.' })).toBeVisible();
   });
 
-  test('Entrar aponta para o login do app', async ({ page }, testInfo) => {
+  test('navbar possui apenas o botão Começar agora apontando para app.prospectlyonboard.com (sem botão Entrar)', async ({ page }, testInfo) => {
     await page.goto('/');
+
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole('banner').getByRole('link', { name: /começar agora/i }),
+    ).toHaveAttribute('href', 'https://app.prospectlyonboard.com');
 
     if (testInfo.project.name === 'mobile-chromium') {
       await page.getByRole('button', { name: 'Abrir menu' }).click();
       await expect(
         page.getByRole('navigation', { name: 'Navegação móvel' }).getByRole('link', { name: 'Entrar', exact: true }),
-      ).toHaveAttribute('href', /\/login$/);
-      return;
+      ).toHaveCount(0);
     }
-
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toHaveAttribute(
-      'href',
-      /\/login$/,
-    );
   });
 
   test('mobile menu opens the questions page', async ({ page }, testInfo) => {
