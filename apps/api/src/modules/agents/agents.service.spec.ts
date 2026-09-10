@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { AgentsService } from './agents.service';
@@ -62,6 +65,13 @@ describe('AgentsService', () => {
       'crm-next-action',
       'whatsapp-first-message',
     ]);
+  });
+
+  it('does not debit AI_CONSUME credits (Copiloto stays unmetered)', () => {
+    const serviceSrc = readFileSync(join(__dirname, 'agents.service.ts'), 'utf8');
+    const moduleSrc = readFileSync(join(__dirname, 'agents.module.ts'), 'utf8');
+    expect(serviceSrc).not.toMatch(/consumeCredit|AI_CONSUME|BillingService/);
+    expect(moduleSrc).not.toMatch(/BillingModule|BillingService/);
   });
 
   it('suggestCrm throws when lead missing', async () => {

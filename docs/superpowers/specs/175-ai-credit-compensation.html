@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spec #175 — Compensação de créditos de IA</title>
+  <style>
+    :root {
+      --ink: #18181b; --muted: #52525b; --bg: #f4f4f5; --card: #fff; --border: #e4e4e7;
+      --accent: #2563eb; --ok: #059669; --warn: #d97706; --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink); background: var(--bg); line-height: 1.55;
+    }
+    header { background: linear-gradient(135deg, #0f172a 0%, #134e4a 100%); color: #fff; padding: 2.5rem 1.25rem 2rem; }
+    header .wrap, main, footer { max-width: 920px; margin: 0 auto; }
+    header h1 { margin: 0 0 0.5rem; font-size: 1.7rem; }
+    header p { margin: 0; opacity: 0.9; }
+    .badge {
+      display: inline-block; margin: 1rem 0.4rem 0 0; padding: 0.25rem 0.65rem; border-radius: 999px;
+      background: rgba(255,255,255,0.15); font-size: 0.8rem; font-weight: 600;
+    }
+    main { padding: 1.5rem 1.25rem 3rem; }
+    section {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem 1.35rem; margin-bottom: 1rem;
+    }
+    h2 { margin: 0 0 0.75rem; font-size: 1.15rem; }
+    h3 { margin: 1rem 0 0.45rem; font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .muted { color: var(--muted); }
+    ul { padding-left: 1.2rem; }
+    li { margin: 0.3rem 0; }
+    code, .path {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86em; background: #f4f4f5; padding: 0.1em 0.35em; border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    th, td { text-align: left; padding: 0.5rem 0.45rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; }
+    .tag { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.15rem 0.45rem; border-radius: 4px; }
+    .tag-ok { background: #d1fae5; color: var(--ok); }
+    .tag-api { background: #dbeafe; color: #1d4ed8; }
+    .controls { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 1rem; }
+    button {
+      border: 0; border-radius: 8px; padding: 0.55rem 0.9rem; font-weight: 650; cursor: pointer; font-size: 0.88rem;
+    }
+    button.primary { background: #0f766e; color: #fff; }
+    button.ghost { background: #e4e4e7; color: var(--ink); }
+    .balance {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.03em; margin: 0;
+    }
+    .delta-neg { color: var(--danger); }
+    .delta-pos { color: var(--ok); }
+    .log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.8rem; background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 0.8rem 0.9rem;
+      min-height: 4.2rem; white-space: pre-wrap;
+    }
+    footer { padding: 0 1.25rem 2rem; color: var(--muted); font-size: 0.85rem; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Spec #175 — Compensação de créditos de IA</h1>
+      <p>Falha nossa depois de <code>AI_CONSUME</code> devolve o crédito uma vez. 4xx / cancelar não. Copiloto continua grátis.</p>
+      <span class="badge">Issue #175</span>
+      <span class="badge">Branch feat/ai-credit-compensation</span>
+      <span class="badge">Asaas intocado</span>
+    </div>
+  </header>
+  <main>
+    <section>
+      <h2>O que foi feito</h2>
+      <p class="muted">Opportunity Finder, Explain e Save Lead já debitavam <code>AI_CONSUME</code>. O buraco: timeout da IA no Explain pago virava fallback e o crédito ficava gasto; 4xx no Save/Explain também reembolsava (risco de fraude). Copiloto não podia passar a debitar nesta spec.</p>
+      <ul>
+        <li>Regra única: <code>shouldRefundAiConsume</code> — 5xx / timeout / erro não-HTTP → compensação. 4xx do actor → não.</li>
+        <li>Explain pago: IA ligada e resposta nula (timeout/falha) → 503 + refund. Run em lote continua com fallback (já pago nos 16 créditos do run).</li>
+        <li>Ledger: segundo refund é no-op. Sem consume (plano ilimitado / quota) → refund no-op.</li>
+        <li>Copiloto / agents: teste de regressão — zero <code>BillingService</code> / <code>AI_CONSUME</code>.</li>
+      </ul>
+      <p class="muted">Vocabulário: <strong>compensação</strong> = refund de consumo. Distinto de <strong>Reversão</strong> (estorno/chargeback Asaas).</p>
+    </section>
+
+    <section>
+      <h2>Demonstração rápida — ledger</h2>
+      <p class="muted">Simulação no browser. Saldo inicial 40. Explain custa 8. Save Lead custa 1. Copiloto custa 0.</p>
+      <p class="balance" id="balance">40</p>
+      <p class="muted" id="balance-hint">créditos</p>
+      <div class="controls">
+        <button type="button" class="primary" id="sim-timeout">Explain timeout (503)</button>
+        <button type="button" class="primary" id="sim-400">Explain 400</button>
+        <button type="button" class="primary" id="sim-retry">Segundo refund</button>
+        <button type="button" class="primary" id="sim-copilot">Copiloto CRM</button>
+        <button type="button" class="ghost" id="sim-reset">Limpar</button>
+      </div>
+      <h3>Ledger</h3>
+      <table>
+        <thead><tr><th>Chave</th><th>Razão</th><th>Delta</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+      <h3>Log</h3>
+      <div class="log" id="sim-log" aria-live="polite">Escolha um cenário.</div>
+    </section>
+
+    <section>
+      <h2>Arquivos</h2>
+      <h3>API <span class="tag tag-api">apps/api</span></h3>
+      <table>
+        <thead><tr><th>Arquivo</th><th>Mudança</th></tr></thead>
+        <tbody>
+          <tr><td><span class="path">billing/ai-credit-compensation.ts</span></td><td><span class="tag tag-ok">NOVO</span> Invariante 5xx/timeout vs 4xx.</td></tr>
+          <tr><td><span class="path">opportunity-finder.service.ts</span></td><td>Explain pago falha limpo; catch só reembolsa falha nossa.</td></tr>
+          <tr><td><span class="path">structured-ai.service.ts</span></td><td><code>isOpportunityAiEnabled()</code> para não confundir «IA desligada» com timeout.</td></tr>
+          <tr><td><span class="path">agents.service.spec.ts</span></td><td>Copiloto não importa billing.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Fora desta entrega</h2>
+      <ul>
+        <li>Tarifar Copiloto, mudar <code>CREDIT_COSTS</code>, Asaas, Reversão.</li>
+        <li>Compensar busca Maps (já tem refund de search).</li>
+      </ul>
+      <p><a href="./index.html">← todas as specs</a> · <a href="https://github.com/Gleydsong/prospectly/issues/175">issue #175</a></p>
+    </section>
+  </main>
+  <footer>Demo estática da spec #175 · não chama a API real.</footer>
+  <script>
+    const state = { balance: 40, rows: [], explained: false, refunded: false };
+
+    function paint(log) {
+      document.getElementById('balance').textContent = String(state.balance);
+      const tb = document.getElementById('ledger');
+      tb.innerHTML = state.rows.length
+        ? state.rows.map((r) =>
+            '<tr><td>' + r.key + '</td><td>' + r.reason + '</td><td class="' +
+            (r.delta < 0 ? 'delta-neg' : 'delta-pos') + '">' + (r.delta > 0 ? '+' : '') + r.delta +
+            '</td></tr>'
+          ).join('')
+        : '<tr><td colspan="3" class="muted">vazio</td></tr>';
+      document.getElementById('sim-log').textContent = log;
+    }
+
+    function consumeExplain() {
+      if (state.explained) return false;
+      state.explained = true;
+      state.balance -= 8;
+      state.rows.push({ key: 'explain-consume:cand-1', reason: 'AI_CONSUME', delta: -8 });
+      return true;
+    }
+
+    function refundExplain() {
+      if (state.refunded) return 'no-op';
+      if (!state.explained) return 'no-consume';
+      state.refunded = true;
+      state.balance += 8;
+      state.rows.push({ key: 'explain-refund:cand-1', reason: 'REFUND (compensação)', delta: 8 });
+      return 'ok';
+    }
+
+    document.getElementById('sim-reset').onclick = () => {
+      state.balance = 40;
+      state.rows = [];
+      state.explained = false;
+      state.refunded = false;
+      paint('Ledger limpo. Saldo 40.');
+    };
+
+    document.getElementById('sim-timeout').onclick = () => {
+      consumeExplain();
+      refundExplain();
+      paint('IA timeout no Explain pago → 503 AI_EXPLAIN_UNAVAILABLE + compensação. Saldo restaurado.');
+    };
+
+    document.getElementById('sim-400').onclick = () => {
+      consumeExplain();
+      paint('400 de validação depois do débito → sem refund. Actor não abre buraco de fraude.');
+    };
+
+    document.getElementById('sim-retry').onclick = () => {
+      consumeExplain();
+      refundExplain();
+      const second = refundExplain();
+      paint(second === 'no-op'
+        ? 'Segundo refund: ledger já tem explain-refund:cand-1 → no-op. Saldo não duplica.'
+        : 'Corra primeiro o timeout para haver um refund.');
+    };
+
+    document.getElementById('sim-copilot').onclick = () => {
+      paint('Copiloto CRM / WhatsApp: zero AI_CONSUME. Saldo continua ' + state.balance + '. Tarifar é outra spec.');
+    };
+
+    paint('Escolha um cenário.');
+  </script>
+</body>
+</html>

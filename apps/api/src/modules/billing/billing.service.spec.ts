@@ -1232,6 +1232,26 @@ describe('BillingService', () => {
     });
   });
 
+  it('does not duplicate an Explain refund when the ledger already has one', async () => {
+    prisma.creditLedgerEntry.findUnique
+      .mockResolvedValueOnce({ delta: -8 })
+      .mockResolvedValueOnce({ delta: 8 });
+
+    await expect(service.refundExplainCredit('org1', 'cand-1')).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
+  it('treats Explain refund as no-op when AI_CONSUME never posted', async () => {
+    prisma.creditLedgerEntry.findUnique.mockResolvedValue(null);
+
+    await expect(service.refundExplainCredit('org1', 'cand-1')).resolves.toBeUndefined();
+
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+    expect(prisma.creditLedgerEntry.create).not.toHaveBeenCalled();
+  });
+
   it('cancels an Asaas card subscription and syncs local entitlement', async () => {
     prisma.organization.findFirst.mockResolvedValue({
       id: 'org1',

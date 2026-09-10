@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PROSPECTING_CATEGORIES } from '@prospectly/shared-types';
 
 import { OpportunityFinderService } from './opportunity-finder.service';
@@ -442,5 +442,105 @@ describe('OpportunityFinderService.saveAsLead', () => {
     expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
     expect(harness.billing.refundSaveLeadCredit).toHaveBeenCalledWith('org-1', 'cand-1');
     expect(harness.prisma.opportunityCandidate.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('does not refund Save Lead when ingest rejects with 400 validation', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidateBase);
+    harness.leadIngestion.ingest.mockRejectedValue(new BadRequestException('invalid company'));
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
+    expect(harness.billing.refundSaveLeadCredit).not.toHaveBeenCalled();
+  });
+
+  it('refunds Save Lead when ingest fails with an internal error', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidateBase);
+    harness.leadIngestion.ingest.mockRejectedValue(new Error('timeout'));
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toThrow('timeout');
+
+    expect(harness.billing.refundSaveLeadCredit).toHaveBeenCalledWith('org-1', 'cand-1');
+  });
+});
+
+describe('OpportunityFinderService.explainCandidate compensation', () => {
+  function createExplainHarness() {
+    const prisma = {
+      opportunityRun: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'run-1',
+          organizationId: 'org-1',
+          userId: 'user-1',
+          service: 'Criação de sites',
+        }),
+      },
+      opportunityCandidate: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    const billing = {
+      consumeCreditForExplain: jest.fn().mockResolvedValue(undefined),
+      refundExplainCredit: jest.fn().mockResolvedValue(undefined),
+    };
+    const ai = {
+      explainOpportunity: jest.fn(),
+      isOpportunityAiEnabled: jest.fn().mockReturnValue(true),
+    };
+    const service = new OpportunityFinderService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      billing as never,
+      ai as never,
+      {} as never,
+      {} as never,
+    );
+    return { service, prisma, billing, ai };
+  }
+
+  const candidate = {
+    id: 'cand-1',
+    runId: 'run-1',
+    explanation: null,
+    company: { companyName: 'Loja X' },
+    signals: [],
+    scoreBreakdown: {},
+  };
+
+  it('refunds Explain when paid AI times out after debit', async () => {
+    const harness = createExplainHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidate);
+    harness.ai.explainOpportunity.mockResolvedValue(null);
+
+    await expect(
+      harness.service.explainCandidate('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(harness.billing.consumeCreditForExplain).toHaveBeenCalledWith('org-1', 'cand-1', 'run-1');
+    expect(harness.billing.refundExplainCredit).toHaveBeenCalledTimes(1);
+    expect(harness.billing.refundExplainCredit).toHaveBeenCalledWith('org-1', 'cand-1');
+  });
+
+  it('does not refund Explain on 400 validation after debit', async () => {
+    const harness = createExplainHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidate);
+    harness.ai.explainOpportunity.mockRejectedValue(new BadRequestException('invalid payload'));
+
+    await expect(
+      harness.service.explainCandidate('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(harness.billing.consumeCreditForExplain).toHaveBeenCalled();
+    expect(harness.billing.refundExplainCredit).not.toHaveBeenCalled();
   });
 });
