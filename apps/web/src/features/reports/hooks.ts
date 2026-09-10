@@ -14,6 +14,7 @@ export function useFunnelConversion(filters: FunnelConversionFilters) {
   return useQuery({
     queryKey: ['reports', 'funnel-conversion', userId, filters],
     queryFn: () => fetchFunnelConversion(filters),
+    retry: false,
   });
 }
 
@@ -25,6 +26,7 @@ export function useFunnelConversionLeads(
   return useQuery({
     queryKey: ['reports', 'funnel-conversion', 'leads', userId, filters],
     queryFn: () => fetchFunnelConversionLeads(filters),
+    retry: false,
     enabled: options?.enabled ?? true,
   });
 }

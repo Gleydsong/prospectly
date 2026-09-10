@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
@@ -122,5 +123,32 @@ describe('ReportsPage', () => {
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: undefined }),
     );
+  });
+
+  it('shows a recoverable Relatórios error without treating overload as a generic 500', async () => {
+    const refetch = vi.fn();
+    const error = new AxiosError('fail');
+    error.response = {
+      status: 503,
+      data: { code: 'REPORTS_QUERY_TIMEOUT', message: 'Relatórios indisponível. Tente de novo.' },
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+    };
+    mocks.useFunnelConversion.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error,
+      refetch,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<ReportsPage />, { withGoogle: false });
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Relatórios indisponível. Tente de novo.');
+    expect(screen.queryByText('Não foi possível carregar o relatório.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

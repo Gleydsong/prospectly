@@ -3,6 +3,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { LEAD_CREATED_TYPE, LEAD_STAGE_CHANGED_TYPE } from '../outbox/outbox.constants';
 import {
+  REPORTS_POOL_MAX_WAIT_MS,
+  REPORTS_STATEMENT_TIMEOUT_MS,
+  isReportsOverloadError,
+  reportsUnavailable,
+} from './reports-overload';
+import {
   REPORT_BUCKETS,
   REPORT_PERIODS,
   type QueryFunnelConversionDto,
@@ -141,47 +147,75 @@ export class ReportsService {
     const now = new Date();
     const periodStart = periodStartDate(query.period, now);
 
-    const [stages, events] = await Promise.all([
-      this.prisma.pipelineStage.findMany({
-        where: {
-          pipeline: { organizationId },
-          OR: [{ isWon: true }, { isLost: true }],
-        },
-        select: { id: true, isWon: true, isLost: true },
-      }),
-      this.prisma.outboxEvent.findMany({
-        where: {
-          organizationId,
-          createdAt: { gte: periodStart },
-          retainUntil: { gte: now },
-          type: { in: [LEAD_CREATED_TYPE, LEAD_STAGE_CHANGED_TYPE] },
-        },
-        select: { type: true, payload: true, createdAt: true, retainUntil: true },
-      }),
-    ]);
-    const inWindow = events.filter((event) => {
-      if (new Date(event.createdAt).getTime() < periodStart.getTime()) return false;
-      if (new Date(event.retainUntil).getTime() < now.getTime()) return false;
-      return true;
-    });
+    let stages: Array<{ id: string; isWon: boolean; isLost: boolean }>;
+    let events: Array<{
+      type: string;
+      payload: unknown;
+      createdAt: Date;
+      retainUntil: Date;
+    }>;
+    let leads: Array<{ id: string; source: string; ownerId: string | null }>;
 
+    try {
+      const loaded = await this.prisma.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SELECT set_config('statement_timeout', ${String(REPORTS_STATEMENT_TIMEOUT_MS)}, true)`;
+          const [loadedStages, loadedEvents] = await Promise.all([
+            tx.pipelineStage.findMany({
+              where: {
+                pipeline: { organizationId },
+                OR: [{ isWon: true }, { isLost: true }],
+              },
+              select: { id: true, isWon: true, isLost: true },
+            }),
+            tx.outboxEvent.findMany({
+              where: {
+                organizationId,
+                createdAt: { gte: periodStart },
+                retainUntil: { gte: now },
+                type: { in: [LEAD_CREATED_TYPE, LEAD_STAGE_CHANGED_TYPE] },
+              },
+              select: { type: true, payload: true, createdAt: true, retainUntil: true },
+            }),
+          ]);
+          const windowed = loadedEvents.filter((event) => {
+            if (new Date(event.createdAt).getTime() < periodStart.getTime()) return false;
+            if (new Date(event.retainUntil).getTime() < now.getTime()) return false;
+            return true;
+          });
+          const leadIds = [
+            ...new Set(
+              windowed
+                .map((event) => payloadString(event.payload, 'leadId'))
+                .filter((id): id is string => Boolean(id)),
+            ),
+          ];
+          const loadedLeads = leadIds.length
+            ? await tx.lead.findMany({
+                where: { organizationId, id: { in: leadIds }, deletedAt: null },
+                select: { id: true, source: true, ownerId: true },
+              })
+            : [];
+          return { stages: loadedStages, events: windowed, leads: loadedLeads };
+        },
+        {
+          maxWait: REPORTS_POOL_MAX_WAIT_MS,
+          timeout: REPORTS_STATEMENT_TIMEOUT_MS + 1_000,
+        },
+      );
+      stages = loaded.stages;
+      events = loaded.events;
+      leads = loaded.leads;
+    } catch (error) {
+      if (isReportsOverloadError(error)) {
+        throw reportsUnavailable();
+      }
+      throw error;
+    }
+
+    const inWindow = events;
     const wonStageIds = new Set(stages.filter((stage) => stage.isWon).map((stage) => stage.id));
     const lostStageIds = new Set(stages.filter((stage) => stage.isLost).map((stage) => stage.id));
-
-    const leadIds = [
-      ...new Set(
-        inWindow
-          .map((event) => payloadString(event.payload, 'leadId'))
-          .filter((id): id is string => Boolean(id)),
-      ),
-    ];
-
-    const leads = leadIds.length
-      ? await this.prisma.lead.findMany({
-          where: { organizationId, id: { in: leadIds }, deletedAt: null },
-          select: { id: true, source: true, ownerId: true },
-        })
-      : [];
     const leadById = new Map(leads.map((lead) => [lead.id, lead]));
 
     const inflowIds = new Set<string>();

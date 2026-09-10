@@ -831,6 +831,7 @@
     "subtitle": "Conversão do funil a partir dos eventos duráveis da organização.",
     "retentionNotice": "O histórico segue a retenção do outbox (90 dias). Ganho e Perdido usam as etapas do funil de agora — reclassificar uma etapa reescreve o passado.",
     "loadError": "Não foi possível carregar o relatório.",
+    "unavailable": "Relatórios indisponível. Tente de novo.",
     "empty": "Nenhum evento neste período.",
     "openBucket": "Ver {{label}} ({{count}})",
     "openSourceBucket": "Ver {{label}} · {{source}} ({{count}})",
