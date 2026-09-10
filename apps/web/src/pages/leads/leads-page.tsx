@@ -128,7 +128,7 @@ function LeadColumnValue({
     case 'tags':
       return (
         <div className="flex flex-wrap gap-1">
-          {lead.tags.slice(0, 3).map((tag) => (
+          {(lead.tags ?? []).slice(0, 3).map((tag) => (
             <Badge key={tag.id}>{tag.name}</Badge>
           ))}
         </div>
@@ -164,88 +164,96 @@ function CustomFieldFilterValue({
   return (
     <>
       {ops.length > 1 ? (
-        <Select
-          value={op}
-          onChange={(event) => {
-            const nextOp = event.target.value as CustomFieldFilterOp;
-            onChange({
-              fieldId: filter.fieldId,
-              op: nextOp,
-              value: nextOp === 'older_than' || nextOp === 'within' ? undefined : '',
-              days: DEFAULT_LAST_CONTACT_DAYS,
-            });
-          }}
-          aria-label={t('leads.customFieldFilter')}
-        >
-          {ops.map((item) => (
-            <option key={item} value={item}>
-              {t(
-                item === 'eq'
-                  ? 'leads.customFieldOpEq'
-                  : item === 'gte'
-                    ? 'leads.customFieldOpGte'
-                    : item === 'lte'
-                      ? 'leads.customFieldOpLte'
-                      : item === 'older_than'
-                        ? 'leads.customFieldOpOlder'
-                        : 'leads.customFieldOpWithin',
-              )}
-            </option>
-          ))}
-        </Select>
-      ) : null}
-      {relative ? (
-        <Input
-          type="number"
-          min={1}
-          max={365}
-          value={filter.days ?? DEFAULT_LAST_CONTACT_DAYS}
-          onChange={(event) => {
-            const next = Number(event.target.value);
-            onChange({
-              ...filter,
-              op,
-              days: Number.isInteger(next)
-                ? Math.min(365, Math.max(1, next))
-                : DEFAULT_LAST_CONTACT_DAYS,
-            });
-          }}
-          aria-label={t('leads.lastContactDays')}
-        />
-      ) : field?.type === 'select' ? (
-        <Select
-          value={typeof filter.value === 'string' ? filter.value : ''}
-          onChange={(event) => onChange({ ...filter, op, value: event.target.value })}
-          aria-label={field.name}
-        >
-          <option value="">—</option>
-          {field.options
-            .filter((option) => !option.archivedAt || option.id === filter.value)
-            .map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
+        <div className="w-full sm:w-44">
+          <Select
+            value={op}
+            onChange={(event) => {
+              const nextOp = event.target.value as CustomFieldFilterOp;
+              onChange({
+                fieldId: filter.fieldId,
+                op: nextOp,
+                value: nextOp === 'older_than' || nextOp === 'within' ? undefined : '',
+                days: DEFAULT_LAST_CONTACT_DAYS,
+              });
+            }}
+            aria-label={t('leads.customFieldFilter')}
+          >
+            {ops.map((item) => (
+              <option key={item} value={item}>
+                {t(
+                  item === 'eq'
+                    ? 'leads.customFieldOpEq'
+                    : item === 'gte'
+                      ? 'leads.customFieldOpGte'
+                      : item === 'lte'
+                        ? 'leads.customFieldOpLte'
+                        : item === 'older_than'
+                          ? 'leads.customFieldOpOlder'
+                          : 'leads.customFieldOpWithin',
+                )}
               </option>
             ))}
-        </Select>
-      ) : (
-        <Input
-          type={field?.type === 'number' ? 'number' : field?.type === 'date' ? 'date' : 'text'}
-          value={filter.value === undefined ? '' : String(filter.value)}
-          onChange={(event) => {
-            const raw = event.target.value;
-            if (field?.type === 'number') {
-              const parsed = Number(raw);
+          </Select>
+        </div>
+      ) : null}
+      {relative ? (
+        <div className="w-full sm:w-28">
+          <Input
+            type="number"
+            min={1}
+            max={365}
+            value={filter.days ?? DEFAULT_LAST_CONTACT_DAYS}
+            onChange={(event) => {
+              const next = Number(event.target.value);
               onChange({
                 ...filter,
                 op,
-                value: raw === '' || !Number.isFinite(parsed) ? '' : parsed,
+                days: Number.isInteger(next)
+                  ? Math.min(365, Math.max(1, next))
+                  : DEFAULT_LAST_CONTACT_DAYS,
               });
-            } else {
-              onChange({ ...filter, op, value: raw });
-            }
-          }}
-          aria-label={field?.name ?? t('leads.customFieldFilter')}
-        />
+            }}
+            aria-label={t('leads.lastContactDays')}
+          />
+        </div>
+      ) : field?.type === 'select' ? (
+        <div className="w-full sm:w-48">
+          <Select
+            value={typeof filter.value === 'string' ? filter.value : ''}
+            onChange={(event) => onChange({ ...filter, op, value: event.target.value })}
+            aria-label={field.name}
+          >
+            <option value="">—</option>
+            {field.options
+              .filter((option) => !option.archivedAt || option.id === filter.value)
+              .map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+          </Select>
+        </div>
+      ) : (
+        <div className="w-full sm:w-48">
+          <Input
+            type={field?.type === 'number' ? 'number' : field?.type === 'date' ? 'date' : 'text'}
+            value={filter.value === undefined ? '' : String(filter.value)}
+            onChange={(event) => {
+              const raw = event.target.value;
+              if (field?.type === 'number') {
+                const parsed = Number(raw);
+                onChange({
+                  ...filter,
+                  op,
+                  value: raw === '' || !Number.isFinite(parsed) ? '' : parsed,
+                });
+              } else {
+                onChange({ ...filter, op, value: raw });
+              }
+            }}
+            aria-label={field?.name ?? t('leads.customFieldFilter')}
+          />
+        </div>
       )}
     </>
   );
@@ -639,69 +647,75 @@ export function LeadsPage() {
             </Button>
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <Select
-              value={lastContactOp}
-              onChange={(event) => {
-                setPage(1);
-                setLastContactOp(event.target.value as LastContactOp);
-              }}
-              aria-label={t('leads.lastContact')}
-            >
-              <option value="">{t('leads.lastContactAny')}</option>
-              <option value="older_than">{t('leads.lastContactOlder')}</option>
-              <option value="within">{t('leads.lastContactWithin')}</option>
-            </Select>
-            {lastContactOp ? (
-              <Input
-                type="number"
-                min={1}
-                max={365}
-                value={lastContactDays}
+            <div className="w-full sm:w-56">
+              <Select
+                value={lastContactOp}
                 onChange={(event) => {
                   setPage(1);
-                  const next = Number(event.target.value);
-                  setLastContactDays(
-                    Number.isInteger(next)
-                      ? Math.min(365, Math.max(1, next))
-                      : DEFAULT_LAST_CONTACT_DAYS,
-                  );
+                  setLastContactOp(event.target.value as LastContactOp);
                 }}
-                aria-label={t('leads.lastContactDays')}
-              />
+                aria-label={t('leads.lastContact')}
+              >
+                <option value="">{t('leads.lastContactAny')}</option>
+                <option value="older_than">{t('leads.lastContactOlder')}</option>
+                <option value="within">{t('leads.lastContactWithin')}</option>
+              </Select>
+            </div>
+            {lastContactOp ? (
+              <div className="w-full sm:w-28">
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={lastContactDays}
+                  onChange={(event) => {
+                    setPage(1);
+                    const next = Number(event.target.value);
+                    setLastContactDays(
+                      Number.isInteger(next)
+                        ? Math.min(365, Math.max(1, next))
+                        : DEFAULT_LAST_CONTACT_DAYS,
+                    );
+                  }}
+                  aria-label={t('leads.lastContactDays')}
+                />
+              </div>
             ) : null}
-            <Select
-              value={customFilters[0]?.fieldId ?? ''}
-              onChange={(event) => {
-                setPage(1);
-                const fieldId = event.target.value;
-                if (!fieldId) {
-                  setCustomFilters([]);
-                  return;
-                }
-                const field = customFields.find((item) => item.id === fieldId);
-                const op: CustomFieldFilterOp = field ? opsForType(field.type)[0] : 'eq';
-                setCustomFilters([
-                  {
-                    fieldId,
-                    op,
-                    value: '',
-                    days: DEFAULT_LAST_CONTACT_DAYS,
-                  },
-                ]);
-              }}
-              aria-label={t('leads.customFieldFilter')}
-            >
-              <option value="">{t('leads.customFieldFilterNone')}</option>
-              {pickerCustomFields(
-                customFields,
-                customFilters.map((item) => item.fieldId),
-              ).map((field) => (
-                <option key={field.id} value={field.id}>
-                  {field.name}
-                  {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
-                </option>
-              ))}
-            </Select>
+            <div className="w-full sm:w-56">
+              <Select
+                value={customFilters[0]?.fieldId ?? ''}
+                onChange={(event) => {
+                  setPage(1);
+                  const fieldId = event.target.value;
+                  if (!fieldId) {
+                    setCustomFilters([]);
+                    return;
+                  }
+                  const field = customFields.find((item) => item.id === fieldId);
+                  const op: CustomFieldFilterOp = field ? opsForType(field.type)[0] : 'eq';
+                  setCustomFilters([
+                    {
+                      fieldId,
+                      op,
+                      value: '',
+                      days: DEFAULT_LAST_CONTACT_DAYS,
+                    },
+                  ]);
+                }}
+                aria-label={t('leads.customFieldFilter')}
+              >
+                <option value="">{t('leads.customFieldFilterNone')}</option>
+                {pickerCustomFields(
+                  customFields,
+                  customFilters.map((item) => item.fieldId),
+                ).map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {field.name}
+                    {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
             {customFilters[0] ? (
               <CustomFieldFilterValue
                 fields={customFields}
@@ -769,6 +783,7 @@ export function LeadsPage() {
                   >
                     <input
                       type="checkbox"
+                      aria-label={field.name}
                       className="h-4 w-4 rounded border-[color:var(--border)]"
                       checked={columns.includes(field.id)}
                       onChange={() => {
@@ -776,8 +791,17 @@ export function LeadsPage() {
                         setColumns((current) => toggleLeadViewColumn(current, field.id));
                       }}
                     />
-                    {field.name}
-                    {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
+                    <span className="max-w-[180px] truncate" title={field.name}>
+                      {field.name}
+                    </span>
+                    <span className="rounded bg-[color:var(--surface-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--ink-muted)] border border-[color:var(--border)]">
+                      {t('leads.customFieldBadge')}
+                    </span>
+                    {field.archivedAt ? (
+                      <span className="text-xs text-[color:var(--ink-muted)]">
+                        ({t('leads.customFieldArchivedSuffix')})
+                      </span>
+                    ) : null}
                   </label>
                 ))}
               </fieldset>

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ import { TableSkeleton } from '@/components/ui/skeleton';
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '@/features/tasks/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { TASK_STATUS_LABELS } from '@/lib/presentation-labels';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import type { Task } from '@/types';
 
 const taskSchema = z.object({
@@ -35,10 +35,33 @@ const PRIORITY_LABEL: Record<Task['priority'], string> = {
   URGENT: 'Urgente',
 };
 
+type QuickFilter = 'all' | 'today' | 'overdue' | 'done';
+
+function isDueToday(dueAt?: string | null): boolean {
+  if (!dueAt) return false;
+  const d = new Date(dueAt);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function isDueOverdue(dueAt?: string | null, status?: Task['status']): boolean {
+  if (!dueAt || status === 'DONE' || status === 'CANCELLED') return false;
+  const d = new Date(dueAt);
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return d.getTime() < todayStart;
+}
+
 export function TasksPage() {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<Task['status'] | ''>('');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('all');
+  const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 
   const query = useTasks({ page, pageSize: 15, status: status || undefined });
@@ -71,6 +94,25 @@ export function TasksPage() {
   const tasks = query.data?.data ?? [];
   const meta = query.data?.meta;
 
+  const filteredTasks = tasks.filter((task) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const matchTitle = task.title.toLowerCase().includes(q);
+      const matchLead = task.lead?.companyName?.toLowerCase().includes(q);
+      if (!matchTitle && !matchLead) return false;
+    }
+    if (quickFilter === 'today') {
+      return isDueToday(task.dueAt);
+    }
+    if (quickFilter === 'overdue') {
+      return isDueOverdue(task.dueAt, task.status);
+    }
+    if (quickFilter === 'done') {
+      return task.status === 'DONE';
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -85,22 +127,68 @@ export function TasksPage() {
       </div>
 
       <Card className="p-4">
-        <Select
-          value={status}
-          onChange={(event) => {
-            setPage(1);
-            setStatus(event.target.value as Task['status'] | '');
-          }}
-          className="max-w-xs"
-          aria-label="Filtrar por status"
-        >
-          <option value="">Todos os status</option>
-          {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--ink-muted)]" aria-hidden />
+              <Input
+                placeholder="Buscar por título ou cliente…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="pl-9"
+                aria-label="Buscar tarefas"
+              />
+            </div>
+            <div className="w-full sm:w-48">
+              <Select
+                value={status}
+                onChange={(event) => {
+                  setPage(1);
+                  setStatus(event.target.value as Task['status'] | '');
+                }}
+                aria-label="Filtrar por status"
+              >
+                <option value="">Todos os status</option>
+                {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filtro rápido por prazo">
+            {(
+              [
+                { id: 'all', label: 'Todas' },
+                { id: 'today', label: 'Hoje' },
+                { id: 'overdue', label: 'Atrasadas' },
+                { id: 'done', label: 'Concluídas' },
+              ] as const
+            ).map((chip) => {
+              const active = quickFilter === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    setQuickFilter(chip.id);
+                  }}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-[color:var(--accent)] text-white shadow-xs'
+                      : 'bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)] border border-[color:var(--border)]',
+                  )}
+                  aria-pressed={active}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </Card>
 
       {actionError ? <Alert tone="error">{actionError}</Alert> : null}
@@ -120,11 +208,16 @@ export function TasksPage() {
             </Button>
           }
         />
+      ) : filteredTasks.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="font-medium text-[color:var(--ink)]">Nenhuma tarefa encontrada</p>
+          <p className="mt-1 text-sm text-[color:var(--ink-muted)]">Tente ajustar a busca ou os filtros selecionados.</p>
+        </Card>
       ) : (
         <>
           <Card className="overflow-hidden">
             <ul className="divide-y divide-[color:var(--border)] md:hidden">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <li key={task.id} className="space-y-2 px-4 py-3.5">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-[color:var(--ink)]">{task.title}</p>
@@ -185,7 +278,7 @@ export function TasksPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.map((task) => (
+                  {filteredTasks.map((task) => (
                     <tr key={task.id} className="border-b border-[color:var(--border)]">
                       <td className="px-5 py-3 font-medium text-[color:var(--ink)]">{task.title}</td>
                       <td className="px-5 py-3">

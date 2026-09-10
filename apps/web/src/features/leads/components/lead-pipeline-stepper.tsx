@@ -11,6 +11,27 @@ export function orderedPipelineStages(
   return [...pipeline.stages].sort((left, right) => left.order - right.order);
 }
 
+export function findStageForStatus(
+  stages: Array<LeadStage & { order: number }>,
+  status?: string | null,
+): (LeadStage & { order: number }) | undefined {
+  if (!status) return undefined;
+  const STATUS_NAME_MAP: Record<string, string> = {
+    NEW: 'novos',
+    IN_ANALYSIS: 'em análise',
+    QUALIFIED: 'qualificados',
+    CONTACTED: 'contatados',
+    RESPONDED: 'responderam',
+    MEETING: 'reunião marcada',
+    PROPOSAL: 'proposta enviada',
+    NEGOTIATION: 'negociação',
+    WON: 'ganhos',
+    LOST: 'perdidos',
+  };
+  const target = STATUS_NAME_MAP[status] ?? status.toLowerCase();
+  return stages.find((s) => s.name.trim().toLowerCase() === target);
+}
+
 export function LeadPipelineStepper({
   stages,
   currentStageId,

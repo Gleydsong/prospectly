@@ -1,4 +1,4 @@
-import { FileSpreadsheet, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,6 +9,25 @@ import { Pagination } from '@/components/ui/pagination';
 import { useCreateCsvImport, useImport, useImportErrors, useImports, usePreviewCsv } from '@/features/imports/hooks';
 import { getApiErrorMessage } from '@/lib/api';
 import { CSV_IMPORT_FIELDS, type CsvImportField, type CsvImportMapping, type CsvPreview } from '@/types';
+
+export const CSV_TEMPLATE_CONTENT =
+  '\uFEFF' +
+  'Nome da Empresa,Telefone,E-mail,Site,Endereço,Cidade,Estado,Segmento\n' +
+  'Padaria Bela Vista,(11) 98765-4321,contato@padariabelavista.com.br,https://padariabelavista.com.br,Av. Paulista 1000,São Paulo,SP,Alimentação\n' +
+  'Clínica Sorriso,(21) 99876-5432,atendimento@clinicasorriso.com.br,https://clinicasorriso.com.br,Rua das Flores 250,Rio de Janeiro,RJ,Saúde\n' +
+  'Oficina Mecânica Express,(31) 98888-7777,contato@mecanicaexpress.com.br,,Rua Minas Gerais 50,Belo Horizonte,MG,Serviços Automotivos\n';
+
+export function downloadCsvTemplate() {
+  const blob = new Blob([CSV_TEMPLATE_CONTENT], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'modelo-leads-prospectly.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 const FIELD_LABELS: Record<CsvImportField, string> = {
   companyName: 'Nome da empresa',
@@ -135,7 +154,22 @@ export function ImportsPage() {
       </div>
 
       <Card>
-        <CardHeader title="Selecionar arquivo" description="Aceitamos apenas CSV. Nenhum lead é criado antes da confirmação." />
+        <CardHeader
+          title="Selecionar arquivo"
+          description="Aceitamos apenas CSV. Nenhum lead é criado antes da confirmação."
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={downloadCsvTemplate}
+              className="gap-1.5"
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              Baixar modelo CSV
+            </Button>
+          }
+        />
         <CardContent>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[color:var(--border)] p-8 text-center transition-colors hover:border-brand-500 hover:bg-brand-500/10">
             <FileSpreadsheet className="mb-3 h-8 w-8 text-[color:var(--accent)]" aria-hidden />

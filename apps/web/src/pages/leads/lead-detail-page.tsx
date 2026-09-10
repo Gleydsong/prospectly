@@ -35,6 +35,7 @@ import { CopyButton } from '@/features/leads/components/lead-copy-button';
 import { LeadOpportunityCard } from '@/features/leads/components/lead-opportunity-card';
 import {
   LeadPipelineStepper,
+  findStageForStatus,
   orderedPipelineStages,
 } from '@/features/leads/components/lead-pipeline-stepper';
 import { LeadTagManager } from '@/features/leads/components/lead-tag-manager';
@@ -232,8 +233,10 @@ export function LeadDetailPage() {
     });
   };
 
+  const activeStage = lead.stage ?? findStageForStatus(funnelStages, lead.status);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <Link
         to="/leads"
         className="inline-flex items-center gap-2 text-sm text-brand-400 hover:text-brand-300"
@@ -257,7 +260,17 @@ export function LeadDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <LeadStatusBadge status={lead.status} />
+          {activeStage ? (
+            <Badge
+              tone={
+                lead.status === 'WON' ? 'green' : lead.status === 'LOST' ? 'red' : 'blue'
+              }
+            >
+              {activeStage.name}
+            </Badge>
+          ) : (
+            <LeadStatusBadge status={lead.status} />
+          )}
           <ScoreBadge score={lead.score} />
           {lead.doNotContact ? <Badge tone="red">Não contatar</Badge> : null}
           {whatsappRaw ? (
@@ -294,7 +307,7 @@ export function LeadDetailPage() {
         ) : (
           <LeadPipelineStepper
             stages={funnelStages}
-            currentStageId={lead.stage?.id}
+            currentStageId={activeStage?.id}
             pending={moveStage.isPending}
             onSelect={(stage) => {
               setPipelineFeedback(null);
@@ -464,6 +477,8 @@ export function LeadDetailPage() {
                 <LeadWebsiteGap
                   companyName={lead.companyName}
                   city={lead.city}
+                  category={lead.category}
+                  segment={lead.segment}
                   googleHref={googleSearchHref}
                   pending={updateLead.isPending}
                   onSaveUrl={(url) => {

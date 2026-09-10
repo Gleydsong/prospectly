@@ -195,12 +195,12 @@ describe('LeadsPage saved views', () => {
     renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
 
     await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
-    await user.click(screen.getByRole('button', { name: 'Guardar vista' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Guardar vista da lista' });
+    await user.click(screen.getByRole('button', { name: /salvar visualização|guardar vista/i }));
+    const dialog = await screen.findByRole('dialog', { name: /salvar visualização da lista|guardar vista da lista/i });
     const nameInput = within(dialog).getByRole('textbox', { name: 'Nome' });
     fireEvent.change(nameInput, { target: { value: 'Clientes novos' } });
     fireEvent.change(within(dialog).getByLabelText('Visibilidade'), { target: { value: 'TEAM' } });
-    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+    await user.click(within(dialog).getByRole('button', { name: /^salvar$|^guardar$/i }));
 
     expect(mutateAsync).toHaveBeenCalledWith({
       name: 'Clientes novos',
@@ -216,10 +216,10 @@ describe('LeadsPage saved views', () => {
       withGoogle: false,
     });
 
-    expect(screen.queryByRole('button', { name: 'Guardar vista' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Duplicar vista' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Guardar alterações' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Arquivar vista' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /salvar visualização|guardar vista/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /duplicar visualização|duplicar vista/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /salvar alterações|guardar alterações/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /arquivar visualização|arquivar vista/i })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Vistas')).toHaveValue('view-1');
     await waitFor(() => {
       expect(mocks.useLeads).toHaveBeenCalledWith(
@@ -304,12 +304,12 @@ describe('LeadsPage saved views', () => {
       );
     });
     await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
-    await user.click(screen.getByRole('button', { name: 'Guardar alterações' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Atualizar vista' });
+    await user.click(screen.getByRole('button', { name: /salvar alterações|guardar alterações/i }));
+    const dialog = await screen.findByRole('dialog', { name: /atualizar visualização|atualizar vista/i });
     fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
       target: { value: 'Lisboa atualizada' },
     });
-    await user.click(within(dialog).getByRole('button', { name: 'Guardar alterações' }));
+    await user.click(within(dialog).getByRole('button', { name: /salvar alterações|guardar alterações/i }));
 
     expect(mutateAsync).toHaveBeenCalledWith({
       id: 'view-1',
@@ -353,13 +353,12 @@ describe('LeadsPage saved views', () => {
 
     await user.selectOptions(screen.getByLabelText('Filtrar por status'), LeadStatus.NEW);
     await user.selectOptions(screen.getByLabelText('Ou este status'), LeadStatus.QUALIFIED);
-    await user.selectOptions(screen.getByLabelText('Último contacto'), 'older_than');
-    await user.click(screen.getByRole('button', { name: 'Guardar vista' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Guardar vista da lista' });
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
-      target: { value: 'Novos ou qualificados' },
-    });
-    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+    await user.selectOptions(screen.getByLabelText(/último contato|último contacto/i), 'older_than');
+    await user.click(screen.getByRole('button', { name: /salvar visualização|guardar vista/i }));
+    const dialog = await screen.findByRole('dialog', { name: /salvar visualização da lista|guardar vista da lista/i });
+    const nameInput = within(dialog).getByRole('textbox', { name: 'Nome' });
+    fireEvent.change(nameInput, { target: { value: 'Novos ou qualificados' } });
+    await user.click(within(dialog).getByRole('button', { name: /^salvar$|^guardar$/i }));
 
     expect(mutateAsync).toHaveBeenCalledWith({
       name: 'Novos ou qualificados',
@@ -454,12 +453,11 @@ describe('LeadsPage saved views', () => {
     renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
 
     await user.click(screen.getByRole('button', { name: 'Kanban' }));
-    await user.click(screen.getByRole('button', { name: 'Guardar vista' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Guardar vista da lista' });
-    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Nome' }), {
-      target: { value: 'Quadro Lisboa' },
-    });
-    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }));
+    await user.click(screen.getByRole('button', { name: /salvar visualização|guardar vista/i }));
+    const dialog = await screen.findByRole('dialog', { name: /salvar visualização da lista|guardar vista da lista/i });
+    const nameInput = within(dialog).getByRole('textbox', { name: 'Nome' });
+    fireEvent.change(nameInput, { target: { value: 'Quadro Lisboa' } });
+    await user.click(within(dialog).getByRole('button', { name: /^salvar$|^guardar$/i }));
 
     expect(mutateAsync).toHaveBeenCalledWith({
       name: 'Quadro Lisboa',
@@ -762,5 +760,31 @@ describe('LeadsPage saved views', () => {
     });
     expect(screen.getByText('PT123')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /NIF antigo/ })).toBeChecked();
+  });
+
+  it('renders custom field badge in column selector', async () => {
+    const customId = '44444444-4444-4444-4444-444444444444';
+    mocks.useCustomFields.mockReturnValue({
+      data: [
+        {
+          id: customId,
+          name: 'Segmento Específico',
+          type: 'text',
+          position: 0,
+          archivedAt: null,
+          options: [],
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/leads'],
+      withGoogle: false,
+    });
+
+    expect(screen.getByRole('checkbox', { name: 'Segmento Específico' })).toBeInTheDocument();
+    expect(screen.getByText('Personalizado')).toBeInTheDocument();
   });
 });

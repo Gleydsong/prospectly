@@ -217,4 +217,24 @@ describe('ImportsPage', () => {
 
     expect(screen.getByText('A importação falhou antes de ser concluída.')).toBeInTheDocument();
   });
+
+  it('renders download CSV template button and provides canonical headers', async () => {
+    const user = userEvent.setup();
+    const createObjectURLMock = vi.fn().mockReturnValue('blob:mock-url');
+    const revokeObjectURLMock = vi.fn();
+    window.URL.createObjectURL = createObjectURLMock;
+    window.URL.revokeObjectURL = revokeObjectURLMock;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(<ImportsPage />);
+
+    const downloadButton = screen.getByRole('button', { name: /Baixar modelo CSV/i });
+    expect(downloadButton).toBeInTheDocument();
+
+    await user.click(downloadButton);
+    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
+    expect(clickSpy).toHaveBeenCalled();
+    clickSpy.mockRestore();
+  });
 });

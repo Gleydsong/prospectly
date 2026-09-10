@@ -105,8 +105,11 @@ export function TopNav() {
     queryKey: ['billing', 'status'],
     queryFn: getBillingStatus,
     staleTime: 60_000,
+    placeholderData: (previousData) => previousData,
   });
 
+  const hasLoadedCredits = billing.data !== undefined;
+  const isCreditsLoading = (billing.isPending || billing.isLoading) && !hasLoadedCredits;
   const creditsLabel = t('nav.creditsBalance', {
     count: billing.data?.creditBalance ?? 0,
   });
@@ -200,7 +203,14 @@ export function TopNav() {
           title={t('nav.credits')}
         >
           <Coins className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>{creditsLabel}</span>
+          {isCreditsLoading ? (
+            <span
+              className="inline-block h-3 w-14 animate-pulse rounded bg-sky-200/80 dark:bg-sky-800/80"
+              aria-label={t('common.loading')}
+            />
+          ) : (
+            <span>{creditsLabel}</span>
+          )}
         </Link>
 
         <ThemeToggle />

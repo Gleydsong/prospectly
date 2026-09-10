@@ -3,7 +3,7 @@ import { useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScoreBadge } from '@/components/ui/score-badge';
@@ -32,6 +32,16 @@ export function PipelinePage() {
   const [loadingMoreStageId, setLoadingMoreStageId] = useState<string | null>(null);
   const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
   const moveSelectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollBoard = (direction: 'left' | 'right') => {
+    if (!scrollContainerRef.current) return;
+    const distance = 320;
+    scrollContainerRef.current.scrollBy({
+      left: direction === 'left' ? -distance : distance,
+      behavior: 'smooth',
+    });
+  };
 
   const move = useMutation({
     mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string; leadName: string; stageName: string }) =>
@@ -104,9 +114,33 @@ export function PipelinePage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.pipeline')}</h1>
-        <p className="text-sm text-[color:var(--ink-muted)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.pipeline')}</h1>
+          <p className="text-sm text-[color:var(--ink-muted)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+        </div>
+        <div className="flex items-center gap-1.5" role="group" aria-label="Navegação horizontal do funil">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => scrollBoard('left')}
+            aria-label="Rolar colunas para a esquerda"
+            title="Rolar colunas para a esquerda"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => scrollBoard('right')}
+            aria-label="Rolar colunas para a direita"
+            title="Rolar colunas para a direita"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Button>
+        </div>
       </div>
 
       <div
@@ -120,6 +154,7 @@ export function PipelinePage() {
       </div>
 
       <div
+        ref={scrollContainerRef}
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 pb-4"
         role="list"
         aria-label={t('pipeline.stagesLabel')}
@@ -157,8 +192,13 @@ export function PipelinePage() {
               className="flex items-center justify-between rounded-t-xl px-3 py-2.5"
               style={{ borderTop: `3px solid ${stage.color ?? '#94a3b8'}` }}
             >
-              <h2 className="text-sm font-semibold text-[color:var(--ink)]">{stage.name}</h2>
-              <span className="rounded-full bg-[color:var(--surface-card)] px-2 py-0.5 text-xs font-medium text-[color:var(--ink-muted)]">
+              <h2 className="text-sm font-semibold text-[color:var(--ink)] truncate mr-2" title={stage.name}>
+                {stage.name}
+              </h2>
+              <span
+                className="shrink-0 rounded-full bg-[color:var(--surface-card)] px-2.5 py-0.5 text-xs font-semibold text-[color:var(--ink)] border border-[color:var(--border)]"
+                title={`${stage.totalCount} leads nesta etapa`}
+              >
                 {stage.totalCount}
               </span>
             </header>

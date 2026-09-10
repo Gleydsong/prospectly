@@ -448,4 +448,30 @@ describe('SearchPage', () => {
       resultIds: ['result-1'],
     });
   });
+
+  it('renders "Selecione o estado" placeholder for city when no region is picked', () => {
+    renderPage();
+    const citySelect = screen.getByLabelText('Cidade');
+    expect(citySelect).toBeDisabled();
+    expect(screen.getAllByRole('option', { name: 'Selecione o estado' })).toHaveLength(2);
+  });
+
+  it('clarifies that existing credits apply to available niches', () => {
+    mocks.useBillingStatus.mockReturnValue({
+      data: {
+        plan: 'FREE',
+        creditBalance: 386,
+        searchUsage: { used: 0, limit: 3, remaining: 3, unlimited: false },
+      },
+      isLoading: false,
+      isError: false,
+    });
+    renderPage();
+    expect(
+      screen.getByText(/Seus 386 créditos podem ser usados nos nichos liberados/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Desbloquear todos os nichos/i }),
+    ).toHaveAttribute('href', '/credits');
+  });
 });

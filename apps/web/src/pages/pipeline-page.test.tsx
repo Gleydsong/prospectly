@@ -190,4 +190,28 @@ describe('PipelinePage', () => {
       screen.getByRole('heading', { name: /mensagem whatsapp: café central/i }),
     ).toBeInTheDocument();
   });
+
+  it('renders horizontal scroll navigation buttons and responds to clicks', async () => {
+    const user = userEvent.setup();
+    const scrollByMock = vi.fn();
+    Element.prototype.scrollBy = scrollByMock;
+
+    render(
+      <Wrapper>
+        <PipelinePage />
+      </Wrapper>,
+    );
+
+    const scrollLeftBtn = await screen.findByRole('button', { name: 'Rolar colunas para a esquerda' });
+    const scrollRightBtn = await screen.findByRole('button', { name: 'Rolar colunas para a direita' });
+
+    expect(scrollLeftBtn).toBeInTheDocument();
+    expect(scrollRightBtn).toBeInTheDocument();
+
+    await user.click(scrollRightBtn);
+    expect(scrollByMock).toHaveBeenCalledWith(expect.objectContaining({ left: 320, behavior: 'smooth' }));
+
+    await user.click(scrollLeftBtn);
+    expect(scrollByMock).toHaveBeenCalledWith(expect.objectContaining({ left: -320, behavior: 'smooth' }));
+  });
 });

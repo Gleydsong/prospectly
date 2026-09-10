@@ -621,6 +621,7 @@
     "customFieldOpOlder": "Older than N days",
     "customFieldOpWithin": "Within the last N days",
     "customFieldArchivedSuffix": "archived",
+    "customFieldBadge": "Custom",
     "column": {
       "companyName": "Company",
       "city": "City",

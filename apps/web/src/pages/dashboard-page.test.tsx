@@ -77,6 +77,22 @@ vi.mock('@/features/leads/hooks', () => ({
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
+        {
+          id: 'lead-3',
+          companyName: 'Salão Requinte',
+          segment: null,
+          category: 'hairdresser',
+          city: 'Recife - PE',
+          email: null,
+          phone: null,
+          status: LeadStatus.NEW,
+          score: 75,
+          source: 'GOOGLE_PLACES',
+          doNotContact: false,
+          tags: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ],
       meta: {
         total: 42,
@@ -187,5 +203,10 @@ describe('DashboardPage', () => {
 
     await user.click(screen.getByRole('button', { name: /novo cliente/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/leads');
+  });
+
+  it('formats raw english category tags into localized Portuguese labels', () => {
+    renderDashboard();
+    expect(screen.getByText('Cabeleireiro')).toBeInTheDocument();
   });
 });

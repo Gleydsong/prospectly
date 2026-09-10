@@ -111,4 +111,91 @@ describe('TasksPage', () => {
     await user.click(screen.getAllByRole('button', { name: /apagar tarefa contato/i })[0]!);
     expect(mocks.deleteTaskAsync).toHaveBeenCalledWith('task-1');
   });
+
+  it('filters tasks by search term', async () => {
+    const user = userEvent.setup();
+    mocks.useTasks.mockReturnValue({
+      isLoading: false,
+      data: {
+        data: [
+          {
+            id: 'task-1',
+            title: 'Ligar para cliente',
+            dueAt: null,
+            priority: 'MEDIUM',
+            status: 'OPEN',
+            lead: { id: 'lead-1', companyName: 'Padaria Alfa' },
+            createdAt: '2026-08-10T12:00:00.000Z',
+          },
+          {
+            id: 'task-2',
+            title: 'Enviar proposta comercial',
+            dueAt: null,
+            priority: 'HIGH',
+            status: 'OPEN',
+            lead: { id: 'lead-2', companyName: 'Restaurante Beta' },
+            createdAt: '2026-08-10T12:00:00.000Z',
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 2, totalPages: 1 },
+      },
+    });
+
+    render(
+      <Wrapper>
+        <TasksPage />
+      </Wrapper>,
+    );
+
+    expect(screen.getAllByText('Ligar para cliente').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Enviar proposta comercial').length).toBeGreaterThan(0);
+
+    const searchInput = screen.getByLabelText('Buscar tarefas');
+    await user.type(searchInput, 'proposta');
+
+    expect(screen.queryByText('Ligar para cliente')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Enviar proposta comercial').length).toBeGreaterThan(0);
+  });
+
+  it('filters tasks by quick filter chips', async () => {
+    const user = userEvent.setup();
+    mocks.useTasks.mockReturnValue({
+      isLoading: false,
+      data: {
+        data: [
+          {
+            id: 'task-open',
+            title: 'Tarefa em aberto',
+            dueAt: null,
+            priority: 'MEDIUM',
+            status: 'OPEN',
+            lead: null,
+            createdAt: '2026-08-10T12:00:00.000Z',
+          },
+          {
+            id: 'task-done',
+            title: 'Tarefa concluída',
+            dueAt: null,
+            priority: 'LOW',
+            status: 'DONE',
+            lead: null,
+            createdAt: '2026-08-10T12:00:00.000Z',
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 2, totalPages: 1 },
+      },
+    });
+
+    render(
+      <Wrapper>
+        <TasksPage />
+      </Wrapper>,
+    );
+
+    const doneChip = screen.getByRole('button', { name: 'Concluídas' });
+    await user.click(doneChip);
+
+    expect(screen.queryByText('Tarefa em aberto')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Tarefa concluída').length).toBeGreaterThan(0);
+  });
 });

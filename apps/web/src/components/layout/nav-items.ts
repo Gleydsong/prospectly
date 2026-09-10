@@ -31,7 +31,7 @@ export interface NavGroup {
 export const TOP_NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.principal', icon: Home },
   { to: '/leads', labelKey: 'nav.clientes', icon: Users },
-  { to: '/agents', labelKey: 'nav.conversas', icon: Bot },
+  { to: '/agents', labelKey: 'nav.agents', icon: Bot },
   { to: '/tools', labelKey: 'nav.ferramentas', icon: Wrench },
   { to: '/support', labelKey: 'nav.suporte', icon: Headphones },
 ];
