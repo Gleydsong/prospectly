@@ -199,4 +199,32 @@ describe('WorkflowExecutorService', () => {
     await service.handleOutboxEvent('evt-1');
     expect(prisma.workflow.findMany).not.toHaveBeenCalled();
   });
+
+  it('stops at 10 steps even if the published definition is oversized', async () => {
+    const prisma = makePrisma();
+    const oversized = {
+      trigger: { type: 'lead.created' },
+      steps: Array.from({ length: 11 }, (_, index) => ({
+        type: 'add_tag',
+        tagName: `tag-${index}`,
+      })),
+    };
+    prisma.outboxEvent.findUnique.mockResolvedValue(processedEvent);
+    prisma.workflow.findMany.mockResolvedValue([workflowRow]);
+    prisma.workflowVersion.findFirst.mockResolvedValue({ ...versionRow, definition: oversized });
+    prisma.workflowStepRun.findUnique.mockResolvedValue(null);
+    prisma.lead.findFirst.mockResolvedValue({ id: 'lead-1', doNotContact: false });
+    prisma.tag.upsert.mockImplementation(async (args: { create: { name: string } }) => ({
+      id: `tag-${args.create.name}`,
+      name: args.create.name,
+    }));
+    prisma.leadTag.createMany.mockResolvedValue({ count: 1 });
+    prisma.workflowStepRun.create.mockResolvedValue({ outcome: WorkflowStepRunOutcome.APPLIED });
+    const service = new WorkflowExecutorService(prisma);
+
+    await service.handleOutboxEvent('evt-1');
+
+    expect(prisma.tag.upsert).toHaveBeenCalledTimes(10);
+    expect(prisma.leadTag.createMany).toHaveBeenCalledTimes(10);
+  });
 });

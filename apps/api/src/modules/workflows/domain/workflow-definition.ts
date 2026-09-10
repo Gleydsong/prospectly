@@ -9,6 +9,15 @@ export const WORKFLOW_STEP_ADD_TAG = 'add_tag';
 export const WORKFLOW_MAX_STEPS = 10;
 export const WORKFLOW_TAG_NAME_MAX = 40;
 
+/** DomainEvents each step type would enqueue. `add_tag` emits none — invariant for v1. */
+export const WORKFLOW_STEP_OUTBOX_EVENTS: Readonly<Record<string, readonly string[]>> = {
+  [WORKFLOW_STEP_ADD_TAG]: [],
+};
+
+export type ParseWorkflowDefinitionOptions = {
+  oversizedSteps?: 'reject' | 'cap';
+};
+
 const DEFINITION_KEYS = new Set(['trigger', 'filter', 'steps']);
 const TRIGGER_KEYS = new Set(['type']);
 const STEP_KEYS = new Set(['type', 'tagName']);
@@ -35,7 +44,29 @@ export type WorkflowDefinition = {
   steps: WorkflowStep[];
 };
 
-export function parseWorkflowDefinition(raw: unknown): WorkflowDefinition {
+export function stepWouldRetrigger(
+  triggerType: string,
+  stepType: string,
+  emittedByStep: Readonly<Record<string, readonly string[]>> = WORKFLOW_STEP_OUTBOX_EVENTS,
+): boolean {
+  return (emittedByStep[stepType] ?? []).includes(triggerType);
+}
+
+export function assertNoTriggerReentry(
+  definition: { trigger: { type: string }; steps: Array<{ type: string }> },
+  emittedByStep: Readonly<Record<string, readonly string[]>> = WORKFLOW_STEP_OUTBOX_EVENTS,
+): void {
+  for (const step of definition.steps) {
+    if (stepWouldRetrigger(definition.trigger.type, step.type, emittedByStep)) {
+      throw new InvalidWorkflowDefinitionError('step would re-enter the Fluxo trigger');
+    }
+  }
+}
+
+export function parseWorkflowDefinition(
+  raw: unknown,
+  options: ParseWorkflowDefinitionOptions = {},
+): WorkflowDefinition {
   assertPlainObject(raw);
   for (const key of Object.keys(raw)) {
     if (!DEFINITION_KEYS.has(key)) {
@@ -47,7 +78,7 @@ export function parseWorkflowDefinition(raw: unknown): WorkflowDefinition {
   }
   const definition: WorkflowDefinition = {
     trigger: parseTrigger(raw.trigger),
-    steps: parseSteps(raw.steps),
+    steps: parseSteps(raw.steps, options.oversizedSteps ?? 'reject'),
   };
   if (raw.filter !== undefined) {
     try {
@@ -59,6 +90,7 @@ export function parseWorkflowDefinition(raw: unknown): WorkflowDefinition {
       throw error;
     }
   }
+  assertNoTriggerReentry(definition);
   return definition;
 }
 
@@ -75,7 +107,7 @@ function parseTrigger(raw: unknown): WorkflowTrigger {
   return { type: WORKFLOW_TRIGGER_LEAD_CREATED };
 }
 
-function parseSteps(raw: unknown): WorkflowStep[] {
+function parseSteps(raw: unknown, oversizedSteps: 'reject' | 'cap'): WorkflowStep[] {
   if (raw === undefined) {
     return [];
   }
@@ -83,7 +115,10 @@ function parseSteps(raw: unknown): WorkflowStep[] {
     throw new InvalidWorkflowDefinitionError('steps must be an array');
   }
   if (raw.length > WORKFLOW_MAX_STEPS) {
-    throw new InvalidWorkflowDefinitionError(`steps cannot exceed ${WORKFLOW_MAX_STEPS}`);
+    if (oversizedSteps === 'reject') {
+      throw new InvalidWorkflowDefinitionError(`steps cannot exceed ${WORKFLOW_MAX_STEPS}`);
+    }
+    return raw.slice(0, WORKFLOW_MAX_STEPS).map(parseStep);
   }
   return raw.map(parseStep);
 }
