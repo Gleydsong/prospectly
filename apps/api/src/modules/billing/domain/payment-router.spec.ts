@@ -2,7 +2,6 @@ import { resolvePaymentProviderId } from './payment-router';
 
 describe('resolvePaymentProviderId', () => {
   it('routes pix to the explicitly configured provider', () => {
-    expect(resolvePaymentProviderId('pix', 'ABACATE')).toBe('ABACATE');
     expect(resolvePaymentProviderId('pix', 'ASAAS')).toBe('ASAAS');
     expect(resolvePaymentProviderId('pix', 'DISABLED')).toBe('DISABLED');
   });

@@ -136,12 +136,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   }
 
   for (const key of [
-    'ABACATE_API_KEY',
-    'ABACATE_WEBHOOK_SECRET',
-    'ABACATE_WEBHOOK_HMAC_KEY',
-    'ABACATE_SUCCESS_URL',
-    'ABACATE_CANCEL_URL',
-    'ABACATE_API_BASE_URL',
     'PIX_PROVIDER',
     'ASAAS_ENABLED',
     'ASAAS_API_KEY',
@@ -176,11 +170,10 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   if (
     config.PIX_PROVIDER !== undefined &&
-    config.PIX_PROVIDER !== 'ABACATE' &&
     config.PIX_PROVIDER !== 'ASAAS' &&
     config.PIX_PROVIDER !== 'DISABLED'
   ) {
-    throw new Error('PIX_PROVIDER must be ABACATE, ASAAS or DISABLED');
+    throw new Error('PIX_PROVIDER must be ASAAS or DISABLED');
   }
 
   if (role === 'api' && config.PIX_PROVIDER === 'ASAAS' && config.ASAAS_ENABLED !== 'true') {
@@ -203,43 +196,6 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
         asaasApiKey,
         typeof asaasApiBaseUrl === 'string' ? asaasApiBaseUrl : undefined,
       );
-    }
-  }
-
-  if (isProdLike && role === 'api') {
-    const requiredAbacate = ['ABACATE_API_KEY', 'ABACATE_WEBHOOK_SECRET'] as const;
-    const missingAbacate = requiredAbacate.filter((key) => {
-      const value = config[key];
-      return typeof value !== 'string' || value.trim().length === 0;
-    });
-    if (missingAbacate.length > 0) {
-      throw new Error(
-        `Missing AbacatePay checkout configuration in ${nodeEnv}: ${missingAbacate.join(', ')}`,
-      );
-    }
-  }
-
-  const lifetimeAmount = config.ABACATE_LIFETIME_AMOUNT_CENTAVOS;
-  if (lifetimeAmount !== undefined) {
-    const parsed = typeof lifetimeAmount === 'number' ? lifetimeAmount : Number(lifetimeAmount);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new Error('ABACATE_LIFETIME_AMOUNT_CENTAVOS must be a positive integer');
-    }
-  }
-
-  const monthlyAmount = config.ABACATE_MONTHLY_AMOUNT_CENTAVOS;
-  if (monthlyAmount !== undefined) {
-    const parsed = typeof monthlyAmount === 'number' ? monthlyAmount : Number(monthlyAmount);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new Error('ABACATE_MONTHLY_AMOUNT_CENTAVOS must be a positive integer');
-    }
-  }
-
-  const httpTimeout = config.ABACATE_HTTP_TIMEOUT_MS;
-  if (httpTimeout !== undefined) {
-    const parsed = typeof httpTimeout === 'number' ? httpTimeout : Number(httpTimeout);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new Error('ABACATE_HTTP_TIMEOUT_MS must be a positive integer');
     }
   }
 

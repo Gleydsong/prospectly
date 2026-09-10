@@ -42,7 +42,7 @@ describe('CreditsPage', () => {
     getBillingStatus.mockResolvedValue({
       plan: 'STARTER_MONTHLY',
       planStatus: 'ACTIVE',
-      paymentProvider: 'ABACATE',
+      paymentProvider: 'ASAAS',
       creditBalance: 400,
       searchUsage: { used: 0, limit: null, remaining: null, unlimited: true },
       planCurrency: 'BRL',
@@ -71,8 +71,8 @@ describe('CreditsPage', () => {
     const user = userEvent.setup();
     createCreditCheckout.mockResolvedValue({
       mode: 'redirect',
-      provider: 'ABACATE',
-      url: 'https://app.abacatepay.com/pay/bill_1',
+      provider: 'ASAAS',
+      url: 'https://sandbox.asaas.com/i/bill_1',
     });
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]!);
@@ -151,7 +151,7 @@ describe('CreditsPage', () => {
     ).toBeDisabled();
   });
 
-  it('shows an accessible cancel confirmation and hides Stripe portal for Abacate orgs', async () => {
+  it('shows an accessible cancel confirmation and hides Stripe portal for Asaas orgs', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     expect(
@@ -185,7 +185,7 @@ describe('CreditsPage', () => {
     const error = new AxiosError('fail');
     error.response = {
       status: 503,
-      data: { message: 'AbacatePay is not configured' },
+      data: { message: 'Asaas is not configured' },
       statusText: 'Service Unavailable',
       headers: {},
       config: {} as never,
@@ -194,7 +194,7 @@ describe('CreditsPage', () => {
 
     renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
     await user.click((await screen.findAllByRole('button', { name: 'Pagar com Pix' }))[0]!);
-    expect(await screen.findByRole('alert')).toHaveTextContent('AbacatePay is not configured');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Asaas is not configured');
   });
 
   it('does not treat a missing role as read-only while the profile hydrates', () => {

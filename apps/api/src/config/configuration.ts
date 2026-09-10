@@ -66,16 +66,6 @@ export const configuration = () => ({
   billing: {
     pixProvider: process.env.PIX_PROVIDER ?? 'ASAAS',
   },
-  abacate: {
-    apiKey: process.env.ABACATE_API_KEY ?? '',
-    webhookSecret: process.env.ABACATE_WEBHOOK_SECRET ?? '',
-    webhookHmacKey: process.env.ABACATE_WEBHOOK_HMAC_KEY?.trim() ?? '',
-    lifetimeAmountCentavos: parseInt(process.env.ABACATE_LIFETIME_AMOUNT_CENTAVOS ?? '39900', 10),
-    successUrl: process.env.ABACATE_SUCCESS_URL,
-    cancelUrl: process.env.ABACATE_CANCEL_URL,
-    apiBaseUrl: process.env.ABACATE_API_BASE_URL ?? 'https://api.abacatepay.com/v2',
-    httpTimeoutMs: parseInt(process.env.ABACATE_HTTP_TIMEOUT_MS ?? '15000', 10),
-  },
   asaas: {
     enabled: process.env.ASAAS_ENABLED === 'true',
     apiKey: process.env.ASAAS_API_KEY?.trim() ?? '',

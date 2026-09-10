@@ -92,8 +92,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         INSERT INTO "MonthlyCheckoutAttempt"
           (id, "organizationId", provider, "paymentMethod", status, "externalId", "createdAt", "updatedAt")
         VALUES
-          (${checkoutAttemptA}, ${orgA}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptA}`}, NOW(), NOW()),
-          (${checkoutAttemptB}, ${orgB}, 'ABACATE'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptB}`}, NOW(), NOW())
+          (${checkoutAttemptA}, ${orgA}, 'ASAAS'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptA}`}, NOW(), NOW()),
+          (${checkoutAttemptB}, ${orgB}, 'ASAAS'::"PaymentProvider", 'CARD'::"BillingPaymentMethod", 'PROCESSING'::"BillingCheckoutAttemptStatus", ${`rls-checkout-${checkoutAttemptB}`}, NOW(), NOW())
       `;
       await tx.$executeRaw`
         INSERT INTO "BillingProfile"

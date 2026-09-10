@@ -105,17 +105,5 @@ export class BillingController {
   cancelSubscription(@CurrentOrg() organizationId: string) {
     return this.billing.cancelSubscription(organizationId);
   }
-
-  @Public()
-  @Post('webhook/abacate')
-  handleAbacateWebhook(
-    @Req() req: RawBodyRequest<Request>,
-    @Headers() headers: Record<string, string | string[] | undefined>,
-  ) {
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      throw new BadRequestException('Raw body missing for Abacate webhook');
-    }
-    return this.billing.handleAbacateWebhook(rawBody, headers);
-  }
 }
+

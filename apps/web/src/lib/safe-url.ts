@@ -1,4 +1,3 @@
-const ABACATE_HOST = /^(?:[a-z0-9-]+\.)*abacatepay\.com$/i;
 const ASAAS_HOST = /^(?:[a-z0-9-]+\.)*asaas\.com$/i;
 
 function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string): void {
@@ -14,18 +13,13 @@ function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string
   window.location.assign(parsed.href);
 }
 
-/** Only allow https redirects to AbacatePay-owned hosts. */
-export function assignAbacateRedirect(url: string): void {
-  assignHttpsHostRedirect(url, ABACATE_HOST, 'AbacatePay');
-}
-
 /** Route checkout redirect by provider. */
-export function assignCheckoutRedirect(url: string, provider: 'ABACATE' | 'ASAAS'): void {
+export function assignCheckoutRedirect(url: string, provider: 'ASAAS' = 'ASAAS'): void {
   if (provider === 'ASAAS') {
     assignHttpsHostRedirect(url, ASAAS_HOST, 'Asaas');
     return;
   }
-  assignAbacateRedirect(url);
+  throw new Error(`Invalid Asaas redirect URL`);
 }
 
 /** Only allow same-origin relative paths (blocks open redirects). */

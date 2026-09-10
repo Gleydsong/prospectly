@@ -25,26 +25,22 @@ describe('BillingActivationService', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       stripeSubscriptionId: null,
-      abacateSubscriptionId: null,
     });
     prisma.organization.update.mockResolvedValue({});
     const previous = await service.activateLifetime({
       organizationId: 'org1',
       currency: 'BRL',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_1',
+      provider: PaymentProvider.ASAAS,
     });
     expect(previous).toEqual({
       previousStripeSubscriptionId: null,
-      previousAbacateSubscriptionId: null,
     });
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
       data: expect.objectContaining({
         plan: OrgPlan.LIFETIME,
         planStatus: PlanStatus.ACTIVE,
-        paymentProvider: PaymentProvider.ABACATE,
-        abacatePaymentId: 'pix_1',
+        paymentProvider: PaymentProvider.ASAAS,
       }),
     });
   });
@@ -52,22 +48,20 @@ describe('BillingActivationService', () => {
   it('returns prior monthly subscription ids when upgrading to lifetime', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
-      stripeSubscriptionId: null,
-      abacateSubscriptionId: 'subs_old',
+      stripeSubscriptionId: 'sub_stripe_old',
     });
     prisma.organization.update.mockResolvedValue({});
     const previous = await service.activateLifetime({
       organizationId: 'org1',
       currency: 'BRL',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_2',
+      provider: PaymentProvider.ASAAS,
     });
-    expect(previous.previousAbacateSubscriptionId).toBe('subs_old');
+    expect(previous.previousStripeSubscriptionId).toBe('sub_stripe_old');
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
       data: expect.objectContaining({
         plan: OrgPlan.LIFETIME,
-        abacateSubscriptionId: null,
+        stripeSubscriptionId: null,
       }),
     });
   });
@@ -99,15 +93,15 @@ describe('BillingActivationService', () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
-      abacateSubscriptionId: 'subs_stale_card',
+      asaasSubscriptionId: 'subs_stale_card',
     });
     prisma.organization.update.mockResolvedValue({});
     const periodEnd = new Date('2026-09-24T00:00:00.000Z');
     await service.activateMonthly({
       organizationId: 'org1',
       currency: 'BRL',
-      provider: PaymentProvider.ABACATE,
-      abacateSubscriptionId: null,
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: null,
       currentPeriodEnd: periodEnd,
     });
     expect(prisma.organization.update).toHaveBeenCalledWith({
@@ -115,7 +109,7 @@ describe('BillingActivationService', () => {
       data: expect.objectContaining({
         plan: OrgPlan.STARTER_MONTHLY,
         planStatus: PlanStatus.ACTIVE,
-        abacateSubscriptionId: null,
+        asaasSubscriptionId: null,
         currentPeriodEnd: periodEnd,
       }),
     });
@@ -140,7 +134,7 @@ describe('BillingActivationService', () => {
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
       planStatus: PlanStatus.ACTIVE,
-      paymentProvider: PaymentProvider.ABACATE,
+      paymentProvider: PaymentProvider.STRIPE,
     });
     await service.activateMonthly({
       organizationId: 'org1',
@@ -248,44 +242,6 @@ describe('BillingActivationService', () => {
     expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 
-  it('revokes lifetime after matching Abacate refund', async () => {
-    prisma.organization.findUnique.mockResolvedValue({
-      id: 'org1',
-      plan: OrgPlan.LIFETIME,
-      paymentProvider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_1',
-    });
-    prisma.organization.update.mockResolvedValue({});
-    await service.revokeLifetime({
-      organizationId: 'org1',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_1',
-    });
-    expect(prisma.organization.update).toHaveBeenCalledWith({
-      where: { id: 'org1' },
-      data: {
-        plan: OrgPlan.FREE,
-        planStatus: PlanStatus.CANCELED,
-        abacatePaymentId: null,
-      },
-    });
-  });
-
-  it('does not revoke lifetime when payment id mismatches', async () => {
-    prisma.organization.findUnique.mockResolvedValue({
-      id: 'org1',
-      plan: OrgPlan.LIFETIME,
-      paymentProvider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_current',
-    });
-    await service.revokeLifetime({
-      organizationId: 'org1',
-      provider: PaymentProvider.ABACATE,
-      abacatePaymentId: 'pix_old',
-    });
-    expect(prisma.organization.update).not.toHaveBeenCalled();
-  });
-
   it('cancels monthly to FREE', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
@@ -295,7 +251,6 @@ describe('BillingActivationService', () => {
     await service.syncMonthlyStatus({
       organizationId: 'org1',
       status: PlanStatus.CANCELED,
-      abacateSubscriptionId: 'subs_1',
     });
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
@@ -307,7 +262,7 @@ describe('BillingActivationService', () => {
     });
   });
 
-  it('clears PIX period end when activating Abacate card subscription', async () => {
+  it('clears PIX period end when activating Asaas card subscription', async () => {
     prisma.organization.findUnique.mockResolvedValue({
       id: 'org1',
       plan: OrgPlan.STARTER_MONTHLY,
@@ -317,8 +272,8 @@ describe('BillingActivationService', () => {
     await service.activateMonthly({
       organizationId: 'org1',
       currency: 'BRL',
-      provider: PaymentProvider.ABACATE,
-      abacateSubscriptionId: 'subs_card',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'subs_card',
       currentPeriodEnd: null,
     });
     expect(prisma.organization.update).toHaveBeenCalledWith({
@@ -326,7 +281,7 @@ describe('BillingActivationService', () => {
       data: expect.objectContaining({
         plan: OrgPlan.STARTER_MONTHLY,
         planStatus: PlanStatus.ACTIVE,
-        abacateSubscriptionId: 'subs_card',
+        asaasSubscriptionId: 'subs_card',
         currentPeriodEnd: null,
       }),
     });

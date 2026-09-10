@@ -2,7 +2,7 @@
 
 ## Roteamento atual
 
-O Prospectly encaminha PIX novo e checkout de cartão hospedado pelo **Asaas**. `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true` são os defaults autorizados do cutover nesta branch. O AbacatePay permanece ativo só para eventos históricos e reconciliação. Contratos existentes AbacatePay e Stripe **não** são migrados nem cancelados automaticamente.
+O Prospectly encaminha PIX e checkout de cartão hospedado pelo **Asaas**. `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true` são os defaults de produção. O provedor legado AbacatePay foi descontinuado e completamente removido da base de código. Contratos legados do Stripe **não** são migrados nem cancelados automaticamente.
 
 | Produto | Preço | Método | Provedor |
 | ----------------- | -------: | --------------------- | --------------------- |
@@ -13,7 +13,7 @@ O Prospectly encaminha PIX novo e checkout de cartão hospedado pelo **Asaas**. 
 | Acesso mensal ilimitado | R$ 49,99 | PIX | Asaas |
 | Acesso mensal ilimitado | R$ 49,99 | Cartão de crédito recorrente | Checkout hospedado Asaas |
 
-A API guarda identificadores históricos de Stripe e AbacatePay. Contratos existentes não são migrados nem cancelados automaticamente. Não há runtime de checkout Stripe. Depois do cutover, PIX/cartão novos **não** podem ir para Stripe nem AbacatePay.
+A API guarda identificadores legados do Stripe. Não há runtime de checkout Stripe. Todo PIX e cartão é processado pelo Asaas.
 
 ## Propriedades de segurança
 
@@ -25,7 +25,7 @@ A API guarda identificadores históricos de Stripe e AbacatePay. Contratos exist
 - O Prospectly guarda um perfil de cobrança mínimo da organização e **nunca** recebe número, validade ou CVV do cartão.
 - Estorno e chargeback de pacotes geram reversão total auditável e podem deixar saldo de créditos negativo.
 - Estornos parciais **não** viram créditos parciais neste MVP. A inbox mantém o evento como falho para revisão de suporte, em vez de alterar o benefício em silêncio.
-- Depois do cutover autorizado, `ASAAS_ENABLED` default é true e `PIX_PROVIDER` default é `ASAAS`. Credenciais de sandbox e produção ficam fora do repositório. Rollback é `PIX_PROVIDER=ABACATE` **sem** fallback silencioso.
+- `ASAAS_ENABLED` default é true e `PIX_PROVIDER` default é `ASAAS`. Credenciais de sandbox e produção ficam fora do repositório.
 
 ## Assistente de sandbox
 
@@ -39,7 +39,7 @@ bash scripts/asaas-sandbox-homologation-wizard.sh
 2. Token de webhook gerado no Asaas (32–255 chars) = `ASAAS_WEBHOOK_TOKEN`. Header `asaas-access-token`.
 3. URL: `https://prospectly-api.onrender.com/api/v1/billing/webhook/asaas`.
 4. `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. `ASAAS_ENABLED=true` neste Blueprint é o cutover PIX autorizado; unset no código continua `false`.
-5. Produção (`https://api.asaas.com/v3`) exige autorização explícita e smoke. Rollback PIX: `PIX_PROVIDER=ABACATE`.
+5. Produção (`https://api.asaas.com/v3`) exige autorização explícita e smoke.
 
 Ver [deploy na Render](../deploy/render.md) para ambiente e webhook.
 

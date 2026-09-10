@@ -62,7 +62,7 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 
 1. Faça push deste repo no GitHub (o sync de Blueprint exige git host conectado).
 2. No [Dashboard da Render](https://dashboard.render.com/) → **New** → **Blueprint** → selecione o repo → aplique `render.yaml`.
-3. Quando pedido, preencha todo secret `sync: false` (Asaas, AbacatePay histórico, SMTP, URLs públicas etc.).
+3. Quando pedido, preencha todo secret `sync: false` (Asaas, SMTP, URLs públicas etc.).
 4. Depois que os serviços tiverem URLs públicas, ligue os cruzamentos:
 
 | Variável | Serviço | Exemplo |
@@ -74,13 +74,12 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 | `NEXT_PUBLIC_APP_URL` | landing (rebuild) | a mesma da web |
 | `NEXT_PUBLIC_LANDING_URL` | landing | a URL dela mesma |
 | `NEXT_PUBLIC_API_URL` | landing | a mesma de `VITE_API_URL` |
-| `ABACATE_*_URL` | api | success/cancel de billing na web |
-| `PIX_PROVIDER` | api | `ASAAS` depois do cutover autorizado; rollback é `ABACATE` |
+| `PIX_PROVIDER` | api | `ASAAS` |
 | `ASAAS_ENABLED` | api | `true` com secrets Asaas de Sandbox/produção; chaves vazias recusam boot |
 
 5. Faça redesploy de **web** e **landing** depois de setar `VITE_*` / `NEXT_PUBLIC_*` (build-time).
 6. Google Sign-In: defina `GOOGLE_CLIENT_ID` (API) e `VITE_GOOGLE_CLIENT_ID` (web, mesmo valor). No Google Cloud Console, adicione JavaScript origins autorizadas para a URL da web e redirect URIs autorizadas se usar GIS.
-7. Mantenha o webhook histórico do AbacatePay em `https://<api>/api/v1/billing/webhook/abacate` com header `X-Abacate-Webhook-Secret: <ABACATE_WEBHOOK_SECRET>`. Secrets na query string **não** são aceitos. Aponte o webhook Asaas para `https://<api>/api/v1/billing/webhook/asaas` com o mesmo token dedicado guardado em `ASAAS_WEBHOOK_TOKEN` e enviado em `asaas-access-token`.
+7. Aponte o webhook Asaas para `https://<api>/api/v1/billing/webhook/asaas` com o mesmo token dedicado guardado em `ASAAS_WEBHOOK_TOKEN` e enviado em `asaas-access-token`.
 8. Migrations rodam no **Pre-Deploy Command** do serviço live `prospectly-api` (uma execução por deploy, antes da revisão nova subir) — ver [`migrations.md`](./migrations.md). Nem a API nem o worker rodam migrate no start.
 
 ## Dockerfiles locais (opcional)
@@ -109,7 +108,6 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 - [ ] E-mail não verificado: banner visível; checkout/convite devolvem 403 `EMAIL_NOT_VERIFIED`
 - [ ] CTAs da landing abrem o app com query correta de plano/moeda
 - [ ] PIX BRL Asaas: pacotes de crédito e mensal ilimitado, com webhook autenticado e recibo autoritativo (ver `docs/billing/payments.md`)
-- [ ] Webhook histórico AbacatePay ainda aceita e reconcilia registros existentes
 - [ ] E-mail de verificação + esqueci senha depois do SMTP ligado
 - [ ] Seed nunca roda em produção (`prisma/seed.ts` lança)
 

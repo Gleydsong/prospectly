@@ -40,20 +40,6 @@ describe('hasUnlimitedAccess', () => {
     ).toBe(true);
   });
 
-  it('keeps Abacate card subscription active despite stale PIX period end', () => {
-    expect(
-      hasUnlimitedAccess(
-        {
-          plan: OrgPlan.STARTER_MONTHLY,
-          planStatus: PlanStatus.ACTIVE,
-          currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
-          abacateSubscriptionId: 'subs_card',
-        },
-        now,
-      ),
-    ).toBe(true);
-  });
-
   it('keeps Asaas card subscription active despite stale invoice period end', () => {
     expect(
       hasUnlimitedAccess(
@@ -99,20 +85,6 @@ describe('isMonthlyPeriodExpired', () => {
           plan: OrgPlan.LIFETIME,
           planStatus: PlanStatus.ACTIVE,
           currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
-        },
-        now,
-      ),
-    ).toBe(false);
-  });
-
-  it('does not expire Abacate card subscription with stale PIX period end', () => {
-    expect(
-      isMonthlyPeriodExpired(
-        {
-          plan: OrgPlan.STARTER_MONTHLY,
-          planStatus: PlanStatus.ACTIVE,
-          currentPeriodEnd: new Date('2026-08-01T00:00:00.000Z'),
-          abacateSubscriptionId: 'subs_card',
         },
         now,
       ),
