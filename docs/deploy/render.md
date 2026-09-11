@@ -98,7 +98,7 @@ Health check da API: `GET /health/ready` (PostgreSQL). Redis fora não deve marc
 - Custom domains: anexe no Dashboard e depois atualize CORS / URLs de frontend / endpoints de webhook.
 - `autoDeployTrigger: checksPass` espera o CI do GitHub em `main`.
 - **SEC-001:** faça deploy de API + web juntos (cookie de refresh + `withCredentials`). Não entregue um sem o outro.
-- **Cookie de refresh:** `onrender.com` é public suffix, então hosts `*.onrender.com` são sites diferentes. Enquanto o app chamar `prospectly-api.onrender.com`, produção usa `REFRESH_COOKIE_SAME_SITE=none` com `Secure` e CSRF via `X-Requested-With`. Cutover same-site: [`api-custom-domain.md`](./api-custom-domain.md) (`app.prospectlyonboard.com` + `api.prospectlyonboard.com` → `lax`, cookie host-only). Não defina `Domain=.onrender.com`. Não passe para `lax` enquanto `VITE_API_URL` ainda for o host onrender.
+- **Cookie de refresh:** produção usa `app.prospectlyonboard.com` + `api.prospectlyonboard.com` → `REFRESH_COOKIE_SAME_SITE=lax` + `Secure`, cookie host-only. Runbook: [`api-custom-domain.md`](./api-custom-domain.md). `onrender.com` é public suffix: não defina `Domain=.onrender.com`. O subdomínio público da API (`prospectly-api.onrender.com`) está desligado (404). Não volte `VITE_API_URL` para o host onrender.
 - **SEC-017:** configure SMTP para e-mails de verificação saírem da fila no-op; mutações críticas exigem `emailVerifiedAt`.
 
 ## Checklist pós-deploy

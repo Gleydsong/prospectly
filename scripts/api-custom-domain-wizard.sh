@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=10
+TOTAL_STAGES=11
 
 CANONICAL_API_HOST_DEFAULT="api.prospectlyonboard.com"
 APP_ORIGIN="https://app.prospectlyonboard.com"
@@ -273,7 +273,7 @@ say "Env da API só tem UM GOOGLE_OAUTH_REDIRECT_URI. O Console precisa dos DOIS
 open_url "$GOOGLE_CREDENTIALS_URL"
 step "APIs & Services → Credentials → o OAuth 2.0 Client Web (o mesmo de GOOGLE_CLIENT_ID)."
 step "Authorized redirect URIs: adiciona ${NEW_OAUTH_REDIRECT}"
-step "Mantém ${LEGACY_OAUTH_REDIRECT} até o ticket 3 (desligar onrender no cliente)."
+step "Overlap: ${LEGACY_OAUTH_REDIRECT} só até o ticket 3. Depois fica só ${NEW_OAUTH_REDIRECT}."
 step "Authorized JavaScript origins: ${APP_ORIGIN} (já deve existir). Não uses *."
 step "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET: abre o valor no Render, tira newline no fim (já quebrou OAuth). Não coloques a chave neste terminal."
 warn "invalid_client = Client ID/secret/origem. invalid_grant = código/refresh. São erros diferentes."
@@ -307,7 +307,7 @@ note "URL nova: ${NEW_ASAAS_WEBHOOK}"
 note "URL actual (overlap): ${LEGACY_ASAAS_WEBHOOK}"
 open_url "https://sandbox.asaas.com/"
 step "Sandbox → Integrações → Webhooks."
-step "Overlap: cria webhook extra para a URL nova (mesmo ASAAS_WEBHOOK_TOKEN). Não apagues o velho até o ticket 3."
+step "Overlap: webhook extra na URL nova (mesmo ASAAS_WEBHOOK_TOKEN). Ticket 3 apaga o webhook onrender."
 step "Header asaas-access-token. Eventos PAYMENT_* iguais aos de agora."
 step "Não coloques o token neste wizard."
 pause "Webhook novo criado (ou anotaste que o health ainda bloqueia)?"
@@ -319,7 +319,7 @@ step "Preflight: Origin ${APP_ORIGIN} → Access-Control-Allow-Origin exactament
 step "Login no app: cookie Host-only, Secure, SameSite=Lax, path /api/v1/auth. Sem Domain=."
 step "Ligar Google: callback no host novo. Se falhar, distingue invalid_grant ≠ invalid_client."
 step "Playwright (skip se o CNAME não resolver): pnpm --filter @prospectly/web exec playwright test --config playwright.probe.config.ts"
-step "Mantém ${LEGACY_API_HOST} no ar no overlap. Não desligues o host velho neste ticket."
+step "Overlap: ${LEGACY_API_HOST} fica no ar até o ticket 3. Não desligues o Render Subdomain neste passo."
 if probe_api_health "$CANONICAL_API_HOST"; then
   say "Health no host novo OK."
 else
@@ -328,13 +328,26 @@ else
 fi
 pause "Probes feitos ou adiados até o CNAME responder?"
 
+stage "Ticket 3 — overlap fechado"
+say "Só depois do app estável no host novo (login + Conexão Google). Rollback: reactivar Render Subdomain."
+open_url "$GOOGLE_CREDENTIALS_URL"
+step "Google Console: apaga ${LEGACY_OAUTH_REDIRECT}. Fica só ${NEW_OAUTH_REDIRECT}."
+step "Não apagues origem JS ${APP_ORIGIN} nem http://localhost:5173."
+open_url "https://sandbox.asaas.com/"
+step "Asaas sandbox: apaga o webhook cuja URL é ${LEGACY_ASAAS_WEBHOOK}. Fica ${NEW_ASAAS_WEBHOOK}."
+open_url "$RENDER_API_DASHBOARD"
+step "prospectly-api → Settings → Custom Domains → Render Subdomain → Disabled (sudo no Dashboard). Só a API, não o web."
+step "curl -i https://${LEGACY_API_HOST}/health/ready → 404 + x-render-routing: blocked-render-subdomain (sem redirect)."
+step "curl -i https://${CANONICAL_API_HOST}/health/ready → 200."
+pause "Overlap fechado (ou ainda no overlap de propósito)?"
+
 stage "Fora desta spec"
 step "Não ligar api.asaas.com."
 step "Não Microsoft/MCP."
 step "Não mudar o domínio do app."
 step "Não feature flags por org."
-step "Não fechar a issue #179 até o host resolver com TLS (entrega do ticket 1)."
-warn "Ticket 2 no git (app a falar só com o host novo) espera este health. Ticket 3 tira o URI/onrender velhos."
-pause "Wizard deste ticket concluído (DNS humano; sem secrets neste repo)?"
+step "Não desligar o onrender do web (prospectly-web)."
+warn "Issue #179 fecha quando o ticket 3 estiver verificado (onrender 404, app no host novo)."
+pause "Wizard concluído (DNS humano; sem secrets neste repo)?"
 
 finish

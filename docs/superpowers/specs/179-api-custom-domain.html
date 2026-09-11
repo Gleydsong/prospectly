@@ -62,19 +62,19 @@
   <header>
     <div class="wrap">
       <h1>Spec #179 — Domínio próprio da API</h1>
-      <p>CNAME <code style="background:transparent;color:#fff">api.prospectlyonboard.com</code>, TLS, CORS, cookie Lax e redirect OAuth. Código no cliente só depois do health no host novo.</p>
+      <p>CNAME <code style="background:transparent;color:#fff">api.prospectlyonboard.com</code>, TLS, CORS, cookie Lax. Tickets 1–3 fechados: onrender da API devolve 404.</p>
       <span class="badge">Issue #179</span>
       <span class="badge">Branch feat/api-custom-domain</span>
-      <span class="badge">Wizard HITL</span>
+      <span class="badge">Cutover fechado</span>
     </div>
   </header>
   <main>
     <section>
       <h2>O que esta entrega faz</h2>
-      <p class="muted">Ticket 1 é humano: DNS/TLS/OAuth/env. Esta PR traz o wizard, o runbook e um probe Playwright que faz skip se o CNAME ainda não existir. <strong>Não</strong> aponta o app de produção para o host novo — <code>dig</code> em 2026-09-10 não resolvia <code>api.prospectlyonboard.com</code>.</p>
+      <p class="muted">Tickets 1–3 no ar: DNS/TLS, app no host novo, overlap Google/Asaas/onrender fechado. Wizard: <code>./scripts/api-custom-domain-wizard.sh</code>. Runbook: <code>docs/deploy/api-custom-domain.md</code>.</p>
       <ul>
         <li>Wizard: <code>./scripts/api-custom-domain-wizard.sh</code> — sem secrets no git nem na issue.</li>
-        <li>Cookie: <code>none</code> enquanto o app fala com <code>*.onrender.com</code>. <code>lax</code> só com app+api no mesmo site pai, no mesmo deploy (SEC-001).</li>
+        <li>Cookie: <code>lax</code> + <code>Secure</code>, host-only, com app+api no mesmo site pai (SEC-001). Subdomínio público da API desligado.</li>
         <li>CORS: lista explícita. Sem <code>*</code>. Parser aceita a origem do app.</li>
         <li><code>GOOGLE_CLIENT_ID</code> com newline → <code>invalid_client</code>. Boot faz <code>trim</code>.</li>
       </ul>
@@ -85,9 +85,10 @@
       <h2>Demonstração — ordem do cutover</h2>
       <p class="muted">Marca o que já está no ar. A combinação errada parte sessão ou OAuth.</p>
       <label class="row"><input type="checkbox" id="dns" /> CNAME + TLS: <code>api.prospectlyonboard.com/health/ready</code> = 200</label>
-      <label class="row"><input type="checkbox" id="google" /> Google Console: URI novo <em>e</em> URI onrender (overlap)</label>
+      <label class="row"><input type="checkbox" id="google" /> Google Console: só o URI do host novo (onrender removido)</label>
       <label class="row"><input type="checkbox" id="app" /> <code>VITE_API_URL</code> = <code>https://api.prospectlyonboard.com/api/v1</code></label>
       <label class="row"><input type="checkbox" id="lax" /> <code>REFRESH_COOKIE_SAME_SITE=lax</code></label>
+      <label class="row"><input type="checkbox" id="off" /> Render Subdomain da API desligado: onrender = 404, sem redirect</label>
       <p class="verdict" id="verdict">—</p>
       <h3>Log</h3>
       <div class="log" id="log" aria-live="polite"></div>
@@ -95,8 +96,8 @@
       <table>
         <thead><tr><th>Campo</th><th>Valor</th></tr></thead>
         <tbody>
-          <tr><td>SameSite</td><td id="samesite">none (produção actual)</td></tr>
-          <tr><td>Site</td><td id="site">cross-site (app.prospectlyonboard.com → onrender)</td></tr>
+          <tr><td>SameSite</td><td id="samesite">lax + Secure, host-only</td></tr>
+          <tr><td>Site</td><td id="site">same-site / cross-origin (app. + api. sob prospectlyonboard.com)</td></tr>
           <tr><td>CORS</td><td id="cors">allowlist do app, credentials true, sem *</td></tr>
         </tbody>
       </table>
@@ -108,7 +109,7 @@
         <thead><tr><th>Arquivo</th><th>Mudança</th></tr></thead>
         <tbody>
           <tr><td><span class="path">scripts/api-custom-domain-wizard.sh</span></td><td><span class="tag tag-api">wizard</span> DNS, TLS, Google overlap, env, Asaas sandbox.</td></tr>
-          <tr><td><span class="path">docs/deploy/api-custom-domain.md</span></td><td>Runbook. Ticket 2 bloqueado sem health.</td></tr>
+          <tr><td><span class="path">docs/deploy/api-custom-domain.md</span></td><td>Runbook. Tickets 1–3 fechados; onrender da API = 404.</td></tr>
           <tr><td><span class="path">cors-origins.ts</span></td><td>Parser + constantes do host canónico (env continua a mandar).</td></tr>
           <tr><td><span class="path">env-string.ts</span></td><td>Trim de Client ID / redirect.</td></tr>
           <tr><td><span class="path">api-custom-domain.probe.spec.ts</span></td><td>Playwright (config probe, sem Vite): skip sem DNS; health + CORS com o CNAME no ar.</td></tr>
@@ -118,7 +119,7 @@
   </main>
   <footer>Pasta <code>docs/superpowers/specs/</code> · issue <a href="https://github.com/Gleydsong/prospectly/issues/179">#179</a>.</footer>
   <script>
-    const ids = ["dns", "google", "app", "lax"];
+    const ids = ["dns", "google", "app", "lax", "off"];
     const logEl = document.getElementById("log");
     const verdictEl = document.getElementById("verdict");
     const samesiteEl = document.getElementById("samesite");
@@ -142,17 +143,24 @@
         verdict = "App down";
         klass = "tag-bad";
         lines.push("VITE_API_URL no host novo sem CNAME/TLS: login, refresh e webhooks falham.");
+      } else if (s.off && !s.app) {
+        verdict = "Host velho morto; app ainda no onrender";
+        klass = "tag-bad";
+        lines.push("Render Subdomain desligado com VITE_API_URL no onrender: a API pública some.");
       } else if (s.app && s.dns && !s.google) {
         verdict = "Conexão Google parte";
         klass = "tag-warn";
-        lines.push("redirect_uri_mismatch ou invalid_client. Console precisa do URI novo; overlap mantém o onrender.");
+        lines.push("redirect_uri_mismatch ou invalid_client. Console precisa do URI do host novo.");
         lines.push("invalid_grant ≠ invalid_client — não rodes Client ID por um código gasto.");
-      } else if (s.dns && s.google && s.app && s.lax) {
-        verdict = "Cutover ok";
+      } else if (s.dns && s.google && s.app && s.lax && s.off) {
+        verdict = "Cutover fechado";
         klass = "tag-ok";
-        lines.push("health 200. App same-site com a API. Cookie Lax + Secure, host-only.");
-        lines.push("CORS: origem exacta do app, credentials true. Webhook Asaas sandbox na URL nova.");
-        lines.push("Ticket 3 ainda pendente: desligar onrender no cliente e URI velho no Console.");
+        lines.push("health 200 no host novo. onrender 404 (blocked-render-subdomain), sem redirect.");
+        lines.push("App same-site com a API. Cookie Lax + Secure, host-only. URI Google e webhook Asaas só no host novo.");
+      } else if (s.dns && s.google && s.app && s.lax) {
+        verdict = "Overlap ainda aberto";
+        klass = "tag-warn";
+        lines.push("App e cookie ok. Ticket 3: tirar URI onrender, webhook velho, desligar Render Subdomain da API.");
       } else if (s.dns && !s.app) {
         verdict = "TLS no ar; app ainda no onrender";
         klass = "tag-warn";
