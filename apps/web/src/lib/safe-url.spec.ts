@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   assignCheckoutRedirect,
+  assignGoogleOAuthRedirect,
   buildGoogleMapsSearchUrl,
   buildGoogleWebSearchUrl,
   resolveInternalRedirect,
@@ -120,5 +121,25 @@ describe('assignCheckoutRedirect', () => {
     expect(() => assignCheckoutRedirect('https://evil.example/pay', 'ASAAS')).toThrow(
       'Invalid Asaas redirect URL',
     );
+  });
+});
+
+describe('assignGoogleOAuthRedirect', () => {
+  it('navigates to the Google authorization host', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    assignGoogleOAuthRedirect('https://accounts.google.com/o/oauth2/v2/auth?x=1');
+    expect(assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?x=1');
+    vi.unstubAllGlobals();
+  });
+
+  it('does not call location.assign for an arbitrary host', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    expect(() => assignGoogleOAuthRedirect('https://evil.example/oauth')).toThrow(
+      'Invalid Google OAuth redirect URL',
+    );
+    expect(assign).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });
