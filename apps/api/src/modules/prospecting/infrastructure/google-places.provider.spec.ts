@@ -402,4 +402,26 @@ describe('GooglePlacesProvider', () => {
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).textQuery).toContain('clinicas');
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).textQuery).toContain('Clínica');
   });
+
+  it('searches a free-text niche without a catalog category', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ places: [] }));
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await provider.search({
+      city: 'Recife',
+      state: 'PE',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+      textQueries: ['pet shop em Recife, PE, Brasil'],
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).textQuery).toBe(
+      'pet shop em Recife, PE, Brasil',
+    );
+  });
 });

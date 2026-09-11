@@ -34,7 +34,7 @@ function resolveGoogleTextQueries(
     (input.textQueries ?? []).map((query) => query.trim()).filter(Boolean),
   )].slice(0, GOOGLE_MAX_TEXT_QUERIES);
   if (custom.length > 0) {
-    const fallbackCategory = input.category.trim() || categories[0]!;
+    const fallbackCategory = input.category?.trim() || categories[0] || 'free_text';
     return custom.map((textQuery) => ({ textQuery, fallbackCategory }));
   }
   return categories.map((category) => ({
@@ -248,12 +248,17 @@ export class GooglePlacesProvider implements SearchProvider {
 
     const categories = [
       ...new Set(
-        (input.categories?.length ? input.categories : [input.category])
+        (input.categories?.length ? input.categories : [input.category ?? ''])
           .map((value) => value.trim())
           .filter(Boolean),
       ),
     ];
-    if (categories.length === 0) throw new Error('Category is required');
+    const customQueries = [...new Set(
+      (input.textQueries ?? []).map((query) => query.trim()).filter(Boolean),
+    )];
+    if (categories.length === 0 && customQueries.length === 0) {
+      throw new Error('Category is required');
+    }
 
     const requestedLimit = input.limit && input.limit > 0 ? input.limit : this.options.resultLimit;
     const perCategoryLimit = Math.min(

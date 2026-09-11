@@ -145,19 +145,36 @@ describe('OpportunityFinderService niche targeting', () => {
       audit as never,
       metrics as never,
     );
-    return { service, prisma, queue, provider, prospecting, billing, ai, audit, metrics };
+    return { service, prisma, queue, provider, providers, prospecting, billing, ai, audit, metrics };
   }
 
-  it('rejects an unknown niche before creating a run or charging credits', async () => {
+  it.each([
+    'consultoria de processos',
+    'pet shop',
+    'academia',
+    'lava jato',
+    'coworking',
+    'fábrica de paletes',
+    'loja de suplementos',
+  ])('accepts typed niche "%s" without requiring a catalog match', async (niche) => {
     const harness = createHarness();
+    harness.prisma.opportunityRun.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+      id: 'run-free-text', status: 'PREPARING', ...data,
+      candidateCount: 0, analyzedCount: 0, failedCount: 0, errorCode: null, errorMessage: null,
+      startedAt: now, completedAt: null, createdAt: now,
+    }));
 
     await expect(harness.service.create('org-1', 'user-1', {
-      service: 'Criação de sites', niche: 'consultoria de processos', city: 'Curitiba', state: 'PR', country: 'BR',
-    })).rejects.toBeInstanceOf(BadRequestException);
-    expect(harness.prospecting.listCategories).not.toHaveBeenCalled();
-    expect(harness.billing.assertCanCreateSearch).not.toHaveBeenCalled();
-    expect(harness.prisma.opportunityRun.create).not.toHaveBeenCalled();
-    expect(harness.queue.add).not.toHaveBeenCalled();
+      service: 'Criação de sites', niche, city: 'Curitiba', state: 'PR', country: 'BR',
+    })).resolves.toMatchObject({ id: 'run-free-text' });
+    expect(harness.prisma.opportunityRun.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        profile: expect.objectContaining({
+          niche,
+          categories: [],
+        }),
+      }),
+    });
   });
 
   it('rejects an ambiguous niche before creating a run', async () => {
@@ -327,6 +344,39 @@ describe('OpportunityFinderService niche targeting', () => {
         }),
         searchStrategy: expect.objectContaining({ categories: ['clothes'] }),
       }),
+    }));
+  });
+
+  it('searches a free-text niche on Google without locking a catalog category', async () => {
+    const petShop = {
+      externalId: 'places/pet-1', companyName: 'Pet Vida', category: 'pet_store',
+      city: 'Curitiba', state: 'PR', country: 'BR', source: 'GOOGLE_PLACES',
+      websitePresence: 'NO_WEBSITE_REPORTED', rating: 4.4, reviewCount: 12,
+    };
+    const harness = createHarness({ providerResults: [petShop] });
+    harness.prisma.opportunityRun.findUnique.mockResolvedValue({
+      id: 'run-pet', organizationId: 'org-1', userId: 'user-1', status: 'PREPARING',
+      service: 'Criação de sites', city: 'Curitiba', state: 'PR', country: 'BR',
+      profile: {
+        service: 'Criação de sites', niche: 'pet shop', targetCustomer: ['pet shop'],
+        categories: [], relevantSignals: ['MISSING_WEBSITE'],
+      },
+    });
+    harness.providers.list.mockReturnValue([
+      { id: 'GOOGLE_PLACES', label: 'Google', available: true },
+      { id: 'OPENSTREETMAP', label: 'OSM', available: true },
+    ]);
+
+    await harness.service.processRun('run-pet');
+
+    expect(harness.provider.search).toHaveBeenCalledWith(expect.objectContaining({
+      categories: [],
+      textQueries: ['pet shop em Curitiba, PR, Brasil'],
+    }));
+    expect(harness.providers.resolve).toHaveBeenCalledWith('GOOGLE_PLACES');
+    expect(harness.providers.resolve).not.toHaveBeenCalledWith('OPENSTREETMAP');
+    expect(harness.prisma.opportunityCandidate.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ externalId: 'places/pet-1' }),
     }));
   });
 

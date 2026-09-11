@@ -247,7 +247,7 @@ function matchesNeighborhoodTags(
 }
 
 function resolveSearchCategories(input: SearchProviderInput): string[] {
-  const raw = input.categories?.length ? input.categories : [input.category];
+  const raw = input.categories?.length ? input.categories : (input.category ? [input.category] : []);
   const categories = [...new Set(raw.map((value) => value.trim()).filter(Boolean))];
   if (categories.length === 0) {
     throw new Error('Category is required');

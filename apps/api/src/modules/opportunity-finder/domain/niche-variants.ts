@@ -4,6 +4,7 @@ export const MAX_OPPORTUNITY_SEARCH_VARIANTS = 4;
 
 export type OpportunityNicheResolution =
   | { status: 'RESOLVED'; category: ProspectingCategory }
+  | { status: 'FREE_TEXT' }
   | { status: 'NOT_IDENTIFIED' }
   | { status: 'AMBIGUOUS'; categories: ProspectingCategory[] };
 
@@ -129,7 +130,9 @@ export function resolveOpportunityNiche(niche: string): OpportunityNicheResoluti
     }
   }
 
-  if (matches.length === 0) return { status: 'NOT_IDENTIFIED' };
+  if (matches.length === 0) {
+    return normalized.length >= 2 ? { status: 'FREE_TEXT' } : { status: 'NOT_IDENTIFIED' };
+  }
 
   const dominant = matches.filter((match) => (
     !matches.some((other) => (
@@ -145,9 +148,10 @@ export function resolveOpportunityNiche(niche: string): OpportunityNicheResoluti
 
 export function buildOpportunitySearchPhrases(
   niche: string,
-  category: ProspectingCategory,
+  category?: ProspectingCategory,
 ): string[] {
   const original = niche.trim();
+  if (!category) return original ? [original] : [];
   const canonical = LABEL_BY_CATEGORY[category] ?? category;
   const aliases = NICHE_ALIASES[category] ?? [];
   const candidates = [original, canonical, ...[...aliases].sort((left, right) => right.length - left.length)];

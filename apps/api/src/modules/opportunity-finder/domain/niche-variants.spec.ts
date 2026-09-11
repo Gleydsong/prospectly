@@ -41,6 +41,13 @@ describe('niche variants', () => {
     });
   });
 
+  it('keeps unmatched niches as free-text instead of inventing a catalog category', () => {
+    expect(resolveOpportunityNiche('consultoria de processos')).toEqual({ status: 'FREE_TEXT' });
+    expect(resolveOpportunityNiche('pet shop')).toEqual({ status: 'FREE_TEXT' });
+    expect(resolveOpportunityNiche('academia')).toEqual({ status: 'FREE_TEXT' });
+    expect(buildOpportunitySearchPhrases('pet shop')).toEqual(['pet shop']);
+  });
+
   it('builds Google search variants from the typed niche, not only the catalog label', () => {
     expect(buildOpportunitySearchPhrases('clinicas', 'clinic')).toEqual(
       expect.arrayContaining(['clinicas', 'Clínica']),
