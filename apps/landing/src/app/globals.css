@@ -580,6 +580,7 @@ body {
 .landing-v2-split-section { display: grid; grid-template-columns: .88fr 1.12fr; align-items: center; gap: 86px; }
 .landing-v2-section-copy h2,
 .landing-v2-benefits-copy h2,
+.landing-v2-benefits-copy h1,
 .landing-v2-centered-copy h2,
 .landing-v2-centered-copy h1 { max-width: 15ch; margin: 17px 0 0; color: var(--v2-ink); font-size: clamp(2.25rem, 4vw, 4rem); font-weight: 700; letter-spacing: -.065em; line-height: .98; text-wrap: balance; }
 .landing-v2-section-intro { max-width: 48ch; margin: 21px 0 0; color: var(--v2-muted); font-size: 16px; line-height: 1.7; }
@@ -596,7 +597,8 @@ body {
 .landing-v2-image-note svg { width: 15px; height: 15px; color: #c4c8cc; }
 
 .landing-v2-benefits-layout { display: grid; grid-template-columns: .82fr 1.18fr; align-items: center; gap: 92px; }
-.landing-v2-benefits-copy h2 { max-width: 11ch; }
+.landing-v2-benefits-copy h2,
+.landing-v2-benefits-copy h1 { max-width: 11ch; }
 .landing-v2-check-list { display: grid; gap: 18px; margin: 31px 0 0; padding: 0; list-style: none; }
 .landing-v2-check-list li { display: flex; align-items: flex-start; gap: 12px; color: #454b51; font-size: 15px; line-height: 1.5; }
 .landing-v2-check-list li > span { display: inline-flex; width: 21px; height: 21px; align-items: center; justify-content: center; flex: 0 0 auto; margin-top: 1px; border-radius: 50%; background: #e2e4e6; color: #5f676e; }
@@ -697,7 +699,7 @@ body {
   .landing-v2-scroll-cue { margin-top: 38px; }
   .landing-v2-section { padding: 76px 0; }
   .landing-v2-split-section, .landing-v2-benefits-layout, .landing-v2-faq-layout { display: flex; flex-direction: column; gap: 40px; }
-  .landing-v2-section-copy h2, .landing-v2-benefits-copy h2, .landing-v2-centered-copy h2, .landing-v2-centered-copy h1 { max-width: 16ch; font-size: clamp(2.3rem, 10vw, 3.6rem); }
+  .landing-v2-section-copy h2, .landing-v2-benefits-copy h2, .landing-v2-benefits-copy h1, .landing-v2-centered-copy h2, .landing-v2-centered-copy h1 { max-width: 16ch; font-size: clamp(2.3rem, 10vw, 3.6rem); }
   .landing-v2-image-frame { width: 100%; min-height: 380px; }
   .landing-v2-benefits-visual { width: 100%; min-height: 370px; }
   .landing-v2-benefits-image-wrap { left: 0; bottom: 25px; }
