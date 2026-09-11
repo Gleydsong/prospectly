@@ -39,7 +39,7 @@ export type ProspectingProviderId = (typeof PROSPECTING_PROVIDER_IDS)[number];
 export const COMBINED_SEARCH_PROVIDER = 'COMBINED';
 
 export interface SearchProviderInput {
-  category: string;
+  category?: string;
   categories?: string[];
   /** Optional free-text Places queries. When set, Google uses these instead of category labels. */
   textQueries?: string[];

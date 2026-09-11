@@ -21,11 +21,11 @@ export const OpportunityProfileSchema = z.object({
   niche: z.string().trim().min(2).max(120).optional(),
   targetCustomer: z.array(z.string().trim().min(1).max(80)).min(1).max(8),
   relevantSignals: z.array(z.enum(signalValues)).min(1).max(signalValues.length),
-  categories: z.array(z.enum(PROSPECTING_CATEGORY_VALUES)).min(1).max(10),
+  categories: z.array(z.enum(PROSPECTING_CATEGORY_VALUES)).max(10),
 });
 
 export const OpportunitySearchStrategySchema = z.object({
-  categories: z.array(z.enum(PROSPECTING_CATEGORY_VALUES)).min(1).max(10),
+  categories: z.array(z.enum(PROSPECTING_CATEGORY_VALUES)).max(10),
   minimumRating: z.number().min(0).max(5).nullable(),
   minimumReviews: z.number().int().min(0).max(100_000).nullable(),
   relevantSignals: z.array(z.enum(signalValues)).min(1).max(signalValues.length),
@@ -40,14 +40,14 @@ const DEFAULT_SIGNALS: OpportunityFinderSignalType[] = [
 export function buildDeterministicOpportunityProfile(
   service: string,
   niche: string,
-  category: ProspectingCategory,
+  category?: ProspectingCategory,
 ): OpportunityProfile {
   return {
     service: service.trim(),
     niche: niche.trim(),
     targetCustomer: [niche.trim()],
     relevantSignals: DEFAULT_SIGNALS,
-    categories: [category],
+    categories: category ? [category] : [],
   };
 }
 
