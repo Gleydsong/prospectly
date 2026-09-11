@@ -1,11 +1,15 @@
 import type { Metadata } from 'next';
 import { LandingV2 } from '@/components/landing-v2';
+import { HOME_LANGUAGE_ALTERNATES } from '@/lib/document-locale';
 
 export const metadata: Metadata = {
   title: 'Prospectly | Encontre empresas para prospectar no Brasil',
   description:
     'Uma forma mais simples e confiável de encontrar empresas brasileiras alinhadas ao seu cliente ideal.',
-  alternates: { canonical: '/' },
+  alternates: {
+    canonical: '/',
+    languages: HOME_LANGUAGE_ALTERNATES,
+  },
   openGraph: {
     title: 'Prospectly | Encontre empresas para prospectar no Brasil',
     description:
