@@ -8,7 +8,7 @@ Wizard (não persiste segredos):
 bash scripts/asaas-sandbox-homologation-wizard.sh
 ```
 
-Webhook da API live: `https://prospectly-api.onrender.com/api/v1/billing/webhook/asaas`  
+Webhook da API live: `https://api.prospectlyonboard.com/api/v1/billing/webhook/asaas`  
 Header: `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN` (gerado no Asaas, 32–255 caracteres; nunca a API Key).
 
 ## Defaults

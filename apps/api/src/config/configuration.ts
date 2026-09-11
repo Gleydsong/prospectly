@@ -1,3 +1,5 @@
+import { stripEnvString } from './env-string';
+
 export const configuration = () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
@@ -19,12 +21,13 @@ export const configuration = () => ({
   corsOrigins:
     process.env.CORS_ORIGINS ?? 'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001',
   google: {
-    clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-    oauthRedirectUri:
-      process.env.GOOGLE_OAUTH_REDIRECT_URI ??
+    clientId: stripEnvString(process.env.GOOGLE_CLIENT_ID),
+    clientSecret: stripEnvString(process.env.GOOGLE_CLIENT_SECRET),
+    oauthRedirectUri: stripEnvString(
+      process.env.GOOGLE_OAUTH_REDIRECT_URI,
       'http://localhost:3000/api/v1/google-connections/callback',
-    tokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY ?? '',
+    ),
+    tokenEncryptionKey: stripEnvString(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY),
   },
   openStreetMap: {
     nominatimUrl: process.env.OSM_NOMINATIM_URL ?? 'https://nominatim.openstreetmap.org/search',

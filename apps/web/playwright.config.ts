@@ -5,6 +5,7 @@ const projectDirectory = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: /api-custom-domain\.probe\.spec\.ts/,
   fullyParallel: true,
   reporter: 'list',
   use: {

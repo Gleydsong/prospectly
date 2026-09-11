@@ -61,7 +61,7 @@ describe('refresh-cookie helpers', () => {
     });
   });
 
-  it('defaults SameSite to none in production and lax locally', () => {
+  it('defaults SameSite to none in production until cutover sets lax (app+api same site)', () => {
     expect(resolveRefreshCookieSameSite(undefined, 'production')).toBe('none');
     expect(resolveRefreshCookieSameSite(undefined, 'development')).toBe('lax');
     expect(resolveRefreshCookieSameSite('lax', 'production')).toBe('lax');
