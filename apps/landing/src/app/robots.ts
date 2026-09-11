@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next';
+import { resolveLandingOrigin } from '@/lib/landing-origin';
 
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
+  const base = resolveLandingOrigin();
   return {
     rules: {
       userAgent: '*',

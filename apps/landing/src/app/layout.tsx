@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { JetBrains_Mono, Outfit } from 'next/font/google';
+import { resolveLandingOrigin } from '@/lib/landing-origin';
 import './globals.css';
 
 const outfit = Outfit({
@@ -15,7 +16,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001'),
+  metadataBase: new URL(resolveLandingOrigin()),
   icons: {
     icon: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
@@ -36,7 +37,7 @@ export const metadata: Metadata = {
   },
 };
 
-const landingUrl = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
+const landingUrl = resolveLandingOrigin();
 
 const jsonLd = {
   '@context': 'https://schema.org',
