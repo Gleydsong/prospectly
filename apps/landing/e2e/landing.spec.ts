@@ -27,6 +27,28 @@ test.describe('landing routes', () => {
   }
 });
 
+test.describe('branded route status', () => {
+  test('unknown Portuguese URL shows the branded not-found page', async ({ page }) => {
+    const response = await page.goto('/pagina-inexistente-prospectly');
+    expect([200, 404]).toContain(response?.status());
+    await expect(page.locator('[data-landing-status="not-found"]')).toBeVisible();
+    await expect(page.locator('.landing-v2')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Esta página não existe.' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voltar ao início' })).toHaveAttribute('href', '/');
+    await expect(page.locator('body')).not.toContainText('Application error');
+    await expect(page.locator('body')).not.toContainText('This page could not be found');
+  });
+
+  test('unknown English URL shows the branded not-found page', async ({ page }) => {
+    const response = await page.goto('/en/pagina-inexistente-prospectly');
+    expect([200, 404]).toContain(response?.status());
+    await expect(page.locator('[data-landing-status="not-found"]')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'This page does not exist.' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/en');
+    await expect(page.locator('body')).not.toContainText('Application error');
+  });
+});
+
 test.describe('canonical FAQ', () => {
   test('/faq permanently redirects to /duvidas', async ({ request }) => {
     const response = await request.get('/faq', { maxRedirects: 0 });
