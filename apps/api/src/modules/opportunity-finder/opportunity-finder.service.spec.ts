@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PROSPECTING_CATEGORIES } from '@prospectly/shared-types';
 
 import { OpportunityFinderService } from './opportunity-finder.service';
