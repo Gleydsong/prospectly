@@ -58,6 +58,53 @@ test.describe('canonical FAQ', () => {
   });
 });
 
+test.describe('V2 headings and accordion', () => {
+  const sectionPages = [
+    { path: '/beneficios', heading: 'Menos volume. Mais chance de fechar.' },
+    { path: '/para-quem-e', heading: 'Encontre empresas prontas para valorizar o que você faz.' },
+    { path: '/duvidas', heading: 'Tudo claro antes de começar.' },
+  ] as const;
+
+  for (const { path, heading } of sectionPages) {
+    test(`${path} has exactly one visible H1`, async ({ page }) => {
+      await page.goto(path);
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1).toHaveCount(1);
+      await expect(h1).toBeVisible();
+      await expect(h1).toHaveText(heading);
+    });
+  }
+
+  test('home keeps a single H1 in the hero', async ({ page }) => {
+    await page.goto('/');
+    const h1 = page.getByRole('heading', { level: 1 });
+    await expect(h1).toHaveCount(1);
+    await expect(h1).toBeVisible();
+    await expect(h1).toContainText('empresas certas');
+    await expect(h1).toContainText('próximo cliente');
+  });
+
+  test('home V2 accordion ties the button to the panel and toggles with the keyboard', async ({ page }) => {
+    await page.goto('/');
+    const button = page.getByRole('button', { name: 'O que o Prospectly faz?' });
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    const panelId = await button.getAttribute('aria-controls');
+    expect(panelId).toBeTruthy();
+    const panel = page.locator(`[id="${panelId}"]`);
+    await expect(panel).toHaveAttribute('role', 'region');
+    await expect(button).toHaveAttribute('aria-controls', panelId!);
+
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(panel).toBeHidden();
+
+    await page.keyboard.press('Space');
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await expect(panel).toBeVisible();
+  });
+});
+
 test.describe('document language', () => {
   test('Portuguese home uses html lang pt-BR', async ({ page }) => {
     await page.goto('/');

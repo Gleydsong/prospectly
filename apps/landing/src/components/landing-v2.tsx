@@ -130,20 +130,22 @@ function StepsSection() {
   );
 }
 
-export function BenefitsSection() {
+export function BenefitsSection({ variant = 'home' }: { variant?: 'home' | 'page' } = {}) {
+  const TitleTag = variant === 'page' ? 'h1' : 'h2';
   return (
     <section id="beneficios" className="landing-v2-section landing-v2-mint landing-v2-anchor-offset" aria-labelledby="landing-v2-benefits-title">
       <div className="landing-v2-shell landing-v2-benefits-layout">
-        <div className="landing-v2-benefits-copy landing-v2-reveal"><p className="landing-v2-kicker">POR QUE FUNCIONA</p><h2 id="landing-v2-benefits-title">Menos volume. Mais chance de fechar.</h2><p className="landing-v2-section-intro">Uma lista boa não é a maior. É a que ajuda você a reconhecer quem pode valorizar o seu trabalho.</p><ul className="landing-v2-check-list">{BENEFITS.map((benefit) => <li key={benefit}><span><Check weight="bold" aria-hidden /></span>{benefit}</li>)}</ul><Link href={enterExplainerUrl('pt')} className="landing-v2-outline-button">Encontrar empresas <ArrowUpRight weight="bold" aria-hidden /></Link></div>
+        <div className="landing-v2-benefits-copy landing-v2-reveal"><p className="landing-v2-kicker">POR QUE FUNCIONA</p><TitleTag id="landing-v2-benefits-title">Menos volume. Mais chance de fechar.</TitleTag><p className="landing-v2-section-intro">Uma lista boa não é a maior. É a que ajuda você a reconhecer quem pode valorizar o seu trabalho.</p><ul className="landing-v2-check-list">{BENEFITS.map((benefit) => <li key={benefit}><span><Check weight="bold" aria-hidden /></span>{benefit}</li>)}</ul><Link href={enterExplainerUrl('pt')} className="landing-v2-outline-button">Encontrar empresas <ArrowUpRight weight="bold" aria-hidden /></Link></div>
         <div className="landing-v2-benefits-visual landing-v2-reveal"><div className="landing-v2-benefits-image-wrap"><Image src="/images/local-business-prospecting-premium.jpg" alt="Fachada de um negócio local com presença para ser encontrada" fill sizes="(max-width: 900px) 100vw, 56vw" className="landing-v2-cover-image" /></div><div className="landing-v2-floating-card"><div className="landing-v2-floating-icon"><ShieldCheck weight="bold" aria-hidden /></div><div><strong>Lista qualificada</strong><span>Pronta para revisar</span></div><Check weight="bold" aria-hidden /></div></div>
       </div>
     </section>
   );
 }
 
-export function AudienceSection() {
+export function AudienceSection({ variant = 'home' }: { variant?: 'home' | 'page' } = {}) {
+  const TitleTag = variant === 'page' ? 'h1' : 'h2';
   return (
-    <section id="para-quem" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-audience-title"><div className="landing-v2-shell landing-v2-audience"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">IDEAL PARA</p><h2 id="landing-v2-audience-title">Encontre empresas prontas para valorizar o que você faz.</h2><p className="landing-v2-section-intro">Da primeira busca ao contato certo: aproxime seu trabalho de quem já precisa dele.</p></div><div className="landing-v2-audience-chips" aria-label="Perfis que usam o Prospectly">{AUDIENCES.map((audience) => <span key={audience}>{audience}</span>)}</div><div className="landing-v2-audience-proof"><div><Buildings weight="bold" aria-hidden /><strong>Empresas brasileiras</strong><span>por categoria e cidade</span></div><div><MapPin weight="bold" aria-hidden /><strong>Dados organizados</strong><span>para agir sem copiar e colar</span></div><div><ShieldCheck weight="bold" aria-hidden /><strong>Mais contexto</strong><span>antes da primeira conversa</span></div></div></div></section>
+    <section id="para-quem" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-audience-title"><div className="landing-v2-shell landing-v2-audience"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">IDEAL PARA</p><TitleTag id="landing-v2-audience-title">Encontre empresas prontas para valorizar o que você faz.</TitleTag><p className="landing-v2-section-intro">Da primeira busca ao contato certo: aproxime seu trabalho de quem já precisa dele.</p></div><div className="landing-v2-audience-chips" aria-label="Perfis que usam o Prospectly">{AUDIENCES.map((audience) => <span key={audience}>{audience}</span>)}</div><div className="landing-v2-audience-proof"><div><Buildings weight="bold" aria-hidden /><strong>Empresas brasileiras</strong><span>por categoria e cidade</span></div><div><MapPin weight="bold" aria-hidden /><strong>Dados organizados</strong><span>para agir sem copiar e colar</span></div><div><ShieldCheck weight="bold" aria-hidden /><strong>Mais contexto</strong><span>antes da primeira conversa</span></div></div></div></section>
   );
 }
 
@@ -159,7 +161,30 @@ export function FaqSection({ locale, variant = 'home' }: { locale: Locale; varia
   const [openId, setOpenId] = useState(items[0]?.id ?? '');
   const TitleTag = variant === 'page' ? 'h1' : 'h2';
   return (
-    <section id="faq" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-faq-title"><div className="landing-v2-shell landing-v2-faq-layout"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">PERGUNTAS FREQUENTES</p><TitleTag id="landing-v2-faq-title">Tudo claro antes de começar.</TitleTag><p className="landing-v2-section-intro">Respostas diretas para você dar o próximo passo com segurança.</p></div><div className="landing-v2-faq-list landing-v2-reveal">{items.map((item) => { const isOpen = openId === item.id; return <div key={item.id} className="landing-v2-faq-item"><h3><button type="button" aria-expanded={isOpen} onClick={() => setOpenId(isOpen ? '' : item.id)}><span>{item.question}</span><CaretDown weight="bold" aria-hidden className={isOpen ? 'is-open' : ''} /></button></h3>{isOpen ? <p>{item.answer}</p> : null}</div>; })}</div></div></section>
+    <section id="faq" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-faq-title"><div className="landing-v2-shell landing-v2-faq-layout"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">PERGUNTAS FREQUENTES</p><TitleTag id="landing-v2-faq-title">Tudo claro antes de começar.</TitleTag><p className="landing-v2-section-intro">Respostas diretas para você dar o próximo passo com segurança.</p></div><div className="landing-v2-faq-list landing-v2-reveal">{items.map((item) => {
+      const isOpen = openId === item.id;
+      const buttonId = `landing-v2-faq-${item.id}-button`;
+      const panelId = `landing-v2-faq-${item.id}-panel`;
+      return (
+        <div key={item.id} className="landing-v2-faq-item">
+          <h3>
+            <button
+              type="button"
+              id={buttonId}
+              aria-expanded={isOpen}
+              aria-controls={panelId}
+              onClick={() => setOpenId(isOpen ? '' : item.id)}
+            >
+              <span>{item.question}</span>
+              <CaretDown weight="bold" aria-hidden className={isOpen ? 'is-open' : ''} />
+            </button>
+          </h3>
+          <div id={panelId} role="region" aria-labelledby={buttonId} hidden={!isOpen}>
+            <p>{item.answer}</p>
+          </div>
+        </div>
+      );
+    })}</div></div></section>
   );
 }
 
@@ -185,8 +210,8 @@ export function LandingV2({ locale }: { locale: Locale }) {
 
 export function LandingV2SectionPage({ locale, section }: { locale: Locale; section: 'benefits' | 'audience' | 'faq' }) {
   return <div className="landing-v2"><a className="landing-v2-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a><V2Header locale={locale} page="section" /><main id="conteudo-principal">
-    {section === 'benefits' ? <BenefitsSection /> : null}
-    {section === 'audience' ? <AudienceSection /> : null}
+    {section === 'benefits' ? <BenefitsSection variant="page" /> : null}
+    {section === 'audience' ? <AudienceSection variant="page" /> : null}
     {section === 'faq' ? <FaqSection locale={locale} variant="page" /> : null}
   </main><V2Footer page="section" /><CookieBanner locale={locale} /></div>;
 }
