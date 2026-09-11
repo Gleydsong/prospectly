@@ -93,7 +93,7 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
 }
 
 function Hero({ locale }: { locale: Locale }) {
-  const enterUrl = enterExplainerUrl(locale);
+  const onboardingUrl = appOnboardingUrl();
   return (
     <section className="landing-v2-hero" aria-labelledby="landing-v2-hero-title">
       <div className="landing-v2-hero-glow" aria-hidden="true" />
@@ -110,7 +110,7 @@ function Hero({ locale }: { locale: Locale }) {
           </div>
           <div className="landing-v2-search-proof" aria-label="O que a busca entrega"><span><Check weight="bold" aria-hidden /> Empresa real</span><span><Check weight="bold" aria-hidden /> Sinal de oportunidade</span><span><Check weight="bold" aria-hidden /> Próximo passo claro</span></div>
         </div>
-        <div className="landing-v2-hero-actions"><Link href={enterUrl} className="landing-v2-green-button">Criar minha primeira lista <ArrowRight weight="bold" aria-hidden /></Link><a href="#como-funciona" className="landing-v2-text-link">Ver como funciona</a></div>
+        <div className="landing-v2-hero-actions"><a href={onboardingUrl} className="landing-v2-green-button">Criar minha primeira lista <ArrowRight weight="bold" aria-hidden /></a><a href="#como-funciona" className="landing-v2-text-link">Ver como funciona</a></div>
         <a href="#como-funciona" className="landing-v2-scroll-cue">ROLE PARA EXPLORAR <ArrowDown weight="bold" aria-hidden /></a>
       </div>
     </section>
@@ -150,9 +150,9 @@ export function AudienceSection({ variant = 'home' }: { variant?: 'home' | 'page
 }
 
 function FinalCtaSection({ locale }: { locale: Locale }) {
-  const enterUrl = enterExplainerUrl(locale);
+  const onboardingUrl = appOnboardingUrl();
   return (
-    <section className="landing-v2-final-cta" aria-labelledby="landing-v2-final-title"><Image src="/images/hero-street.jpg" alt="Rua com negócios locais ao fim do dia" fill sizes="100vw" className="landing-v2-final-image" /><div className="landing-v2-final-overlay" aria-hidden="true" /><div className="landing-v2-shell landing-v2-final-content landing-v2-reveal"><p className="landing-v2-kicker">O PRÓXIMO CLIENTE ESTÁ MAIS PERTO</p><h2 id="landing-v2-final-title">Pare de perder tempo procurando clientes.</h2><p>Encontre as melhores oportunidades, organize os contatos e comece conversas com um motivo concreto.</p><div className="landing-v2-final-actions"><Link href={enterUrl} className="landing-v2-green-button">Começar agora <ArrowRight weight="bold" aria-hidden /></Link><a href={`mailto:${TEAM_EMAIL}`} className="landing-v2-light-link">Falar com a equipe <ArrowUpRight weight="bold" aria-hidden /></a></div></div></section>
+    <section className="landing-v2-final-cta" aria-labelledby="landing-v2-final-title"><Image src="/images/hero-street.jpg" alt="Rua com negócios locais ao fim do dia" fill sizes="100vw" className="landing-v2-final-image" /><div className="landing-v2-final-overlay" aria-hidden="true" /><div className="landing-v2-shell landing-v2-final-content landing-v2-reveal"><p className="landing-v2-kicker">O PRÓXIMO CLIENTE ESTÁ MAIS PERTO</p><h2 id="landing-v2-final-title">Pare de perder tempo procurando clientes.</h2><p>Encontre as melhores oportunidades, organize os contatos e comece conversas com um motivo concreto.</p><div className="landing-v2-final-actions"><a href={onboardingUrl} className="landing-v2-green-button">Começar agora <ArrowRight weight="bold" aria-hidden /></a><a href={`mailto:${TEAM_EMAIL}`} className="landing-v2-light-link">Falar com a equipe <ArrowUpRight weight="bold" aria-hidden /></a></div></div></section>
   );
 }
 

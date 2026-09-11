@@ -17,7 +17,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { useReducedMotion } from 'motion/react';
 import { CookieBanner } from '@/components/cookie-banner';
 import { V2Footer, V2Header } from '@/components/landing-v2';
-import { enterExplainerUrl } from '@/lib/pricing';
+import { appOnboardingUrl, enterExplainerUrl } from '@/lib/pricing';
 import type { Locale } from '@/lib/i18n';
 
 const JOURNEY_STATES = [
@@ -160,10 +160,10 @@ function AfterListSection() {
 }
 
 export function LandingHowItWorksV2({ locale }: { locale: Locale }) {
-  const enterUrl = enterExplainerUrl(locale);
+  const onboardingUrl = appOnboardingUrl();
   return <div className="landing-v2 landing-how-v2"><a className="landing-v2-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a><V2Header locale={locale} page="how" /><main id="conteudo-principal">
-    <section className="landing-how-hero" aria-labelledby="landing-how-hero-title"><div className="landing-how-hero-glow" aria-hidden="true" /><div className="landing-v2-shell landing-how-hero-grid"><MotionReveal className="landing-how-hero-copy"><p className="landing-v2-kicker">COMO FUNCIONA</p><h1 id="landing-how-hero-title">Da busca à conversa, em três passos claros.</h1><p>Descubra como o Prospectly ajuda você a encontrar empresas, reconhecer oportunidades e organizar o próximo contato.</p><div className="landing-how-hero-actions"><Link href={enterUrl} className="landing-v2-green-button">Criar minha primeira lista <ArrowRight weight="bold" aria-hidden /></Link><a href="#fluxo" className="landing-v2-text-link">Explorar o fluxo</a></div></MotionReveal><MotionReveal className="landing-how-hero-visual" delay={120}><JourneyMock /></MotionReveal></div></section>
+    <section className="landing-how-hero" aria-labelledby="landing-how-hero-title"><div className="landing-how-hero-glow" aria-hidden="true" /><div className="landing-v2-shell landing-how-hero-grid"><MotionReveal className="landing-how-hero-copy"><p className="landing-v2-kicker">COMO FUNCIONA</p><h1 id="landing-how-hero-title">Da busca à conversa, em três passos claros.</h1><p>Descubra como o Prospectly ajuda você a encontrar empresas, reconhecer oportunidades e organizar o próximo contato.</p><div className="landing-how-hero-actions"><a href={onboardingUrl} className="landing-v2-green-button">Criar minha primeira lista <ArrowRight weight="bold" aria-hidden /></a><a href="#fluxo" className="landing-v2-text-link">Explorar o fluxo</a></div></MotionReveal><MotionReveal className="landing-how-hero-visual" delay={120}><JourneyMock /></MotionReveal></div></section>
     <HowSteps /><HowDetailSections /><AfterListSection />
-    <section className="landing-how-final"><div className="landing-v2-shell"><MotionReveal><p className="landing-v2-kicker">PRONTO PARA COMEÇAR?</p><h2>Encontre uma empresa. Entenda o contexto. Comece melhor.</h2><Link href={enterUrl} className="landing-v2-dark-button">Começar agora <ArrowRight weight="bold" aria-hidden /></Link></MotionReveal></div></section>
+    <section className="landing-how-final"><div className="landing-v2-shell"><MotionReveal><p className="landing-v2-kicker">PRONTO PARA COMEÇAR?</p><h2>Encontre uma empresa. Entenda o contexto. Comece melhor.</h2><a href={onboardingUrl} className="landing-v2-dark-button">Começar agora <ArrowRight weight="bold" aria-hidden /></a></MotionReveal></div></section>
   </main><V2Footer page="how" /><CookieBanner locale={locale} /></div>;
 }

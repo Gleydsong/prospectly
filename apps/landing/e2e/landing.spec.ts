@@ -167,6 +167,13 @@ test.describe('landing navigation', () => {
     }
   });
 
+  test('botão Criar minha primeira lista direciona para app.prospectlyonboard.com', async ({ page }) => {
+    await page.goto('/');
+    await expect(
+      page.getByRole('main').getByRole('link', { name: /criar minha primeira lista/i }),
+    ).toHaveAttribute('href', 'https://app.prospectlyonboard.com');
+  });
+
   test('mobile menu opens the questions page', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'mobile-chromium', 'mobile menu is covered in the mobile project');
     await page.goto('/');
