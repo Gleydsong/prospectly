@@ -82,11 +82,6 @@ html {
   html {
     scroll-behavior: auto;
   }
-
-  .neon-route {
-    animation: none;
-    opacity: 0.45;
-  }
 }
 
 body {
@@ -102,42 +97,6 @@ body {
 
 .hero-wash {
   background: var(--hero-wash);
-}
-
-.conversion-brand {
-  background: #061126;
-  --ink: #ffffff;
-  --ink-muted: rgb(191 219 254 / 0.85);
-  --border: rgb(255 255 255 / 0.2);
-  --cta-secondary-bg: rgb(255 255 255 / 0.1);
-  --cta-secondary-border: rgb(255 255 255 / 0.2);
-  --cta-secondary-ink: #ffffff;
-  --cta-secondary-hover: rgb(255 255 255 / 0.15);
-  --cta-ghost-hover: rgb(255 255 255 / 0.1);
-  --cta-glass-bg: rgb(255 255 255 / 0.14);
-  --cta-glass-border: rgb(255 255 255 / 0.28);
-  --cta-glass-ink: #ffffff;
-  --cta-glass-hover: rgb(255 255 255 / 0.2);
-  --cta-glass-inset: rgb(255 255 255 / 0.25);
-  --cta-primary-from: #60a5fa;
-  --cta-primary-to: #1d4ed8;
-  --cta-primary-border: rgb(147 197 253 / 0.45);
-  --cta-primary-shadow: 0 1px 0 0 rgb(255 255 255 / 0.3) inset,
-    0 16px 40px -12px rgb(37 99 235 / 0.8);
-  --cta-primary-hover-from: #93c5fd;
-  --cta-primary-hover-to: #2563eb;
-}
-
-.conversion-brand-overlay {
-  background:
-    linear-gradient(90deg, rgb(3 7 18 / 0.9) 0%, rgb(3 7 18 / 0.72) 42%, rgb(3 7 18 / 0.24) 100%),
-    linear-gradient(180deg, rgb(3 7 18 / 0.08) 0%, rgb(3 7 18 / 0.54) 100%);
-}
-
-@media (max-width: 1023px) {
-  .conversion-brand-overlay {
-    background: linear-gradient(180deg, rgb(3 7 18 / 0.72) 0%, rgb(3 7 18 / 0.84) 100%);
-  }
 }
 
 .problem-intelligence-visual {
@@ -159,33 +118,6 @@ body {
 .problem-intelligence-routes {
   opacity: 0.42;
   mix-blend-mode: screen;
-}
-
-.neon-route {
-  fill: none;
-  stroke: rgb(96 165 250 / 0.62);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-dasharray: 12 170;
-  stroke-dashoffset: 182;
-  filter: drop-shadow(0 0 3px rgb(37 99 235 / 0.35));
-  animation: prospectly-neon-route 7s linear infinite;
-}
-
-.neon-route-delayed {
-  animation-delay: -2.3s;
-}
-
-.neon-route-slow {
-  animation-delay: -4.8s;
-  animation-duration: 9s;
-}
-
-@keyframes prospectly-neon-route {
-  to {
-    stroke-dashoffset: -182;
-  }
 }
 
 .surface-raised {
@@ -1037,45 +969,6 @@ footer.site-chrome-enter { margin-top: 0; background-color: #ffffff; }
 .landing-light-page .bento-surface [class~="bg-white/[0.04]"],
 .landing-light-page .bento-surface [class~="bg-white/[0.06]"],
 .landing-light-page .bento-surface [class~="bg-white/[0.07]"] { background: #f4f5f6; }
-
-/* A home keeps the product mock, but removes its blue cast to match the gray system. */
-.landing-home-v2 .conversion-brand {
-  background: #f4f5f6;
-  --ink: #202428;
-  --ink-muted: #697178;
-}
-.landing-home-v2 .conversion-brand > img { opacity: .16; filter: grayscale(1); }
-.landing-home-v2 .conversion-brand-overlay {
-  background: linear-gradient(90deg, rgb(244 245 246 / .98) 0%, rgb(244 245 246 / .84) 48%, rgb(244 245 246 / .48) 100%);
-}
-.landing-home-v2 .conversion-brand > .relative > div:first-child h1 { color: #202428 !important; }
-.landing-home-v2 .conversion-brand > .relative > div:first-child p { color: #697178 !important; }
-.landing-home-v2 .conversion-brand .cta-glass {
-  border-color: #747b82;
-  background: #747b82;
-  color: #ffffff;
-}
-.landing-home-v2 .conversion-brand .cta-glass:hover { background: #555c63; }
-.landing-home-v2 .conversion-brand .cta-secondary {
-  border-color: #d9dde0;
-  background: #ffffff;
-  color: #555c63;
-}
-.landing-home-v2 .conversion-brand figure { filter: grayscale(.82) saturate(.2); }
-.landing-home-v2 .neon-route {
-  stroke: rgb(116 123 130 / .62);
-  filter: drop-shadow(0 0 3px rgb(92 100 108 / .24));
-}
-.landing-home-v2 [data-gsap="badge"] {
-  border-color: #dfe2e4;
-  background: #f0f1f2;
-  color: #697178;
-}
-.landing-home-v2 .bg-graphite-900 {
-  border-color: #dfe2e4;
-  background: #ffffff;
-  color: #555c63;
-}
 
 .site-chrome-light {
   --bg: #ffffff;
