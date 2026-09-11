@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { sitemapHomeEntries } from '@/lib/document-locale';
 import { resolveLandingOrigin } from '@/lib/landing-origin';
 
 const base = resolveLandingOrigin();
@@ -27,12 +28,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   entries.push(
-    {
-      url: `${base}/`,
+    ...sitemapHomeEntries(base).map((entry) => ({
+      ...entry,
       lastModified,
-      changeFrequency: 'weekly',
+      changeFrequency: 'weekly' as const,
       priority: 1,
-    },
+    })),
     {
       url: `${base}/como-funciona`,
       lastModified,

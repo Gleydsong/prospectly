@@ -12,6 +12,7 @@ const publicRoutes = [
   '/privacy',
   '/terms',
   '/cookies',
+  '/en',
   '/en/enter',
   '/en/faq',
   '/en/pricing',
@@ -25,6 +26,28 @@ test.describe('landing routes', () => {
       await expect(page.locator('body')).not.toContainText('Application error');
     });
   }
+});
+
+test.describe('document language', () => {
+  test('Portuguese home uses html lang pt-BR', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
+  });
+
+  test('English home stays on /en with html lang en and an English H1', async ({ page }) => {
+    const response = await page.goto('/en');
+    expect(response?.status(), '/en response').toBe(200);
+    await expect(page).toHaveURL(/\/en\/?$/);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Find companies worth prospecting in Brazil.' }),
+    ).toBeVisible();
+  });
+
+  test('English nested routes keep html lang en', async ({ page }) => {
+    await page.goto('/en/faq');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  });
 });
 
 test.describe('landing navigation', () => {
