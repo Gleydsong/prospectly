@@ -26,7 +26,7 @@ export function Switch({
           {label}
         </label>
         {description ? (
-          <p className="mt-0.5 text-sm leading-5 text-[color:var(--ink-muted)]">{description}</p>
+          <p id={`${switchId}-description`} className="mt-0.5 text-sm leading-5 text-[color:var(--ink-muted)]">{description}</p>
         ) : null}
       </div>
       <button
@@ -34,6 +34,7 @@ export function Switch({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-describedby={description ? `${switchId}-description` : undefined}
         disabled={disabled}
         onClick={() => onCheckedChange(!checked)}
         className={cn(
