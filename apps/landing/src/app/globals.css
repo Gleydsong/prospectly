@@ -580,7 +580,8 @@ body {
 .landing-v2-split-section { display: grid; grid-template-columns: .88fr 1.12fr; align-items: center; gap: 86px; }
 .landing-v2-section-copy h2,
 .landing-v2-benefits-copy h2,
-.landing-v2-centered-copy h2 { max-width: 15ch; margin: 17px 0 0; color: var(--v2-ink); font-size: clamp(2.25rem, 4vw, 4rem); font-weight: 700; letter-spacing: -.065em; line-height: .98; text-wrap: balance; }
+.landing-v2-centered-copy h2,
+.landing-v2-centered-copy h1 { max-width: 15ch; margin: 17px 0 0; color: var(--v2-ink); font-size: clamp(2.25rem, 4vw, 4rem); font-weight: 700; letter-spacing: -.065em; line-height: .98; text-wrap: balance; }
 .landing-v2-section-intro { max-width: 48ch; margin: 21px 0 0; color: var(--v2-muted); font-size: 16px; line-height: 1.7; }
 .landing-v2-step-list { margin: 39px 0 0; padding: 0; list-style: none; }
 .landing-v2-step-list li { display: grid; grid-template-columns: 42px 1fr; gap: 16px; padding: 19px 0; border-top: 1px solid #e4e6e8; }
@@ -614,7 +615,8 @@ body {
 
 .landing-v2-audience { display: flex; flex-direction: column; align-items: center; }
 .landing-v2-centered-copy { max-width: 740px; text-align: center; }
-.landing-v2-centered-copy h2 { max-width: 18ch; margin-inline: auto; }
+.landing-v2-centered-copy h2,
+.landing-v2-centered-copy h1 { max-width: 18ch; margin-inline: auto; }
 .landing-v2-centered-copy .landing-v2-section-intro { margin-inline: auto; }
 .landing-v2-audience-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 790px; margin-top: 42px; }
 .landing-v2-audience-chips span { padding: 11px 16px; border: 1px solid #d8dcdf; border-radius: 999px; color: #5e666d; font-size: 14px; font-weight: 600; background: #fcfcfd; }
@@ -639,7 +641,8 @@ body {
 
 .landing-v2-faq-layout { display: grid; grid-template-columns: .76fr 1.24fr; gap: 90px; align-items: start; }
 .landing-v2-faq-layout .landing-v2-centered-copy { text-align: left; }
-.landing-v2-faq-layout .landing-v2-centered-copy h2 { margin-inline: 0; }
+.landing-v2-faq-layout .landing-v2-centered-copy h2,
+.landing-v2-faq-layout .landing-v2-centered-copy h1 { margin-inline: 0; }
 .landing-v2-faq-layout .landing-v2-centered-copy .landing-v2-section-intro { margin-inline: 0; }
 .landing-v2-faq-list { border-top: 1px solid #e2e4e6; }
 .landing-v2-faq-item { border-bottom: 1px solid #e2e4e6; }
@@ -694,13 +697,13 @@ body {
   .landing-v2-scroll-cue { margin-top: 38px; }
   .landing-v2-section { padding: 76px 0; }
   .landing-v2-split-section, .landing-v2-benefits-layout, .landing-v2-faq-layout { display: flex; flex-direction: column; gap: 40px; }
-  .landing-v2-section-copy h2, .landing-v2-benefits-copy h2, .landing-v2-centered-copy h2 { max-width: 16ch; font-size: clamp(2.3rem, 10vw, 3.6rem); }
+  .landing-v2-section-copy h2, .landing-v2-benefits-copy h2, .landing-v2-centered-copy h2, .landing-v2-centered-copy h1 { max-width: 16ch; font-size: clamp(2.3rem, 10vw, 3.6rem); }
   .landing-v2-image-frame { width: 100%; min-height: 380px; }
   .landing-v2-benefits-visual { width: 100%; min-height: 370px; }
   .landing-v2-benefits-image-wrap { left: 0; bottom: 25px; }
   .landing-v2-floating-card { right: 8px; min-width: 230px; }
   .landing-v2-centered-copy, .landing-v2-faq-layout .landing-v2-centered-copy { text-align: center; }
-  .landing-v2-faq-layout .landing-v2-centered-copy h2, .landing-v2-faq-layout .landing-v2-centered-copy .landing-v2-section-intro { margin-inline: auto; }
+  .landing-v2-faq-layout .landing-v2-centered-copy h2, .landing-v2-faq-layout .landing-v2-centered-copy h1, .landing-v2-faq-layout .landing-v2-centered-copy .landing-v2-section-intro { margin-inline: auto; }
   .landing-v2-audience-proof { grid-template-columns: 1fr; gap: 22px; margin-top: 44px; }
   .landing-v2-final-cta, .landing-v2-final-content { min-height: 500px; }
   .landing-v2-final-overlay { background: linear-gradient(180deg, rgb(7 28 19 / .72), rgb(7 28 19 / .94)); }

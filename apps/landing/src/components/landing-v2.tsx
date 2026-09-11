@@ -16,9 +16,10 @@ import {
   X,
 } from '@phosphor-icons/react';
 import { useCallback, useEffect, useState } from 'react';
-import { getHomeFaqItems } from '@/lib/faq-content';
+import { getFaqItems, getHomeFaqItems } from '@/lib/faq-content';
 import { appOnboardingUrl, enterExplainerUrl } from '@/lib/pricing';
 import { TEAM_EMAIL, type Locale } from '@/lib/i18n';
+import { canonicalFaqPath } from '@/lib/faq-routes';
 import { CookieBanner } from '@/components/cookie-banner';
 import { BrandIntro } from '@/components/brand-intro';
 
@@ -58,7 +59,7 @@ export function V2Header({ locale, page = 'home' }: { locale: Locale; page?: 'ho
   const howUrl = '/como-funciona';
   const benefitsUrl = '/beneficios';
   const audienceUrl = '/para-quem-e';
-  const faqUrl = '/duvidas';
+  const faqUrl = canonicalFaqPath(locale);
 
   useEffect(() => {
     if (!open) return;
@@ -153,16 +154,17 @@ function FinalCtaSection({ locale }: { locale: Locale }) {
   );
 }
 
-export function FaqSection({ locale }: { locale: Locale }) {
-  const items = getHomeFaqItems(locale);
+export function FaqSection({ locale, variant = 'home' }: { locale: Locale; variant?: 'home' | 'page' }) {
+  const items = variant === 'page' ? getFaqItems(locale) : getHomeFaqItems(locale);
   const [openId, setOpenId] = useState(items[0]?.id ?? '');
+  const TitleTag = variant === 'page' ? 'h1' : 'h2';
   return (
-    <section id="faq" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-faq-title"><div className="landing-v2-shell landing-v2-faq-layout"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">PERGUNTAS FREQUENTES</p><h2 id="landing-v2-faq-title">Tudo claro antes de começar.</h2><p className="landing-v2-section-intro">Respostas diretas para você dar o próximo passo com segurança.</p></div><div className="landing-v2-faq-list landing-v2-reveal">{items.slice(0, 8).map((item) => { const isOpen = openId === item.id; return <div key={item.id} className="landing-v2-faq-item"><h3><button type="button" aria-expanded={isOpen} onClick={() => setOpenId(isOpen ? '' : item.id)}><span>{item.question}</span><CaretDown weight="bold" aria-hidden className={isOpen ? 'is-open' : ''} /></button></h3>{isOpen ? <p>{item.answer}</p> : null}</div>; })}</div></div></section>
+    <section id="faq" className="landing-v2-section landing-v2-white landing-v2-anchor-offset" aria-labelledby="landing-v2-faq-title"><div className="landing-v2-shell landing-v2-faq-layout"><div className="landing-v2-centered-copy landing-v2-reveal"><p className="landing-v2-kicker">PERGUNTAS FREQUENTES</p><TitleTag id="landing-v2-faq-title">Tudo claro antes de começar.</TitleTag><p className="landing-v2-section-intro">Respostas diretas para você dar o próximo passo com segurança.</p></div><div className="landing-v2-faq-list landing-v2-reveal">{items.map((item) => { const isOpen = openId === item.id; return <div key={item.id} className="landing-v2-faq-item"><h3><button type="button" aria-expanded={isOpen} onClick={() => setOpenId(isOpen ? '' : item.id)}><span>{item.question}</span><CaretDown weight="bold" aria-hidden className={isOpen ? 'is-open' : ''} /></button></h3>{isOpen ? <p>{item.answer}</p> : null}</div>; })}</div></div></section>
   );
 }
 
 export function V2Footer({ page = 'home' }: { page?: 'home' | 'how' | 'section' }) {
-  return <footer className="landing-v2-footer" data-page={page}><div className="landing-v2-shell landing-v2-footer-grid"><div><V2Brand /><p>Empresas certas. Próximos passos claros.</p></div><div><strong>Produto</strong><Link href="/como-funciona">Como funciona</Link><Link href="/beneficios">Benefícios</Link><Link href="/duvidas">Perguntas frequentes</Link></div><div><strong>Legal</strong><Link href="/terms">Termos de uso</Link><Link href="/privacy">Política de privacidade</Link><a href={`mailto:${TEAM_EMAIL}`}>Fale com a gente</a></div></div><div className="landing-v2-shell landing-v2-footer-bottom"><span>© {new Date().getFullYear()} Prospectly</span><span>Prospecção B2B com mais clareza.</span></div></footer>;
+  return <footer className="landing-v2-footer" data-page={page}><div className="landing-v2-shell landing-v2-footer-grid"><div><V2Brand /><p>Empresas certas. Próximos passos claros.</p></div><div><strong>Produto</strong><Link href="/como-funciona">Como funciona</Link><Link href="/beneficios">Benefícios</Link><Link href={canonicalFaqPath('pt')}>Perguntas frequentes</Link></div><div><strong>Legal</strong><Link href="/terms">Termos de uso</Link><Link href="/privacy">Política de privacidade</Link><a href={`mailto:${TEAM_EMAIL}`}>Fale com a gente</a></div></div><div className="landing-v2-shell landing-v2-footer-bottom"><span>© {new Date().getFullYear()} Prospectly</span><span>Prospecção B2B com mais clareza.</span></div></footer>;
 }
 
 export function LandingV2({ locale }: { locale: Locale }) {
@@ -185,6 +187,6 @@ export function LandingV2SectionPage({ locale, section }: { locale: Locale; sect
   return <div className="landing-v2"><a className="landing-v2-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a><V2Header locale={locale} page="section" /><main id="conteudo-principal">
     {section === 'benefits' ? <BenefitsSection /> : null}
     {section === 'audience' ? <AudienceSection /> : null}
-    {section === 'faq' ? <FaqSection locale={locale} /> : null}
+    {section === 'faq' ? <FaqSection locale={locale} variant="page" /> : null}
   </main><V2Footer page="section" /><CookieBanner locale={locale} /></div>;
 }

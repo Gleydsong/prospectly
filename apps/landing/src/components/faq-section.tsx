@@ -14,6 +14,7 @@ import {
   type FaqItem,
 } from '@/lib/faq-content';
 import { prefix, t, type Locale } from '@/lib/i18n';
+import { canonicalFaqPath } from '@/lib/faq-routes';
 import { enterExplainerUrl } from '@/lib/pricing';
 
 function FaqAccordion({
@@ -111,7 +112,6 @@ function FaqAccordion({
 export function FaqSection({ locale }: { locale: Locale }) {
   const items = getHomeFaqItems(locale);
   const baseId = useId();
-  const p = prefix(locale);
 
   return (
     <section className="bg-[color:var(--bg)]" aria-labelledby={`${baseId}-title`}>
@@ -129,7 +129,7 @@ export function FaqSection({ locale }: { locale: Locale }) {
                 {t(locale, 'faqSubtitle')}
               </p>
             </div>
-            <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+            <CtaButton href={canonicalFaqPath(locale)} variant="ghost" size="sm" className="font-medium">
               {t(locale, 'faqAllLink')}
             </CtaButton>
           </div>

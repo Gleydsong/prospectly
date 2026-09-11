@@ -7,7 +7,6 @@ const publicRoutes = [
   '/para-quem-e',
   '/duvidas',
   '/entrar',
-  '/faq',
   '/pricing',
   '/privacy',
   '/terms',
@@ -26,6 +25,37 @@ test.describe('landing routes', () => {
       await expect(page.locator('body')).not.toContainText('Application error');
     });
   }
+});
+
+test.describe('canonical FAQ', () => {
+  test('/faq permanently redirects to /duvidas', async ({ request }) => {
+    const response = await request.get('/faq', { maxRedirects: 0 });
+    expect(response.status()).toBe(301);
+    expect(new URL(response.headers()['location'] ?? '', 'http://127.0.0.1:3011').pathname).toBe(
+      '/duvidas',
+    );
+  });
+
+  test('canonical Portuguese FAQ returns 200 with FAQPage JSON-LD', async ({ page }) => {
+    const response = await page.goto('/duvidas');
+    expect(response?.status(), '/duvidas response').toBe(200);
+    await expect(page.getByRole('heading', { level: 1, name: 'Tudo claro antes de começar.' })).toBeVisible();
+    await expect(page.locator('.landing-v2')).toBeVisible();
+    await expect(page.getByText('PERGUNTAS FREQUENTES', { exact: true })).toBeVisible();
+    const jsonLdScripts = await page.locator('script[type="application/ld+json"]').allTextContents();
+    expect(
+      jsonLdScripts.some((text) => text.includes('"FAQPage"') && text.includes('O que o Prospectly faz?')),
+      'FAQPage JSON-LD on /duvidas',
+    ).toBe(true);
+  });
+
+  test('V2 header FAQ link goes to /duvidas', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop-chromium', 'desktop navigation is covered in the desktop project');
+    await page.goto('/');
+    await expect(
+      page.getByRole('navigation', { name: 'Navegação principal' }).getByRole('link', { name: 'Dúvidas frequentes' }),
+    ).toHaveAttribute('href', '/duvidas');
+  });
 });
 
 test.describe('document language', () => {

@@ -335,3 +335,18 @@ export function getHomeFaqItems(locale: Locale): FaqItem[] {
   const map = new Map(getFaqItems(locale).map((item) => [item.id, item]));
   return preferred.map((id) => map.get(id)).filter(Boolean) as FaqItem[];
 }
+
+export function faqPageJsonLd(locale: Locale) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage' as const,
+    mainEntity: getFaqItems(locale).map((item) => ({
+      '@type': 'Question' as const,
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer' as const,
+        text: item.answer,
+      },
+    })),
+  };
+}
