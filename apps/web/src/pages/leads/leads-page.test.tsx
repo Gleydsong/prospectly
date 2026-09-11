@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
@@ -786,5 +787,52 @@ describe('LeadsPage saved views', () => {
 
     expect(screen.getByRole('checkbox', { name: 'Segmento Específico' })).toBeInTheDocument();
     expect(screen.getByText('Personalizado')).toBeInTheDocument();
+  });
+
+  it('opens a client from the table via a keyboard-focusable link', async () => {
+    mocks.useLeads.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'l1',
+            companyName: 'Padaria Central',
+            city: 'Lisboa',
+            status: LeadStatus.NEW,
+            source: 'MANUAL',
+            score: 40,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: null,
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(
+      <Routes>
+        <Route path="/leads" element={<LeadsPage />} />
+        <Route path="/leads/:leadId" element={<p>Detalhe do cliente</p>} />
+      </Routes>,
+      { initialEntries: ['/leads'], withGoogle: false },
+    );
+
+    const openClientButtons = screen
+      .queryAllByRole('button', { name: /Padaria Central/ })
+      .filter((button) => button.getAttribute('aria-label') !== 'Apagar cliente Padaria Central');
+    expect(openClientButtons).toHaveLength(0);
+    const tableLink = within(screen.getByRole('table')).getByRole('link', { name: 'Padaria Central' });
+    expect(tableLink).toHaveAttribute('href', '/leads/l1');
+
+    tableLink.focus();
+    expect(tableLink).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByText('Detalhe do cliente')).toBeInTheDocument();
   });
 });
