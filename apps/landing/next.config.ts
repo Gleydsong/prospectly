@@ -1,5 +1,11 @@
 import type { NextConfig } from 'next';
 
+import { resolveLandingOrigin, shouldFailFastNextCommand } from './src/lib/landing-origin';
+
+if (shouldFailFastNextCommand()) {
+  resolveLandingOrigin();
+}
+
 const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },

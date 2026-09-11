@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
+import { resolveLandingOrigin } from '@/lib/landing-origin';
 
-const base = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
+const base = resolveLandingOrigin();
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const sharedPaths = ['/pricing', '/faq', '/privacy', '/terms', '/cookies'];

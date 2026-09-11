@@ -8,6 +8,9 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    env:
+      # next build sets NODE_ENV=production; fail-fast requires a public https origin.
+      NEXT_PUBLIC_LANDING_URL: https://prospectlyonboard.com
     steps:
       - uses: actions/checkout@v4
 
