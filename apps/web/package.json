@@ -14,6 +14,8 @@
     "test:e2e:api-domain": "playwright test --config playwright.probe.config.ts"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
     "@hookform/resolvers": "^3.9.1",
     "@prospectly/shared-types": "workspace:*",
     "@react-oauth/google": "^0.13.5",
