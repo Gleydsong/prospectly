@@ -1,5 +1,5 @@
 import { Mail, MessageCircle, MoreHorizontal, Phone } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type MouseEvent, type ReactNode, type UlHTMLAttributes } from 'react';
+import { useEffect, useId, useRef, useState, type ComponentProps, type MouseEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ export function ClientDenseList({
   children,
   className,
   ...props
-}: UlHTMLAttributes<HTMLUListElement>) {
+}: ComponentProps<'ul'>) {
   return (
     <ul className={cn('client-dense-list', className)} {...props}>
       {children}
