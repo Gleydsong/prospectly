@@ -1,14 +1,29 @@
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { canWriteSavedReport } from '@/features/reports/can-write-saved-report';
 import { reportLeadsPath, type ReportPeriod } from '@/features/reports/api';
-import { useFunnelConversion } from '@/features/reports/hooks';
+import {
+  useArchiveSavedReport,
+  useCreateSavedReport,
+  useFunnelConversion,
+  useSavedReports,
+} from '@/features/reports/hooks';
+import {
+  fetchSavedReportConversion,
+  savedReportToFilters,
+  type SavedReport,
+} from '@/features/reports/saved-reports-api';
+import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, Role } from '@/types';
 
@@ -21,13 +36,28 @@ export function ReportsPage() {
   const [period, setPeriod] = useState<ReportPeriod>('30d');
   const [source, setSource] = useState<LeadSource | ''>('');
   const [mineOnly, setMineOnly] = useState(user?.role === Role.SALES);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [saveName, setSaveName] = useState('');
 
-  const filters = {
+  const canSave = canWriteSavedReport(user?.role);
+  const savedReports = useSavedReports();
+  const createSaved = useCreateSavedReport();
+  const archiveSaved = useArchiveSavedReport();
+  const selected = (savedReports.data ?? []).find((row) => row.id === selectedId) ?? null;
+
+  const ephemeralFilters = {
     period,
     source: source || undefined,
     ownerId: mineOnly ? user?.id : undefined,
   };
-  const query = useFunnelConversion(filters);
+  const filters = selected ? savedReportToFilters(selected) : ephemeralFilters;
+  const ephemeralQuery = useFunnelConversion(ephemeralFilters, { enabled: !selectedId });
+  const savedQuery = useQuery({
+    queryKey: ['saved-reports', selectedId, 'funnel-conversion'],
+    queryFn: () => fetchSavedReportConversion(selectedId!),
+    enabled: Boolean(selectedId),
+  });
+  const query = selectedId ? savedQuery : ephemeralQuery;
 
   return (
     <div className="space-y-6">
@@ -44,12 +74,55 @@ export function ReportsPage() {
         {t('reports.retentionNotice')}
       </Card>
 
+      <SavedReportsPanel
+        canSave={canSave}
+        saveName={saveName}
+        onSaveNameChange={setSaveName}
+        onSave={() => {
+          const name = saveName.trim();
+          if (!name) return;
+          createSaved.mutate(
+            {
+              name,
+              definition: {
+                period: ephemeralFilters.period,
+                ...(ephemeralFilters.source ? { source: ephemeralFilters.source } : {}),
+                ...(ephemeralFilters.ownerId ? { ownerId: ephemeralFilters.ownerId } : {}),
+              },
+            },
+            {
+              onSuccess: (created) => {
+                setSaveName('');
+                setSelectedId(created.id);
+              },
+            },
+          );
+        }}
+        saving={createSaved.isPending}
+        saveError={createSaved.isError ? getApiErrorMessage(createSaved.error) : null}
+        reports={savedReports.data ?? []}
+        selectedId={selectedId}
+        onSelect={(report) => setSelectedId(report.id)}
+        onClear={() => setSelectedId(null)}
+        onArchive={(id) => {
+          archiveSaved.mutate(id, {
+            onSuccess: () => {
+              if (selectedId === id) setSelectedId(null);
+            },
+          });
+        }}
+        listError={savedReports.isError}
+      />
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Select
           id="report-period"
           label={t('reports.fields.period')}
           value={period}
-          onChange={(event) => setPeriod(event.target.value as ReportPeriod)}
+          onChange={(event) => {
+            setSelectedId(null);
+            setPeriod(event.target.value as ReportPeriod);
+          }}
         >
           {PERIODS.map((value) => (
             <option key={value} value={value}>
@@ -61,7 +134,10 @@ export function ReportsPage() {
           id="report-source"
           label={t('reports.fields.source')}
           value={source}
-          onChange={(event) => setSource(event.target.value as LeadSource | '')}
+          onChange={(event) => {
+            setSelectedId(null);
+            setSource(event.target.value as LeadSource | '');
+          }}
         >
           <option value="">{t('reports.fields.sourceAll')}</option>
           {SOURCES.map((value) => (
@@ -79,7 +155,10 @@ export function ReportsPage() {
             type="checkbox"
             className="h-4 w-4 accent-[color:var(--ink)]"
             checked={mineOnly}
-            onChange={(event) => setMineOnly(event.target.checked)}
+            onChange={(event) => {
+              setSelectedId(null);
+              setMineOnly(event.target.checked);
+            }}
           />
           {t('reports.fields.mineOnly')}
         </label>
@@ -264,5 +343,105 @@ function BucketCell({ count, href, label }: { count: number; href: string; label
     >
       {count}
     </Link>
+  );
+}
+
+function SavedReportsPanel({
+  canSave,
+  saveName,
+  onSaveNameChange,
+  onSave,
+  saving,
+  saveError,
+  reports,
+  selectedId,
+  onSelect,
+  onClear,
+  onArchive,
+  listError,
+}: {
+  canSave: boolean;
+  saveName: string;
+  onSaveNameChange: (value: string) => void;
+  onSave: () => void;
+  saving: boolean;
+  saveError: string | null;
+  reports: SavedReport[];
+  selectedId: string | null;
+  onSelect: (report: SavedReport) => void;
+  onClear: () => void;
+  onArchive: (id: string) => void;
+  listError: boolean;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Card>
+      <CardHeader
+        className="px-6 py-5 sm:px-8"
+        title={t('reports.savedTitle')}
+        description={t('reports.savedDesc')}
+      />
+      <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8">
+        {canSave ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Input
+              id="saved-report-name"
+              className="h-11 max-w-md"
+              label={t('reports.savedName')}
+              value={saveName}
+              onChange={(event) => onSaveNameChange(event.target.value)}
+              maxLength={120}
+            />
+            <Button
+              type="button"
+              disabled={!saveName.trim() || saving}
+              loading={saving}
+              onClick={onSave}
+            >
+              {t('reports.savedCreate')}
+            </Button>
+          </div>
+        ) : null}
+        {saveError ? <Alert tone="error">{saveError}</Alert> : null}
+        {listError ? <Alert tone="error">{t('reports.savedLoadError')}</Alert> : null}
+        {reports.length === 0 ? (
+          <p className="text-sm text-[color:var(--ink-muted)]">{t('reports.savedEmpty')}</p>
+        ) : (
+          <ul className="space-y-2">
+            {reports.map((report) => {
+              const selected = report.id === selectedId;
+              return (
+                <li
+                  key={report.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-panel border border-[color:var(--border)] px-3 py-2"
+                >
+                  <button
+                    type="button"
+                    className="min-w-0 text-left text-sm font-semibold text-[color:var(--ink)] hover:underline"
+                    aria-pressed={selected}
+                    onClick={() => onSelect(report)}
+                  >
+                    {report.name}
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {selected ? (
+                      <Button type="button" size="sm" variant="glass" onClick={onClear}>
+                        {t('reports.savedClear')}
+                      </Button>
+                    ) : null}
+                    {report.canEdit ? (
+                      <Button type="button" size="sm" variant="glass" onClick={() => onArchive(report.id)}>
+                        {t('reports.savedArchive')}
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

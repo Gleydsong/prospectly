@@ -303,6 +303,7 @@ model User {
   savedViews           SavedView[]
   workflows            Workflow[]
   googleConnections    GoogleConnection[]
+  savedReports         SavedReport[]
 
   @@index([email])
 }
@@ -358,6 +359,7 @@ model Organization {
   googleConnections      GoogleConnection[]
   syncedCommunications   SyncedCommunication[]
   organizationFlags      OrganizationFlag[]
+  savedReports           SavedReport[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
@@ -379,6 +381,25 @@ model OrganizationFlag {
 
   @@unique([organizationId, key])
   @@index([organizationId])
+}
+
+/// Named recorte of Relatórios. Stores the query, never the totals.
+model SavedReport {
+  id             String    @id @default(uuid())
+  organizationId String
+  ownerId        String
+  name           String
+  nameNormalized String
+  definition     Json
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, archivedAt])
+  @@index([organizationId, nameNormalized])
 }
 
 /// Consent grant/withdrawal history for the account holder (not lead outreach).

@@ -44,6 +44,8 @@ export const TENANT_MODELS = new Set([
   'CustomFieldDefinition',
   'GoogleConnection',
   'SyncedCommunication',
+  'OrganizationFlag',
+  'SavedReport',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

@@ -48,6 +48,22 @@ describe('assertTenantOperation', () => {
     expect(args.where).toEqual({ id: 'sc-1', organizationId: 'org-1' });
   });
 
+  it('applies tenant scope to organization flags', () => {
+    const args = { where: { key: 'saved_report' } };
+    runWithTenant('org-1', () => {
+      assertTenantOperation('OrganizationFlag', 'findFirst', args);
+    });
+    expect(args.where).toEqual({ key: 'saved_report', organizationId: 'org-1' });
+  });
+
+  it('applies tenant scope to saved reports', () => {
+    const args = { where: { id: 'rep-1' } };
+    runWithTenant('org-1', () => {
+      assertTenantOperation('SavedReport', 'findFirst', args);
+    });
+    expect(args.where).toEqual({ id: 'rep-1', organizationId: 'org-1' });
+  });
+
   it('applies tenant scope to monthly checkout attempts', () => {
     const args = { where: { id: 'attempt-1' } };
     runWithTenant('org-1', () => {

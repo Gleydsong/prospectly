@@ -11,10 +11,16 @@ import { ReportsPage } from './reports-page';
 
 const mocks = vi.hoisted(() => ({
   useFunnelConversion: vi.fn(),
+  useSavedReports: vi.fn(),
+  useCreateSavedReport: vi.fn(),
+  useArchiveSavedReport: vi.fn(),
 }));
 
 vi.mock('@/features/reports/hooks', () => ({
   useFunnelConversion: (...args: unknown[]) => mocks.useFunnelConversion(...args),
+  useSavedReports: () => mocks.useSavedReports(),
+  useCreateSavedReport: () => mocks.useCreateSavedReport(),
+  useArchiveSavedReport: () => mocks.useArchiveSavedReport(),
 }));
 
 function setUser(role: Role = Role.OWNER) {
@@ -55,6 +61,9 @@ describe('ReportsPage', () => {
       isLoading: false,
       isError: false,
     });
+    mocks.useSavedReports.mockReturnValue({ data: [], isLoading: false, isError: false });
+    mocks.useCreateSavedReport.mockReturnValue({ mutate: vi.fn(), isPending: false, isError: false });
+    mocks.useArchiveSavedReport.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
   it('shows funnel conversion KPIs and the 90-day outbox notice', () => {
@@ -65,7 +74,8 @@ describe('ReportsPage', () => {
     expect(screen.getAllByText('Entradas').length).toBeGreaterThan(0);
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getAllByText('Manual').length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: /guardar|salvar|publicar/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Guardar Relatório salvo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /publicar/i })).not.toBeInTheDocument();
   });
 
   it('opens the wins bucket in Clientes and does not navigate empty cells', () => {
@@ -96,7 +106,7 @@ describe('ReportsPage', () => {
       'href',
       '/leads?reportBucket=wins&period=30d',
     );
-    expect(screen.queryByRole('button', { name: /guardar|salvar|publicar|criar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar Relatório salvo' })).not.toBeInTheDocument();
   });
 
   it('requests a new period when the filter changes', async () => {
@@ -105,6 +115,7 @@ describe('ReportsPage', () => {
     await user.selectOptions(screen.getByLabelText('Período'), '7d');
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(
       expect.objectContaining({ period: '7d' }),
+      expect.anything(),
     );
   });
 
@@ -114,6 +125,7 @@ describe('ReportsPage', () => {
     renderWithProviders(<ReportsPage />, { withGoogle: false });
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: 'u1' }),
+      expect.anything(),
     );
     expect(screen.getByRole('link', { name: 'Ver Ganhos (1)' })).toHaveAttribute(
       'href',
@@ -122,6 +134,30 @@ describe('ReportsPage', () => {
     await user.click(screen.getByLabelText('Só os meus clientes'));
     expect(mocks.useFunnelConversion).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: undefined }),
+      expect.anything(),
     );
+  });
+
+  it('lists Relatórios salvos without mixing them with Vistas', () => {
+    mocks.useSavedReports.mockReturnValue({
+      data: [
+        {
+          id: 'rep-1',
+          name: '30d Google',
+          ownerId: 'u1',
+          definition: { period: '30d', source: 'GOOGLE_PLACES' },
+          archivedAt: null,
+          createdAt: '2026-09-12T00:00:00.000Z',
+          updatedAt: '2026-09-12T00:00:00.000Z',
+          canEdit: true,
+        },
+      ],
+      isLoading: false,
+      isError: false,
+    });
+    renderWithProviders(<ReportsPage />, { withGoogle: false });
+    expect(screen.getByText('Relatórios salvos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '30d Google' })).toBeInTheDocument();
+    expect(screen.queryByText(/Vista salva/i)).not.toBeInTheDocument();
   });
 });
