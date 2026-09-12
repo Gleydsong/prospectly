@@ -532,4 +532,18 @@ describe('SearchPage', () => {
       screen.getByRole('link', { name: /Desbloquear todos os nichos/i }),
     ).toHaveAttribute('href', '/credits');
   });
+
+  it('orchestrates form, results and history from prospecting feature modules', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { dirname, join } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'search-page.tsx'), 'utf8');
+
+    expect(source).toContain("from '@/features/prospecting/components/search-form'");
+    expect(source).toContain("from '@/features/prospecting/components/search-results'");
+    expect(source).toContain("from '@/features/prospecting/components/search-history'");
+    expect(source).not.toContain('Pesquisar empresas');
+    expect(source).not.toContain('Histórico de pesquisas');
+    expect(source).not.toContain('Resultados da pesquisa');
+  });
 });
