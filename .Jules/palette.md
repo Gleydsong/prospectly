@@ -1,0 +1,3 @@
+## 2024-09-12 - Error message associations in form controls
+**Learning:** While the `Input` component properly linked its inline error message to the input field via `aria-describedby` and an element `id`, other form controls like `Select` and `Textarea` missed this pattern. They only implemented `aria-invalid`, but missing `aria-describedby` means screen reader users aren't automatically read the error message when they focus the field.
+**Action:** Always ensure that any inline error messages are explicitly linked to their respective form controls (Input, Select, Textarea, Checkbox, Radio, Switch) using `aria-describedby` when building or reviewing components. Make sure the linked text element has a matching `id`.
