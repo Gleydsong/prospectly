@@ -361,4 +361,21 @@ describe('CampaignDetailPage', () => {
     expect(await screen.findByText(/Prévia assistida/i)).toBeInTheDocument();
     expect(mocks.sendCampaignMessage).not.toHaveBeenCalled();
   });
+
+  it('orchestrates metrics, leads, templates and status from campaign feature sections', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { dirname, join } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'campaign-detail-page.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain("from '@/features/campaigns/components/campaign-status-header'");
+    expect(source).toContain("from '@/features/campaigns/components/campaign-metrics-section'");
+    expect(source).toContain("from '@/features/campaigns/components/campaign-leads-section'");
+    expect(source).toContain("from '@/features/campaigns/components/campaign-templates-modal'");
+    expect(source).not.toContain('campaign-stages-heading');
+    expect(source).not.toContain('campaign-leads-heading');
+  });
 });
