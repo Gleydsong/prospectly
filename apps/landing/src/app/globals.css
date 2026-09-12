@@ -435,6 +435,25 @@ body {
 .landing-v2-shell { width: min(1180px, calc(100% - 40px)); margin-inline: auto; }
 .landing-v2-skip-link { position: fixed; left: 16px; top: 12px; z-index: 80; transform: translateY(-160%); padding: 10px 14px; border-radius: 10px; background: var(--v2-navy); color: #fff; font-size: 14px; font-weight: 600; transition: transform .2s ease; }
 .landing-v2-skip-link:focus { transform: translateY(0); }
+
+.cookie-banner-dialog {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 50;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1rem;
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-raised) 95%, transparent);
+  color: var(--ink);
+  box-shadow: 0 -12px 40px rgb(24 24 27 / 0.08);
+  backdrop-filter: blur(12px);
+}
+.cookie-banner-dialog::backdrop {
+  background: rgb(24 24 27 / 0.18);
+}
 .landing-v2 a:focus-visible,
 .landing-v2 button:focus-visible { outline: 3px solid rgb(92 100 108 / .48); outline-offset: 3px; }
 
