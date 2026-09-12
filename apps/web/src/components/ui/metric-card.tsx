@@ -58,15 +58,18 @@ export function MetricCard({
       className={cn(
         'surface-bento animate-fade-rise rounded-panel border p-4 shadow-panel transition-colors',
         emphasis ? 'surface-bento-accent border-brand-500/25' : 'border-[color:var(--border)]',
-        'hover:border-[color:var(--border-strong)] hover:-translate-y-0.5',
+        'hover:border-[color:var(--border-strong)]',
         className,
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--ink-muted)]">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--ink-secondary)]">{label}</p>
         {Icon ? (
           <Icon
-            className={cn('h-4 w-4', emphasis ? 'text-brand-300' : 'text-[color:var(--ink-muted)]')}
+            className={cn(
+              'h-4 w-4',
+              emphasis ? 'text-[color:var(--brand)]' : 'text-[color:var(--ink-muted)]',
+            )}
             aria-hidden
           />
         ) : null}
@@ -86,7 +89,7 @@ export function MetricCard({
           )}
         </p>
       )}
-      {hint ? <p className="mt-1 text-xs text-[color:var(--ink-muted)]">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-[color:var(--ink-secondary)]">{hint}</p> : null}
     </div>
   );
 }

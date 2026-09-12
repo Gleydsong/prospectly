@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 export interface PageHeaderProps {
   title: ReactNode;
   description?: ReactNode;
-  /** Rótulo curto acima do título (etapa do fluxo, seção) — estilo Facilitey uppercase. */
   eyebrow?: ReactNode;
   actions?: ReactNode;
   className?: string;
@@ -22,15 +21,13 @@ export function PageHeader({
     <div className={cn('flex flex-wrap items-start justify-between gap-4', className)}>
       <div className="min-w-0 max-w-3xl">
         {eyebrow ? (
-          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--ink-muted)]">
-            {eyebrow}
-          </p>
+          <p className="mb-1 text-xs font-medium text-[color:var(--ink-secondary)]">{eyebrow}</p>
         ) : null}
-        <h1 className="text-balance text-[1.75rem] font-bold leading-tight tracking-tight text-[color:var(--ink)] sm:text-3xl">
+        <h1 className="text-balance text-2xl font-semibold leading-tight tracking-tight text-[color:var(--ink)]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-[color:var(--ink-muted)] sm:text-[15px]">
+          <p className="mt-1.5 max-w-[65ch] text-sm leading-relaxed text-[color:var(--ink-secondary)]">
             {description}
           </p>
         ) : null}

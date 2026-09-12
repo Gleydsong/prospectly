@@ -244,6 +244,7 @@ describe('LeadIngestionService', () => {
           ownerId: 'user-1',
           companyName: 'Restaurante da Ana',
           phone: '+5511998765432',
+          whatsapp: '+5511998765432',
           email: 'contato@example.com',
           city: 'São Paulo',
           state: 'SP',
@@ -280,8 +281,82 @@ describe('LeadIngestionService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           phone: '+351210000000',
+          whatsapp: undefined,
           country: 'PT',
           state: 'Lisboa',
+        }),
+      }),
+    );
+  });
+
+  it('copies a Brazilian mobile phone into whatsapp when the field is empty', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-wa', ...data }),
+    );
+    const service = new LeadIngestionService(prisma);
+
+    await service.ingest('org-1', 'user-1', {
+      companyName: 'Barbearia Nacuca',
+      phone: '(81) 99863-9994',
+    });
+
+    expect(prisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          phone: '+5581998639994',
+          whatsapp: '+5581998639994',
+        }),
+      }),
+    );
+  });
+
+  it('does not invent whatsapp for a Brazilian landline', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-fixo', ...data }),
+    );
+    const service = new LeadIngestionService(prisma);
+
+    await service.ingest('org-1', 'user-1', {
+      companyName: 'Cartório Central',
+      phone: '(11) 3234-5678',
+    });
+
+    expect(prisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          phone: '+551132345678',
+          whatsapp: undefined,
+        }),
+      }),
+    );
+  });
+
+  it('keeps an explicit whatsapp even when the phone is a landline', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-explicit', ...data }),
+    );
+    const service = new LeadIngestionService(prisma);
+
+    await service.ingest('org-1', 'user-1', {
+      companyName: 'Clínica Vila',
+      phone: '(11) 3234-5678',
+      whatsapp: '(11) 99876-5432',
+    });
+
+    expect(prisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          phone: '+551132345678',
+          whatsapp: '+5511998765432',
         }),
       }),
     );

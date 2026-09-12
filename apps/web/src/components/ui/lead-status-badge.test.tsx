@@ -5,45 +5,31 @@ import { LeadStatus } from '@/types';
 import { LeadStatusBadge } from './lead-status-badge';
 
 describe('LeadStatusBadge', () => {
-  it('renders NEW status with sky colors and pulsing dot', () => {
+  it('renders NEW status with a live indicator', () => {
     const { container } = render(<LeadStatusBadge status={LeadStatus.NEW} />);
     const badge = container.firstChild as HTMLElement;
-    expect(badge.className).toContain('bg-sky-50');
-    expect(badge.className).toContain('text-sky-700');
-    expect(badge.className).toContain('border-sky-200');
+    expect(badge).toHaveAttribute('data-status', LeadStatus.NEW);
     expect(container.querySelector('.animate-ping')).toBeInTheDocument();
   });
 
-  it('renders CONTACTED status with amber colors', () => {
+  it('renders CONTACTED status', () => {
     const { container } = render(<LeadStatusBadge status={LeadStatus.CONTACTED} />);
-    const badge = container.firstChild as HTMLElement;
-    expect(badge.className).toContain('bg-amber-50');
-    expect(badge.className).toContain('text-amber-800');
-    expect(badge.className).toContain('border-amber-200');
+    expect(container.firstChild).toHaveAttribute('data-status', LeadStatus.CONTACTED);
   });
 
-  it('renders QUALIFIED status with blue colors', () => {
+  it('renders QUALIFIED status', () => {
     const { container } = render(<LeadStatusBadge status={LeadStatus.QUALIFIED} />);
-    const badge = container.firstChild as HTMLElement;
-    expect(badge.className).toContain('bg-blue-50');
-    expect(badge.className).toContain('text-blue-700');
-    expect(badge.className).toContain('border-blue-200');
+    expect(container.firstChild).toHaveAttribute('data-status', LeadStatus.QUALIFIED);
   });
 
-  it('renders WON status with emerald colors and check icon', () => {
+  it('renders WON status with a check icon', () => {
     const { container } = render(<LeadStatusBadge status={LeadStatus.WON} />);
-    const badge = container.firstChild as HTMLElement;
-    expect(badge.className).toContain('bg-emerald-50');
-    expect(badge.className).toContain('text-emerald-700');
-    expect(badge.className).toContain('border-emerald-300');
+    expect(container.firstChild).toHaveAttribute('data-status', LeadStatus.WON);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('renders LOST status with rose colors', () => {
+  it('renders LOST status', () => {
     const { container } = render(<LeadStatusBadge status={LeadStatus.LOST} />);
-    const badge = container.firstChild as HTMLElement;
-    expect(badge.className).toContain('bg-rose-50');
-    expect(badge.className).toContain('text-rose-700');
-    expect(badge.className).toContain('border-rose-200');
+    expect(container.firstChild).toHaveAttribute('data-status', LeadStatus.LOST);
   });
 });

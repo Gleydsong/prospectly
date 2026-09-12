@@ -541,10 +541,68 @@ describe('LeadsPage saved views', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('columnheader', { name: 'Empresa' })).toBeInTheDocument();
+      expect(screen.getByText('Padaria Central')).toBeInTheDocument();
     });
-    expect(screen.queryByRole('columnheader', { name: 'Cidade' })).not.toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Empresa' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Status' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Cidade' })).not.toBeChecked();
+    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir' })).toBeInTheDocument();
+  });
+
+  it('shows WhatsApp for a Brazilian mobile and a landline as phone/email', async () => {
+    mocks.useLeads.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'l-mobile',
+            companyName: 'Farmácia do Largo',
+            city: 'São Paulo',
+            status: LeadStatus.QUALIFIED,
+            source: 'MANUAL',
+            score: 80,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: null,
+            phone: '(11) 99876-5432',
+            email: 'info@farmacia.test',
+          },
+          {
+            id: 'l-landline',
+            companyName: 'Cartório Central',
+            city: 'São Paulo',
+            status: LeadStatus.NEW,
+            source: 'MANUAL',
+            score: 40,
+            doNotContact: false,
+            tags: [],
+            createdAt: '2026-09-05T12:00:00.000Z',
+            updatedAt: '2026-09-05T12:00:00.000Z',
+            owner: { id: 'u1', name: 'Ana' },
+            website: 'https://cartorio.test',
+            phone: '(11) 3234-5678',
+            email: 'contato@cartorio.test',
+          },
+        ],
+        meta: { page: 1, pageSize: 15, total: 2, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
+
+    expect(screen.getByRole('link', { name: /99876/ })).toHaveAttribute(
+      'href',
+      'https://wa.me/11998765432',
+    );
+    expect(screen.getByText('WhatsApp (celular)')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /3234/ })).toHaveAttribute('href', 'tel:1132345678');
+    expect(screen.getAllByText('E-mail').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Abrir' })).toHaveLength(2);
   });
 
   it('lists only the Relatórios bucket ids and does not save a Vista', async () => {
@@ -695,8 +753,9 @@ describe('LeadsPage saved views', () => {
     expect(screen.queryByRole('checkbox', { name: /Legacy/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: 'NIF' }));
 
-    expect(screen.getByRole('columnheader', { name: 'NIF' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'NIF' })).toBeChecked();
     expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument();
   });
 
   it('keeps an archived custom field column already on a Vista', async () => {
@@ -757,9 +816,9 @@ describe('LeadsPage saved views', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('columnheader', { name: 'NIF antigo' })).toBeInTheDocument();
+      expect(screen.getByText('PT123')).toBeInTheDocument();
     });
-    expect(screen.getByText('PT123')).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader')).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /NIF antigo/ })).toBeChecked();
   });
 
@@ -789,7 +848,7 @@ describe('LeadsPage saved views', () => {
     expect(screen.getByText('Personalizado')).toBeInTheDocument();
   });
 
-  it('opens a client from the table via a keyboard-focusable link', async () => {
+  it('opens a client from the dense row via the Abrir action', async () => {
     mocks.useLeads.mockReturnValue({
       data: {
         data: [
@@ -823,15 +882,9 @@ describe('LeadsPage saved views', () => {
       { initialEntries: ['/leads'], withGoogle: false },
     );
 
-    const openClientButtons = screen
-      .queryAllByRole('button', { name: /Padaria Central/ })
-      .filter((button) => button.getAttribute('aria-label') !== 'Apagar cliente Padaria Central');
-    expect(openClientButtons).toHaveLength(0);
-    const tableLink = within(screen.getByRole('table')).getByRole('link', { name: 'Padaria Central' });
-    expect(tableLink).toHaveAttribute('href', '/leads/l1');
-
-    tableLink.focus();
-    expect(tableLink).toHaveFocus();
+    const open = screen.getByRole('button', { name: 'Abrir' });
+    open.focus();
+    expect(open).toHaveFocus();
     await user.keyboard('{Enter}');
     expect(screen.getByText('Detalhe do cliente')).toBeInTheDocument();
   });

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ClientDenseList } from '@/components/ui/client-dense-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
@@ -640,7 +641,7 @@ export function SearchPage() {
                   </p>
                 </div>
 
-                <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <ClientDenseList className="rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
                   {results.map((result) => (
                     <li key={result.id}>
                       <SearchResultCard
@@ -653,7 +654,7 @@ export function SearchPage() {
                       />
                     </li>
                   ))}
-                </ul>
+                </ClientDenseList>
 
                 {resultPage?.meta ? (
                   <Pagination {...resultPage.meta} onPageChange={changeResultsPage} />
