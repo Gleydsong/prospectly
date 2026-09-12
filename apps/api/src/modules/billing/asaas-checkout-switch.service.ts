@@ -218,15 +218,26 @@ export class AsaasCheckoutSwitchService {
   }
 
   private async grantMonthlyPix(attempt: MonthlyCheckoutAttempt, payment: AsaasPayment) {
-    await this.activation.activateMonthly({
+    const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const activation = await this.activation.activateMonthly({
       organizationId: attempt.organizationId,
       currency: 'BRL',
       provider: PaymentProvider.ASAAS,
       asaasSubscriptionId: null,
       asaasPaymentId: payment.id,
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      currentPeriodEnd: periodEnd,
     });
     await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
+    if (activation.shouldSendReceipt) {
+      await this.activation.notifyMonthlyPurchased({
+        organizationId: attempt.organizationId,
+        amountCentavos: attempt.amountCentavos,
+        currency: 'BRL',
+        periodEnd,
+        paymentMethod: 'PIX',
+        purchasedAt: new Date(),
+      });
+    }
   }
 
   private async grantMonthlyCard(attempt: MonthlyCheckoutAttempt, payment: AsaasPayment) {
@@ -234,17 +245,28 @@ export class AsaasCheckoutSwitchService {
       await this.markMonthlyReview(attempt, 'Asaas recurring payment without subscription');
       throw new ServiceUnavailableException('Estamos confirmando seu checkout');
     }
-    await this.activation.activateMonthly({
+    const periodEnd = payment.dueDate
+      ? this.cardPeriodEnd(payment.dueDate)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const activation = await this.activation.activateMonthly({
       organizationId: attempt.organizationId,
       currency: 'BRL',
       provider: PaymentProvider.ASAAS,
       asaasSubscriptionId: payment.subscription,
       asaasPaymentId: null,
-      currentPeriodEnd: payment.dueDate
-        ? this.cardPeriodEnd(payment.dueDate)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      currentPeriodEnd: periodEnd,
     });
     await this.monthlyAttempts.markResolved(attempt.externalId, payment.customer);
+    if (activation.shouldSendReceipt) {
+      await this.activation.notifyMonthlyPurchased({
+        organizationId: attempt.organizationId,
+        amountCentavos: attempt.amountCentavos,
+        currency: 'BRL',
+        periodEnd,
+        paymentMethod: 'CARD',
+        purchasedAt: new Date(),
+      });
+    }
   }
 
   private async markPurchaseReview(purchase: CreditPurchase) {

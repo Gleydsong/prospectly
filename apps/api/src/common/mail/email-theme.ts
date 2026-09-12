@@ -35,6 +35,7 @@ export type EmailTemplateId =
   | 'welcome'
   | 'account-activation'
   | 'credits-purchased'
+  | 'monthly-purchased'
   | 'password-reset'
   | 'waitlist-confirmation'
   | 'waitlist-notify';

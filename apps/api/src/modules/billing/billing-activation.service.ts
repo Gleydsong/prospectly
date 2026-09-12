@@ -1,15 +1,41 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OrgPlan, PaymentProvider, PlanStatus, type Prisma } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { OrgPlan, PaymentProvider, PlanStatus, Role, type Prisma } from '@prisma/client';
 
+import { MailService } from '../../common/mail/mail.service';
+import { buildMonthlyPurchasedEmail } from '../../common/mail/templates/monthly-purchased-email';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type { BillingDb } from './billing-db';
 import type { BillingCurrency } from './domain/payment-provider';
+
+export type MonthlyActivationResult = {
+  applied: boolean;
+  shouldSendReceipt: boolean;
+};
+
+export type MonthlyPlanReceipt = {
+  organizationId: string;
+  amountCentavos: number;
+  currency: 'BRL';
+  periodEnd?: Date | null;
+  paymentMethod?: 'PIX' | 'CARD';
+  purchasedAt?: Date;
+};
+
+const SKIPPED_MONTHLY_ACTIVATION: MonthlyActivationResult = {
+  applied: false,
+  shouldSendReceipt: false,
+};
 
 @Injectable()
 export class BillingActivationService {
   private readonly logger = new Logger(BillingActivationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService,
+  ) {}
 
   /**
    * Activate lifetime entitlement. Returns any prior monthly subscription IDs so
@@ -105,21 +131,21 @@ export class BillingActivationService {
     asaasPaymentId?: string | null;
     currentPeriodEnd?: Date | null;
     tx?: Prisma.TransactionClient;
-  }): Promise<void> {
+  }): Promise<MonthlyActivationResult> {
     const db = this.db(input.tx);
     const org = await db.organization.findUnique({
       where: { id: input.organizationId },
     });
     if (!org) {
       this.logger.warn(`activateMonthly: org ${input.organizationId} not found`);
-      return;
+      return SKIPPED_MONTHLY_ACTIVATION;
     }
     // Lifetime is permanent; never allow a later monthly webhook/checkout to downgrade it.
     if (org.plan === OrgPlan.LIFETIME) {
       this.logger.warn(
         `Ignoring monthly activation for org ${input.organizationId}: already on LIFETIME`,
       );
-      return;
+      return SKIPPED_MONTHLY_ACTIVATION;
     }
     if (
       org.paymentProvider &&
@@ -129,7 +155,7 @@ export class BillingActivationService {
       this.logger.warn(
         `Ignoring stale ${input.provider} monthly activation for org ${input.organizationId}`,
       );
-      return;
+      return SKIPPED_MONTHLY_ACTIVATION;
     }
     if (
       input.provider === PaymentProvider.ASAAS &&
@@ -141,14 +167,14 @@ export class BillingActivationService {
       this.logger.warn(
         `Ignoring stale Asaas subscription activation for org ${input.organizationId}`,
       );
-      return;
+      return SKIPPED_MONTHLY_ACTIVATION;
     }
     if (input.provider === PaymentProvider.ASAAS && input.asaasPaymentId) {
       if (org.asaasPaymentId === input.asaasPaymentId) {
         this.logger.debug(
           `Ignoring duplicate Asaas PIX activation for org ${input.organizationId}`,
         );
-        return;
+        return SKIPPED_MONTHLY_ACTIVATION;
       }
       if (
         org.asaasPaymentId &&
@@ -156,7 +182,7 @@ export class BillingActivationService {
         (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE)
       ) {
         this.logger.warn(`Ignoring stale Asaas PIX activation for org ${input.organizationId}`);
-        return;
+        return SKIPPED_MONTHLY_ACTIVATION;
       }
     }
 
@@ -166,6 +192,14 @@ export class BillingActivationService {
       org.currentPeriodEnd > input.currentPeriodEnd
         ? org.currentPeriodEnd
         : input.currentPeriodEnd;
+
+    const alreadyActiveMonthly =
+      org.plan === OrgPlan.STARTER_MONTHLY &&
+      (org.planStatus === PlanStatus.ACTIVE || org.planStatus === PlanStatus.PAST_DUE);
+    const periodExtended = Boolean(
+      input.currentPeriodEnd &&
+        (!org.currentPeriodEnd || input.currentPeriodEnd > org.currentPeriodEnd),
+    );
 
     await db.organization.update({
       where: { id: input.organizationId },
@@ -183,6 +217,72 @@ export class BillingActivationService {
         ...(input.currentPeriodEnd !== undefined ? { currentPeriodEnd } : {}),
       },
     });
+
+    return {
+      applied: true,
+      shouldSendReceipt: !alreadyActiveMonthly || periodExtended,
+    };
+  }
+
+  async notifyMonthlyPurchased(receipt: MonthlyPlanReceipt): Promise<void> {
+    try {
+      const recipients = await this.prisma.organizationMember.findMany({
+        where: {
+          organizationId: receipt.organizationId,
+          role: { in: [Role.OWNER, Role.ADMIN] },
+        },
+        select: {
+          user: {
+            select: { email: true, name: true, locale: true, anonymizedAt: true },
+          },
+        },
+      });
+      const appUrl = (this.config.get<string>('frontendUrl') ?? 'http://localhost:5173').replace(
+        /\/$/,
+        '',
+      );
+
+      for (const member of recipients) {
+        const user = member.user;
+        if (!user?.email || user.anonymizedAt) continue;
+        const content = buildMonthlyPurchasedEmail({
+          locale: user.locale === 'en' ? 'en' : 'pt',
+          fullName: user.name,
+          amountCentavos: receipt.amountCentavos,
+          currency: receipt.currency,
+          purchasedAt: receipt.purchasedAt,
+          periodEnd: receipt.periodEnd,
+          paymentMethod: receipt.paymentMethod,
+          appUrl,
+        });
+        await this.mail.send({
+          to: user.email,
+          subject: content.subject,
+          text: content.text,
+          html: content.html,
+          template: content.template,
+        });
+      }
+
+      this.logger.log(
+        {
+          template: 'monthly-purchased',
+          organizationId: receipt.organizationId,
+          outcome: 'notified',
+        },
+        'monthly plan email dispatched',
+      );
+    } catch (err) {
+      this.logger.error(
+        {
+          template: 'monthly-purchased',
+          organizationId: receipt.organizationId,
+          outcome: 'failed',
+          reason: err instanceof Error ? err.message : String(err),
+        },
+        'monthly plan email failed',
+      );
+    }
   }
 
   async syncMonthlyStatus(input: {

@@ -38,7 +38,11 @@ describe('AsaasWebhookService', () => {
   };
   const client = { getPayment: jest.fn(), findPayment: jest.fn() };
   const purchases = { completeById: jest.fn(), refundById: jest.fn(), notifyCreditsPurchased: jest.fn() };
-  const activation = { activateMonthly: jest.fn(), syncMonthlyStatus: jest.fn() };
+  const activation = {
+    activateMonthly: jest.fn(),
+    syncMonthlyStatus: jest.fn(),
+    notifyMonthlyPurchased: jest.fn(),
+  };
   const monthlyAttempts = {
     markResolved: jest.fn(),
     markPaymentFailed: jest.fn(),
@@ -48,6 +52,7 @@ describe('AsaasWebhookService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    activation.activateMonthly.mockResolvedValue({ applied: true, shouldSendReceipt: true });
     prisma.billingWebhookEvent.findMany.mockResolvedValue([]);
     prisma.creditPurchase.findMany.mockResolvedValue([]);
     prisma.creditPurchase.updateMany.mockResolvedValue({ count: 1 });
@@ -249,6 +254,13 @@ describe('AsaasWebhookService', () => {
         asaasPaymentId: null,
       }),
     );
+    expect(activation.notifyMonthlyPurchased).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        amountCentavos: 4999,
+        paymentMethod: 'CARD',
+      }),
+    );
     expect(monthlyAttempts.markResolved).not.toHaveBeenCalled();
   });
 
@@ -425,11 +437,51 @@ describe('AsaasWebhookService', () => {
     await service.processEvent('evt_1');
 
     expect(activation.activateMonthly).toHaveBeenCalled();
+    expect(activation.notifyMonthlyPurchased).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        amountCentavos: 4999,
+        paymentMethod: 'CARD',
+      }),
+    );
     expect(monthlyAttempts.markResolved).toHaveBeenCalledWith(
       'org:org-1:monthly-card:attempt-1',
       'cus_1',
       txClient,
     );
+  });
+
+  it('does not email a monthly receipt when activation is a duplicate grant', async () => {
+    activation.activateMonthly.mockResolvedValue({ applied: true, shouldSendReceipt: false });
+    prisma.billingWebhookEvent.findUnique.mockResolvedValue({
+      type: 'PAYMENT_RECEIVED',
+      payload: { ...payload, event: 'PAYMENT_RECEIVED' },
+    });
+    prisma.billingWebhookEvent.updateMany.mockResolvedValue({ count: 1 });
+    prisma.creditPurchase.findUnique.mockResolvedValue(null);
+    prisma.monthlyCheckoutAttempt.findUnique.mockResolvedValue({
+      organizationId: 'org-1',
+      externalId: 'org:org-1:monthly-card:attempt-1',
+      product: 'MONTHLY_ACCESS',
+      amountCentavos: 4999,
+      currency: 'BRL',
+    });
+    prisma.billingProfile.findUnique.mockResolvedValue({ asaasCustomerId: 'cus_1' });
+    client.getPayment.mockResolvedValue({
+      id: 'pay_1',
+      customer: 'cus_1',
+      value: 49.99,
+      externalReference: 'org:org-1:monthly-card:attempt-1',
+      billingType: 'CREDIT_CARD',
+      status: 'RECEIVED',
+      subscription: 'sub_1',
+      dueDate: '2026-08-25',
+    });
+
+    await service.processEvent('evt_1');
+
+    expect(activation.activateMonthly).toHaveBeenCalled();
+    expect(activation.notifyMonthlyPurchased).not.toHaveBeenCalled();
   });
 
   it('activates exactly one paid period for a received monthly PIX payment without a subscription', async () => {
@@ -481,6 +533,13 @@ describe('AsaasWebhookService', () => {
       'org:org-1:monthly-pix:attempt-1',
       'cus_1',
       txClient,
+    );
+    expect(activation.notifyMonthlyPurchased).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        amountCentavos: 4999,
+        paymentMethod: 'PIX',
+      }),
     );
   });
 
@@ -691,6 +750,13 @@ describe('AsaasWebhookService', () => {
       expect.objectContaining({ checkoutSession: 'pay_pix_monthly_1' }),
     );
     expect(activation.activateMonthly).toHaveBeenCalled();
+    expect(activation.notifyMonthlyPurchased).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org-1',
+        paymentMethod: 'PIX',
+        amountCentavos: 4999,
+      }),
+    );
   });
 
   it('acknowledges a duplicate Asaas event without inserting a second inbox row', async () => {

@@ -16,7 +16,7 @@ import { runWithBypass } from '../../common/prisma/tenant-context';
 import { MetricsService } from '../ops/metrics.service';
 import { MONTHLY_PLAN_AMOUNT_CENTAVOS } from './billing.constants';
 import type { BillingDb } from './billing-db';
-import { BillingActivationService } from './billing-activation.service';
+import { BillingActivationService, type MonthlyPlanReceipt } from './billing-activation.service';
 import { CreditPurchaseService, type CompletedCreditPurchase } from './credit-purchase.service';
 import { AsaasClient, type AsaasPayment } from './infrastructure/asaas.client';
 import {
@@ -31,6 +31,10 @@ type AsaasEnvelope = {
 };
 
 class AsaasStatePendingError extends Error {}
+
+type AppliedBillingBenefit =
+  | { kind: 'credits'; purchase: CompletedCreditPurchase }
+  | { kind: 'monthly'; receipt: MonthlyPlanReceipt };
 
 @Injectable()
 export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
@@ -186,9 +190,9 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     try {
       const envelope = this.parseStoredEnvelope(event.payload);
       const payment = await this.client.getPayment(envelope.payment.id);
-      let granted: CompletedCreditPurchase | null = null;
+      let benefit: AppliedBillingBenefit | null = null;
       await this.prisma.$transaction(async (tx) => {
-        granted = await this.applyPayment(tx, event.type, payment);
+        benefit = await this.applyPayment(tx, event.type, payment);
         await tx.billingWebhookEvent.updateMany({
           where: { provider: PaymentProvider.ASAAS, eventId },
           data: {
@@ -199,7 +203,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
           },
         });
       });
-      if (granted) await this.purchases.notifyCreditsPurchased(granted);
+      await this.notifyAppliedBenefit(benefit);
       this.metrics?.recordWebhookProcessed();
       this.logger.log({
         event: 'webhook_processed',
@@ -238,7 +242,7 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
     db: BillingDb,
     type: string,
     payment: AsaasPayment,
-  ): Promise<CompletedCreditPurchase | null> {
+  ): Promise<AppliedBillingBenefit | null> {
     const tx = '$transaction' in db ? undefined : db;
     const purchase = payment.externalReference
       ? await db.creditPurchase.findUnique({
@@ -263,7 +267,8 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       this.assertSupportedReversal(type);
       this.assertChargebackTerminal(type, payment);
       if (this.isBenefitReceived(type, payment, isPix)) {
-        return this.purchases.completeById(purchase.id, payment.id, tx);
+        const completed = await this.purchases.completeById(purchase.id, payment.id, tx);
+        return completed ? { kind: 'credits', purchase: completed } : null;
       }
       if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
         await this.purchases.refundById(purchase.id, tx);
@@ -292,17 +297,31 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
       throw new Error('Asaas recurring payment without subscription');
     }
     if (this.isBenefitReceived(type, payment, monthly.isPix)) {
-      await this.activation.activateMonthly({
+      const periodEnd = monthly.isPix ? this.pixPeriodEnd() : this.periodEnd(payment.dueDate);
+      const activation = await this.activation.activateMonthly({
         organizationId: monthly.organizationId,
         currency: 'BRL',
         provider: PaymentProvider.ASAAS,
         asaasSubscriptionId: monthly.isPix ? null : payment.subscription,
         asaasPaymentId: monthly.isPix ? payment.id : null,
-        currentPeriodEnd: monthly.isPix ? this.pixPeriodEnd() : this.periodEnd(payment.dueDate),
+        currentPeriodEnd: periodEnd,
         tx,
       });
       if (monthly.attemptExternalId) {
         await this.monthlyAttempts.markResolved(monthly.attemptExternalId, payment.customer, tx);
+      }
+      if (activation.shouldSendReceipt) {
+        return {
+          kind: 'monthly',
+          receipt: {
+            organizationId: monthly.organizationId,
+            amountCentavos: monthly.amountCentavos,
+            currency: 'BRL',
+            periodEnd,
+            paymentMethod: monthly.isPix ? 'PIX' : 'CARD',
+            purchasedAt: new Date(),
+          },
+        };
       }
     } else if (type === 'PAYMENT_REFUNDED' && payment.status === 'REFUNDED') {
       await this.activation.syncMonthlyStatus({
@@ -502,11 +521,20 @@ export class AsaasWebhookService implements OnModuleInit, OnModuleDestroy {
               ? 'PAYMENT_CHARGEBACK_REQUESTED'
               : null;
     if (eventType) {
-      const granted = await this.prisma.$transaction((tx) =>
+      const benefit = await this.prisma.$transaction((tx) =>
         this.applyPayment(tx, eventType, payment),
       );
-      if (granted) await this.purchases.notifyCreditsPurchased(granted);
+      await this.notifyAppliedBenefit(benefit);
     }
+  }
+
+  private async notifyAppliedBenefit(benefit: AppliedBillingBenefit | null): Promise<void> {
+    if (!benefit) return;
+    if (benefit.kind === 'credits') {
+      await this.purchases.notifyCreditsPurchased(benefit.purchase);
+      return;
+    }
+    await this.activation.notifyMonthlyPurchased(benefit.receipt);
   }
 
   private assertSupportedReversal(type: string): void {

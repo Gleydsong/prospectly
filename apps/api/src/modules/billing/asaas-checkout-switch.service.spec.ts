@@ -28,7 +28,10 @@ describe('AsaasCheckoutSwitchService', () => {
   };
   const creditPurchases = { completeById: jest.fn() };
   const monthlyAttempts = { markResolved: jest.fn() };
-  const activation = { activateMonthly: jest.fn() };
+  const activation = {
+    activateMonthly: jest.fn(),
+    notifyMonthlyPurchased: jest.fn(),
+  };
   const config = { get: jest.fn((key: string) => (key === 'frontendUrl' ? 'https://app.test' : undefined)) };
 
   const service = new AsaasCheckoutSwitchService(
@@ -63,6 +66,7 @@ describe('AsaasCheckoutSwitchService', () => {
     asaasClient.deletePayment.mockResolvedValue(undefined);
     asaasClient.cancelCheckout.mockResolvedValue(undefined);
     asaasClient.findPayment.mockResolvedValue(null);
+    activation.activateMonthly.mockResolvedValue({ applied: true, shouldSendReceipt: true });
   });
 
   it('leaves a matching pending PIX package in place', async () => {
@@ -213,5 +217,35 @@ describe('AsaasCheckoutSwitchService', () => {
       service.prepare({ organizationId: 'org1', product: 'monthly', paymentMethod: 'card' }),
     ).resolves.toEqual({ outcome: 'continue' });
     expect(asaasClient.deletePayment).toHaveBeenCalledWith('pay_pix_1');
+  });
+
+  it('emails a monthly receipt when an abandoned PIX was already received', async () => {
+    prisma.monthlyCheckoutAttempt.findFirst.mockResolvedValue({
+      id: 'attempt-pix',
+      organizationId: 'org1',
+      paymentMethod: BillingPaymentMethod.PIX,
+      status: BillingCheckoutAttemptStatus.READY,
+      externalId: 'org:org1:monthly-pix:1',
+      externalCheckoutId: 'pay_month_1',
+      amountCentavos: 4999,
+    });
+    asaasClient.getPayment.mockResolvedValue({
+      id: 'pay_month_1',
+      status: 'RECEIVED',
+      customer: 'cus_1',
+    });
+
+    await expect(
+      service.prepare({ organizationId: 'org1', product: 'monthly', paymentMethod: 'card' }),
+    ).resolves.toMatchObject({ outcome: 'alreadyPaid' });
+    expect(activation.activateMonthly).toHaveBeenCalled();
+    expect(activation.notifyMonthlyPurchased).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: 'org1',
+        amountCentavos: 4999,
+        paymentMethod: 'PIX',
+      }),
+    );
+    expect(monthlyAttempts.markResolved).toHaveBeenCalledWith('org:org1:monthly-pix:1', 'cus_1');
   });
 });
