@@ -1,18 +1,18 @@
-import { Copy, ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardHeader } from '@/components/ui/card';
-import { EmptyState } from '@/components/ui/empty-state';
-import { Input } from '@/components/ui/input';
-import { Modal } from '@/components/ui/modal';
-import { Pagination } from '@/components/ui/pagination';
-import { Select } from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import type { CampaignLeadResult, CampaignStage, CampaignStatus } from '@/features/campaigns/api';
+import { expectNoSend } from '@/features/campaigns/campaign-assisted';
+import { CampaignLeadsSection } from '@/features/campaigns/components/campaign-leads-section';
+import { CampaignMetricsSection } from '@/features/campaigns/components/campaign-metrics-section';
+import { CampaignStatusHeader } from '@/features/campaigns/components/campaign-status-header';
+import {
+  CampaignTemplatesModal,
+  type CampaignTemplateForm,
+} from '@/features/campaigns/components/campaign-templates-modal';
+import type { CampaignLeadResult, CampaignStatus } from '@/features/campaigns/api';
 import {
   useAddCampaignLeads,
   useCampaign,
@@ -30,40 +30,13 @@ import {
 import { useLeads } from '@/features/leads/hooks';
 import { usePreviewSavedView, useSavedViews } from '@/features/saved-views/hooks';
 import { getApiErrorMessage } from '@/lib/api';
-import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
-import { formatDate } from '@/lib/utils';
 
-const RESULTS: CampaignLeadResult[] = [
-  'CONTACTED',
-  'REPLIED',
-  'INTERESTED',
-  'MEETING',
-  'PROPOSAL',
-  'WON',
-  'LOST',
-  'NO_RESPONSE',
-  'OPT_OUT',
-];
-
-const STATUS_ACTIONS: Partial<Record<CampaignStatus, CampaignStatus[]>> = {
-  DRAFT: ['SCHEDULED', 'RUNNING', 'CANCELLED'],
-  SCHEDULED: ['RUNNING', 'CANCELLED'],
-  RUNNING: ['PAUSED', 'COMPLETED', 'CANCELLED'],
-  PAUSED: ['RUNNING', 'COMPLETED', 'CANCELLED'],
+const INITIAL_TEMPLATE_FORM: CampaignTemplateForm = {
+  name: '',
+  category: 'EMAIL',
+  subject: '',
+  body: 'Olá {{contactName}}, vi a {{companyName}} em {{city}}.',
 };
-
-function formatCampaignLeadStatus(
-  status: string,
-  currentStageId: string | null | undefined,
-  stages: CampaignStage[] | undefined,
-): string {
-  const currentStage = currentStageId
-    ? stages?.find((stage) => stage.id === currentStageId)
-    : undefined;
-  if (currentStage) return currentStage.name;
-  if (status === 'PENDING') return 'Pendente';
-  return 'Em andamento';
-}
 
 export function CampaignDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
@@ -95,12 +68,7 @@ export function CampaignDetailPage() {
   const [liveMessage, setLiveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewText, setPreviewText] = useState<string | null>(null);
-  const [templateForm, setTemplateForm] = useState({
-    name: '',
-    category: 'EMAIL',
-    subject: '',
-    body: 'Olá {{contactName}}, vi a {{companyName}} em {{city}}.',
-  });
+  const [templateForm, setTemplateForm] = useState(INITIAL_TEMPLATE_FORM);
 
   const availableLeadsQuery = useLeads({
     page: leadPage,
@@ -112,12 +80,14 @@ export function CampaignDetailPage() {
 
   const campaign = campaignQuery.data;
   const metrics = metricsQuery.data;
+  const campaignLeads = leadsQuery.data?.data ?? [];
+  const templates = templatesQuery.data?.data ?? [];
   const campaignLeadIds = useMemo(
     () => new Set((leadsQuery.data?.data ?? []).map((row) => row.leadId)),
     [leadsQuery.data],
   );
 
-  const activeLead = (leadsQuery.data?.data ?? []).find((row) => row.leadId === activeLeadId);
+  const activeLead = campaignLeads.find((row) => row.leadId === activeLeadId);
 
   async function handleStatus(status: CampaignStatus) {
     setError(null);
@@ -250,67 +220,14 @@ export function CampaignDetailPage() {
     );
   }
 
-  const nextStatuses = STATUS_ACTIONS[campaign.status] ?? [];
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link
-            to="/campaigns"
-            className="mb-2 inline-block text-sm text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-          >
-            {t('campaigns.backToList')}
-          </Link>
-          <h1 className="text-2xl font-semibold text-[color:var(--ink)]">{campaign.name}</h1>
-          <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-            {campaign.description || t('campaigns.noDescription')}
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--ink-muted)]">
-            <Badge>
-              {t(`campaigns.status.${campaign.status}`, {
-                defaultValue: 'Estado não identificado',
-              })}
-            </Badge>
-            <span>
-              {t('campaigns.columns.segment')}: {campaign.segment ?? '—'}
-            </span>
-            <span>
-              {t('campaigns.columns.owner')}: {campaign.owner?.name ?? '—'}
-            </span>
-            <span>
-              {t('campaigns.columns.updated')}: {formatDate(campaign.updatedAt)}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {nextStatuses.map((status) => (
-            <Button
-              key={status}
-              type="button"
-              size="sm"
-              variant="ghost"
-              loading={updateStatus.isPending}
-              onClick={() => void handleStatus(status)}
-            >
-              {t(`campaigns.statusAction.${status}`, {
-                defaultValue: t(`campaigns.status.${status}`),
-              })}
-            </Button>
-          ))}
-          <Button type="button" onClick={() => setPickerOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden />
-            {t('campaigns.addLeads')}
-          </Button>
-        </div>
-      </div>
-
-      <Card
-        className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
-        role="note"
-      >
-        {t('campaigns.assistedNotice')}
-      </Card>
+      <CampaignStatusHeader
+        campaign={campaign}
+        statusPending={updateStatus.isPending}
+        onStatus={(status) => void handleStatus(status)}
+        onAddLeads={() => setPickerOpen(true)}
+      />
 
       <div aria-live="polite" className="sr-only">
         {liveMessage}
@@ -321,501 +238,79 @@ export function CampaignDetailPage() {
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ['leads', metrics?.totals.leads ?? campaign._count?.leads ?? 0],
-          ['pending', metrics?.totals.pending ?? 0],
-          ['openTasks', metrics?.totals.openTasks ?? 0],
-          ['contacted', metrics?.totals.contacted ?? 0],
-          ['replied', metrics?.totals.replied ?? 0],
-          ['meeting', metrics?.totals.meeting ?? 0],
-          ['proposal', metrics?.totals.proposal ?? 0],
-          ['won', metrics?.totals.won ?? 0],
-          ['optOut', metrics?.totals.optOut ?? 0],
-        ].map(([key, value]) => (
-          <Card key={key} className="p-4">
-            <div className="text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
-              {t(`campaigns.metrics.${key}`)}
-            </div>
-            <div className="mt-1 text-2xl font-semibold text-[color:var(--ink)]">{value}</div>
-          </Card>
-        ))}
-      </div>
-      {metrics ? (
-        <p className="text-xs text-[color:var(--ink-muted)]">
-          {metrics.eventsRecorded === 0
-            ? t('campaigns.metrics.zeroEvents')
-            : t('campaigns.metrics.eventsRecorded', { count: metrics.eventsRecorded })}
-        </p>
-      ) : null}
+      <CampaignMetricsSection
+        campaign={campaign}
+        metrics={metrics}
+        createTasksPending={createTasks.isPending}
+        onCreateTasks={(stageId) => void handleCreateTasks(stageId)}
+      />
 
-      <section className="space-y-3" aria-labelledby="campaign-stages-heading">
-        <h2 id="campaign-stages-heading" className="text-lg font-medium text-[color:var(--ink)]">
-          {t('campaigns.stagesTitle')}
-        </h2>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {(metrics?.stages ?? campaign.metrics?.stages ?? []).map((stage) => (
-            <Card key={stage.id} className="p-4">
-              <CardHeader
-                title={stage.name}
-                description={t(`campaigns.stageType.${stage.type}`, {
-                  defaultValue: 'Etapa manual',
-                })}
-              />
-              <div className="mt-3 flex flex-wrap gap-3 text-sm text-[color:var(--ink-muted)]">
-                <span>
-                  {t('campaigns.metrics.leads')}:{' '}
-                  {'leadCount' in stage ? stage.leadCount : (campaign.stageCounts?.[stage.id] ?? 0)}
-                </span>
-                <span>
-                  {t('campaigns.metrics.openTasks')}: {'openTasks' in stage ? stage.openTasks : 0}
-                </span>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  loading={createTasks.isPending}
-                  onClick={() => void handleCreateTasks(stage.id)}
-                >
-                  {t('campaigns.createTasks')}
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-3" aria-labelledby="campaign-leads-heading">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="campaign-leads-heading" className="text-lg font-medium text-[color:var(--ink)]">
-            {t('campaigns.leadsTitle')}
-          </h2>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setTemplateOpen(true)}>
-            {t('campaigns.templatesManage')}
-          </Button>
-        </div>
-
-        {leadsQuery.isLoading ? (
-          <TableSkeleton rows={4} />
-        ) : (leadsQuery.data?.data.length ?? 0) === 0 ? (
-          <EmptyState
-            title={t('campaigns.leadsEmptyTitle')}
-            description={t('campaigns.leadsEmptyDescription')}
-            action={
-              <Button type="button" onClick={() => setPickerOpen(true)}>
-                {t('campaigns.addLeads')}
-              </Button>
-            }
-          />
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-[color:var(--border)] bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)]">
-                  <tr>
-                    <th className="px-4 py-3">{t('campaigns.leadColumns.company')}</th>
-                    <th className="px-4 py-3">{t('campaigns.leadColumns.contact')}</th>
-                    <th className="px-4 py-3">{t('campaigns.leadColumns.status')}</th>
-                    <th className="px-4 py-3">{t('campaigns.leadColumns.result')}</th>
-                    <th className="px-4 py-3">{t('campaigns.leadColumns.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(leadsQuery.data?.data ?? []).map((row) => (
-                    <tr
-                      key={row.leadId}
-                      className="border-b border-[color:var(--border)] text-[color:var(--ink)]"
-                    >
-                      <td className="px-4 py-3">
-                        <Link
-                          to={`/leads/${row.leadId}`}
-                          className="font-medium text-[color:var(--ink)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-                        >
-                          {row.lead.companyName}
-                        </Link>
-                        <div className="text-xs text-[color:var(--ink-muted)]">
-                          {[row.lead.city, row.lead.state].filter(Boolean).join(' · ') || '—'}
-                          {' · '}
-                          {t('campaigns.score')}: {row.lead.score}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
-                        <div>{row.lead.email ?? '—'}</div>
-                        <div>{row.lead.phone ?? '—'}</div>
-                      </td>
-                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
-                        {formatCampaignLeadStatus(
-                          row.status,
-                          row.currentStageId,
-                          campaign?.metrics?.stages,
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-[color:var(--ink-muted)]">
-                        {row.result
-                          ? t(`campaigns.results.${row.result}`, {
-                              defaultValue: 'Resultado registrado',
-                            })
-                          : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setActiveLeadId(row.leadId)}
-                          >
-                            {t('campaigns.manualAction')}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            aria-label={t('campaigns.removeLead')}
-                            onClick={() => {
-                              if (window.confirm(t('campaigns.removeLeadConfirm'))) {
-                                void removeLead.mutateAsync(row.leadId).then(() => {
-                                  setLiveMessage(t('campaigns.leadRemoved'));
-                                });
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        )}
-      </section>
-
-      {activeLead ? (
-        <Card className="space-y-4 p-4">
-          <CardHeader
-            title={t('campaigns.manualPanelTitle', { company: activeLead.lead.companyName })}
-            description={t('campaigns.manualPanelDesc')}
-          />
-          <div className="flex flex-wrap gap-2">
-            {activeLead.lead.email ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void copyText(activeLead.lead.email!)}
-              >
-                <Copy className="mr-2 h-4 w-4" aria-hidden />
-                {t('campaigns.copyEmail')}
-              </Button>
-            ) : null}
-            {activeLead.lead.phone ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void copyText(activeLead.lead.phone!)}
-              >
-                <Copy className="mr-2 h-4 w-4" aria-hidden />
-                {t('campaigns.copyPhone')}
-              </Button>
-            ) : null}
-            {activeLead.lead.phone ? (
-              <a
-                href={`https://wa.me/${activeLead.lead.phone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-8 items-center gap-2 rounded-control px-3 text-sm text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-              >
-                <ExternalLink className="h-4 w-4" aria-hidden />
-                {t('campaigns.openWhatsApp')}
-              </a>
-            ) : null}
-            <Link
-              to={`/leads/${activeLead.leadId}`}
-              className="inline-flex h-8 items-center rounded-control px-3 text-sm text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
-            >
-              {t('campaigns.openLead')}
-            </Link>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <label className="text-sm text-[color:var(--ink)]">
-              {t('campaigns.resultLabel')}
-              <select
-                className="mt-1 w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] px-3 py-2"
-                value={resultValue}
-                onChange={(e) => setResultValue(e.target.value as CampaignLeadResult)}
-              >
-                {RESULTS.map((result) => (
-                  <option key={result} value={result}>
-                    {t(`campaigns.results.${result}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm text-[color:var(--ink)]">
-              {t('campaigns.nextAction')}
-              <Input
-                className="mt-1"
-                value={nextAction}
-                onChange={(e) => setNextAction(e.target.value)}
-              />
-            </label>
-            <label className="text-sm text-[color:var(--ink)]">
-              {t('campaigns.followUpAt')}
-              <Input
-                className="mt-1"
-                type="datetime-local"
-                value={followUpAt}
-                onChange={(e) => setFollowUpAt(e.target.value)}
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              loading={recordResult.isPending}
-              onClick={() => void handleRecordResult()}
-            >
-              {t('campaigns.saveResult')}
-            </Button>
-            {(templatesQuery.data?.data ?? []).slice(0, 3).map((template) => (
-              <Button
-                key={template.id}
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => void handlePreview(template.body, template.subject)}
-              >
-                {t('campaigns.previewTemplate', { name: template.name })}
-              </Button>
-            ))}
-          </div>
-
-          {previewText ? (
-            <div className="rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] p-3 text-sm text-[color:var(--ink)]">
-              <p className="mb-2 text-xs text-amber-200">{t('campaigns.previewNotice')}</p>
-              <pre className="whitespace-pre-wrap font-sans">{previewText}</pre>
-              <Button
-                type="button"
-                size="sm"
-                className="mt-3"
-                variant="ghost"
-                onClick={() => void copyText(previewText)}
-              >
-                {t('campaigns.copyMessage')}
-              </Button>
-            </div>
-          ) : null}
-        </Card>
-      ) : null}
-
-      <Modal
-        open={pickerOpen}
-        onClose={() => {
+      <CampaignLeadsSection
+        leads={campaignLeads}
+        leadsLoading={leadsQuery.isLoading}
+        stages={campaign.metrics?.stages}
+        campaignLeadIds={campaignLeadIds}
+        onOpenTemplates={() => setTemplateOpen(true)}
+        onOpenPicker={() => setPickerOpen(true)}
+        onSelectLead={setActiveLeadId}
+        onRemoveLead={(leadId) => {
+          void removeLead.mutateAsync(leadId).then(() => {
+            setLiveMessage(t('campaigns.leadRemoved'));
+          });
+        }}
+        activeLead={activeLead}
+        resultValue={resultValue}
+        onResultValueChange={setResultValue}
+        nextAction={nextAction}
+        onNextActionChange={setNextAction}
+        followUpAt={followUpAt}
+        onFollowUpAtChange={setFollowUpAt}
+        recordPending={recordResult.isPending}
+        onRecordResult={() => void handleRecordResult()}
+        templates={templates}
+        onPreview={(body, subject) => void handlePreview(body, subject)}
+        previewText={previewText}
+        onCopy={(value) => void copyText(value)}
+        pickerOpen={pickerOpen}
+        onClosePicker={() => {
           setPickerOpen(false);
           setSelectedViewId('');
         }}
-        title={t('campaigns.addLeads')}
-      >
-        <div className="space-y-4">
-          <Select
-            id="campaign-saved-view"
-            label={t('campaigns.savedView')}
-            value={selectedViewId}
-            onChange={(event) => setSelectedViewId(event.target.value)}
-          >
-            <option value="">{t('campaigns.chooseView')}</option>
-            {(viewsQuery.data ?? []).map((view) => (
-              <option key={view.id} value={view.id}>
-                {view.name}
-              </option>
-            ))}
-          </Select>
-          {selectedViewId && viewPreviewQuery.data ? (
-            <p className="text-sm text-[color:var(--ink-muted)]">
-              {t('campaigns.viewMatchCount', { count: viewPreviewQuery.data.total })}
-            </p>
-          ) : null}
-          {selectedViewId && viewPreviewQuery.data && viewPreviewQuery.data.total > 200 ? (
-            <p className="text-sm text-amber-300" role="alert">
-              {t('campaigns.viewTooLarge')}
-            </p>
-          ) : null}
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              loading={addLeads.isPending}
-              disabled={
-                !selectedViewId ||
-                viewPreviewQuery.isLoading ||
-                !viewPreviewQuery.data ||
-                viewPreviewQuery.data.total === 0 ||
-                viewPreviewQuery.data.total > 200
-              }
-              onClick={() => void handleAddFromView()}
-            >
-              {t('campaigns.addFromView')}
-            </Button>
-          </div>
-          <Input
-            value={leadSearch}
-            onChange={(e) => {
-              setLeadSearch(e.target.value);
-              setLeadPage(1);
-            }}
-            placeholder={t('campaigns.searchLeads')}
-            aria-label={t('campaigns.searchLeads')}
-          />
-          {availableLeadsQuery.isLoading ? (
-            <TableSkeleton rows={4} />
-          ) : (
-            <ul className="max-h-80 space-y-2 overflow-y-auto">
-              {(availableLeadsQuery.data?.data ?? []).map((lead) => {
-                const alreadyIn = campaignLeadIds.has(lead.id);
-                const blocked = lead.doNotContact;
-                const checked = selectedLeadIds.includes(lead.id);
-                return (
-                  <li key={lead.id}>
-                    <label
-                      className={`flex items-start gap-3 rounded-md border border-[color:var(--border)] p-3 ${
-                        blocked ? 'opacity-50' : ''
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-1"
-                        disabled={blocked || alreadyIn}
-                        checked={checked || alreadyIn}
-                        onChange={(e) => {
-                          setSelectedLeadIds((current) =>
-                            e.target.checked
-                              ? [...current, lead.id]
-                              : current.filter((id) => id !== lead.id),
-                          );
-                        }}
-                      />
-                      <span>
-                        <span className="block font-medium text-[color:var(--ink)]">
-                          {lead.companyName}
-                        </span>
-                        <span className="block text-xs text-[color:var(--ink-muted)]">
-                          {[lead.city, lead.email, lead.phone].filter(Boolean).join(' · ')}
-                        </span>
-                        {blocked ? (
-                          <span className="mt-1 block text-xs text-amber-300">
-                            {t('campaigns.doNotContactBlocked')}
-                          </span>
-                        ) : null}
-                        {alreadyIn ? (
-                          <span className="mt-1 block text-xs text-[color:var(--ink-muted)]">
-                            {t('campaigns.alreadyInCampaign')}
-                          </span>
-                        ) : null}
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {availableLeadsQuery.data?.meta ? (
-            <Pagination
-              page={availableLeadsQuery.data.meta.page}
-              totalPages={availableLeadsQuery.data.meta.totalPages}
-              total={availableLeadsQuery.data.meta.total}
-              onPageChange={setLeadPage}
-            />
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setPickerOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              loading={addLeads.isPending}
-              disabled={selectedLeadIds.length === 0}
-              onClick={() => void handleAddSelectedLeads()}
-            >
-              {t('campaigns.addSelected', { count: selectedLeadIds.length })}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onCancelPicker={() => setPickerOpen(false)}
+        views={viewsQuery.data ?? []}
+        selectedViewId={selectedViewId}
+        onSelectedViewIdChange={setSelectedViewId}
+        viewPreview={viewPreviewQuery.data}
+        viewPreviewLoading={viewPreviewQuery.isLoading}
+        onAddFromView={() => void handleAddFromView()}
+        addLeadsPending={addLeads.isPending}
+        leadSearch={leadSearch}
+        onLeadSearchChange={(value) => {
+          setLeadSearch(value);
+          setLeadPage(1);
+        }}
+        availableLeads={availableLeadsQuery.data}
+        availableLeadsLoading={availableLeadsQuery.isLoading}
+        selectedLeadIds={selectedLeadIds}
+        onToggleLead={(leadId, checked) => {
+          setSelectedLeadIds((current) =>
+            checked ? [...current, leadId] : current.filter((id) => id !== leadId),
+          );
+        }}
+        onLeadPageChange={setLeadPage}
+        onAddSelectedLeads={() => void handleAddSelectedLeads()}
+      />
 
-      <Modal
+      <CampaignTemplatesModal
         open={templateOpen}
         onClose={() => setTemplateOpen(false)}
-        title={t('campaigns.templatesManage')}
-      >
-        <div className="space-y-4">
-          <p className="text-xs text-amber-200">{t('campaigns.previewNotice')}</p>
-          <p className="text-xs text-[color:var(--ink-muted)]">
-            {t('campaigns.variablesHint')}: {(variablesQuery.data ?? []).join(', ')}
-          </p>
-          <Input
-            value={templateForm.name}
-            onChange={(e) => setTemplateForm((c) => ({ ...c, name: e.target.value }))}
-            placeholder={t('campaigns.templateName')}
-            aria-label={t('campaigns.templateName')}
-          />
-          <Input
-            value={templateForm.category}
-            onChange={(e) => setTemplateForm((c) => ({ ...c, category: e.target.value }))}
-            placeholder={t('campaigns.templateCategory')}
-            aria-label={t('campaigns.templateCategory')}
-          />
-          <Input
-            value={templateForm.subject}
-            onChange={(e) => setTemplateForm((c) => ({ ...c, subject: e.target.value }))}
-            placeholder={t('campaigns.templateSubject')}
-            aria-label={t('campaigns.templateSubject')}
-          />
-          <textarea
-            className="min-h-28 w-full rounded-md border border-[color:var(--border)] bg-[color:var(--surface-card)] px-3 py-2 text-sm"
-            value={templateForm.body}
-            onChange={(e) => setTemplateForm((c) => ({ ...c, body: e.target.value }))}
-            aria-label={t('campaigns.templateBody')}
-          />
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setTemplateOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="button"
-              loading={createTemplate.isPending}
-              onClick={() => void handleCreateTemplate()}
-            >
-              {t('campaigns.saveTemplate')}
-            </Button>
-          </div>
-          <ul className="space-y-2 text-sm text-[color:var(--ink)]">
-            {(templatesQuery.data?.data ?? []).map((template) => (
-              <li key={template.id} className="rounded-md border border-[color:var(--border)] p-3">
-                <div className="font-medium text-[color:var(--ink)]">{template.name}</div>
-                <div className="text-xs text-[color:var(--ink-muted)]">
-                  {formatMessageTemplateCategory(template.category)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Modal>
+        variables={variablesQuery.data ?? []}
+        templateForm={templateForm}
+        onTemplateFormChange={setTemplateForm}
+        templates={templates}
+        creating={createTemplate.isPending}
+        onCreate={() => void handleCreateTemplate()}
+      />
     </div>
   );
-}
-
-function expectNoSend(payload: {
-  autoSend?: boolean;
-  messageSent?: boolean;
-  autoSendEnabled?: boolean;
-}) {
-  if (payload.autoSend || payload.messageSent || payload.autoSendEnabled) {
-    throw new Error('Unexpected auto-send flag in assisted campaign response');
-  }
 }
