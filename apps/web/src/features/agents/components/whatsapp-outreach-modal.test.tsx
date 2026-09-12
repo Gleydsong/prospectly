@@ -165,4 +165,17 @@ describe('WhatsAppOutreachModal', () => {
     const openBtn = screen.getByRole('button', { name: /abrir whatsapp/i });
     expect(openBtn).toBeDisabled();
   });
+
+  it('does not sync variant, preview or stage through effects', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { dirname, join } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'whatsapp-outreach-modal.tsx'),
+      'utf8',
+    );
+
+    expect(source.match(/\buseEffect\(/g)?.length ?? 0).toBe(0);
+    expect(source).toContain("from '@/features/agents/whatsapp-compose'");
+  });
 });
