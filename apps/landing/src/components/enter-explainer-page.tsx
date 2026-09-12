@@ -1,6 +1,4 @@
-'use client';
-
-import { MagnifyingGlass, Funnel, Path, EnvelopeSimple } from '@phosphor-icons/react';
+import { EnvelopeSimple, Funnel, MagnifyingGlass, Path } from '@phosphor-icons/react/ssr';
 import { ProductDemoVideo } from '@/components/product-demo-video';
 import { HeroMotion } from '@/components/motion';
 import { BentoCard, BentoIconDisk, BentoSurface } from '@/components/ui/bento-card';
