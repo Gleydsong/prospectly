@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { IntentLanding, type IntentPageContent } from '@/components/intent-landing';
+import { landingOpenGraph } from '@/lib/landing-og';
 
 const content: IntentPageContent = {
   title: 'Prospecção B2B no Brasil',
@@ -35,10 +36,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/prospeccao-b2b',
   },
-  openGraph: {
+  openGraph: landingOpenGraph({
     title: `${content.title} | Prospectly`,
     description: content.description,
-  },
+  }),
 };
 
 export default function ProspeccaoB2bPage() {

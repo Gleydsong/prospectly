@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { LandingV2 } from '@/components/landing-v2';
 import { HOME_LANGUAGE_ALTERNATES } from '@/lib/document-locale';
+import { landingOpenGraph } from '@/lib/landing-og';
 
 export const metadata: Metadata = {
   title: 'Prospectly | Encontre empresas para prospectar no Brasil',
@@ -10,12 +11,12 @@ export const metadata: Metadata = {
     canonical: '/',
     languages: HOME_LANGUAGE_ALTERNATES,
   },
-  openGraph: {
+  openGraph: landingOpenGraph({
     title: 'Prospectly | Encontre empresas para prospectar no Brasil',
     description:
       'Encontre empresas alinhadas ao seu cliente ideal e organize sua próxima conversa comercial.',
     locale: 'pt_BR',
-  },
+  }),
 };
 
 export default function HomePage() {

@@ -1,10 +1,11 @@
-import type { Metadata } from 'next';
 import { JetBrains_Mono, Outfit } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import type { HtmlLang } from '@/lib/document-locale';
 import { resolveLandingOrigin } from '@/lib/landing-origin';
 import './globals.css';
+
+export { landingDocumentMetadata } from '@/lib/landing-og';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -61,19 +62,6 @@ const jsonLd = {
     },
   ],
 };
-
-export function landingDocumentMetadata(): Pick<Metadata, 'metadataBase' | 'icons' | 'twitter'> {
-  return {
-    metadataBase: new URL(resolveLandingOrigin()),
-    icons: {
-      icon: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
-      apple: [{ url: '/brand/prospectly-mark-v2.svg', type: 'image/svg+xml' }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-    },
-  };
-}
 
 export function LandingHtmlDocument({ lang, children }: { lang: HtmlLang; children: ReactNode }) {
   return (
