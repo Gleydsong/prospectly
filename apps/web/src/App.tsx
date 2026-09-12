@@ -9,12 +9,6 @@ import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { ResetPasswordPage } from '@/pages/auth/reset-password-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
-import { CampaignDetailPage } from '@/pages/campaign-detail-page';
-import { CampaignsPage } from '@/pages/campaigns-page';
-import { LeadDetailPage } from '@/pages/leads/lead-detail-page';
-import { LeadsPage } from '@/pages/leads/leads-page';
-import { PipelinePage } from '@/pages/pipeline-page';
-import { SearchPage } from '@/pages/search-page';
 import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
 import { ReportsPage } from '@/pages/reports-page';
@@ -59,6 +53,24 @@ const CustomFieldsPage = lazy(() =>
 );
 const OpportunityFinderPage = lazy(() =>
   import('@/pages/opportunity-finder-page').then((m) => ({ default: m.OpportunityFinderPage })),
+);
+const SearchPage = lazy(() =>
+  import('@/pages/search-page').then((m) => ({ default: m.SearchPage })),
+);
+const LeadsPage = lazy(() =>
+  import('@/pages/leads/leads-page').then((m) => ({ default: m.LeadsPage })),
+);
+const LeadDetailPage = lazy(() =>
+  import('@/pages/leads/lead-detail-page').then((m) => ({ default: m.LeadDetailPage })),
+);
+const PipelinePage = lazy(() =>
+  import('@/pages/pipeline-page').then((m) => ({ default: m.PipelinePage })),
+);
+const CampaignsPage = lazy(() =>
+  import('@/pages/campaigns-page').then((m) => ({ default: m.CampaignsPage })),
+);
+const CampaignDetailPage = lazy(() =>
+  import('@/pages/campaign-detail-page').then((m) => ({ default: m.CampaignDetailPage })),
 );
 
 function LazyPage({ children }: { children: ReactNode }) {
@@ -132,7 +144,14 @@ export function App() {
               </LazyPage>
             }
           />
-          <Route path="search" element={<SearchPage />} />
+          <Route
+            path="search"
+            element={
+              <LazyPage>
+                <SearchPage />
+              </LazyPage>
+            }
+          />
           <Route path="support" element={<SupportPage />} />
           <Route
             path="imports"
@@ -142,9 +161,30 @@ export function App() {
               </LazyPage>
             }
           />
-          <Route path="leads" element={<LeadsPage />} />
-          <Route path="leads/:id" element={<LeadDetailPage />} />
-          <Route path="pipeline" element={<PipelinePage />} />
+          <Route
+            path="leads"
+            element={
+              <LazyPage>
+                <LeadsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="leads/:id"
+            element={
+              <LazyPage>
+                <LeadDetailPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="pipeline"
+            element={
+              <LazyPage>
+                <PipelinePage />
+              </LazyPage>
+            }
+          />
           <Route
             path="agents"
             element={
@@ -170,8 +210,22 @@ export function App() {
             }
           />
           <Route path="tasks" element={<TasksPage />} />
-          <Route path="campaigns" element={<CampaignsPage />} />
-          <Route path="campaigns/:id" element={<CampaignDetailPage />} />
+          <Route
+            path="campaigns"
+            element={
+              <LazyPage>
+                <CampaignsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="campaigns/:id"
+            element={
+              <LazyPage>
+                <CampaignDetailPage />
+              </LazyPage>
+            }
+          />
           <Route path="workflows" element={<WorkflowsPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route

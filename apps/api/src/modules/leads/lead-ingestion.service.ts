@@ -5,6 +5,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { OutboxService } from '../outbox/outbox.service';
 import { SuppressionService } from '../privacy/suppression.service';
+import { classifyBrazilianPhone } from './brazilian-phone';
 
 const INGESTED_LEAD_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -277,12 +278,20 @@ export class LeadIngestionService {
 
   private normalizeCandidate(candidate: LeadIngestionCandidate) {
     const country = candidate.country?.trim().toUpperCase() || 'BR';
+    const phone = candidate.phone
+      ? normalizePhoneForCountry(candidate.phone, country)
+      : undefined;
+    const explicitWhatsapp = candidate.whatsapp
+      ? normalizePhoneForCountry(candidate.whatsapp, country)
+      : undefined;
+    const whatsapp =
+      explicitWhatsapp ||
+      (country === 'BR' && phone && classifyBrazilianPhone(phone) === 'mobile' ? phone : undefined);
     return {
       ...candidate,
       companyName: candidate.companyName.trim(),
-      phone: candidate.phone
-        ? normalizePhoneForCountry(candidate.phone, country)
-        : undefined,
+      phone,
+      whatsapp,
       email: candidate.email?.trim().toLowerCase(),
       domain: normalizeDomain(candidate.website, candidate.domain),
       city: candidate.city?.trim(),

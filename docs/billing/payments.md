@@ -37,7 +37,7 @@ bash scripts/asaas-sandbox-homologation-wizard.sh
 
 1. Conta e API Key só no Sandbox (`https://sandbox.asaas.com/`). Guarda `ASAAS_API_KEY` no Render, nunca no git.
 2. Token de webhook gerado no Asaas (32–255 chars) = `ASAAS_WEBHOOK_TOKEN`. Header `asaas-access-token`.
-3. URL: `https://prospectly-api.onrender.com/api/v1/billing/webhook/asaas`.
+3. URL: `https://api.prospectlyonboard.com/api/v1/billing/webhook/asaas`.
 4. `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. `ASAAS_ENABLED=true` neste Blueprint é o cutover PIX autorizado; unset no código continua `false`.
 5. Produção (`https://api.asaas.com/v3`) exige autorização explícita e smoke.
 

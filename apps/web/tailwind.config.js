@@ -6,21 +6,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Cobalto da marca (mantido: já é a identidade oficial do Prospectly).
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: '#f4f5fd',
+          100: '#ecf0fe',
+          200: '#d5dbf8',
+          300: '#b0b6ec',
+          400: '#8a90e0',
+          500: '#676fd6',
+          600: '#5b63c9',
+          700: '#4a52b0',
+          800: '#3a4190',
+          900: '#2c326e',
+          950: '#1c2048',
         },
-        // Grafite via CSS vars — dark/light remapeiam a escala sem reescrever classes.
         zinc: {
           50: 'rgb(var(--zinc-50) / <alpha-value>)',
           100: 'rgb(var(--zinc-100) / <alpha-value>)',
@@ -40,22 +38,21 @@ export default {
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
-        control: '12px',
+        control: '10px',
+        card: '12px',
         panel: '16px',
-        bento: '18px',
+        bento: '16px',
       },
       boxShadow: {
-        soft: '0 18px 50px -28px rgb(0 0 0 / 0.65)',
-        panel: '0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 24px 60px -32px rgb(0 0 0 / 0.85)',
-        elevated: '0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 32px 80px -36px rgb(0 0 0 / 0.9)',
-        'panel-light':
-          '0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -24px rgb(46 26 74 / 0.18)',
+        soft: 'var(--shadow-rest)',
+        panel: 'var(--shadow-rest)',
+        elevated: 'var(--shadow-rest)',
+        fab: 'var(--shadow-fab)',
+        'panel-light': 'var(--shadow-rest)',
       },
-      backgroundImage: {
-        'surface-sheen':
-          'radial-gradient(120% 100% at 0% 0%, rgb(255 255 255 / 0.05) 0%, transparent 60%)',
-        'accent-sheen':
-          'radial-gradient(120% 100% at 0% 0%, rgb(59 130 246 / 0.16) 0%, transparent 62%)',
+      spacing: {
+        4.5: '1.125rem',
+        sidebar: '13.75rem',
       },
       keyframes: {
         'fade-rise': {

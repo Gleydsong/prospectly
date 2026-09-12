@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,149 +26,56 @@ vi.mock('@/stores/auth.store', () => ({
   }),
 }));
 
+function renderNav(props?: { onOpenNav?: () => void; navOpen?: boolean }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ThemeProvider>
+        <MemoryRouter>
+          <TopNav onOpenNav={props?.onOpenNav ?? vi.fn()} navOpen={props?.navOpen ?? false} />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe('TopNav', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('exposes principal navigation and tools entry', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
-    expect(
-      screen.getByRole('navigation', { name: /navegação principal|main navigation/i }),
-    ).toBeInTheDocument();
-  });
-
   it('shows user avatar photo when avatarUrl is present', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
+    renderNav();
     const avatar = screen.getByRole('link', { name: /conta de test user|test user's account/i });
     expect(avatar).toHaveAttribute('href', '/settings');
     expect(avatar.querySelector('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
   });
 
   it('shows the current credit balance with the credit label', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
+    renderNav();
     expect(await screen.findByText(/2[,.]?500 créditos/i)).toBeInTheDocument();
   });
 
   it('links the search clients control to the prospecting search page', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByRole('link', { name: /buscar clientes|search clients/i })).toHaveAttribute(
+    renderNav();
+    expect(screen.getAllByRole('link', { name: /buscar clientes|search clients/i })[0]).toHaveAttribute(
       'href',
       '/search',
     );
   });
 
-  it('portals the mobile menu outside the sticky header so backdrop-filter cannot clip it', async () => {
-    const user = userEvent.setup();
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    await user.click(screen.getByRole('button', { name: /abrir menu|open menu/i }));
-
-    const overlay = screen.getAllByRole('button', { name: /fechar menu|close menu/i })[0];
-    expect(overlay).toBeDefined();
-    expect(overlay?.closest('header')).toBeNull();
-    expect(document.getElementById('mobile-nav')).toBeTruthy();
-  });
-
-  it('renders global search with soft neutral background and shortcut badge', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    const searchLink = screen.getByRole('link', { name: /buscar clientes|search clients/i });
-    expect(searchLink.className).toContain('bg-slate-100');
-    expect(searchLink.className).toContain('text-slate-800');
+  it('renders global search with shortcut badge', () => {
+    renderNav();
     expect(screen.getByText('⌘K')).toBeInTheDocument();
   });
 
-  it('renders credit pill with soft sky style', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
+  it('exposes a menu control for the sidebar drawer', () => {
+    const onOpenNav = vi.fn();
+    renderNav({ onOpenNav });
+    expect(screen.getByRole('button', { name: /abrir menu|open menu/i })).toHaveAttribute(
+      'aria-controls',
+      'mobile-nav',
     );
-
-    const creditLink = await screen.findByTitle(/créditos|credits/i);
-    expect(creditLink.className).toContain('bg-sky-50');
-    expect(creditLink.className).toContain('text-sky-700');
-    expect(creditLink.className).toContain('border-sky-100');
-  });
-
-  it('links to agents page with Assistentes label', () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(screen.getByRole('link', { name: /assistentes/i })).toHaveAttribute('href', '/agents');
   });
 
   it('shows loading indicator for credits while query is pending and has no cache', () => {
@@ -180,7 +86,7 @@ describe('TopNav', () => {
       <QueryClientProvider client={client}>
         <ThemeProvider>
           <MemoryRouter>
-            <TopNav />
+            <TopNav onOpenNav={vi.fn()} navOpen={false} />
           </MemoryRouter>
         </ThemeProvider>
       </QueryClientProvider>,

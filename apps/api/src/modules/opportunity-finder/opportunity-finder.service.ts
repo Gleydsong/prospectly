@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import {
   ConfidenceLevel,
   LeadSource,
@@ -59,8 +59,10 @@ import {
   OpportunitySearchStrategySchema,
   resolveOpportunityNiche,
 } from './domain/opportunity-profile';
+import { buildOpportunitySearchPhrases } from './domain/niche-variants';
 import { buildOpportunitySignals, scoreOpportunity } from './domain/opportunity-scoring';
 import { sanitizeCompanyForLlm } from '../privacy/llm-privacy.sanitizer';
+import { formatLocalizedPlaceQuery } from '../prospecting/domain/search-provider';
 import type { CreateOpportunityRunDto } from './dto/create-opportunity-run.dto';
 import type { QueryOpportunityCandidatesDto } from './dto/query-opportunity-candidates.dto';
 
@@ -116,16 +118,16 @@ export class OpportunityFinderService {
         categories: resolution.categories,
       });
     }
-    const category = resolution.category;
-    const catalog = await this.prospecting.listCategories(organizationId);
-    const categoryOption = catalog.categories.find((option) => option.value === category);
-    if (!categoryOption?.available) {
-      throw new ForbiddenException({
-        code: 'ENTITLEMENT_CATEGORIES',
-        message: 'O nicho informado não está disponível no plano atual.',
-        requiredPlan: catalog.requiredPlan,
-        categories: [category],
-      });
+    const category = resolution.status === 'RESOLVED' ? resolution.category : undefined;
+    if (category) {
+      const catalog = await this.prospecting.listCategories(organizationId);
+      const categoryOption = catalog.categories.find((option) => option.value === category);
+      if (!categoryOption) {
+        throw new BadRequestException({
+          code: 'NICHE_NOT_IDENTIFIED',
+          message: 'Não foi possível identificar o nicho. Informe um tipo de empresa, como lojas de roupas, clínicas ou restaurantes.',
+        });
+      }
     }
     const initialProfile = buildDeterministicOpportunityProfile(dto.service, niche, category);
     await this.billing.assertCanCreateSearch(organizationId, CREDIT_COSTS.opportunityFinder);
@@ -401,26 +403,29 @@ export class OpportunityFinderService {
     const resolution = resolveOpportunityNiche(niche);
     if (resolution.status === 'NOT_IDENTIFIED') throw new Error('NICHE_NOT_IDENTIFIED');
     if (resolution.status === 'AMBIGUOUS') throw new Error('NICHE_AMBIGUOUS');
-    const category = resolution.category;
-    const catalog = await this.prospecting.listCategories(run.organizationId);
-    const categoryOption = catalog.categories.find((option) => option.value === category);
-    if (!categoryOption?.available) throw new Error('ENTITLEMENT_CATEGORIES');
+    const category = resolution.status === 'RESOLVED' ? resolution.category : undefined;
+    if (category) {
+      const catalog = await this.prospecting.listCategories(run.organizationId);
+      const categoryOption = catalog.categories.find((option) => option.value === category);
+      if (!categoryOption) throw new Error('NICHE_NOT_IDENTIFIED');
+    }
+    const lockedCategories = category ? [category] : [];
     const deterministicProfile = buildDeterministicOpportunityProfile(run.service, niche, category);
     const aiProfile = await this.ai.buildOpportunityProfile(context, {
       service: run.service,
       niche,
-      categories: [category],
+      categories: lockedCategories,
     });
     const profile = OpportunityProfileSchema.parse({
       ...(aiProfile ?? deterministicProfile),
       service: run.service,
       niche,
-      categories: [category],
+      categories: lockedCategories,
     });
     const aiStrategy = await this.ai.buildSearchStrategy(context, profile);
     const strategy = OpportunitySearchStrategySchema.parse({
       ...(aiStrategy ?? buildDeterministicSearchStrategy(profile)),
-      categories: [category],
+      categories: lockedCategories,
     });
 
     await this.prisma.opportunityRun.update({
@@ -434,10 +439,17 @@ export class OpportunityFinderService {
       },
     });
 
-    const providerIds = this.providers.list().filter((provider) => provider.available).map((provider) => provider.id);
+    const textQueries = buildOpportunitySearchPhrases(niche, category).map((phrase) => (
+      formatLocalizedPlaceQuery(phrase, run.city, run.state, 'BR')
+    ));
+    const providerIds = this.providers.list()
+      .filter((provider) => provider.available)
+      .filter((provider) => category || provider.id === 'GOOGLE_PLACES')
+      .map((provider) => provider.id);
     const settled = await Promise.allSettled(providerIds.map((providerId) => this.providers.resolve(providerId).search({
-      category: strategy.categories[0]!,
-      categories: strategy.categories,
+      ...(category ? { category } : {}),
+      categories: lockedCategories,
+      textQueries,
       city: run.city,
       state: run.state,
       country: 'BR',
@@ -445,7 +457,7 @@ export class OpportunityFinderService {
       limit: OPPORTUNITY_LIMITS.maxCandidates,
     })));
     const businesses = mergeProviderResults(settled.flatMap((result) => result.status === 'fulfilled' ? result.value : []))
-      .filter((business) => business.category === category)
+      .filter((business) => !category || business.category === category)
       .filter((business) => strategy.minimumRating == null || business.rating == null || business.rating >= strategy.minimumRating)
       .filter((business) => strategy.minimumReviews == null || business.reviewCount == null || business.reviewCount >= strategy.minimumReviews)
       .slice(0, OPPORTUNITY_LIMITS.maxCandidates);

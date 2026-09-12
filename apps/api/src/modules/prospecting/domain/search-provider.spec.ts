@@ -1,5 +1,6 @@
 import {
   countryDisplayName,
+  formatLocalizedPlaceQuery,
   isBrazilianStateCode,
   isProspectingCountryCode,
   PROSPECTING_COUNTRIES,
@@ -22,5 +23,11 @@ describe('prospecting geo domain', () => {
 
   it('exposes Portuguese display labels for UI/provider queries', () => {
     expect(countryDisplayName('BR')).toBe('Brasil');
+  });
+
+  it('formats a free-text niche as a localized Places query', () => {
+    expect(formatLocalizedPlaceQuery('clinicas', 'Jaboatão dos Guararapes', 'PE', 'BR')).toBe(
+      'clinicas em Jaboatão dos Guararapes, PE, Brasil',
+    );
   });
 });

@@ -376,4 +376,52 @@ describe('GooglePlacesProvider', () => {
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body.locationRestriction).toBeUndefined();
   });
+
+  it('fans out custom niche text queries instead of the catalog label', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ places: [] }));
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await provider.search({
+      category: 'clinic',
+      city: 'Jaboatão dos Guararapes',
+      state: 'PE',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+      textQueries: [
+        'clinicas em Jaboatão dos Guararapes, PE, Brasil',
+        'Clínica em Jaboatão dos Guararapes, PE, Brasil',
+      ],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).textQuery).toContain('clinicas');
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)).textQuery).toContain('Clínica');
+  });
+
+  it('searches a free-text niche without a catalog category', async () => {
+    const fetchMock = jest.fn().mockResolvedValue(jsonResponse({ places: [] }));
+    const provider = new GooglePlacesProvider({
+      apiKey: 'test-key',
+      timeoutMs: 5_000,
+      resultLimit: 20,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await provider.search({
+      city: 'Recife',
+      state: 'PE',
+      country: 'BR',
+      onlyWithoutWebsite: false,
+      textQueries: ['pet shop em Recife, PE, Brasil'],
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)).textQuery).toBe(
+      'pet shop em Recife, PE, Brasil',
+    );
+  });
 });

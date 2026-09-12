@@ -156,7 +156,7 @@ export function LoginPage() {
       footer={
         <>
           {t('auth.noAccount')}{' '}
-          <Link to={registerHref} className="font-medium text-brand-400 hover:text-brand-300">
+          <Link to={registerHref} className="font-medium link-brand">
             {t('auth.createAccount')}
           </Link>
         </>
@@ -181,14 +181,14 @@ export function LoginPage() {
         <div className="flex justify-end">
           <Link
             to="/forgot-password"
-            className="text-sm font-medium text-brand-400 hover:text-brand-300"
+            className="text-sm font-medium link-brand"
           >
             {t('auth.forgotLink')}
           </Link>
         </div>
 
         {serverError ? (
-          <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+          <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]" role="alert">
             {serverError}
           </p>
         ) : null}

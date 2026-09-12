@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VirtualizedList } from '@/components/ui/virtualized-list';
 import {
   WhatsAppOutreachModal,
   type WhatsAppOutreachModalLead,
 } from '@/features/agents/components';
 import { fetchPipelineBoard, fetchStageLeads, moveLeadToStage } from '@/features/pipeline/api';
+import { kanbanToneClass, kanbanToneFromStage } from '@/lib/kanban-tone';
 import { cn } from '@/lib/utils';
 import type { LeadListItem, PipelineBoardStage } from '@/types';
 
@@ -104,7 +106,7 @@ export function PipelinePage() {
 
   if (board.isError || !board.data) {
     return (
-      <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
+      <p className="rounded-control bg-[color:var(--status-danger-bg)] p-4 text-sm text-[color:var(--status-danger-ink)]" role="alert">
         {t('pipeline.loadError')}
       </p>
     );
@@ -117,7 +119,7 @@ export function PipelinePage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.pipeline')}</h1>
-          <p className="text-sm text-[color:var(--ink-muted)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+          <p className="text-sm text-[color:var(--ink-secondary)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
         </div>
         <div className="flex items-center gap-1.5" role="group" aria-label="Navegação horizontal do funil">
           <Button
@@ -159,7 +161,7 @@ export function PipelinePage() {
         role="list"
         aria-label={t('pipeline.stagesLabel')}
       >
-        {stages.map((stage) => (
+        {stages.map((stage, index) => (
           <section
             key={stage.id}
             role="listitem"
@@ -184,72 +186,83 @@ export function PipelinePage() {
               setOverStageId(null);
             }}
             className={cn(
-              'flex w-72 shrink-0 flex-col rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)]',
-              overStageId === stage.id ? 'border-brand-500 ring-2 ring-brand-500/30' : 'border-[color:var(--border)]',
+              'kanban-col',
+              kanbanToneClass(kanbanToneFromStage(stage.name, index)),
+              overStageId === stage.id && 'ring-2 ring-[color:var(--ring)]',
             )}
           >
-            <header
-              className="flex items-center justify-between rounded-t-xl px-3 py-2.5"
-              style={{ borderTop: `3px solid ${stage.color ?? '#94a3b8'}` }}
-            >
-              <h2 className="text-sm font-semibold text-[color:var(--ink)] truncate mr-2" title={stage.name}>
+            <header className="kanban-col__header">
+              <h2 className="mr-2 truncate text-sm font-semibold" title={stage.name}>
                 {stage.name}
               </h2>
               <span
-                className="shrink-0 rounded-full bg-[color:var(--surface-card)] px-2.5 py-0.5 text-xs font-semibold text-[color:var(--ink)] border border-[color:var(--border)]"
+                className="shrink-0 rounded-full bg-black/10 px-2.5 py-0.5 text-xs font-semibold"
                 title={`${stage.totalCount} leads nesta etapa`}
               >
                 {stage.totalCount}
               </span>
             </header>
-            <div className="flex flex-1 flex-col gap-2 p-2">
+            <div className="flex min-h-0 flex-1 flex-col p-2">
               {stage.leads.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-[color:var(--border)] p-3 text-center text-xs text-[color:var(--ink-muted)]">
+                <p className="rounded-lg border border-dashed border-[color:var(--border)] p-3 text-center text-xs text-[color:var(--ink-secondary)]">
                   {t('pipeline.emptyColumn')}
                 </p>
               ) : (
-                stage.leads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    stages={stages}
-                    currentStageId={stage.id}
-                    dragging={draggingLeadId === lead.id}
-                    disabled={move.isPending}
-                    selectRef={(node) => {
-                      moveSelectRefs.current[lead.id] = node;
-                    }}
-                    onDragStart={() => setDraggingLeadId(lead.id)}
-                    onDragEnd={() => {
-                      setDraggingLeadId(null);
-                      setOverStageId(null);
-                    }}
-                    onMove={(stageId, stageName) => {
-                      move.mutate({
-                        leadId: lead.id,
-                        stageId,
-                        leadName: lead.companyName,
-                        stageName,
-                      });
-                    }}
-                    onOpenWhatsApp={(leadItem) =>
-                      setWhatsAppModalLead({
-                        id: leadItem.id,
-                        companyName: leadItem.companyName,
-                        phone: leadItem.phone,
-                        stageId: stage.id,
-                        doNotContact: leadItem.doNotContact,
-                      })
-                    }
-                  />
-                ))
+                <VirtualizedList
+                  count={stage.leads.length}
+                  estimateSize={176}
+                  className="kanban-col__body"
+                  ariaLabel={stage.name}
+                  getItemKey={(index) => stage.leads[index]?.id ?? index}
+                >
+                  {(index) => {
+                    const lead = stage.leads[index];
+                    if (!lead) return null;
+                    return (
+                      <div className="pb-2">
+                        <LeadCard
+                          lead={lead}
+                          stages={stages}
+                          currentStageId={stage.id}
+                          dragging={draggingLeadId === lead.id}
+                          disabled={move.isPending}
+                          selectRef={(node) => {
+                            moveSelectRefs.current[lead.id] = node;
+                          }}
+                          onDragStart={() => setDraggingLeadId(lead.id)}
+                          onDragEnd={() => {
+                            setDraggingLeadId(null);
+                            setOverStageId(null);
+                          }}
+                          onMove={(stageId, stageName) => {
+                            move.mutate({
+                              leadId: lead.id,
+                              stageId,
+                              leadName: lead.companyName,
+                              stageName,
+                            });
+                          }}
+                          onOpenWhatsApp={(leadItem) =>
+                            setWhatsAppModalLead({
+                              id: leadItem.id,
+                              companyName: leadItem.companyName,
+                              phone: leadItem.phone,
+                              stageId: stage.id,
+                              doNotContact: leadItem.doNotContact,
+                            })
+                          }
+                        />
+                      </div>
+                    );
+                  }}
+                </VirtualizedList>
               )}
               {stage.hasMore ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-1 w-full"
+                  className="mt-1 w-full shrink-0"
                   loading={loadingMoreStageId === stage.id}
                   onClick={() => {
                     void appendStageLeads(stage);
@@ -306,7 +319,10 @@ function LeadCard({
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      className={cn('cursor-grab space-y-2 p-3 hover:shadow-md', dragging && 'opacity-50')}
+      className={cn(
+        'cursor-grab space-y-2 rounded-card p-3 shadow-none hover:bg-[color:var(--surface-hover)]',
+        dragging && 'opacity-50',
+      )}
     >
       <div className="flex items-start justify-between gap-1">
         <Link
@@ -330,13 +346,13 @@ function LeadCard({
           </button>
         ) : null}
       </div>
-      <p className="text-xs text-[color:var(--ink-muted)]">{lead.city ?? '—'}</p>
+      <p className="text-xs text-[color:var(--ink-secondary)]">{lead.city ?? '—'}</p>
       <div className="flex items-center justify-between">
         <ScoreBadge score={lead.score} />
-        <span className="text-xs text-[color:var(--ink-muted)]">{lead.owner?.name ?? ''}</span>
+        <span className="text-xs text-[color:var(--ink-secondary)]">{lead.owner?.name ?? ''}</span>
       </div>
       <label className="block space-y-1">
-        <span className="text-xs font-medium text-[color:var(--ink-muted)]">{t('pipeline.moveToStage')}</span>
+        <span className="text-xs font-medium text-[color:var(--ink-secondary)]">{t('pipeline.moveToStage')}</span>
         <select
           ref={selectRef}
           className="h-8 w-full rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] px-2 text-xs text-[color:var(--ink)] focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"

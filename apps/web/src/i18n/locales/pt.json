@@ -11,6 +11,18 @@
     "results_other": "{{count}} resultados",
     "dash": "—"
   },
+  "clientRow": {
+    "channelWhatsApp": "WhatsApp (celular)",
+    "channelEmail": "E-mail",
+    "channelPhone": "Telefone",
+    "channelNone": "—",
+    "openWhatsApp": "Abrir WhatsApp",
+    "copyPhone": "Copiar telefone",
+    "copiedPhone": "Telefone copiado",
+    "openSite": "Abrir site",
+    "moreActions": "Mais ações",
+    "select": "Selecionar {{name}}"
+  },
   "nav": {
     "dashboard": "Painel",
     "search": "Pesquisa",
@@ -22,6 +34,8 @@
     "logout": "Sair",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
+    "hideSidebar": "Esconder menu",
+    "showSidebar": "Mostrar menu",
     "themeToLight": "Ativar tema claro",
     "themeToDark": "Ativar tema escuro",
     "campaigns": "Campanhas",
@@ -34,6 +48,7 @@
     "ferramentas": "Ferramentas",
     "suporte": "Suporte",
     "mainNav": "Navegação principal",
+    "skipToContent": "Pular para o conteúdo principal",
     "searchClients": "Buscar clientes",
     "globalSearch": "Busca global...",
     "credits": "Créditos",
@@ -611,6 +626,7 @@
     "layout": "Disposição",
     "layoutTable": "Tabela",
     "layoutKanban": "Kanban",
+    "deleteClient": "Apagar cliente",
     "kanbanLabel": "Quadro por status",
     "columns": "Colunas",
     "customFieldFilter": "Campo personalizado",

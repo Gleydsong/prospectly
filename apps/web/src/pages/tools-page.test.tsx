@@ -59,6 +59,24 @@ describe('ToolsPage', () => {
     expect(ORG_SCHEMA.some((tool) => tool.to === '/custom-fields')).toBe(true);
   });
 
+  it('gives every tool card an icon that matches the tool', () => {
+    expect(QUICK.every((tool) => Boolean(tool.icon))).toBe(true);
+    expect(ALL.every((tool) => Boolean(tool.icon))).toBe(true);
+    expect(ORG_SCHEMA.every((tool) => Boolean(tool.icon))).toBe(true);
+
+    render(
+      <MemoryRouter>
+        <ToolsPage />
+      </MemoryRouter>,
+    );
+
+    const cards = screen.getAllByRole('link', { name: /abrir ferramenta/i });
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect(card.querySelector('svg')).not.toBeNull();
+    }
+  });
+
   it('hides the custom fields card from VIEWER', () => {
     setUser(Role.VIEWER);
     render(

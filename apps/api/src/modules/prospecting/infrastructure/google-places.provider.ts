@@ -22,6 +22,32 @@ import type { BoundingBoxResolver } from './nominatim-bounding-box.resolver';
 
 /** Places API (New) text search caps a single response at 20 places. */
 const GOOGLE_MAX_RESULTS_PER_REQUEST = 20;
+const GOOGLE_MAX_TEXT_QUERIES = 4;
+
+function resolveGoogleTextQueries(
+  input: SearchProviderInput,
+  categories: string[],
+  region: string,
+  country: ProspectingCountryCode,
+): Array<{ textQuery: string; fallbackCategory: string }> {
+  const custom = [...new Set(
+    (input.textQueries ?? []).map((query) => query.trim()).filter(Boolean),
+  )].slice(0, GOOGLE_MAX_TEXT_QUERIES);
+  if (custom.length > 0) {
+    const fallbackCategory = input.category?.trim() || categories[0] || 'free_text';
+    return custom.map((textQuery) => ({ textQuery, fallbackCategory }));
+  }
+  return categories.map((category) => ({
+    textQuery: mapCategoryToGoogleTextQuery(
+      category,
+      input.city,
+      region,
+      country,
+      input.neighborhood,
+    ),
+    fallbackCategory: category,
+  }));
+}
 
 const FIELD_MASK = [
   'places.id',
@@ -222,12 +248,17 @@ export class GooglePlacesProvider implements SearchProvider {
 
     const categories = [
       ...new Set(
-        (input.categories?.length ? input.categories : [input.category])
+        (input.categories?.length ? input.categories : [input.category ?? ''])
           .map((value) => value.trim())
           .filter(Boolean),
       ),
     ];
-    if (categories.length === 0) throw new Error('Category is required');
+    const customQueries = [...new Set(
+      (input.textQueries ?? []).map((query) => query.trim()).filter(Boolean),
+    )];
+    if (categories.length === 0 && customQueries.length === 0) {
+      throw new Error('Category is required');
+    }
 
     const requestedLimit = input.limit && input.limit > 0 ? input.limit : this.options.resultLimit;
     const perCategoryLimit = Math.min(
@@ -236,17 +267,12 @@ export class GooglePlacesProvider implements SearchProvider {
     );
 
     const locationRestriction = await this.resolveLocationRestriction(input, region, country);
+    const queries = resolveGoogleTextQueries(input, categories, region, country);
 
     const categoryBatches = await Promise.all(
-      categories.map(async (category) => {
+      queries.map(async ({ textQuery, fallbackCategory }) => {
         const response = await this.requestTextSearch({
-          textQuery: mapCategoryToGoogleTextQuery(
-            category,
-            input.city,
-            region,
-            country,
-            input.neighborhood,
-          ),
+          textQuery,
           languageCode: googleLanguageCode(country),
           regionCode: country,
           maxResultCount: perCategoryLimit,
@@ -266,7 +292,7 @@ export class GooglePlacesProvider implements SearchProvider {
           }
           businesses.push({
             ...business,
-            category: resolveGooglePlaceCategory(place, category),
+            category: resolveGooglePlaceCategory(place, fallbackCategory),
           });
         }
         return businesses;

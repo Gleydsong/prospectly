@@ -48,6 +48,23 @@ describe('GoogleConnectionSettingsCard', () => {
     expect(mocks.assign).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/v2/auth?x=1');
   });
 
+  it('does not navigate when the OAuth url is off the Google allowlist', async () => {
+    mocks.fetchMyGoogleConnection.mockResolvedValue({
+      connected: false,
+      googleEmail: null,
+      connectedAt: null,
+      lastSyncAt: null,
+      lastError: null,
+    });
+    mocks.startGoogleConnection.mockResolvedValue({ url: 'https://evil.example/oauth' });
+    const user = userEvent.setup();
+    renderWithProviders(<GoogleConnectionSettingsCard role={Role.SALES} />, { withGoogle: false });
+
+    await user.click(await screen.findByRole('button', { name: 'Ligar Google' }));
+    expect(mocks.startGoogleConnection).toHaveBeenCalled();
+    expect(mocks.assign).not.toHaveBeenCalled();
+  });
+
   it('hides connect from VIEWER', async () => {
     mocks.fetchMyGoogleConnection.mockResolvedValue({
       connected: false,

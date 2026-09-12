@@ -12,6 +12,7 @@ import {
   startGoogleConnection,
 } from '@/features/google-connections/api';
 import { getApiErrorMessage } from '@/lib/api';
+import { assignGoogleOAuthRedirect } from '@/lib/safe-url';
 import { Role } from '@/types';
 
 function canConnectGoogle(role: Role | string | undefined): boolean {
@@ -33,7 +34,7 @@ export function GoogleConnectionSettingsCard({ role }: { role: Role | string | u
   const start = useMutation({
     mutationFn: startGoogleConnection,
     onSuccess: ({ url }) => {
-      window.location.assign(url);
+      assignGoogleOAuthRedirect(url);
     },
   });
 

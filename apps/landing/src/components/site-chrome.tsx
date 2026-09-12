@@ -7,11 +7,11 @@ import { List, X } from '@phosphor-icons/react';
 import { BrandLogo } from '@/components/brand-logo';
 import { CtaButton } from '@/components/ui/cta-button';
 import { prefix, t, type Locale } from '@/lib/i18n';
+import { canonicalFaqPath } from '@/lib/faq-routes';
 import { appLoginUrl, enterExplainerUrl } from '@/lib/pricing';
 
 const LIGHT_THEME_PATHS = new Set([
   '/',
-  '/faq',
   '/pricing',
   '/entrar',
   '/en',
@@ -66,7 +66,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
               {t(locale, 'navHome')}
             </CtaButton>
-            <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+            <CtaButton href={canonicalFaqPath(locale)} variant="ghost" size="sm" className="font-medium">
               {t(locale, 'navFaq')}
             </CtaButton>
             <CtaButton href={ctaHref} variant="glass" size="sm" className="ml-1 font-medium">
@@ -79,7 +79,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               <CtaButton href={p || '/'} variant="ghost" size="sm" className="font-medium">
                 {t(locale, 'navHome')}
               </CtaButton>
-              <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+              <CtaButton href={canonicalFaqPath(locale)} variant="ghost" size="sm" className="font-medium">
                 {t(locale, 'navFaq')}
               </CtaButton>
               <CtaButton href={`${p}/pricing`} variant="ghost" size="sm" className="font-medium">
@@ -134,7 +134,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               {t(locale, 'navHome')}
             </CtaButton>
             <CtaButton
-              href={`${p}/faq`}
+              href={canonicalFaqPath(locale)}
               variant="ghost"
               size="md"
               className="w-full justify-start font-medium"
@@ -183,7 +183,7 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <CtaButton href={`${p}/faq`} variant="ghost" size="sm" className="font-medium">
+          <CtaButton href={canonicalFaqPath(locale)} variant="ghost" size="sm" className="font-medium">
             {t(locale, 'footerFaq')}
           </CtaButton>
           <CtaButton href={`${p}/privacy`} variant="ghost" size="sm" className="font-medium">

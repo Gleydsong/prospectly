@@ -7,6 +7,7 @@ import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { parseCorsOrigins } from './config/cors-origins';
 
 process.env.ROLE = 'api';
 
@@ -24,14 +25,11 @@ async function bootstrap() {
     }),
   );
 
-  const corsOrigins = (
+  const corsOrigins = parseCorsOrigins(
     config.get<string>('corsOrigins') ??
-    config.get<string>('CORS_ORIGINS') ??
-    'http://localhost:5173,http://localhost:3001'
-  )
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+      config.get<string>('CORS_ORIGINS') ??
+      'http://localhost:5173,http://localhost:3001',
+  );
   app.enableCors({
     origin: corsOrigins,
     credentials: true,

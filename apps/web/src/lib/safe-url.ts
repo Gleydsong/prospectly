@@ -1,4 +1,5 @@
 const ASAAS_HOST = /^(?:[a-z0-9-]+\.)*asaas\.com$/i;
+const GOOGLE_OAUTH_HOST = /^accounts\.google\.com$/i;
 
 function assignHttpsHostRedirect(url: string, hostPattern: RegExp, label: string): void {
   let parsed: URL;
@@ -20,6 +21,11 @@ export function assignCheckoutRedirect(url: string, provider: 'ASAAS' = 'ASAAS')
     return;
   }
   throw new Error(`Invalid Asaas redirect URL`);
+}
+
+/** Navigate only to Google's OAuth authorization host. */
+export function assignGoogleOAuthRedirect(url: string): void {
+  assignHttpsHostRedirect(url, GOOGLE_OAUTH_HOST, 'Google OAuth');
 }
 
 /** Only allow same-origin relative paths (blocks open redirects). */
@@ -78,7 +84,7 @@ export function sanitizeTelHref(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed || /[?#&<>"'\\]/.test(trimmed)) return null;
-  if (!/^[+\d][\d\s().-]*$/.test(trimmed)) return null;
+  if (!/^[+\d(][\d\s().-]*$/.test(trimmed)) return null;
   const normalized = trimmed.replace(/[^\d+]/g, '');
   const digits = normalized.replace(/\D/g, '');
   if (digits.length < 8) return null;

@@ -1,9 +1,12 @@
 import type { MetadataRoute } from 'next';
+import { sitemapFaqUrls } from '@/lib/faq-routes';
+import { sitemapHomeEntries } from '@/lib/document-locale';
+import { resolveLandingOrigin } from '@/lib/landing-origin';
 
-const base = process.env.NEXT_PUBLIC_LANDING_URL ?? 'http://localhost:3001';
+const base = resolveLandingOrigin();
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const sharedPaths = ['/pricing', '/faq', '/privacy', '/terms', '/cookies'];
+  const sharedPaths = ['/pricing', '/privacy', '/terms', '/cookies'];
   const intentPaths = [
     '/prospeccao-b2b',
     '/lista-de-empresas',
@@ -26,20 +29,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }
 
   entries.push(
-    {
-      url: `${base}/`,
+    ...sitemapHomeEntries(base).map((entry) => ({
+      ...entry,
       lastModified,
-      changeFrequency: 'weekly',
+      changeFrequency: 'weekly' as const,
       priority: 1,
-    },
+    })),
     {
       url: `${base}/como-funciona`,
       lastModified,
       changeFrequency: 'monthly',
       priority: 0.9,
     },
-    ...['beneficios', 'para-quem-e', 'duvidas'].map((path) => ({
+    ...['beneficios', 'para-quem-e'].map((path) => ({
       url: `${base}/${path}`,
+      lastModified,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
+    ...sitemapFaqUrls(base).map((url) => ({
+      url,
       lastModified,
       changeFrequency: 'monthly' as const,
       priority: 0.8,

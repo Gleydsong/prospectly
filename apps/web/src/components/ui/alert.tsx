@@ -7,10 +7,19 @@ export type AlertTone = 'error' | 'success' | 'warning' | 'info';
 
 const tones: Record<AlertTone, { className: string; icon: ComponentType<{ className?: string }> }> =
   {
-    error: { className: 'border-red-500/25 bg-red-500/10 text-[color:var(--ink)]', icon: XCircle },
-    success: { className: 'border-brand-500/25 bg-brand-500/10 text-[color:var(--ink)]', icon: CheckCircle2 },
+    error: {
+      className:
+        'border-[color:var(--status-danger-ink)]/25 bg-[color:var(--status-danger-bg)] text-[color:var(--ink)]',
+      icon: XCircle,
+    },
+    success: {
+      className:
+        'border-[color:var(--status-success-ink)]/25 bg-[color:var(--status-success-bg)] text-[color:var(--ink)]',
+      icon: CheckCircle2,
+    },
     warning: {
-      className: 'border-amber-500/25 bg-amber-500/10 text-[color:var(--ink)]',
+      className:
+        'border-[color:var(--status-warning-ink)]/25 bg-[color:var(--status-warning-bg)] text-[color:var(--ink)]',
       icon: AlertTriangle,
     },
     info: { className: 'border-[color:var(--border)] bg-[color:var(--surface-subtle)] text-[color:var(--ink)]', icon: Info },

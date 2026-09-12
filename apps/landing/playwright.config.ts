@@ -1,12 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
+import { consentedStorageState, landingOrigin } from './e2e/storage-state';
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:3011',
+    baseURL: landingOrigin,
     trace: 'retain-on-failure',
+    storageState: consentedStorageState,
   },
   projects: [
     { name: 'desktop-chromium', use: { ...devices['Desktop Chrome'] } },
@@ -15,7 +18,7 @@ export default defineConfig({
   webServer: {
       command: 'pnpm --filter @prospectly/landing exec next dev -H 127.0.0.1 -p 3011',
     cwd: process.cwd(),
-      url: 'http://127.0.0.1:3011/',
+      url: `${landingOrigin}/`,
       reuseExistingServer: false,
     timeout: 120_000,
   },

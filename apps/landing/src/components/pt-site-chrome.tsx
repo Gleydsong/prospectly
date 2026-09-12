@@ -5,23 +5,21 @@ import { CookieBanner } from '@/components/cookie-banner';
 import { SiteFooter, SiteHeader } from '@/components/site-chrome';
 import type { Locale } from '@/lib/i18n';
 
-/** Marketing pages that already ship their own header/footer (Landing V2). */
-const SELF_CHROME_PATHS = new Set([
-  '/',
-  '/como-funciona',
-  '/beneficios',
-  '/para-quem-e',
-  '/duvidas',
-  '/v2',
-  '/v2/como-funciona',
-  '/v2/beneficios',
-  '/v2/para-quem-e',
-  '/v2/duvidas',
+/** Legal/explainer pages that still use SiteHeader instead of Landing V2 chrome. */
+const LEGACY_CHROME_PATHS = new Set([
+  '/pricing',
+  '/entrar',
+  '/privacy',
+  '/terms',
+  '/cookies',
+  '/lista-de-empresas',
+  '/prospeccao-para-consultorias',
+  '/prospeccao-para-agencias',
+  '/prospeccao-b2b',
 ]);
 
-function usesSelfChrome(pathname: string | null): boolean {
-  if (!pathname) return false;
-  return SELF_CHROME_PATHS.has(pathname);
+function usesLegacyChrome(pathname: string | null): boolean {
+  return pathname != null && LEGACY_CHROME_PATHS.has(pathname);
 }
 
 export function PtSiteChrome({
@@ -33,7 +31,7 @@ export function PtSiteChrome({
 }) {
   const pathname = usePathname();
 
-  if (usesSelfChrome(pathname)) {
+  if (!usesLegacyChrome(pathname)) {
     return <>{children}</>;
   }
 

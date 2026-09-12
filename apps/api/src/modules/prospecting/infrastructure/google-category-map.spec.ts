@@ -17,5 +17,7 @@ describe('google-category-map', () => {
     );
     expect(resolveGooglePlaceCategory({ types: ['coffee_shop'] }, 'bakery')).toBe('cafe');
     expect(resolveGooglePlaceCategory({}, 'cafe')).toBe('cafe');
+    expect(resolveGooglePlaceCategory({ primaryType: 'dental_clinic' }, 'restaurant')).toBe('clinic');
+    expect(resolveGooglePlaceCategory({ types: ['physiotherapist'] }, 'clinic')).toBe('clinic');
   });
 });

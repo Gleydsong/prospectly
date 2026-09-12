@@ -13,6 +13,7 @@ const NICHE_CASES: Array<[string, ProspectingCategory]> = [
   ['drogarias', 'pharmacy'],
   ['hospitais', 'hospital'],
   ['clínicas odontológicas', 'clinic'],
+  ['clinicas', 'clinic'],
   ['supermercados', 'supermarket'],
   ['panificadoras', 'bakery'],
   ['açougues', 'butcher'],
@@ -39,8 +40,8 @@ describe('opportunity profile', () => {
     });
   });
 
-  it('rejects unknown and ambiguous niches instead of using generic categories', () => {
-    expect(resolveOpportunityNiche('consultoria de processos')).toEqual({ status: 'NOT_IDENTIFIED' });
+  it('keeps unknown niches as free-text and rejects mixed catalog niches', () => {
+    expect(resolveOpportunityNiche('consultoria de processos')).toEqual({ status: 'FREE_TEXT' });
     expect(resolveOpportunityNiche('roupas e restaurantes')).toEqual({
       status: 'AMBIGUOUS',
       categories: ['restaurant', 'clothes'],
@@ -55,6 +56,21 @@ describe('opportunity profile', () => {
         targetCustomer: ['Roupas no atacado'],
         categories: ['clothes'],
       });
+  });
+
+  it('builds a free-text profile without locking a catalog category', () => {
+    expect(buildDeterministicOpportunityProfile('Criação de sites', 'pet shop')).toMatchObject({
+      niche: 'pet shop',
+      targetCustomer: ['pet shop'],
+      categories: [],
+    });
+    expect(OpportunityProfileSchema.safeParse({
+      service: 'Criação de sites',
+      niche: 'pet shop',
+      targetCustomer: ['pet shop'],
+      relevantSignals: ['MISSING_WEBSITE'],
+      categories: [],
+    }).success).toBe(true);
   });
 
   it('rejects categories invented by model output', () => {
