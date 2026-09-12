@@ -1,6 +1,8 @@
-import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { OrgPlan, PaymentProvider, PlanStatus } from '@prisma/client';
 
+import { MailService } from '../../common/mail/mail.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { BillingActivationService } from './billing-activation.service';
 
@@ -11,12 +13,22 @@ describe('BillingActivationService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    organizationMember: {
+      findMany: jest.fn(),
+    },
   };
+  const mail = { send: jest.fn() };
+  const config = { get: jest.fn(() => 'https://app.prospectlyonboard.com') };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [BillingActivationService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        BillingActivationService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MailService, useValue: mail },
+        { provide: ConfigService, useValue: config },
+      ],
     }).compile();
     service = module.get(BillingActivationService);
   });
@@ -72,12 +84,13 @@ describe('BillingActivationService', () => {
       plan: OrgPlan.FREE,
     });
     prisma.organization.update.mockResolvedValue({});
-    await service.activateMonthly({
+    const result = await service.activateMonthly({
       organizationId: 'org1',
       currency: 'BRL',
       provider: PaymentProvider.STRIPE,
       stripeSubscriptionId: 'sub_1',
     });
+    expect(result).toEqual({ applied: true, shouldSendReceipt: true });
     expect(prisma.organization.update).toHaveBeenCalledWith({
       where: { id: 'org1' },
       data: expect.objectContaining({
@@ -127,6 +140,70 @@ describe('BillingActivationService', () => {
       stripeSubscriptionId: 'sub_attack',
     });
     expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('does not mark a receipt for a duplicate CONFIRMED/RECEIVED grant on an active period', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_1',
+      currentPeriodEnd: new Date('2026-10-12T00:00:00.000Z'),
+    });
+    prisma.organization.update.mockResolvedValue({});
+    const result = await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_1',
+      currentPeriodEnd: new Date('2026-10-12T00:00:00.000Z'),
+    });
+    expect(result).toEqual({ applied: true, shouldSendReceipt: false });
+  });
+
+  it('marks a receipt when a card renewal extends the paid period', async () => {
+    prisma.organization.findUnique.mockResolvedValue({
+      id: 'org1',
+      plan: OrgPlan.STARTER_MONTHLY,
+      planStatus: PlanStatus.ACTIVE,
+      paymentProvider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_1',
+      currentPeriodEnd: new Date('2026-10-12T00:00:00.000Z'),
+    });
+    prisma.organization.update.mockResolvedValue({});
+    const result = await service.activateMonthly({
+      organizationId: 'org1',
+      currency: 'BRL',
+      provider: PaymentProvider.ASAAS,
+      asaasSubscriptionId: 'sub_1',
+      currentPeriodEnd: new Date('2026-11-12T00:00:00.000Z'),
+    });
+    expect(result).toEqual({ applied: true, shouldSendReceipt: true });
+  });
+
+  it('emails owners and admins after a monthly grant', async () => {
+    prisma.organizationMember.findMany.mockResolvedValue([
+      { user: { email: 'owner@acme.test', name: 'Ana', locale: 'pt', anonymizedAt: null } },
+    ]);
+    mail.send.mockResolvedValue(undefined);
+
+    await service.notifyMonthlyPurchased({
+      organizationId: 'org1',
+      amountCentavos: 4999,
+      currency: 'BRL',
+      paymentMethod: 'PIX',
+      purchasedAt: new Date('2026-09-12T12:00:00.000Z'),
+      periodEnd: new Date('2026-10-12T12:00:00.000Z'),
+    });
+
+    expect(mail.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'owner@acme.test',
+        template: 'monthly-purchased',
+        html: expect.stringContaining('Ilimitado mensal'),
+      }),
+    );
   });
 
   it('does not let a stale Asaas event overwrite an active historical provider', async () => {
@@ -198,7 +275,7 @@ describe('BillingActivationService', () => {
       currentPeriodEnd: new Date('2026-09-27T00:00:00.000Z'),
     });
 
-    await service.activateMonthly({
+    const result = await service.activateMonthly({
       organizationId: 'org1',
       currency: 'BRL',
       provider: PaymentProvider.ASAAS,
@@ -207,6 +284,7 @@ describe('BillingActivationService', () => {
       currentPeriodEnd: new Date('2026-09-28T00:00:00.000Z'),
     });
 
+    expect(result).toEqual({ applied: false, shouldSendReceipt: false });
     expect(prisma.organization.update).not.toHaveBeenCalled();
   });
 
