@@ -216,7 +216,7 @@ export function CampaignsPage() {
             <label className="mb-1 block text-sm text-[color:var(--ink)]" htmlFor="campaign-name">
               {t('campaigns.fields.name')}
             </label>
-            <Input id="campaign-name" {...form.register('name')} autoFocus />
+            <Input id="campaign-name" {...form.register('name')} data-dialog-initial-focus />
             {form.formState.errors.name ? (
               <p className="mt-1 text-xs text-red-400">{form.formState.errors.name.message}</p>
             ) : null}

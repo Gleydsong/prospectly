@@ -70,6 +70,20 @@ describe('ClientDenseRow', () => {
     expect(onActivate).not.toHaveBeenCalled();
   });
 
+  it('activates the row from the keyboard', async () => {
+    const user = userEvent.setup();
+    const onActivate = vi.fn();
+    renderWithProviders(
+      <ClientDenseRow name="Padaria Forno Antigo" channel="none" onActivate={onActivate} />,
+      { withGoogle: false },
+    );
+
+    const row = screen.getByRole('button', { name: /Padaria Forno Antigo/i });
+    row.focus();
+    await user.keyboard('{Enter}');
+    expect(onActivate).toHaveBeenCalledTimes(1);
+  });
+
   it('exposes overflow actions', async () => {
     const user = userEvent.setup();
     const onDelete = vi.fn();

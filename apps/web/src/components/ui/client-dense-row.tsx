@@ -1,5 +1,14 @@
 import { Mail, MessageCircle, MoreHorizontal, Phone } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ComponentProps, type MouseEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentProps,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -112,6 +121,14 @@ export function ClientDenseRow({
     event.stopPropagation();
   };
 
+  function handleActivateKey(event: ReactKeyboardEvent<HTMLElement>) {
+    if (!onActivate || event.currentTarget !== event.target) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onActivate();
+    }
+  }
+
   return (
     <article
       className={cn(
@@ -122,14 +139,17 @@ export function ClientDenseRow({
           : 'hover:bg-[color:var(--surface-hover)]',
         onActivate && 'cursor-pointer',
       )}
-      onClick={onActivate}
+      {...(onActivate
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onClick: onActivate,
+            onKeyDown: handleActivateKey,
+          }
+        : {})}
     >
       {showCheckbox ? (
-        <div
-          className="client-dense-row__check"
-          onClick={stop}
-          onKeyDown={(event) => event.stopPropagation()}
-        >
+        <div className="client-dense-row__check">
           <input
             type="checkbox"
             aria-label={t('clientRow.select', { name })}
@@ -137,6 +157,7 @@ export function ClientDenseRow({
             disabled={selectable === false}
             onChange={() => onToggle?.()}
             className="h-4 w-4 rounded border-[color:var(--border-default)] text-[color:var(--brand)] focus:ring-[color:var(--ring)]"
+            onClick={stop}
           />
         </div>
       ) : null}
@@ -233,7 +254,7 @@ export function ClientDenseRow({
       </div>
 
       <div className="client-dense-row__actions">
-        <div className="client-dense-row__cta" data-slot="cta" onClick={stop}>
+        <div className="client-dense-row__cta" data-slot="cta">
           {primaryAction ? (
             <Button
               type="button"
@@ -241,7 +262,10 @@ export function ClientDenseRow({
               className="w-full whitespace-nowrap"
               disabled={primaryAction.disabled}
               loading={primaryAction.loading}
-              onClick={primaryAction.onClick}
+              onClick={(event) => {
+                event.stopPropagation();
+                primaryAction.onClick();
+              }}
             >
               {primaryAction.label}
             </Button>
@@ -250,12 +274,7 @@ export function ClientDenseRow({
           )}
         </div>
 
-        <div
-          ref={menuRef}
-          className="client-dense-row__menu"
-          data-slot="menu"
-          onClick={stop}
-        >
+        <div ref={menuRef} className="client-dense-row__menu" data-slot="menu">
           {menuItems.length ? (
             <>
               <button
@@ -264,7 +283,10 @@ export function ClientDenseRow({
                 aria-label={t('clientRow.moreActions')}
                 aria-expanded={menuOpen}
                 aria-controls={menuId}
-                onClick={() => setMenuOpen((open) => !open)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMenuOpen((open) => !open);
+                }}
               >
                 <MoreHorizontal className="h-4 w-4" aria-hidden />
               </button>
@@ -283,7 +305,10 @@ export function ClientDenseRow({
                           target="_blank"
                           rel="noreferrer noopener"
                           className="block px-3 py-2 text-sm text-[color:var(--ink)] hover:bg-[color:var(--bg-subtle)]"
-                          onClick={() => setMenuOpen(false)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setMenuOpen(false);
+                          }}
                         >
                           {item.label}
                         </a>
@@ -298,7 +323,8 @@ export function ClientDenseRow({
                               ? 'text-[color:var(--status-danger-ink)]'
                               : 'text-[color:var(--ink)]',
                           )}
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation();
                             setMenuOpen(false);
                             item.onClick?.();
                           }}

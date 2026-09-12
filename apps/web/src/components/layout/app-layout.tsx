@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
 
 import { EmailVerificationBanner } from '@/components/email-verification-banner';
@@ -31,6 +32,7 @@ function persistCollapsed(collapsed: boolean) {
 }
 
 export function AppLayout() {
+  const { t } = useTranslation();
   const [navOpen, setNavOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(readDesktop);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readCollapsed);
@@ -68,6 +70,12 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh bg-[color:var(--bg-app)]">
+      <a
+        href="#conteudo-principal"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[80] focus:rounded-control focus:bg-[color:var(--ink)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-[color:var(--bg-app)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400"
+      >
+        {t('nav.skipToContent')}
+      </a>
       <Sidebar
         open={navOpen}
         onClose={() => setNavOpen(false)}
@@ -91,7 +99,7 @@ export function AppLayout() {
           isDesktop={isDesktop}
         />
         <EmailVerificationBanner />
-        <main className="min-w-0 flex-1 px-4 py-5 lg:px-6">
+        <main id="conteudo-principal" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 lg:px-6">
           <Outlet />
         </main>
         <AppFooter />
