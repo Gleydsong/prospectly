@@ -247,3 +247,25 @@ test.describe('waitlist form', () => {
     await expect(page.getByLabel('E-mail')).toBeVisible();
   });
 });
+
+test.describe('Open Graph and Twitter image', () => {
+  test('home emits an absolute 1200×630 share image', async ({ page, request }) => {
+    await page.goto('/');
+    const ogImage = page.locator('meta[property="og:image"]').first();
+    await expect(ogImage).toHaveAttribute('content', /opengraph-image/);
+    const ogContent = await ogImage.getAttribute('content');
+    expect(ogContent, 'og:image must be absolute').toMatch(/^https?:\/\//);
+
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+      'content',
+      'summary_large_image',
+    );
+    const twitterImage = await page.locator('meta[name="twitter:image"]').first().getAttribute('content');
+    expect(twitterImage, 'twitter:image must not be empty').toBeTruthy();
+    expect(twitterImage).toMatch(/^https?:\/\//);
+
+    const imageResponse = await request.get('/opengraph-image');
+    expect(imageResponse.status()).toBe(200);
+    expect(imageResponse.headers()['content-type']).toMatch(/image\/png/);
+  });
+});

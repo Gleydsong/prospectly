@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CtaButton } from '@/components/ui/cta-button';
 import { HOME_LANGUAGE_ALTERNATES } from '@/lib/document-locale';
+import { landingOpenGraph } from '@/lib/landing-og';
 import { t } from '@/lib/i18n';
 import { enterExplainerUrl } from '@/lib/pricing';
 
@@ -14,11 +15,11 @@ export const metadata: Metadata = {
     canonical: '/en',
     languages: HOME_LANGUAGE_ALTERNATES,
   },
-  openGraph: {
+  openGraph: landingOpenGraph({
     title,
     description,
     locale: 'en_US',
-  },
+  }),
 };
 
 export default function EnHomePage() {
