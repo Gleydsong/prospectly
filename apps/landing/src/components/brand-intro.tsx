@@ -7,11 +7,11 @@ import { motion, useAnimationControls, useReducedMotion } from 'motion/react';
 const INTRO_SESSION_KEY = 'prospectly-brand-intro-seen';
 const LOGO_SRC = '/brand/prospectly-mark-v2.svg';
 
-type BrandIntroProps = {
-  onComplete: () => void;
-};
+function markLandingIntroComplete() {
+  document.querySelector('.landing-v2')?.setAttribute('data-brand-intro-state', 'complete');
+}
 
-export function BrandIntro({ onComplete }: BrandIntroProps) {
+export function BrandIntro() {
   const controls = useAnimationControls();
   const reducedMotion = useReducedMotion();
   const completedRef = useRef(false);
@@ -29,7 +29,7 @@ export function BrandIntro({ onComplete }: BrandIntroProps) {
       document.body.style.overflow = previousOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
       setVisible(false);
-      onComplete();
+      markLandingIntroComplete();
     };
 
     const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
@@ -73,7 +73,7 @@ export function BrandIntro({ onComplete }: BrandIntroProps) {
       document.body.style.overflow = previousOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [controls, onComplete, reducedMotion]);
+  }, [controls, reducedMotion]);
 
   if (!visible) return null;
 

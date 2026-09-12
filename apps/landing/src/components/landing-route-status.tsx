@@ -5,7 +5,8 @@ import type { ReactNode } from 'react';
 import { ArrowRight } from '@phosphor-icons/react';
 
 import { CookieBanner } from '@/components/cookie-banner';
-import { V2Footer, V2Header } from '@/components/landing-v2';
+import { V2Footer } from '@/components/landing-v2-footer';
+import { V2Header } from '@/components/landing-v2-header';
 import { LANDING_ROUTE_STATUS } from '@/lib/landing-route-status';
 import type { Locale } from '@/lib/i18n';
 
