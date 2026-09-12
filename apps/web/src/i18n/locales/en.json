@@ -886,7 +886,15 @@
       "YELP": "Yelp",
       "REFERRAL": "Referral",
       "OTHER": "Other"
-    }
+    },
+    "savedTitle": "Saved reports",
+    "savedDesc": "Named recortes for the organization. Totals are re-read in the current window; this is not a Vista or the Principal.",
+    "savedName": "Saved report name",
+    "savedCreate": "Save Relatório salvo",
+    "savedEmpty": "No saved reports yet.",
+    "savedLoadError": "Could not load saved reports.",
+    "savedArchive": "Archive",
+    "savedClear": "Open without saving"
   },
   "workflows": {
     "title": "Flows",

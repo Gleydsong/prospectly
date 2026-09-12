@@ -1,12 +1,16 @@
 # Reports
 
-O contexto de Reports lê fatos duráveis já persistidos e mostra conversão do funil para a organização da sessão. Não guarda um Relatório persistido e não muta estado comercial.
+O contexto de Reports lê fatos duráveis já persistidos e mostra conversão do funil para a organização da sessão. Relatório salvo guarda só o recorte nomeado; os totais continuam efémeros na leitura.
 
 ## Language
 
 **Relatórios**:
 A área de produto que agrega DomainEvents da organização numa janela rolling. Não é a Principal, a Vista, o Fluxo nem a Cadência.
 _Avoid_: Dashboard, SavedView, Workflow, Campaign, cubo OLAP
+
+**Relatório salvo**:
+Recorte nomeado (período, origem opcional, dono opcional) pertencente à organização. Toda a org com ACL de Relatórios lê. Não persiste totais. Distinto de Vista salva e da Principal.
+_Avoid_: SavedView, snapshot, cubo, CSV
 
 **Conversão do funil**:
 Contagem de `leadId` distintos que, na janela, tiveram `lead.stage_changed` classificado como ganho ou perda. Eventos `schemaVersion` ≥ 2 usam `toStageIsWon`/`toStageIsLost` congelados no fato. Eventos v1 usam `PipelineStage.isWon`/`isLost` **agora**.
@@ -29,3 +33,4 @@ _Avoid_: Vista salva, CSV, funil etapa-a-etapa
 - `doNotContact` não apaga ganho/perda já ocorridos. Lead apagado (`deletedAt`) não entra.
 - Reclassificar `isWon`/`isLost` só reescreve eventos v1. Eventos v2 mantêm o snapshot do fato. Sem backfill.
 - Clique num balde (entradas, ganhos, perdas, ou célula de origem) abre Clientes com os mesmos `leadId` distintos; não grava Vista. Balde vazio não navega.
+- Relatório salvo guarda o recorte, não os totais. Abrir um salvo relê OutboxEvent na janela rolling actual. Unique de nome activo é case-insensitive por organização.

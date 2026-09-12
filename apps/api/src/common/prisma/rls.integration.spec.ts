@@ -45,6 +45,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const customFieldB = randomUUID();
   const organizationFlagA = randomUUID();
   const organizationFlagB = randomUUID();
+  const savedReportA = randomUUID();
+  const savedReportB = randomUUID();
   const googleConnectionA = randomUUID();
   const googleConnectionB = randomUUID();
   const syncedCommunicationA = randomUUID();
@@ -154,6 +156,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${organizationFlagB}, ${orgB}, 'saved_report', false, NOW(), NOW())
       `;
       await tx.$executeRaw`
+        INSERT INTO "SavedReport"
+          (id, "organizationId", "ownerId", name, "nameNormalized", definition, "createdAt", "updatedAt")
+        VALUES
+          (${savedReportA}, ${orgA}, ${userA}, '30d A', '30d a', '{"period":"30d"}'::jsonb, NOW(), NOW()),
+          (${savedReportB}, ${orgB}, ${userB}, '30d B', '30d b', '{"period":"30d"}'::jsonb, NOW(), NOW())
+      `;
+      await tx.$executeRaw`
         INSERT INTO "GoogleConnection"
           (id, "organizationId", "userId", "googleSubject", "googleEmail", "refreshTokenEncrypted", scopes, "connectedAt", "createdAt", "updatedAt")
         VALUES
@@ -182,6 +191,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       );
       await tx.$executeRawUnsafe(
         `DELETE FROM "GoogleConnection" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "SavedReport" WHERE "organizationId" IN ($1, $2)`,
         orgA,
         orgB,
       );
@@ -427,6 +441,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
             (id, "organizationId", key, enabled, "createdAt", "updatedAt")
           VALUES
             (${foreignFlagId}, ${orgB}, 'leaked_key', true, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('isolates saved reports by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "SavedReport" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: savedReportA }]);
+  });
+
+  it('rejects a cross-tenant saved report insert', async () => {
+    const foreignReportId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "SavedReport"
+            (id, "organizationId", "ownerId", name, "nameNormalized", definition, "createdAt", "updatedAt")
+          VALUES
+            (${foreignReportId}, ${orgB}, ${userA}, 'Leaked', 'leaked', '{"period":"7d"}'::jsonb, NOW(), NOW())
         `;
       }),
     ).rejects.toThrow();

@@ -886,7 +886,15 @@
       "YELP": "Yelp",
       "REFERRAL": "Indicação",
       "OTHER": "Outro"
-    }
+    },
+    "savedTitle": "Relatórios salvos",
+    "savedDesc": "Recortes nomeados da organização. Os totais são relidos na janela actual; não é Vista nem Principal.",
+    "savedName": "Nome do Relatório salvo",
+    "savedCreate": "Guardar Relatório salvo",
+    "savedEmpty": "Nenhum Relatório salvo ainda.",
+    "savedLoadError": "Não foi possível carregar os Relatórios salvos.",
+    "savedArchive": "Arquivar",
+    "savedClear": "Abrir sem gravar"
   },
   "workflows": {
     "title": "Fluxos",
