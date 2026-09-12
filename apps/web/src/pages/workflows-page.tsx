@@ -361,7 +361,7 @@ export function WorkflowsPage() {
             id="workflow-name"
             label={t('workflows.fields.name')}
             {...form.register('name')}
-            autoFocus
+            data-dialog-initial-focus
           />
           {form.formState.errors.name ? (
             <p className="text-xs text-red-400">{form.formState.errors.name.message}</p>

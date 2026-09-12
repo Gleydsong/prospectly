@@ -3,10 +3,12 @@ module.exports = {
   env: { browser: true, es2022: true },
   parser: '@typescript-eslint/parser',
   parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
-  plugins: ['@typescript-eslint', 'react-hooks'],
+  plugins: ['@typescript-eslint', 'react-hooks', 'jsx-a11y'],
+  // #222: recommended jsx-a11y is the chosen set — new violations fail CI.
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
+    'plugin:jsx-a11y/recommended',
     'prettier',
   ],
   rules: {

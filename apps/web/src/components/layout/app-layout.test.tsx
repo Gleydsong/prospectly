@@ -115,4 +115,13 @@ describe('AppLayout shell', () => {
     expect(document.getElementById('mobile-nav')).toHaveAttribute('aria-hidden', 'false');
     expect(window.localStorage.getItem('prospectly:sidebar-collapsed')).toBe('0');
   });
+
+  it('skip link targets the main landmark', () => {
+    mockMatchMedia(true);
+    renderLayout();
+    const skip = screen.getByRole('link', { name: /pular para o conteúdo principal|skip to main content/i });
+    expect(skip).toHaveAttribute('href', '#conteudo-principal');
+    const main = document.getElementById('conteudo-principal');
+    expect(main?.tagName).toBe('MAIN');
+  });
 });
