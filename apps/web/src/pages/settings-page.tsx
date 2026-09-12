@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { changeEmail, getProfile, updateProfile } from '@/features/auth/api';
 import { canManageOrg } from '@/features/settings/can-manage-org';
 import { IntegrationsSettingsCard } from '@/features/settings/integrations-settings-card';
+import { OrganizationFlagsCard } from '@/features/settings/organization-flags-card';
 import { GoogleConnectionSettingsCard } from '@/features/google-connections/google-connection-settings-card';
 import {
   fetchOrgGoogleConnections,
@@ -364,6 +365,8 @@ export function SettingsPage() {
             ) : null}
           </CardContent>
         </Card>
+
+        <OrganizationFlagsCard canManage={manage} emailVerified={emailVerified} />
 
         <Card>
           <CardHeader

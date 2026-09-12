@@ -3,6 +3,7 @@
 ## Contextos
 
 - [Billing](./docs/domain/billing/CONTEXT.md): vende créditos e acesso mensal para organizações e mantém o histórico financeiro desses benefícios
+- [Organization flags](./docs/domain/organization-flags/CONTEXT.md): liga ou desliga capacidades ainda não globais na organização da sessão
 - [Events](./docs/domain/events/CONTEXT.md): registra fatos duráveis do domínio comercial e o estado de entrega desses fatos
 - [Views](./docs/domain/views/CONTEXT.md): guarda listas inteligentes da organização sobre clientes potenciais
 - [Workflows](./docs/domain/workflows/CONTEXT.md): guarda Fluxos da organização que reagem a DomainEvents com definição allowlisted
@@ -18,6 +19,8 @@
 - **Agents → Leads**: avalia sinais técnicos (WebsiteAnalysis), dados de contato e DNC para sugerir ações e gerar mensagens
 - **Agents → Pipelines**: o copiloto pode aplicar transição de estágio e registrar avanços após contato confirmado
 - **Agents → Tasks**: inspeciona tarefas atrasadas e permite agendamento direto de follow-ups
+- **Organization flags → Organizations**: cada flag pertence à organização da sessão; nunca chega `organizationId` do cliente
+- **Organization flags ↛ Billing**: flag de organização não é plano nem entitlement
 - **Billing → Organizations**: benefícios adquiridos pertencem a uma organização, independentemente da pessoa que realizou o pagamento
 - **Billing → Usage**: o saldo adquirido financia o uso de funcionalidades cobradas por créditos
 - **Events → Organizations**: cada DomainEvent pertence à organização da sessão; nunca chega `organizationId` do cliente
