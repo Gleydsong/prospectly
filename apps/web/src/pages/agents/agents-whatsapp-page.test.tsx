@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import userEvent from '@testing-library/user-event';
 import type { PropsWithChildren } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -11,6 +12,8 @@ import { AgentsWhatsappPage } from './agents-whatsapp-page';
 const mocks = vi.hoisted(() => ({
   useWhatsappVariants: vi.fn(),
   recordOutreachMutateAsync: vi.fn(),
+  useWhatsappFirstMessage: vi.fn(),
+  useMessageTemplates: vi.fn(),
 }));
 
 vi.mock('@/features/agents/hooks', () => ({
@@ -19,12 +22,7 @@ vi.mock('@/features/agents/hooks', () => ({
     mutateAsync: mocks.recordOutreachMutateAsync,
     isPending: false,
   }),
-  useWhatsappFirstMessage: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    error: null,
-  }),
+  useWhatsappFirstMessage: (...args: unknown[]) => mocks.useWhatsappFirstMessage(...args),
 }));
 
 vi.mock('@/features/pipeline/api', () => ({
@@ -32,10 +30,7 @@ vi.mock('@/features/pipeline/api', () => ({
 }));
 
 vi.mock('@/features/campaigns/hooks', () => ({
-  useMessageTemplates: () => ({
-    data: { data: [] },
-    isLoading: false,
-  }),
+  useMessageTemplates: (...args: unknown[]) => mocks.useMessageTemplates(...args),
 }));
 
 vi.mock('@/features/leads/api', () => ({
@@ -108,6 +103,16 @@ function Wrapper({
 describe('AgentsWhatsappPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.useWhatsappFirstMessage.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+    mocks.useMessageTemplates.mockReturnValue({
+      data: { data: [] },
+      isLoading: false,
+    });
     mocks.useWhatsappVariants.mockImplementation((_leadId?: string, _count?: number, seed = 0) => ({
       data: variantPack(seed),
       isLoading: false,
@@ -198,6 +203,82 @@ describe('AgentsWhatsappPage', () => {
           leadId: 'lead-1',
           sequenceStage: 'FOLLOW_UP_1',
         }),
+      );
+    });
+  });
+
+  it('fills preview from the first variant without extra variant fetches', async () => {
+    render(
+      <Wrapper>
+        <AgentsWhatsappPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId('whatsapp-preview')).toHaveValue(
+      'Olá! Vi o Salão Resenha em Recife.',
+    );
+
+    await act(async () => {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 40);
+      });
+    });
+    const callsAfterSettle = mocks.useWhatsappVariants.mock.calls.length;
+    await act(async () => {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 40);
+      });
+    });
+    expect(mocks.useWhatsappVariants.mock.calls.length).toBe(callsAfterSettle);
+  });
+
+  it('does not sync template, variant, preview or stage through effects', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { dirname, join } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'agents-whatsapp-page.tsx'),
+      'utf8',
+    );
+
+    expect(source.match(/\buseEffect\(/g)?.length ?? 0).toBe(1);
+    expect(source).toContain('setLeadSearch');
+    expect(source).toContain("from '@/features/agents/whatsapp-compose'");
+  });
+
+  it('updates preview when a saved template is chosen', async () => {
+    const user = userEvent.setup();
+    mocks.useMessageTemplates.mockReturnValue({
+      data: {
+        data: [{ id: 'wa-1', name: 'Abertura', category: 'WHATSAPP', body: 'unused' }],
+      },
+      isLoading: false,
+    });
+    mocks.useWhatsappFirstMessage.mockImplementation((_leadId?: string, templateId?: string) => ({
+      data:
+        templateId === 'wa-1'
+          ? { body: 'Olá {{contactName}}, vi a {{companyName}}.', digits: '5581987950071' }
+          : undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    }));
+
+    render(
+      <Wrapper>
+        <AgentsWhatsappPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId('whatsapp-preview')).toHaveValue(
+      'Olá! Vi o Salão Resenha em Recife.',
+    );
+
+    await user.click(screen.getByRole('button', { name: /usar modelo salvo/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('whatsapp-preview')).toHaveValue(
+        'Olá {{contactName}}, vi a {{companyName}}.',
       );
     });
   });
