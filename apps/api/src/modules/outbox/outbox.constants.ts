@@ -2,7 +2,7 @@ export const OUTBOX_QUEUE = 'outbox';
 export const PUBLISH_OUTBOX_JOB = 'publish-outbox-event';
 
 export const LEAD_STAGE_CHANGED_TYPE = 'lead.stage_changed';
-export const LEAD_STAGE_CHANGED_SCHEMA_VERSION = 1;
+export const LEAD_STAGE_CHANGED_SCHEMA_VERSION = 2;
 export const LEAD_CREATED_TYPE = 'lead.created';
 export const LEAD_CREATED_SCHEMA_VERSION = 1;
 export const LEAD_DO_NOT_CONTACT_SET_TYPE = 'lead.do_not_contact_set';
@@ -35,6 +35,8 @@ export type LeadStageChangedPayload = {
   toStageId: string;
   fromStageName: string | null;
   toStageName: string;
+  toStageIsWon: boolean;
+  toStageIsLost: boolean;
 };
 
 export type LeadCreatedPayload = {

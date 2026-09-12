@@ -278,7 +278,7 @@ export class OutboxService {
     });
 
     try {
-      this.assertPayload(event.type, event.payload);
+      this.assertPayload(event.type, event.payload, event.schemaVersion ?? 1);
       await this.prisma.outboxEvent.updateMany({
         where: { id: eventId },
         data: {
@@ -324,13 +324,14 @@ export class OutboxService {
   private assertPayload(
     type: string,
     payload: Prisma.JsonValue,
+    schemaVersion: number,
   ):
     | LeadStageChangedPayload
     | LeadCreatedPayload
     | LeadDoNotContactSetPayload
     | TaskCompletedPayload {
     if (type === LEAD_STAGE_CHANGED_TYPE) {
-      return this.assertLeadStageChangedPayload(payload);
+      return this.assertLeadStageChangedPayload(payload, schemaVersion);
     }
     if (type === LEAD_CREATED_TYPE) {
       return this.assertLeadCreatedPayload(payload);
@@ -382,17 +383,31 @@ export class OutboxService {
     };
   }
 
-  private assertLeadStageChangedPayload(payload: Prisma.JsonValue): LeadStageChangedPayload {
+  private assertLeadStageChangedPayload(
+    payload: Prisma.JsonValue,
+    schemaVersion: number,
+  ): LeadStageChangedPayload {
     const record = this.assertObjectPayload(payload);
     if (typeof record.leadId !== 'string' || typeof record.toStageId !== 'string') {
       throw new Error('Invalid outbox payload');
     }
-    return {
+    const base = {
       leadId: record.leadId,
       fromStageId: typeof record.fromStageId === 'string' ? record.fromStageId : null,
       toStageId: record.toStageId,
       fromStageName: typeof record.fromStageName === 'string' ? record.fromStageName : null,
       toStageName: typeof record.toStageName === 'string' ? record.toStageName : '',
+    };
+    if (schemaVersion < 2) {
+      return { ...base, toStageIsWon: false, toStageIsLost: false };
+    }
+    if (typeof record.toStageIsWon !== 'boolean' || typeof record.toStageIsLost !== 'boolean') {
+      throw new Error('Invalid outbox payload');
+    }
+    return {
+      ...base,
+      toStageIsWon: record.toStageIsWon,
+      toStageIsLost: record.toStageIsLost,
     };
   }
 

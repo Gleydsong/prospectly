@@ -9,7 +9,7 @@ A área de produto que agrega DomainEvents da organização numa janela rolling.
 _Avoid_: Dashboard, SavedView, Workflow, Campaign, cubo OLAP
 
 **Conversão do funil**:
-Contagem de `leadId` distintos que, na janela, tiveram `lead.stage_changed` para uma etapa cujo `PipelineStage.isWon` ou `isLost` está verdadeiro **agora**.
+Contagem de `leadId` distintos que, na janela, tiveram `lead.stage_changed` classificado como ganho ou perda. Eventos `schemaVersion` ≥ 2 usam `toStageIsWon`/`toStageIsLost` congelados no fato. Eventos v1 usam `PipelineStage.isWon`/`isLost` **agora**.
 _Avoid_: snapshot de `Lead.status`, taxa da Principal (`won / (won + lost)` com `createdAt` no período)
 
 **Entrada**:
@@ -27,5 +27,5 @@ _Avoid_: Vista salva, CSV, funil etapa-a-etapa
 - Taxa = ganhos distintos / união (ganhou ou perdeu pelo menos uma vez). Lead que ganhou e perdeu: wins=1, losses=1, union=1, winRate=100.
 - `organizationId` só da sessão. VIEWER lê. Filtro de dono é opcional; SALES pode abrir já filtrado em si.
 - `doNotContact` não apaga ganho/perda já ocorridos. Lead apagado (`deletedAt`) não entra.
-- Reclassificar `isWon`/`isLost` reescreve o passado do relatório. Congelar flags no payload do evento é trabalho futuro.
+- Reclassificar `isWon`/`isLost` só reescreve eventos v1. Eventos v2 mantêm o snapshot do fato. Sem backfill.
 - Clique num balde (entradas, ganhos, perdas, ou célula de origem) abre Clientes com os mesmos `leadId` distintos; não grava Vista. Balde vazio não navega.

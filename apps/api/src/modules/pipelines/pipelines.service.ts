@@ -166,6 +166,8 @@ export class PipelinesService {
           toStageId: stageId,
           fromStageName: lead.stage?.name ?? null,
           toStageName: stage.name,
+          toStageIsWon: stage.isWon,
+          toStageIsLost: stage.isLost,
         },
       });
       return [moved, event] as const;

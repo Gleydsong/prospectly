@@ -74,6 +74,30 @@ function payloadString(payload: unknown, key: string): string | null {
   return typeof value === 'string' && value ? value : null;
 }
 
+function payloadBoolean(payload: unknown, key: string): boolean | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const value = (payload as Record<string, unknown>)[key];
+  return typeof value === 'boolean' ? value : null;
+}
+
+function stageChangedOutcome(
+  event: { schemaVersion?: number | null; payload: unknown },
+  wonStageIds: Set<string>,
+  lostStageIds: Set<string>,
+): { won: boolean; lost: boolean } {
+  if ((event.schemaVersion ?? 1) >= 2) {
+    return {
+      won: payloadBoolean(event.payload, 'toStageIsWon') === true,
+      lost: payloadBoolean(event.payload, 'toStageIsLost') === true,
+    };
+  }
+  const toStageId = payloadString(event.payload, 'toStageId');
+  return {
+    won: Boolean(toStageId && wonStageIds.has(toStageId)),
+    lost: Boolean(toStageId && lostStageIds.has(toStageId)),
+  };
+}
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -156,7 +180,7 @@ export class ReportsService {
           retainUntil: { gte: now },
           type: { in: [LEAD_CREATED_TYPE, LEAD_STAGE_CHANGED_TYPE] },
         },
-        select: { type: true, payload: true, createdAt: true, retainUntil: true },
+        select: { type: true, payload: true, createdAt: true, retainUntil: true, schemaVersion: true },
       }),
     ]);
     const inWindow = events.filter((event) => {
@@ -216,11 +240,12 @@ export class ReportsService {
       if (event.type === LEAD_STAGE_CHANGED_TYPE) {
         const toStageId = payloadString(event.payload, 'toStageId');
         if (!toStageId) continue;
-        if (wonStageIds.has(toStageId)) {
+        const outcome = stageChangedOutcome(event, wonStageIds, lostStageIds);
+        if (outcome.won) {
           winIds.add(leadId);
           sourceBucket(lead.source).wins.add(leadId);
         }
-        if (lostStageIds.has(toStageId)) {
+        if (outcome.lost) {
           lossIds.add(leadId);
           sourceBucket(lead.source).losses.add(leadId);
         }
