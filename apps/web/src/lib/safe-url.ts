@@ -84,7 +84,7 @@ export function sanitizeTelHref(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const trimmed = raw.trim();
   if (!trimmed || /[?#&<>"'\\]/.test(trimmed)) return null;
-  if (!/^[+\d][\d\s().-]*$/.test(trimmed)) return null;
+  if (!/^[+\d(][\d\s().-]*$/.test(trimmed)) return null;
   const normalized = trimmed.replace(/[^\d+]/g, '');
   const digits = normalized.replace(/\D/g, '');
   if (digits.length < 8) return null;

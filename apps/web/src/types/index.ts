@@ -86,6 +86,7 @@ export interface LeadListItem {
   city?: string | null;
   email?: string | null;
   phone?: string | null;
+  whatsapp?: string | null;
   website?: string | null;
   domain?: string | null;
   status: LeadStatus;

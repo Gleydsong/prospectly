@@ -27,7 +27,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-/** Nav horizontal estilo Facilitey (Principal / Clientes / Conversas / Ferramentas / Suporte). */
+/** Navegação principal do shell autenticado. */
 export const TOP_NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.principal', icon: Home },
   { to: '/leads', labelKey: 'nav.clientes', icon: Users },
@@ -100,4 +100,13 @@ export function routeTitleKey(pathname: string): string | undefined {
 export function isTopNavActive(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/';
   return pathname === to || pathname.startsWith(`${to}/`);
+}
+
+const PRIMARY_PATHS = new Set(TOP_NAV_ITEMS.map((item) => item.to));
+
+export function secondaryNavGroups(): NavGroup[] {
+  return NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !PRIMARY_PATHS.has(item.to)),
+  })).filter((group) => group.items.length > 0);
 }

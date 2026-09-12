@@ -33,7 +33,7 @@ export function AgentsPage() {
           <Skeleton className="h-40" />
         </div>
       ) : catalog.isError ? (
-        <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+        <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]" role="alert">
           {getApiErrorMessage(catalog.error) ?? t('agents.loadError')}
         </p>
       ) : (
@@ -44,10 +44,14 @@ export function AgentsPage() {
               <Card key={agent.id}>
                 <CardHeader
                   title={t(`agents.catalog.${agent.id}.name`, { defaultValue: agent.name })}
-                  action={<Icon className="h-5 w-5 text-brand-300" aria-hidden />}
+                  action={
+                    <span className="flex h-9 w-9 items-center justify-center rounded-control bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
+                      <Icon className="h-4 w-4" aria-hidden />
+                    </span>
+                  }
                 />
                 <CardContent className="space-y-6">
-                  <p className="text-sm text-[color:var(--ink-muted)]">
+                  <p className="text-sm text-[color:var(--ink-secondary)]">
                     {t(`agents.catalog.${agent.id}.description`, {
                       defaultValue: agent.description,
                     })}

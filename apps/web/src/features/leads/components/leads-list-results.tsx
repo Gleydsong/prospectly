@@ -1,21 +1,127 @@
-import { Link } from 'react-router-dom';
-import { Globe, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Globe, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Alert } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  ClientDenseList,
+  ClientDenseRow,
+  type ClientDenseRowMenuItem,
+} from '@/components/ui/client-dense-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { Pagination } from '@/components/ui/pagination';
-import { ScoreBadge } from '@/components/ui/score-badge';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import type { CustomFieldDefinition } from '@/features/custom-fields/api';
 import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
-import type { LeadViewColumnKey, LeadViewLayout } from '@/features/saved-views/lead-filter';
+import {
+  isBuiltinLeadViewColumn,
+  type LeadViewColumnKey,
+  type LeadViewLayout,
+} from '@/features/saved-views/lead-filter';
+import {
+  buildWhatsAppLink,
+  hasLikelyWhatsApp,
+  preferredContactChannel,
+} from '@/lib/brazilian-phone';
 import type { LeadListItem } from '@/types';
 
-import { LeadColumnValue, leadColumnLabel, leadDetailPath } from './lead-column-value';
+import { LeadColumnValue, leadDetailPath } from './lead-column-value';
 import { LeadsKanban } from './leads-kanban';
+
+function LeadListDenseRow({
+  lead,
+  columns,
+  fields,
+  deleting,
+  onOpen,
+  onDelete,
+}: {
+  lead: LeadListItem;
+  columns: LeadViewColumnKey[];
+  fields: CustomFieldDefinition[];
+  deleting: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
+  const likelyWhatsApp =
+    !lead.doNotContact && hasLikelyWhatsApp({ phone: lead.phone, whatsapp: lead.whatsapp });
+  const channel = preferredContactChannel({
+    phone: lead.phone,
+    email: lead.email,
+    whatsapp: lead.whatsapp,
+  });
+  const whatsappHref = likelyWhatsApp
+    ? buildWhatsAppLink(lead.whatsapp || lead.phone)
+    : null;
+  const subtitle = [
+    lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
+    lead.city,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const customExtras = columns.filter((column) => !isBuiltinLeadViewColumn(column));
+  const menuItems: ClientDenseRowMenuItem[] = [];
+  if (whatsappHref) {
+    menuItems.push({
+      id: 'whatsapp',
+      label: t('clientRow.openWhatsApp'),
+      href: whatsappHref,
+    });
+  }
+  if (lead.phone) {
+    menuItems.push({
+      id: 'copy-phone',
+      label: t('clientRow.copyPhone'),
+      onClick: () => {
+        void navigator.clipboard?.writeText(lead.phone ?? '');
+      },
+    });
+  }
+  menuItems.push({
+    id: 'delete',
+    label: t('leads.deleteClient'),
+    onClick: onDelete,
+    danger: true,
+    disabled: deleting,
+  });
+
+  return (
+    <ClientDenseRow
+      name={lead.companyName}
+      subtitle={subtitle || null}
+      tags={(lead.tags ?? []).map((tag) => ({ id: tag.id, label: tag.name }))}
+      email={lead.email}
+      phone={lead.phone}
+      whatsappHref={whatsappHref}
+      channel={lead.doNotContact ? 'none' : channel}
+      status={<LeadStatusBadge status={lead.status} />}
+      extraBadges={
+        <>
+          {!lead.website ? (
+            <Badge tone="mint" title="Sem website">
+              <Globe className="h-3 w-3" aria-hidden /> sem site
+            </Badge>
+          ) : null}
+          {customExtras.map((column) => (
+            <span key={column} className="text-xs text-[color:var(--ink-secondary)]">
+              <LeadColumnValue column={column} lead={lead} fields={fields} />
+            </span>
+          ))}
+        </>
+      }
+      primaryAction={{
+        label: t('principal.open'),
+        onClick: onOpen,
+      }}
+      menuItems={menuItems}
+      onActivate={onOpen}
+    />
+  );
+}
 
 export function LeadsListResults({
   layout,
@@ -33,7 +139,6 @@ export function LeadsListResults({
   onCreate,
   onDelete,
   newClientLabel,
-  t,
 }: {
   layout: LeadViewLayout;
   leads: LeadListItem[];
@@ -52,6 +157,8 @@ export function LeadsListResults({
   newClientLabel: string;
   t: (key: string) => string;
 }) {
+  const navigate = useNavigate();
+
   if (isLoading || waitingForReportIds) {
     return (
       <div className="p-5">
@@ -103,83 +210,20 @@ export function LeadsListResults({
 
   return (
     <>
-      <ul className="divide-y divide-[color:var(--border)] md:hidden">
+      <ClientDenseList>
         {leads.map((lead) => (
           <li key={lead.id}>
-            <Link
-              to={leadDetailPath(lead.id)}
-              className="flex w-full flex-col gap-2 px-4 py-3.5 hover:bg-[color:var(--surface-hover)]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-[color:var(--ink)]">{lead.companyName}</p>
-                  <p className="text-xs text-[color:var(--ink-muted)]">
-                    {[
-                      lead.city,
-                      lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || '—'}
-                  </p>
-                </div>
-                <ScoreBadge score={lead.score} />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <LeadStatusBadge status={lead.status} />
-                {!lead.website ? (
-                  <Badge tone="amber" title="Sem site">
-                    <Globe className="h-3 w-3" aria-hidden /> sem site
-                  </Badge>
-                ) : null}
-              </div>
-            </Link>
+            <LeadListDenseRow
+              lead={lead}
+              columns={columns}
+              fields={customFields}
+              deleting={deletePendingId === lead.id}
+              onOpen={() => navigate(leadDetailPath(lead.id))}
+              onDelete={() => onDelete(lead.id, lead.companyName)}
+            />
           </li>
         ))}
-      </ul>
-
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[820px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-[color:var(--border)] text-xs uppercase tracking-wide text-[color:var(--ink-muted)]">
-              {columns.map((column) => (
-                <th key={column} scope="col" className="px-5 py-3 font-medium">
-                  {leadColumnLabel(column, customFields, t)}
-                </th>
-              ))}
-              <th scope="col" className="px-5 py-3 font-medium">
-                <span className="sr-only">Ações</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((lead) => (
-              <tr
-                key={lead.id}
-                className="relative border-b border-[color:var(--border)] hover:bg-[color:var(--surface-hover)]"
-              >
-                {columns.map((column) => (
-                  <td key={column} className="px-5 py-3">
-                    <LeadColumnValue column={column} lead={lead} fields={customFields} />
-                  </td>
-                ))}
-                <td className="relative z-10 px-3 py-3 text-right">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                    aria-label={`Apagar cliente ${lead.companyName}`}
-                    loading={deletePendingId === lead.id}
-                    onClick={() => onDelete(lead.id, lead.companyName)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      </ClientDenseList>
       {meta ? (
         <div className="border-t border-[color:var(--border)] px-4 py-3">
           <Pagination

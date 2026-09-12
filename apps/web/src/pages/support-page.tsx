@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react';
+import { Headphones, Send } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,26 +23,23 @@ export function SupportPage() {
     <div className="mx-auto flex min-h-[min(680px,calc(100dvh-10rem))] max-w-2xl items-start justify-center py-6 lg:items-center">
       <Card className="overflow-hidden">
         <CardContent className="p-6 sm:p-8">
-          <div className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-control bg-[color:var(--status-success-bg)] text-[color:var(--status-success-ink)]">
-            <span className="text-lg font-bold" aria-hidden>
-              ?
-            </span>
+          <div className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-control bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
+            <Headphones className="h-5 w-5" aria-hidden />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">
             {t('support.title')}
           </h1>
-          <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-muted)]">{t('support.subtitle')}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+            {t('support.subtitle')}
+          </p>
           {supportMailto ? (
-            <a
-              href={supportMailto}
-              className="mt-2 inline-block text-sm font-medium text-brand-400 hover:text-brand-300"
-            >
+            <a href={supportMailto} className="link-brand mt-2 inline-block text-sm font-medium">
               {SUPPORT_EMAIL}
             </a>
           ) : null}
 
           {sent ? (
-            <p className="mt-8 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-hover)] px-4 py-3 text-sm text-[color:var(--ink)]">
+            <p className="mt-8 rounded-control border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] px-4 py-3 text-sm text-[color:var(--ink)]">
               {t('support.sent', { email: SUPPORT_EMAIL })}
             </p>
           ) : (
@@ -81,14 +78,16 @@ export function SupportPage() {
                 className="min-h-[140px]"
               />
               {error ? (
-                <p className="text-sm text-red-400" role="alert">
+                <p className="text-sm text-[color:var(--status-danger-ink)]" role="alert">
                   {error}
                 </p>
               ) : null}
-              <Button type="submit" size="lg">
-                <Send className="h-4 w-4" aria-hidden />
-                {t('support.submit')}
-              </Button>
+              <div className="flex justify-center pt-1">
+                <Button type="submit" size="lg">
+                  <Send className="h-4 w-4" aria-hidden />
+                  {t('support.submit')}
+                </Button>
+              </div>
             </form>
           )}
         </CardContent>

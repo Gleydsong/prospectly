@@ -69,6 +69,7 @@ describe('sanitizeMailtoHref', () => {
 describe('sanitizeTelHref', () => {
   it('allows a typical Brazilian mobile number', () => {
     expect(sanitizeTelHref('+55 (19) 99887-7666')).toBe('tel:+5519998877666');
+    expect(sanitizeTelHref('(11) 3234-5678')).toBe('tel:1132345678');
   });
 
   it('rejects javascript and query injection', () => {

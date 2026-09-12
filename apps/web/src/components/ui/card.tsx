@@ -5,10 +5,10 @@ import { cn } from '@/lib/utils';
 type Surface = 'default' | 'elevated' | 'bento' | 'accent';
 
 const surfaces: Record<Surface, string> = {
-  default: 'rounded-panel border-[color:var(--border)] bg-[color:var(--surface-card)] shadow-panel',
-  elevated: 'rounded-panel border-[color:var(--border-strong)] bg-[color:var(--surface-card)] shadow-elevated',
-  bento: 'surface-bento rounded-bento border-[color:var(--border)] shadow-elevated',
-  accent: 'surface-bento surface-bento-accent rounded-bento border-[color:var(--border-strong)] shadow-elevated',
+  default: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-panel',
+  elevated: 'rounded-card border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] shadow-panel',
+  bento: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-panel',
+  accent: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--brand-well)] shadow-panel',
 };
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
@@ -45,13 +45,15 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'flex flex-col gap-3 border-b border-[color:var(--border)] p-5 sm:flex-row sm:items-start sm:justify-between',
+        'flex flex-col gap-3 border-b border-[color:var(--border-default)] p-4 sm:flex-row sm:items-start sm:justify-between',
         className,
       )}
     >
       <div className="min-w-0">
-        <h3 className="text-base font-bold tracking-tight text-[color:var(--ink)]">{title}</h3>
-        {description ? <p className="mt-0.5 text-sm text-[color:var(--ink-muted)]">{description}</p> : null}
+        <h3 className="text-base font-semibold tracking-tight text-[color:var(--ink)]">{title}</h3>
+        {description ? (
+          <p className="mt-0.5 text-sm text-[color:var(--ink-secondary)]">{description}</p>
+        ) : null}
       </div>
       {action ? <div className="w-full shrink-0 sm:w-auto">{action}</div> : null}
     </div>
@@ -59,5 +61,5 @@ export function CardHeader({
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-5', className)} {...props} />;
+  return <div className={cn('p-4', className)} {...props} />;
 }

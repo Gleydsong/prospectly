@@ -440,6 +440,11 @@ describe('SearchPage', () => {
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
     expect(screen.getByText('Sem site')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /99863/ })).toHaveAttribute(
+      'href',
+      'https://wa.me/81998639994',
+    );
+    expect(screen.getByText('WhatsApp (celular)')).toBeInTheDocument();
 
     await user.click(screen.getAllByRole('button', { name: 'Enviar para CRM' })[0]!);
 
@@ -447,6 +452,59 @@ describe('SearchPage', () => {
       searchId: 'search-1',
       resultIds: ['result-1'],
     });
+  });
+
+  it('does not offer WhatsApp for a landline result', async () => {
+    const user = userEvent.setup();
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    mocks.useSearchResults.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'result-landline',
+            data: {
+              externalId: 'node/2',
+              companyName: 'Cartório Central',
+              city: 'São Paulo',
+              state: 'SP',
+              country: 'BR',
+              phone: '(11) 3234-5678',
+              email: 'contato@cartorio.test',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'WEBSITE_FOUND',
+              website: 'https://cartorio.test',
+            },
+            normalizedData: {
+              externalId: 'node/2',
+              companyName: 'Cartório Central',
+              city: 'São Paulo',
+              state: 'SP',
+              country: 'BR',
+              phone: '(11) 3234-5678',
+              email: 'contato@cartorio.test',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'WEBSITE_FOUND',
+              website: 'https://cartorio.test',
+            },
+            websitePresence: 'WEBSITE_FOUND',
+            importedLeadId: null,
+            createdAt: '2026-07-22T10:00:00.000Z',
+          },
+        ],
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    expect(screen.queryByText('WhatsApp (celular)')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /3234/ })).toHaveAttribute('href', 'tel:1132345678');
+    expect(screen.getAllByText('E-mail').length).toBeGreaterThan(0);
   });
 
   it('renders "Selecione o estado" placeholder for city when no region is picked', () => {

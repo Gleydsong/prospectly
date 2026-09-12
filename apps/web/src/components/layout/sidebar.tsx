@@ -1,86 +1,169 @@
-import { X } from 'lucide-react';
+import { PanelLeftClose, X } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
-import { NAV_GROUPS } from './nav-items';
+import { useAuthStore } from '@/stores/auth.store';
+import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
+import { secondaryNavGroups, TOP_NAV_ITEMS } from './nav-items';
+import { UserAvatar } from './user-avatar';
 
-export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function Sidebar({
+  open,
+  onClose,
+  isDesktop,
+  collapsed,
+  onCollapse,
+}: {
+  open: boolean;
+  onClose: () => void;
+  isDesktop: boolean;
+  collapsed: boolean;
+  onCollapse: () => void;
+}) {
   const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const expanded = isDesktop ? !collapsed : open;
+  const secondary = secondaryNavGroups();
+
+  useEffect(() => {
+    if (open && !isDesktop) {
+      closeRef.current?.focus();
+    }
+  }, [open, isDesktop]);
 
   return (
     <>
-      {open ? (
+      {open && !isDesktop ? (
         <button
-          className="fixed inset-0 z-30 bg-[var(--chrome-overlay)] backdrop-blur-sm lg:hidden"
+          type="button"
+          className="fixed inset-0 z-30 bg-[var(--chrome-overlay)] lg:hidden"
           onClick={onClose}
           aria-label={t('nav.closeMenu')}
         />
       ) : null}
       <aside
+        id="mobile-nav"
+        aria-hidden={!expanded}
+        {...(!expanded ? { inert: '' } : {})}
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/[0.08] bg-[var(--chrome-sidebar)] backdrop-blur-xl transition-transform lg:translate-x-0',
-          open ? 'translate-x-0' : '-translate-x-full',
+          'fixed inset-y-0 left-0 z-40 flex w-sidebar flex-col border-r border-[color:var(--border-default)] bg-[color:var(--bg-sidebar)] transition-transform duration-200 motion-reduce:transition-none',
+          expanded ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-5">
-          <NavLink to="/" className="flex items-center gap-2.5" onClick={onClose}>
-            <span className="cta-glass flex h-8 w-8 items-center justify-center rounded-control text-sm font-semibold">
-              P
-            </span>
-            <span className="text-lg font-bold tracking-tight text-zinc-50">Prospectly</span>
-          </NavLink>
-          <button
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control text-zinc-400 hover:bg-white/[0.06] hover:text-zinc-100 lg:hidden"
+        <div className="flex h-14 items-center justify-between gap-2 border-b border-[color:var(--border-default)] px-4">
+          <NavLink
+            to="/"
+            aria-label="Prospectly"
+            className="inline-flex min-w-0 items-center gap-0 text-[15px] font-semibold tracking-tight text-[color:var(--ink)]"
             onClick={onClose}
-            aria-label={t('nav.closeMenu')}
           >
-            <X className="h-5 w-5" />
-          </button>
+            <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
+            <span className="-ml-0.5 truncate leading-none">rospectly</span>
+          </NavLink>
+          {isDesktop ? (
+            <button
+              type="button"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]"
+              onClick={onCollapse}
+              aria-label={t('nav.hideSidebar')}
+              title={t('nav.hideSidebar')}
+            >
+              <PanelLeftClose className="h-5 w-5" aria-hidden />
+            </button>
+          ) : (
+            <button
+              ref={closeRef}
+              type="button"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]"
+              onClick={onClose}
+              aria-label={t('nav.closeMenu')}
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label="Navigation">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.labelKey} className="space-y-1">
-              <p className="px-3 pb-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-500">
+        <nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
+          <div className="space-y-0.5">
+            {TOP_NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                onClick={onClose}
+                tabIndex={expanded ? undefined : -1}
+                className={({ isActive }) =>
+                  cn(
+                    'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-[color:var(--bg-nav-active)] font-semibold text-[color:var(--brand-hover)]'
+                      : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]',
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <item.icon
+                      className={cn(
+                        'h-4 w-4',
+                        isActive ? 'text-[color:var(--brand)]' : 'text-[color:var(--ink-muted)]',
+                      )}
+                      aria-hidden
+                    />
+                    {t(item.labelKey)}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+
+          {secondary.map((group) => (
+            <div key={group.labelKey} className="space-y-0.5">
+              <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--ink-secondary)]">
                 {t(group.labelKey)}
               </p>
               {group.items.map((item) => (
                 <NavLink
-                  key={item.to}
+                  key={`${group.labelKey}-${item.to}`}
                   to={item.to}
                   end={item.to === '/'}
                   onClick={onClose}
+                  tabIndex={expanded ? undefined : -1}
                   className={({ isActive }) =>
                     cn(
-                      'group relative flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-colors',
+                      'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium transition-colors',
                       isActive
-                        ? 'bg-white/[0.07] text-zinc-50'
-                        : 'text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-100',
+                        ? 'bg-[color:var(--bg-nav-active)] font-semibold text-[color:var(--brand-hover)]'
+                        : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]',
                     )
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      <span
-                        className={cn(
-                          'absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-zinc-400 transition-opacity',
-                          isActive ? 'opacity-100' : 'opacity-0',
-                        )}
-                        aria-hidden
-                      />
-                      <item.icon
-                        className={cn('h-5 w-5', isActive ? 'text-zinc-50' : 'text-current')}
-                        aria-hidden
-                      />
-                      {t(item.labelKey)}
-                    </>
-                  )}
+                  <item.icon className="h-4 w-4 text-[color:var(--ink-muted)]" aria-hidden />
+                  {t(item.labelKey)}
                 </NavLink>
               ))}
             </div>
           ))}
         </nav>
+
+        {user ? (
+          <div className="border-t border-[color:var(--border-default)] p-3">
+            <div className="flex items-center gap-2.5 rounded-control px-1.5 py-1">
+              <UserAvatar
+                name={user.name}
+                avatarUrl={user.avatarUrl}
+                label={t('nav.account', { name: user.name })}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-[color:var(--ink)]">{user.name}</p>
+                <p className="truncate text-xs text-[color:var(--ink-secondary)]">{user.email}</p>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </aside>
     </>
   );

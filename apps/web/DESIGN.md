@@ -1,27 +1,37 @@
 # Design da web Prospectly
 
 ## Theme
-- Dark: grafite existente (produção)
-- Light: lavanda suave (`#f0ebf7` / cards brancos translúcidos), tipografia quase-preta
+- Light (principal): cinza-gelo `#F1F2F4`, superfícies brancas, acento índigo-violeta
+- Dark: mesmos tokens semânticos com valores escuros coerentes
 
 ## Color
-- Accent / primary actions: **cinza grafite** (`#3f3f46` → `#18181b`), nunca verde
-- Eyebrows / labels: cinza médio uppercase tracking largo
-- Light undertone: lavanda no fundo e glass; CTAs e estados ativos em cinza
-- Brand cobalt: só charts/dados pontuais se necessário
+- Accent / primary: **índigo** (`--brand: #676FD6` → `--brand-hover: #5B63C9`)
+- Texto: `--ink` `#1A1D26`, `--ink-secondary` `#5B6472` (WCAG), `--ink-muted` `#8B93A0` (ícones / placeholders)
+- Superfícies: `--bg-app`, `--bg-sidebar`, `--bg-surface`, `--bg-subtle`, `--bg-nav-active`
+- Semânticos: success mint, warning ouro, teal fechado, slate neutro
+- Evitar: glass, gradientes decorativos, noise, halos, CTA grafite, azul cobalto como primária
 
 ## Typography
-- Família única: **Inter** (400–700), como nos screenshots Facilitey
-- H1 páginas: ~28–30px bold / tight tracking
-- Body: 14–15px regular, cinza médio
-- Labels: 14px semibold
+- Família única: **Inter** (400–700)
+- H1 páginas: ~24–28px semibold / tight tracking
+- Body: 14px regular, `ink-secondary`
+- Labels: 13–14px medium
 
 ## Components
-- Cards: radius 16–18px, borda fina cinza, sombra suave, fundo branco/glass
-- Inputs: `.field-control` — borda cinza clara, fundo branco (light)
-- Buttons: glass iOS; `primary` = cinza escuro glass; `glass`/`secondary` = frosted/outline
-- Page header: eyebrow uppercase cinza + título bold + descrição muted
-- Nav ativa: indicador cinza (não verde/azul)
+- Controles: radius 10px, altura mínima 44px no chrome
+- Cards: radius 12px, hairline, sombra `0 1px 2px rgb(16 24 40 / 0.06)`
+- Painéis: radius 16px
+- Pills: 999px
+- Inputs: `.field-control` — borda `--border-default`, fundo `--bg-surface`
+- Buttons: `primary` = índigo sólido; `outline`/`secondary` = flat
+- Nav ativa: `--bg-nav-active`
+- Kanban: header sólido + well pastel por estágio
+
+## Shell
+- Sidebar ~220px + topbar 56–64px
+- Workspace ocupa a largura restante (sem `max-width: 1200px`)
+- Mobile: sidebar vira drawer (botão, backdrop, Escape)
+- Desktop: ícone no aside esconde a barra; a topbar reabre
 
 ## Motion
 - Theme toggle: View Transition máscara radial ~720ms
