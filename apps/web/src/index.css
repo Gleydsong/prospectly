@@ -349,6 +349,7 @@ html.light {
     overflow: hidden;
     border: 1px solid var(--border-default);
     border-radius: 12px;
+    max-height: calc(100vh - 10rem);
   }
 
   .kanban-col__header {
@@ -357,6 +358,11 @@ html.light {
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.625rem 0.75rem;
+  }
+
+  .kanban-col__body {
+    min-height: 24rem;
+    flex: 1;
   }
 
   .filter-chip {

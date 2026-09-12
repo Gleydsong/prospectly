@@ -214,4 +214,34 @@ describe('PipelinePage', () => {
     await user.click(scrollLeftBtn);
     expect(scrollByMock).toHaveBeenCalledWith(expect.objectContaining({ left: -320, behavior: 'smooth' }));
   });
+
+  it('does not mount every lead in a long column at once', async () => {
+    const leads = Array.from({ length: 80 }, (_, index) => ({
+      ...boardFixture.stages[0]!.leads[0]!,
+      id: `lead-${index}`,
+      companyName: `Empresa ${index}`,
+    }));
+    mocks.fetchPipelineBoard.mockResolvedValue({
+      ...boardFixture,
+      stages: [
+        {
+          ...boardFixture.stages[0]!,
+          totalCount: 80,
+          hasMore: false,
+          leads,
+        },
+        boardFixture.stages[1]!,
+      ],
+    });
+
+    render(
+      <Wrapper>
+        <PipelinePage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByText('Empresa 0')).toBeInTheDocument();
+    expect(screen.getAllByText(/Empresa \d+/).length).toBeLessThan(80);
+    expect(screen.queryByText('Empresa 79')).not.toBeInTheDocument();
+  });
 });

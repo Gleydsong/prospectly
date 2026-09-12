@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { ClientDenseList } from '@/components/ui/client-dense-row';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { TableSkeleton } from '@/components/ui/skeleton';
+import { VirtualizedList } from '@/components/ui/virtualized-list';
 import { downloadCsvFile } from '@/features/leads/api';
 import { SearchQueryError } from '@/features/prospecting/components/search-query-error';
 import { SearchResultCard } from '@/features/prospecting/components/search-result-card';
@@ -223,20 +223,36 @@ export function SearchResults({
               </p>
             </div>
 
-            <ClientDenseList className="rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
-              {results.map((result) => (
-                <li key={result.id}>
-                  <SearchResultCard
-                    result={result}
-                    selected={selectedResultIds.includes(result.id)}
-                    selectable={canImport && !result.importedLeadId}
-                    importing={importingResultId === result.id}
-                    onToggle={onToggleResult}
-                    onSendToCrm={onImportOne}
-                  />
-                </li>
-              ))}
-            </ClientDenseList>
+            <div className="rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
+              <VirtualizedList
+                count={results.length}
+                estimateSize={104}
+                className="max-h-[min(70vh,40rem)]"
+                ariaLabel="Resultados da pesquisa"
+                getItemKey={(index) => results[index]?.id ?? index}
+              >
+                {(index) => {
+                  const result = results[index];
+                  if (!result) return null;
+                  return (
+                    <div
+                      className={
+                        index === 0 ? undefined : 'border-t border-[color:var(--border-default)]'
+                      }
+                    >
+                      <SearchResultCard
+                        result={result}
+                        selected={selectedResultIds.includes(result.id)}
+                        selectable={canImport && !result.importedLeadId}
+                        importing={importingResultId === result.id}
+                        onToggle={onToggleResult}
+                        onSendToCrm={onImportOne}
+                      />
+                    </div>
+                  );
+                }}
+              </VirtualizedList>
+            </div>
 
             {resultsMeta ? <Pagination {...resultsMeta} onPageChange={onPageChange} /> : null}
             <p className="text-xs text-[color:var(--ink-muted)]">

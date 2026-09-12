@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VirtualizedList } from '@/components/ui/virtualized-list';
 import {
   WhatsAppOutreachModal,
   type WhatsAppOutreachModalLead,
@@ -201,54 +202,67 @@ export function PipelinePage() {
                 {stage.totalCount}
               </span>
             </header>
-            <div className="flex flex-1 flex-col gap-2 p-2">
+            <div className="flex min-h-0 flex-1 flex-col p-2">
               {stage.leads.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-[color:var(--border)] p-3 text-center text-xs text-[color:var(--ink-secondary)]">
                   {t('pipeline.emptyColumn')}
                 </p>
               ) : (
-                stage.leads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    stages={stages}
-                    currentStageId={stage.id}
-                    dragging={draggingLeadId === lead.id}
-                    disabled={move.isPending}
-                    selectRef={(node) => {
-                      moveSelectRefs.current[lead.id] = node;
-                    }}
-                    onDragStart={() => setDraggingLeadId(lead.id)}
-                    onDragEnd={() => {
-                      setDraggingLeadId(null);
-                      setOverStageId(null);
-                    }}
-                    onMove={(stageId, stageName) => {
-                      move.mutate({
-                        leadId: lead.id,
-                        stageId,
-                        leadName: lead.companyName,
-                        stageName,
-                      });
-                    }}
-                    onOpenWhatsApp={(leadItem) =>
-                      setWhatsAppModalLead({
-                        id: leadItem.id,
-                        companyName: leadItem.companyName,
-                        phone: leadItem.phone,
-                        stageId: stage.id,
-                        doNotContact: leadItem.doNotContact,
-                      })
-                    }
-                  />
-                ))
+                <VirtualizedList
+                  count={stage.leads.length}
+                  estimateSize={176}
+                  className="kanban-col__body"
+                  ariaLabel={stage.name}
+                  getItemKey={(index) => stage.leads[index]?.id ?? index}
+                >
+                  {(index) => {
+                    const lead = stage.leads[index];
+                    if (!lead) return null;
+                    return (
+                      <div className="pb-2">
+                        <LeadCard
+                          lead={lead}
+                          stages={stages}
+                          currentStageId={stage.id}
+                          dragging={draggingLeadId === lead.id}
+                          disabled={move.isPending}
+                          selectRef={(node) => {
+                            moveSelectRefs.current[lead.id] = node;
+                          }}
+                          onDragStart={() => setDraggingLeadId(lead.id)}
+                          onDragEnd={() => {
+                            setDraggingLeadId(null);
+                            setOverStageId(null);
+                          }}
+                          onMove={(stageId, stageName) => {
+                            move.mutate({
+                              leadId: lead.id,
+                              stageId,
+                              leadName: lead.companyName,
+                              stageName,
+                            });
+                          }}
+                          onOpenWhatsApp={(leadItem) =>
+                            setWhatsAppModalLead({
+                              id: leadItem.id,
+                              companyName: leadItem.companyName,
+                              phone: leadItem.phone,
+                              stageId: stage.id,
+                              doNotContact: leadItem.doNotContact,
+                            })
+                          }
+                        />
+                      </div>
+                    );
+                  }}
+                </VirtualizedList>
               )}
               {stage.hasMore ? (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-1 w-full"
+                  className="mt-1 w-full shrink-0"
                   loading={loadingMoreStageId === stage.id}
                   onClick={() => {
                     void appendStageLeads(stage);
