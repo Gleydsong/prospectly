@@ -26,6 +26,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { OrganizationFlagsModule } from './modules/organization-flags/organization-flags.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { SavedViewsModule } from './modules/saved-views/saved-views.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
@@ -105,6 +106,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     AuthModule,
     UsersModule,
     OrganizationsModule,
+    OrganizationFlagsModule,
     LeadsModule,
     SavedViewsModule,
     WorkflowsModule,

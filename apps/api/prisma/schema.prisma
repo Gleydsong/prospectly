@@ -357,12 +357,28 @@ model Organization {
   customFieldDefinitions CustomFieldDefinition[]
   googleConnections      GoogleConnection[]
   syncedCommunications   SyncedCommunication[]
+  organizationFlags      OrganizationFlag[]
 
   @@index([planStatus])
   @@index([stripeCustomerId])
   @@index([asaasSubscriptionId])
   @@index([asaasPaymentId])
   @@index([paymentProvider])
+}
+
+/// Org-scoped product capability toggles. Keys are allowlisted in code; missing row = OFF.
+model OrganizationFlag {
+  id             String   @id @default(uuid())
+  organizationId String
+  key            String
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
 }
 
 /// Consent grant/withdrawal history for the account holder (not lead outreach).

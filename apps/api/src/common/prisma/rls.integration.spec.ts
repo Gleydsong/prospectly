@@ -43,6 +43,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const workflowStepRunB = randomUUID();
   const customFieldA = randomUUID();
   const customFieldB = randomUUID();
+  const organizationFlagA = randomUUID();
+  const organizationFlagB = randomUUID();
   const googleConnectionA = randomUUID();
   const googleConnectionB = randomUUID();
   const syncedCommunicationA = randomUUID();
@@ -145,6 +147,13 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
           (${customFieldB}, ${orgB}, 'NIF B', 'TEXT'::"CustomFieldType", 0, '[]'::jsonb, NOW(), NOW())
       `;
       await tx.$executeRaw`
+        INSERT INTO "OrganizationFlag"
+          (id, "organizationId", key, enabled, "createdAt", "updatedAt")
+        VALUES
+          (${organizationFlagA}, ${orgA}, 'saved_report', true, NOW(), NOW()),
+          (${organizationFlagB}, ${orgB}, 'saved_report', false, NOW(), NOW())
+      `;
+      await tx.$executeRaw`
         INSERT INTO "GoogleConnection"
           (id, "organizationId", "userId", "googleSubject", "googleEmail", "refreshTokenEncrypted", scopes, "connectedAt", "createdAt", "updatedAt")
         VALUES
@@ -173,6 +182,11 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       );
       await tx.$executeRawUnsafe(
         `DELETE FROM "GoogleConnection" WHERE "organizationId" IN ($1, $2)`,
+        orgA,
+        orgB,
+      );
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "OrganizationFlag" WHERE "organizationId" IN ($1, $2)`,
         orgA,
         orgB,
       );
@@ -387,6 +401,35 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     });
 
     expect(rows).toEqual([{ id: customFieldA }]);
+  });
+
+  it('isolates organization flags by organization', async () => {
+    const rows = await prisma!.$transaction(async (tx) => {
+      await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+      await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+      return tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "OrganizationFlag" ORDER BY id
+      `;
+    });
+
+    expect(rows).toEqual([{ id: organizationFlagA }]);
+  });
+
+  it('rejects a cross-tenant organization flag insert', async () => {
+    const foreignFlagId = randomUUID();
+
+    await expect(
+      prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SET LOCAL ROLE prospectly_app`;
+        await tx.$executeRaw`SELECT set_config('app.current_org_id', ${orgA}, true), set_config('app.current_user_id', '', true), set_config('app.rls_bypass', '', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "OrganizationFlag"
+            (id, "organizationId", key, enabled, "createdAt", "updatedAt")
+          VALUES
+            (${foreignFlagId}, ${orgB}, 'leaked_key', true, NOW(), NOW())
+        `;
+      }),
+    ).rejects.toThrow();
   });
 
   it('isolates google connections by organization', async () => {
