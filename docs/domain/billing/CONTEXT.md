@@ -52,6 +52,10 @@ _Avoid_: Período de tolerância, renovação pendente
 A retirada total ou parcial de um benefício após estorno ou chargeback confirmado. Créditos consumidos permanecem representados como saldo negativo auditável.
 _Avoid_: Apagar compra, absorver perda
 
+**Compensação**:
+O reembolso de um `AI_CONSUME` quando o trabalho interno falha (5xx, timeout, fila). 4xx de validação ou cancelamento do actor não devolve. Idempotente no ledger. Distinto de Reversão.
+_Avoid_: Estorno, Reversão, crédito extra, tarifar Copiloto
+
 **Contrato histórico**:
 Uma relação financeira criada por um provedor anterior que permanece identificável e exige tratamento de suporte antes de uma nova assinatura.
 _Avoid_: Assinatura Asaas, migração automática

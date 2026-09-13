@@ -53,6 +53,11 @@ export class StructuredAiService {
     private readonly prisma: PrismaService,
   ) {}
 
+  isOpportunityAiEnabled(): boolean {
+    const enabled = this.config.get<string | boolean>('opportunityAi.enabled');
+    return enabled !== false && enabled !== 'false' && enabled !== '0';
+  }
+
   async buildOpportunityProfile(
     context: AiContext,
     input: { service: string; niche: string; categories: ProspectingCategory[] },
@@ -123,8 +128,7 @@ export class StructuredAiService {
     system: string;
     input: unknown;
   }): Promise<T | null> {
-    const enabled = this.config.get<string | boolean>('opportunityAi.enabled');
-    if (enabled === false || enabled === 'false' || enabled === '0') return null;
+    if (!this.isOpportunityAiEnabled()) return null;
 
     const provider = 'OLLAMA';
     const model = this.config.get<string>('opportunityAi.model') ?? 'qwen3:8b';

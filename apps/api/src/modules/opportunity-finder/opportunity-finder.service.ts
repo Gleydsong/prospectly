@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import {
   ConfidenceLevel,
   LeadSource,
@@ -29,6 +29,7 @@ import {
 } from '../../common/workers/durable-job';
 import { StructuredAiService } from '../ai/structured-ai.service';
 import { AuditService } from '../audit/audit.service';
+import { shouldRefundAiConsume } from '../billing/ai-credit-compensation';
 import { BillingService } from '../billing/billing.service';
 import { CREDIT_COSTS } from '../billing/billing.constants';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
@@ -260,14 +261,16 @@ export class OpportunityFinderService {
     if (candidate.explanation) return this.toCandidateView(candidate);
     await this.billing.consumeCreditForExplain(organizationId, candidate.id, run.id);
     try {
-      const explanation = await this.generateExplanation(run, candidate, userId);
+      const explanation = await this.generateExplanation(run, candidate, userId, { paid: true });
       const updated = await this.prisma.opportunityCandidate.update({
         where: { id: candidate.id },
         data: { explanation: explanation as unknown as Prisma.InputJsonValue, explanationPromptVersion: OPPORTUNITY_EXPLANATION_PROMPT_VERSION },
       });
       return this.toCandidateView(updated);
     } catch (error) {
-      await this.billing.refundExplainCredit(organizationId, candidate.id);
+      if (shouldRefundAiConsume(error)) {
+        await this.billing.refundExplainCredit(organizationId, candidate.id);
+      }
       throw error;
     }
   }
@@ -349,7 +352,9 @@ export class OpportunityFinderService {
       });
       return { status: outcome.status, leadId: lead.id };
     } catch (error) {
-      await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
+      if (shouldRefundAiConsume(error)) {
+        await this.billing.refundSaveLeadCredit(organizationId, candidate.id);
+      }
       throw error;
     }
   }
@@ -547,13 +552,24 @@ export class OpportunityFinderService {
     await this.billing.refundOpportunityRunCredit(run.organizationId, runId, publicCode);
   }
 
-  private async generateExplanation(run: { id: string; organizationId: string; userId: string; service: string }, candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue }, userId: string): Promise<OpportunityExplanation> {
+  private async generateExplanation(
+    run: { id: string; organizationId: string; userId: string; service: string },
+    candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue },
+    userId: string,
+    options?: { paid?: boolean },
+  ): Promise<OpportunityExplanation> {
     const rawCompany = candidate.company as unknown as OpportunityCompany;
     const company = sanitizeCompanyForLlm(rawCompany as unknown as Record<string, unknown>);
     const signals = candidate.signals as unknown as OpportunityCandidateView['signals'];
     const scoreBreakdown = candidate.scoreBreakdown as unknown as OpportunityCandidateView['scoreBreakdown'];
     const ai = await this.ai.explainOpportunity({ organizationId: run.organizationId, userId, opportunityRunId: run.id, candidateId: candidate.id }, { service: run.service, company, signals, scoreBreakdown });
     if (ai) return ai;
+    if (options?.paid && this.ai.isOpportunityAiEnabled()) {
+      throw new ServiceUnavailableException({
+        code: 'AI_EXPLAIN_UNAVAILABLE',
+        message: 'Explicação indisponível. Tente de novo.',
+      });
+    }
     const companyName = typeof company.companyName === 'string' ? company.companyName : 'A empresa';
     const strongest = signals.filter((entry) => entry.value === 'TRUE').slice(0, 3).map((entry) => entry.evidence);
     return {

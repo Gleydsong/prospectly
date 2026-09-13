@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { PROSPECTING_CATEGORIES } from '@prospectly/shared-types';
 
 import { OpportunityFinderService } from './opportunity-finder.service';
@@ -506,5 +506,111 @@ describe('OpportunityFinderService.saveAsLead', () => {
     expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
     expect(harness.billing.refundSaveLeadCredit).toHaveBeenCalledWith('org-1', 'cand-1');
     expect(harness.prisma.opportunityCandidate.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refunds save-lead credit on internal ingest failure', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidateBase);
+    harness.leadIngestion.ingest.mockRejectedValue(new Error('ingest timeout'));
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toThrow('ingest timeout');
+
+    expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
+    expect(harness.billing.refundSaveLeadCredit).toHaveBeenCalledWith('org-1', 'cand-1');
+  });
+
+  it('does not refund save-lead credit when ingest fails with actor 4xx', async () => {
+    const harness = createSaveHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidateBase);
+    harness.leadIngestion.ingest.mockRejectedValue(new BadRequestException('invalid phone'));
+
+    await expect(
+      harness.service.saveAsLead('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(harness.billing.consumeCreditForSaveLead).toHaveBeenCalled();
+    expect(harness.billing.refundSaveLeadCredit).not.toHaveBeenCalled();
+  });
+});
+
+describe('OpportunityFinderService.explainCandidate', () => {
+  function createExplainHarness() {
+    const prisma = {
+      opportunityRun: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'run-1',
+          organizationId: 'org-1',
+          userId: 'user-1',
+          service: 'Criação de sites',
+        }),
+      },
+      opportunityCandidate: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+    };
+    const billing = {
+      consumeCreditForExplain: jest.fn().mockResolvedValue(undefined),
+      refundExplainCredit: jest.fn().mockResolvedValue(undefined),
+    };
+    const ai = {
+      explainOpportunity: jest.fn().mockResolvedValue(null),
+      isOpportunityAiEnabled: jest.fn().mockReturnValue(true),
+    };
+    const service = new OpportunityFinderService(
+      prisma as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      billing as never,
+      ai as never,
+      {} as never,
+      {} as never,
+    );
+    return { service, prisma, billing, ai };
+  }
+
+  const candidate = {
+    id: 'cand-1',
+    runId: 'run-1',
+    status: 'READY',
+    company: { companyName: 'Loja X', websitePresence: 'NO_WEBSITE_REPORTED' },
+    signals: [],
+    scoreBreakdown: {},
+    overallScore: 80,
+    confidenceScore: 70,
+    dataCompleteness: 50,
+    rankingCategory: 'clothes',
+    explanation: null,
+    importedLeadId: null,
+    analyzedAt: new Date('2026-02-01T00:00:00.000Z'),
+  };
+
+  it('refunds Explain credit when paid AI times out after debit', async () => {
+    const harness = createExplainHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidate);
+
+    await expect(
+      harness.service.explainCandidate('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(harness.billing.consumeCreditForExplain).toHaveBeenCalledWith('org-1', 'cand-1', 'run-1');
+    expect(harness.billing.refundExplainCredit).toHaveBeenCalledWith('org-1', 'cand-1');
+  });
+
+  it('does not refund Explain credit on actor 4xx after debit', async () => {
+    const harness = createExplainHarness();
+    harness.prisma.opportunityCandidate.findFirst.mockResolvedValue(candidate);
+    harness.ai.explainOpportunity.mockRejectedValue(new BadRequestException('invalid candidate'));
+
+    await expect(
+      harness.service.explainCandidate('org-1', 'user-1', 'run-1', 'cand-1'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(harness.billing.consumeCreditForExplain).toHaveBeenCalled();
+    expect(harness.billing.refundExplainCredit).not.toHaveBeenCalled();
   });
 });
