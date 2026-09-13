@@ -6,4 +6,5 @@ export const RETENTION = {
   expiredRefreshTokenDays: 7,
   completedImportErrorDays: 30,
   expiredAuthTokenClearMs: 0,
+  outboxEventGcBatchSize: 500,
 } as const;

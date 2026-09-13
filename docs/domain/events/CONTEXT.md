@@ -29,3 +29,4 @@ _Avoid_: delete, drop, retry infinito
 - `lead.stage_changed` nasce com `schemaVersion` 2 e congela `toStageIsWon`/`toStageIsLost` no momento do fato. Eventos v1 no outbox não são reescritos.
 - `lead.created`, `lead.do_not_contact_set` e `task.completed` permanecem v1.
 - Relatórios: v2 classifica pelo snapshot; v1 segue as flags actuais da etapa.
+- Job de retenção apaga OutboxEvent com `retainUntil < now` em lotes. Não encurta `OUTBOX_RETAIN_DAYS` (90). PENDING/FAILED ainda dentro da retenção ficam. DEAD com `retainUntil` passado sai. Comunicação sincronizada não entra neste GC.
