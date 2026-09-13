@@ -16,6 +16,7 @@ export class RetentionService {
     expiredTokens: number;
     expiredAuthSecrets: number;
     importErrorsCleared: number;
+    outboxEventsDeleted: number;
   }> {
     return runWithBypass(async () => {
       const now = new Date();
@@ -62,14 +63,40 @@ export class RetentionService {
           }),
         ]);
 
+      const outboxEventsDeleted = await this.deleteExpiredOutboxEvents(now);
+
       const result = {
         revokedTokens: revokedTokens.count,
         expiredTokens: expiredTokens.count,
         expiredAuthSecrets: expiredResets.count + expiredVerifies.count,
         importErrorsCleared: importErrors.count,
+        outboxEventsDeleted,
       };
       this.logger.log({ message: 'Privacy retention job completed', ...result });
       return result;
     });
+  }
+
+  private async deleteExpiredOutboxEvents(now: Date): Promise<number> {
+    const take = RETENTION.outboxEventGcBatchSize;
+    let deleted = 0;
+    for (;;) {
+      const expired = await this.prisma.outboxEvent.findMany({
+        where: { retainUntil: { lt: now } },
+        select: { id: true },
+        take,
+        orderBy: { retainUntil: 'asc' },
+      });
+      if (expired.length === 0) {
+        return deleted;
+      }
+      const result = await this.prisma.outboxEvent.deleteMany({
+        where: { id: { in: expired.map((row) => row.id) } },
+      });
+      deleted += result.count;
+      if (expired.length < take || result.count === 0) {
+        return deleted;
+      }
+    }
   }
 }

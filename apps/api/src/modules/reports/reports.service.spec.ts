@@ -350,6 +350,34 @@ describe('ReportsService', () => {
     expect(result.wins).toBe(0);
   });
 
+  it('returns the same 90d conversion before and after expired OutboxEvent rows are gone', async () => {
+    const liveWin = stageEvent('lead-live', WON_STAGE, FEB_10);
+    const expiredWin = {
+      ...stageEvent('lead-expired', WON_STAGE, FEB_10),
+      retainUntil: new Date(NOW.getTime() - 1000),
+    };
+    const leads = [
+      { id: 'lead-live', source: 'MANUAL', ownerId: 'owner-1', doNotContact: false },
+      { id: 'lead-expired', source: 'MANUAL', ownerId: 'owner-1', doNotContact: false },
+    ];
+
+    const convert = async (events: ReturnType<typeof stageEvent>[]) => {
+      const prisma = makePrisma();
+      prisma.pipelineStage.findMany.mockResolvedValue([
+        { id: WON_STAGE, isWon: true, isLost: false },
+      ]);
+      prisma.outboxEvent.findMany.mockResolvedValue(events);
+      prisma.lead.findMany.mockResolvedValue(leads);
+      return new ReportsService(prisma).funnelConversion('org-1', { period: '90d' });
+    };
+
+    const beforeGc = await convert([liveWin, expiredWin]);
+    const afterGc = await convert([liveWin]);
+
+    expect(beforeGc).toEqual(afterGc);
+    expect(afterGc.wins).toBe(1);
+  });
+
   it('puts a January-created February win in the wins bucket, not inflow', async () => {
     const prisma = makePrisma();
     prisma.pipelineStage.findMany.mockResolvedValue([
