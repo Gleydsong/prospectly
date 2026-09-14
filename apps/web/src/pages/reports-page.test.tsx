@@ -160,4 +160,19 @@ describe('ReportsPage', () => {
     expect(screen.getByRole('button', { name: '30d Google' })).toBeInTheDocument();
     expect(screen.queryByText(/Vista salva/i)).not.toBeInTheDocument();
   });
+
+  it('asks the viewer to try again when Relatórios times out', () => {
+    mocks.useFunnelConversion.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: Object.assign(new Error('Relatórios indisponível'), {
+        isAxiosError: true,
+        response: { data: { code: 'REPORTS_QUERY_TIMEOUT' } },
+      }),
+    });
+    renderWithProviders(<ReportsPage />, { withGoogle: false });
+    expect(screen.getByText('Relatórios indisponível. Tente de novo.')).toBeInTheDocument();
+    expect(screen.queryByText('Não foi possível carregar o relatório.')).not.toBeInTheDocument();
+  });
 });

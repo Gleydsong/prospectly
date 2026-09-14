@@ -15,6 +15,10 @@ export const TASK_AGGREGATE_TYPE = 'Task';
 export const OUTBOX_MAX_ATTEMPTS = 10;
 export const OUTBOX_RETAIN_DAYS = 90;
 export const OUTBOX_PROCESSING_STALE_MS = 2 * 60 * 1000;
+export const OUTBOX_WORKER_CONCURRENCY = 2;
+export const OUTBOX_PROCESSOR_OPTIONS = {
+  concurrency: OUTBOX_WORKER_CONCURRENCY,
+} as const;
 
 export const OUTBOX_JOB_OPTIONS = {
   attempts: 3,
