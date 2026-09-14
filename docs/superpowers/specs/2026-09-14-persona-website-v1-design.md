@@ -1,7 +1,7 @@
 # Design: persona profissional + módulo Website (v1)
 
 **Data:** 2026-09-14  
-**Status:** Aprovado em conversa; aguarda revisão deste ficheiro antes de implementar  
+**Status:** Aprovado pelo humano (2026-09-14). Pronto para implementar.  
 **Branch:** `feat/persona-website-v1`  
 **Decisões humanas:** abordagem B; Q1=C; Q2=C; Q3=B
 

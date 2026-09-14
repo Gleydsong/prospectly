@@ -26,6 +26,10 @@ import { buildAccountActivationEmail } from '../../common/mail/templates/account
 import { buildWelcomeEmail } from '../../common/mail/templates/welcome-email';
 import { buildPasswordResetEmail } from './password-reset-email';
 import { RegisterDto } from './dto/register.dto';
+import {
+  effectivePersona,
+  type ProfessionalPersona,
+} from '../../common/professional-persona';
 
 export interface AuthTokens {
   accessToken: string;
@@ -43,6 +47,10 @@ export interface AuthResponse extends AuthTokens {
     locale: 'pt' | 'en';
     avatarUrl?: string | null;
     emailVerifiedAt?: string | null;
+    defaultPersona: ProfessionalPersona;
+    personaOverride: ProfessionalPersona | null;
+    effectivePersona: ProfessionalPersona;
+    personaOnboardedAt: string | null;
   };
 }
 
@@ -94,6 +102,8 @@ export class AuthService {
         passwordHash,
         organizationName: dto.organizationName.trim(),
         locale: dto.locale,
+        defaultPersona: dto.defaultPersona,
+        personaOnboardedAt: new Date(),
       });
       const verifiedUser = await this.completeEmailVerificationAfterRegister(user);
       return this.buildAuthResponse(verifiedUser, organizationId, role);
@@ -186,6 +196,8 @@ export class AuthService {
       dto.organizationName?.trim() || `Workspace de ${displayName}`
     ).slice(0, 120);
     const locale = dto.locale ?? 'pt';
+    const defaultPersona = dto.defaultPersona;
+    const personaOnboardedAt = defaultPersona ? new Date() : null;
 
     return runWithBypass(async () => {
       const { user, organizationId, role } = await this.provisionOwnerAccount({
@@ -197,6 +209,8 @@ export class AuthService {
         googleId,
         avatarUrl,
         emailVerifiedAt: emailVerified ? new Date() : null,
+        defaultPersona: defaultPersona ?? 'vendedor',
+        personaOnboardedAt,
       });
       if (emailVerified) {
         await this.sendWelcomeEmail(user);
@@ -600,6 +614,8 @@ export class AuthService {
     googleId?: string;
     avatarUrl?: string | null;
     emailVerifiedAt?: Date | null;
+    defaultPersona: ProfessionalPersona;
+    personaOnboardedAt: Date | null;
   }): Promise<{ user: User; organizationId: string; role: Role }> {
     const slug = await this.generateOrgSlug(input.organizationName);
     const acceptedAt = new Date();
@@ -610,6 +626,8 @@ export class AuthService {
           name: input.organizationName,
           slug,
           creditBalance: SIGNUP_BONUS_CREDITS,
+          defaultPersona: input.defaultPersona,
+          personaOnboardedAt: input.personaOnboardedAt,
         },
       });
 
@@ -678,6 +696,12 @@ export class AuthService {
     const organization = await this.prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
     });
+    const membership = await this.prisma.organizationMember.findUnique({
+      where: { userId_organizationId: { userId: user.id, organizationId } },
+      select: { personaOverride: true },
+    });
+    const defaultPersona = organization.defaultPersona ?? 'vendedor';
+    const personaOverride = membership?.personaOverride ?? null;
     const tokens = await this.issueTokens(user.id, organizationId, role);
     return {
       ...tokens,
@@ -691,6 +715,10 @@ export class AuthService {
         locale: user.locale,
         avatarUrl: user.avatarUrl ?? null,
         emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+        defaultPersona,
+        personaOverride,
+        effectivePersona: effectivePersona(defaultPersona, personaOverride),
+        personaOnboardedAt: organization.personaOnboardedAt?.toISOString() ?? null,
       },
     };
   }

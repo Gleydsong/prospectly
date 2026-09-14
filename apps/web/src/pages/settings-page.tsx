@@ -29,8 +29,14 @@ import {
   removeOrganizationMember,
   updateOrganizationMemberRole,
   updateOrganizationName,
+  updateOrganizationPersona,
+  updatePersonaOverride,
   type OrgMember,
 } from '@/features/organizations/api';
+import {
+  PROFESSIONAL_PERSONAS,
+  type ProfessionalPersona,
+} from '@/features/organizations/professional-persona';
 import { setAppLocale } from '@/i18n';
 import { compressAvatarFile } from '@/lib/compress-avatar';
 import { getApiErrorMessage } from '@/lib/api';
@@ -66,6 +72,10 @@ export function SettingsPage() {
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [orgName, setOrgName] = useState(user?.organizationName ?? '');
+  const [orgPersona, setOrgPersona] = useState<ProfessionalPersona>(
+    user?.defaultPersona ?? 'vendedor',
+  );
+  const [overrideValue, setOverrideValue] = useState(user?.personaOverride ?? '');
   const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [orgError, setOrgError] = useState<string | null>(null);
 
@@ -76,6 +86,7 @@ export function SettingsPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const manage = canManageOrg(user?.role);
+  const canMutatePersona = user?.role !== Role.VIEWER;
   const emailVerified = Boolean(user?.emailVerifiedAt);
   const requestedTab = parseSettingsTab(searchParams.get('tab'));
   const tab = requestedTab === 'integrations' && !manage ? 'account' : requestedTab;
@@ -105,7 +116,12 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (orgQuery.data?.name) setOrgName(orgQuery.data.name);
-  }, [orgQuery.data?.name]);
+    if (orgQuery.data?.defaultPersona) setOrgPersona(orgQuery.data.defaultPersona);
+  }, [orgQuery.data?.name, orgQuery.data?.defaultPersona]);
+
+  useEffect(() => {
+    setOverrideValue(user?.personaOverride ?? '');
+  }, [user?.personaOverride]);
 
   const members = useQuery({
     queryKey: ['organizations', 'members'],
@@ -163,6 +179,42 @@ export function SettingsPage() {
       const msg = getApiErrorMessage(err);
       setOrgMessage(null);
       setOrgError(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'));
+    },
+  });
+
+  const saveOrgPersona = useMutation({
+    mutationFn: () => updateOrganizationPersona(orgPersona),
+    onSuccess: async (data) => {
+      updateUser({
+        defaultPersona: data.defaultPersona,
+        effectivePersona: user?.personaOverride ?? data.defaultPersona,
+        personaOnboardedAt: data.personaOnboardedAt,
+      });
+      setOrgMessage(t('settings.orgSaved'));
+      setOrgError(null);
+      await queryClient.invalidateQueries({ queryKey: ['organizations', 'current'] });
+    },
+    onError: (err) => {
+      setOrgMessage(null);
+      setOrgError(getApiErrorMessage(err) || t('settings.orgError'));
+    },
+  });
+
+  const saveOverride = useMutation({
+    mutationFn: () =>
+      updatePersonaOverride(overrideValue === '' ? null : (overrideValue as ProfessionalPersona)),
+    onSuccess: (data) => {
+      updateUser({
+        defaultPersona: data.defaultPersona,
+        personaOverride: data.personaOverride,
+        effectivePersona: data.effectivePersona,
+      });
+      setProfileMessage(t('settings.profileSaved'));
+      setProfileError(null);
+    },
+    onError: (err) => {
+      setProfileMessage(null);
+      setProfileError(getApiErrorMessage(err) || t('settings.profileError'));
     },
   });
 
@@ -311,6 +363,35 @@ export function SettingsPage() {
               <option value="pt">{t('auth.languagePt')}</option>
               <option value="en">{t('auth.languageEn')}</option>
             </Select>
+            <Select
+              id="persona-override"
+              name="persona-override"
+              className="h-11 max-w-md"
+              label={t('persona.override')}
+              value={overrideValue}
+              disabled={!canMutatePersona}
+              onChange={(event) => setOverrideValue(event.target.value)}
+            >
+              <option value="">{t('persona.followOrg')}</option>
+              {PROFESSIONAL_PERSONAS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`persona.${value}`)}
+                </option>
+              ))}
+            </Select>
+            {canMutatePersona ? (
+              <div className="flex justify-end">
+                <Button
+                  loading={saveOverride.isPending}
+                  disabled={overrideValue === (user?.personaOverride ?? '')}
+                  onClick={() => saveOverride.mutate()}
+                >
+                  {t('common.save')}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-[color:var(--ink-muted)]">{t('persona.readOnly')}</p>
+            )}
             <div className="flex justify-end">
               <Button
                 loading={saveProfile.isPending}
@@ -345,16 +426,38 @@ export function SettingsPage() {
                 leadingIcon={<Building2 className="h-4 w-4" />}
               />
             )}
+            <Select
+              id="org-persona"
+              name="org-persona"
+              className="h-11 max-w-md"
+              label={t('persona.orgDefault')}
+              value={orgPersona}
+              disabled={!manage}
+              onChange={(event) => setOrgPersona(event.target.value as ProfessionalPersona)}
+            >
+              {PROFESSIONAL_PERSONAS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`persona.${value}`)}
+                </option>
+              ))}
+            </Select>
             {orgMessage ? <Alert tone="success">{orgMessage}</Alert> : null}
             {orgError ? <Alert tone="error">{orgError}</Alert> : null}
             {manage ? (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button
                   loading={saveOrg.isPending}
                   disabled={!orgDirty || !orgName.trim() || !emailVerified}
                   onClick={() => saveOrg.mutate()}
                 >
                   {t('common.save')}
+                </Button>
+                <Button
+                  loading={saveOrgPersona.isPending}
+                  disabled={orgPersona === (orgQuery.data?.defaultPersona ?? user?.defaultPersona)}
+                  onClick={() => saveOrgPersona.mutate()}
+                >
+                  {t('persona.saveDefault')}
                 </Button>
               </div>
             ) : (

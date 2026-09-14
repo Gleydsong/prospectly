@@ -1113,5 +1113,38 @@
     "openInCalendar": "Abrir no Calendar",
     "noSubject": "(sem assunto)",
     "messageCount": "{{count}} mensagens"
+  },
+  "persona": {
+    "label": "Persona profissional",
+    "vendedor": "Vendedor",
+    "desenvolvedor": "Desenvolvedor",
+    "trafego_pago": "Tráfego pago",
+    "marketing": "Marketing",
+    "outro": "Outro",
+    "followOrg": "Seguir organização",
+    "onboardingTitle": "Como você trabalha?",
+    "onboardingSubtitle": "Escolha a persona padrão desta organização. Cada membro pode sobrepor depois.",
+    "continue": "Continuar",
+    "orgDefault": "Persona padrão da organização",
+    "override": "Sua persona nesta organização",
+    "readOnly": "Apenas leitura. Peça a um membro para alterar a persona.",
+    "saveDefault": "Salvar persona"
+  },
+  "leadWebsites": {
+    "title": "Sites",
+    "titleWon": "Ficha de cliente — Sites",
+    "add": "Adicionar site",
+    "url": "URL",
+    "labelField": "Etiqueta",
+    "kindLabel": "Tipo",
+    "kind": {
+      "site": "Site",
+      "landing": "Landing",
+      "app": "App"
+    },
+    "notes": "Notas",
+    "empty": "Nenhum site registado neste cliente potencial.",
+    "remove": "Remover",
+    "error": "Não foi possível carregar ou guardar os sites."
   }
 }

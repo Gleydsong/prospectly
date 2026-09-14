@@ -43,6 +43,11 @@ import { LeadWebsiteGap } from '@/features/leads/components/lead-website-gap';
 import { WebsiteAnalysisPanel } from '@/features/leads/components/website-analysis-panel';
 import { LeadCustomFieldsCard } from '@/features/custom-fields/lead-custom-fields-card';
 import { SyncedCommunicationsCard } from '@/features/communications/synced-communications-card';
+import { LeadWebsitesCard } from '@/features/leads/components/lead-websites-card';
+import {
+  isPrimarySitesPersona,
+  isWonClientFile,
+} from '@/features/organizations/professional-persona';
 import {
   useAddLeadTags,
   useCreateActivity,
@@ -66,11 +71,14 @@ import {
   sanitizeTelHref,
 } from '@/lib/safe-url';
 import type { LeadStage, Task } from '@/types';
+import { Role } from '@/types';
+import { useAuthStore } from '@/stores/auth.store';
 
 export function LeadDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { id = '' } = useParams();
+  const user = useAuthStore((state) => state.user);
   const leadQuery = useLead(id);
   const activitiesQuery = useLeadActivities(id);
   const tasksQuery = useQuery({
@@ -234,6 +242,15 @@ export function LeadDetailPage() {
   };
 
   const activeStage = lead.stage ?? findStageForStatus(funnelStages, lead.status);
+  const sitesPrimary = isPrimarySitesPersona(user?.effectivePersona);
+  const sitesCard = (
+    <LeadWebsitesCard
+      leadId={lead.id}
+      prominence={sitesPrimary ? 'primary' : 'secondary'}
+      emphasized={isWonClientFile(lead)}
+      canMutate={user?.role !== Role.VIEWER}
+    />
+  );
 
   return (
     <div className="space-y-6">
@@ -505,6 +522,7 @@ export function LeadDetailPage() {
         </div>
 
         <div className="space-y-4 lg:col-span-2">
+          {sitesPrimary ? sitesCard : null}
           <CrmCopilotCard
             leadId={lead.id}
             onOpenWhatsApp={whatsappRaw && !lead.doNotContact ? openWhatsApp : undefined}
@@ -546,6 +564,8 @@ export function LeadDetailPage() {
               </CardContent>
             </Card>
           ) : null}
+
+          {sitesPrimary ? null : sitesCard}
 
           <SyncedCommunicationsCard leadId={lead.id} />
 

@@ -31,6 +31,7 @@ describe('auth API timeouts', () => {
       organizationName: 'Demo Organization',
       locale: 'pt' as const,
       acceptTerms: true as const,
+      defaultPersona: 'vendedor' as const,
     };
 
     await register(input);

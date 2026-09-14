@@ -1,5 +1,5 @@
 import { api, AUTH_REQUEST_TIMEOUT_MS } from '@/lib/api';
-import type { AuthUser } from '@/types';
+import type { AuthUser, ProfessionalPersona } from '@/types';
 
 const authRequestConfig = { timeout: AUTH_REQUEST_TIMEOUT_MS };
 
@@ -27,6 +27,7 @@ export async function googleAuth(input: {
   organizationName?: string;
   locale?: 'pt' | 'en';
   acceptTerms?: true;
+  defaultPersona?: ProfessionalPersona;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/google', input, authRequestConfig);
   return data;
@@ -39,6 +40,7 @@ export async function register(input: {
   organizationName: string;
   locale: 'pt' | 'en';
   acceptTerms: true;
+  defaultPersona: ProfessionalPersona;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/register', input, authRequestConfig);
   return data;

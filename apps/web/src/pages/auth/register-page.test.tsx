@@ -18,7 +18,7 @@ vi.mock('@/features/auth/google-sign-in-button', () => ({
 }));
 
 async function submitValidRegistration() {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ delay: null });
   await user.type(screen.getByLabelText('Nome'), 'Demo User');
   await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
   await user.type(screen.getByLabelText('Senha'), 'secret12');
@@ -70,5 +70,34 @@ describe('RegisterPage', () => {
         'O servidor demorou mais que o esperado para responder. Tente novamente em instantes.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('sends defaultPersona vendedor unless the select is changed', async () => {
+    authApiMocks.register.mockResolvedValueOnce({
+      accessToken: 'token',
+      user: {
+        id: 'u1',
+        name: 'Demo User',
+        email: 'demo@prospectly.dev',
+        organizationId: 'org-1',
+        organizationName: 'Demo Organization',
+        role: 'OWNER',
+        locale: 'pt',
+        defaultPersona: 'vendedor',
+        personaOverride: null,
+        effectivePersona: 'vendedor',
+        personaOnboardedAt: '2026-09-14T00:00:00.000Z',
+      },
+    });
+    renderWithProviders(<RegisterPage />, { initialEntries: ['/register'] });
+
+    await submitValidRegistration();
+
+    expect(authApiMocks.register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'demo@prospectly.dev',
+        defaultPersona: 'vendedor',
+      }),
+    );
   });
 });

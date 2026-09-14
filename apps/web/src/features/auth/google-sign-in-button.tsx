@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { googleAuth, type AuthResponse } from '@/features/auth/api';
 import { GOOGLE_SIGN_IN_SCOPES } from '@/features/auth/google-sign-in-scopes';
 import { getApiErrorMessage } from '@/lib/api';
+import type { ProfessionalPersona } from '@/features/organizations/professional-persona';
 
 type GoogleSignInButtonProps = {
   onSuccess: (response: AuthResponse) => void | Promise<void>;
@@ -14,6 +15,7 @@ type GoogleSignInButtonProps = {
   acceptTerms?: boolean;
   organizationName?: string;
   locale?: 'pt' | 'en';
+  defaultPersona?: ProfessionalPersona;
   disabled?: boolean;
 };
 
@@ -46,6 +48,7 @@ function GoogleSignInButtonInner({
   acceptTerms,
   organizationName,
   locale,
+  defaultPersona,
   disabled,
 }: GoogleSignInButtonProps) {
   const { t } = useTranslation();
@@ -66,6 +69,7 @@ function GoogleSignInButtonInner({
           ...(acceptTerms ? { acceptTerms: true as const } : {}),
           ...(organizationName?.trim() ? { organizationName: organizationName.trim() } : {}),
           ...(locale ? { locale } : {}),
+          ...(defaultPersona ? { defaultPersona } : {}),
         });
         await onSuccess(response);
       } catch (error) {

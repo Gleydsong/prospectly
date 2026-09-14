@@ -20,14 +20,19 @@ const user: AuthUser = {
   organizationName: 'Acme',
   role: Role.OWNER,
   locale: 'pt',
+  personaOnboardedAt: '2026-01-01T00:00:00.000Z',
+  defaultPersona: 'vendedor',
+  personaOverride: null,
+  effectivePersona: 'vendedor',
 };
 
-function renderProtected() {
+function renderProtected(initialPath = '/') {
   render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <Routes>
         <Route element={<ProtectedRoute />}>
           <Route index element={<div>Area logada</div>} />
+          <Route path="/onboarding/persona" element={<div>Onboarding persona</div>} />
         </Route>
         <Route path="/login" element={<div>Tela de login</div>} />
       </Routes>
@@ -62,5 +67,20 @@ describe('ProtectedRoute', () => {
     renderProtected();
 
     expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+  });
+
+  it('redirects OWNER without persona onboarding to /onboarding/persona', async () => {
+    bootstrapSession.mockImplementation(async () => {
+      useAuthStore.setState({
+        user: { ...user, personaOnboardedAt: null },
+        accessToken: 'restored-token',
+        bootstrapped: true,
+      });
+      return true;
+    });
+
+    renderProtected();
+
+    expect(await screen.findByText('Onboarding persona')).toBeInTheDocument();
   });
 });

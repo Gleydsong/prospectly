@@ -23,13 +23,18 @@ import { AssignOwnerDto, ManageTagsDto } from './dto/manage-tags.dto';
 import { ExportLeadsDto } from './dto/export-leads.dto';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+import { CreateLeadWebsiteDto, UpdateLeadWebsiteDto } from './dto/lead-website.dto';
+import { LeadWebsitesService } from './lead-websites.service';
 import { LeadsService } from './leads.service';
 
 @ApiTags('leads')
 @ApiBearerAuth()
 @Controller({ path: 'leads', version: '1' })
 export class LeadsController {
-  constructor(private readonly leads: LeadsService) {}
+  constructor(
+    private readonly leads: LeadsService,
+    private readonly leadWebsites: LeadWebsitesService,
+  ) {}
 
   @Get()
   list(@CurrentOrg() organizationId: string, @Query() query: QueryLeadsDto) {
@@ -75,6 +80,46 @@ export class LeadsController {
     @Body() dto: UpdateLeadDto,
   ) {
     return this.leads.update(organizationId, id, dto);
+  }
+
+  @Get(':id/websites')
+  listLeadWebsites(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.leadWebsites.list(organizationId, id);
+  }
+
+  @Post(':id/websites')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  createLeadWebsite(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateLeadWebsiteDto,
+  ) {
+    return this.leadWebsites.create(organizationId, id, dto);
+  }
+
+  @Patch(':id/websites/:websiteId')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  updateLeadWebsite(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('websiteId', ParseUUIDPipe) websiteId: string,
+    @Body() dto: UpdateLeadWebsiteDto,
+  ) {
+    return this.leadWebsites.update(organizationId, id, websiteId, dto);
+  }
+
+  @Delete(':id/websites/:websiteId')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeLeadWebsite(
+    @CurrentOrg() organizationId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('websiteId', ParseUUIDPipe) websiteId: string,
+  ): Promise<void> {
+    await this.leadWebsites.remove(organizationId, id, websiteId);
   }
 
   @Post(':id/analyze')

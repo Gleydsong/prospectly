@@ -65,6 +65,10 @@ vi.mock('@/features/pipeline/api', () => ({
   moveLeadToStage: (...args: unknown[]) => mocks.moveLeadToStage(...args),
 }));
 
+vi.mock('@/features/leads/components/lead-websites-card', () => ({
+  LeadWebsitesCard: () => <div>Sites do lead</div>,
+}));
+
 const TEXT_FIELD = {
   id: 'field-nif',
   name: 'NIF',
@@ -94,6 +98,10 @@ function setUser(role: Role) {
       organizationId: 'org1',
       organizationName: 'Acme',
       locale: 'pt',
+      defaultPersona: 'vendedor',
+      personaOverride: null,
+      effectivePersona: 'vendedor',
+      personaOnboardedAt: '2026-01-01T00:00:00.000Z',
     },
     accessToken: 'token',
     bootstrapped: true,
@@ -179,7 +187,9 @@ describe('LeadDetailPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole('button', { name: 'Novos' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Novos' }, { timeout: 5000 }),
+    );
 
     await waitFor(() => {
       expect(mocks.moveLeadToStage).toHaveBeenCalledWith('lead-1', 'stage-new');

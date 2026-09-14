@@ -6,6 +6,8 @@ import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/cur
 import { RequireEmailVerified } from '../../common/decorators/require-email-verified.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { InviteMemberDto } from './dto/invite-member.dto';
+import { PatchOrganizationPersonaDto } from './dto/patch-organization-persona.dto';
+import { PatchPersonaOverrideDto } from './dto/patch-persona-override.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationsService } from './organizations.service';
@@ -31,6 +33,26 @@ export class OrganizationsController {
     @Body() dto: UpdateOrganizationDto,
   ) {
     return this.organizations.update(organizationId, dto.name, user.id);
+  }
+
+  @Patch('current/persona')
+  @Roles('OWNER', 'ADMIN')
+  updateDefaultPersona(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: PatchOrganizationPersonaDto,
+  ) {
+    return this.organizations.updateDefaultPersona(organizationId, dto.defaultPersona, user.id);
+  }
+
+  @Patch('me/persona-override')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
+  updatePersonaOverride(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: PatchPersonaOverrideDto,
+  ) {
+    return this.organizations.updatePersonaOverride(organizationId, user.id, dto.personaOverride);
   }
 
   @Get('members')
