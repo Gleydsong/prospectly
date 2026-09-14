@@ -23,6 +23,7 @@ import {
   savedReportToFilters,
   type SavedReport,
 } from '@/features/reports/saved-reports-api';
+import { isReportsUnavailableError } from '@/features/reports/unavailable';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, Role } from '@/types';
@@ -56,6 +57,7 @@ export function ReportsPage() {
     queryKey: ['saved-reports', selectedId, 'funnel-conversion'],
     queryFn: () => fetchSavedReportConversion(selectedId!),
     enabled: Boolean(selectedId),
+    retry: false,
   });
   const query = selectedId ? savedQuery : ephemeralQuery;
 
@@ -167,7 +169,9 @@ export function ReportsPage() {
       {query.isLoading ? (
         <TableSkeleton rows={4} />
       ) : query.isError ? (
-        <Alert tone="error">{t('reports.loadError')}</Alert>
+        <Alert tone="error">
+          {isReportsUnavailableError(query.error) ? t('reports.unavailable') : t('reports.loadError')}
+        </Alert>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-4">

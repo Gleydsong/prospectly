@@ -28,6 +28,7 @@ _Avoid_: Vista salva, CSV, funil etapa-a-etapa
 
 - Fonte: `OutboxEvent`. Relatórios não lê `DashboardService` nem o status atual do Lead para ganho/perda.
 - Períodos: `7d`, `30d`, `90d` rolling. Não há `all`. O copy de retenção segue `OUTBOX_RETAIN_DAYS` (90). GC só apaga OutboxEvent com `retainUntil` já passado; a janela 90d continua honesta.
+- Timeout / P2028 na leitura → 503 recuperável (`REPORTS_QUERY_TIMEOUT`), sem retry interno. Login e ficha não usam essa transação.
 - Taxa = ganhos distintos / união (ganhou ou perdeu pelo menos uma vez). Lead que ganhou e perdeu: wins=1, losses=1, union=1, winRate=100.
 - `organizationId` só da sessão. VIEWER lê. Filtro de dono é opcional; SALES pode abrir já filtrado em si.
 - `doNotContact` não apaga ganho/perda já ocorridos. Lead apagado (`deletedAt`) não entra.

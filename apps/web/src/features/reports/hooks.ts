@@ -24,6 +24,7 @@ export function useFunnelConversion(
     queryKey: ['reports', 'funnel-conversion', userId, filters],
     queryFn: () => fetchFunnelConversion(filters),
     enabled: options?.enabled ?? true,
+    retry: false,
   });
 }
 
@@ -36,6 +37,7 @@ export function useFunnelConversionLeads(
     queryKey: ['reports', 'funnel-conversion', 'leads', userId, filters],
     queryFn: () => fetchFunnelConversionLeads(filters),
     enabled: options?.enabled ?? true,
+    retry: false,
   });
 }
 
