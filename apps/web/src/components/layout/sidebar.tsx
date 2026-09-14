@@ -47,7 +47,7 @@ export function Sidebar({
       <aside
         id="mobile-nav"
         aria-hidden={!expanded}
-        {...(!expanded ? { inert: '' } : {})}
+        inert={!expanded}
         className={cn(
           'fixed inset-y-0 left-0 z-40 flex w-sidebar flex-col border-r border-[color:var(--border-default)] bg-[color:var(--bg-sidebar)] transition-transform duration-200 motion-reduce:transition-none',
           expanded ? 'translate-x-0' : '-translate-x-full',
