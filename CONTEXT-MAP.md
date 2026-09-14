@@ -39,6 +39,7 @@
 - **Communications → Organizations**: cada Conexão Google e cada Comunicação sincronizada pertencem à organização da sessão
 - **Communications → User**: a Conexão Google é da pessoa; não reutiliza Integration nem Sign-In
 - **Communications → Lead**: a Comunicação sincronizada casa no cliente potencial; não é LeadActivity nem DomainEvent
+- **Communications ↛ Events**: retenção da Comunicação sincronizada segue o Lead, não `OutboxEvent.retainUntil`
 - **Integrations → Organizations**: cada PluginToken pertence à organização da sessão; nunca chega `organizationId` do cliente
 - **Integrations ↛ Communications**: Conexão Google não é PluginToken
 - **Integrations ↛ Events**: PluginToken não publica DomainEvent

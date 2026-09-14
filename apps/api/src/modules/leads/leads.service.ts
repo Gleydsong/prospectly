@@ -240,6 +240,7 @@ export class LeadsService {
     }
     // Soft-delete only. Keep tasks so restore can bring the lead back intact;
     // TasksService.list already hides rows whose lead has deletedAt set.
+    // R6: Casamentos stay; listForLead hides them because deletedAt is set.
     await this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 

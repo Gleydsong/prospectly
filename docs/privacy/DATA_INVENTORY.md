@@ -1,6 +1,6 @@
 # Inventário de dados pessoais
 
-Última revisão técnica: 2026-08-28  
+Última revisão técnica: 2026-09-14  
 Classificações são técnicas. **Base legal = LEGAL_REVIEW_REQUIRED** quando o código não pode decidir.
 
 | Dado | Classificação | Origem | Finalidade | Armazenamento | Quem acessa | Terceiros | Retenção (técnica) | Exclusão | Base legal esperada | Risco |
@@ -15,6 +15,7 @@ Classificações são técnicas. **Base legal = LEGAL_REVIEW_REQUIRED** quando o
 | CreditPurchase / webhooks | FINANCIAL_DATA | Gateways | Cobrança | Postgres (payload webhook) | Sistema / OWNER | Abacate, Asaas, Stripe legado | LEGAL_REVIEW | Não no self-delete | Obrigação legal possível | HIGH |
 | Lead.email/phone/whatsapp/address | BUSINESS_CONTACT_DATA ou PERSONAL_DATA (MEI/PF) | Manual, CSV, OSM, Places | Prospecção do **controlador cliente** | Postgres (soft-delete) | Membros da org | OSM, Google Places | Definido pelo cliente; soft-delete ≠ erasure | Soft-delete; suppression hash no opt-out | **LEGAL_REVIEW_REQUIRED** (LI / RIPD) | CRITICAL (prospecção) |
 | LeadContact.* | PERSONAL_DATA | CRM | Contactos da empresa | Postgres | Membros | — | Idem lead | Cascade lead | LEGAL_REVIEW | HIGH |
+| SyncedCommunication (assunto, snippet, endereços) | PERSONAL_DATA / BUSINESS_CONTACT_DATA | Gmail/Calendar via Conexão Google | Fio na ficha do Lead | Postgres (metadado, sem corpo) | Quem já abre o Lead | Google (ingest) | Segue o Lead (R6) | Cascade hard-delete do Lead. Disconnect **não** apaga. Job retenção **não** apaga. Export titular **não** inclui | LEGAL_REVIEW | HIGH |
 | SearchResult.data / OpportunityCandidate.company JSON | BUSINESS_CONTACT_DATA / PERSONAL_DATA | Providers | Staging de descoberta | Postgres | Membros | OSM/Places | Enquanto run/search existir | Cascade org | LEGAL_REVIEW | HIGH |
 | Import.stagedRows | PERSONAL_DATA | CSV | Processamento | Postgres temporário | Sistema | — | Apagado ao COMPLETED/FAILED | Já implementado | Contrato (operador) | HIGH se retido |
 | ImportError.data | PERSONAL_DATA | CSV inválido | Diagnóstico | Postgres | OWNER | — | Job zera após 30d do completed | Job retenção | Contrato | MEDIUM |

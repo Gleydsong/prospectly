@@ -20,6 +20,7 @@ describe('AccountExportService', () => {
       aiRun: { findMany: jest.fn().mockResolvedValue([]) },
       googleConnection: { findMany: jest.fn().mockResolvedValue([]) },
       lead: { findMany: jest.fn() },
+      syncedCommunication: { findMany: jest.fn() },
     };
     const audit = { log: jest.fn().mockResolvedValue(undefined) };
     const service = new AccountExportService(prisma as never, audit as never);
@@ -40,6 +41,9 @@ describe('AccountExportService', () => {
       }),
     );
     expect(payload.googleConnections).toEqual([]);
+    expect(prisma.syncedCommunication.findMany).not.toHaveBeenCalled();
+    expect(JSON.stringify(payload)).not.toMatch(/snippet/i);
+    expect(payload).not.toHaveProperty('syncedCommunications');
     expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'privacy.data_exported', entityId: 'u1' }),
     );

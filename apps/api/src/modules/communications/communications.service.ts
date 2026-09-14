@@ -69,6 +69,7 @@ export class CommunicationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listForLead(organizationId: string, leadId: string, page = 1, pageSize = 50) {
+    // R6: visibility is the Lead ACL. An active Google Connection is not required to read matched rows.
     await this.assertReadableLead(organizationId, leadId);
     const safePage =
       Number.isFinite(Number(page)) && Number(page) > 0 ? Math.floor(Number(page)) : 1;
