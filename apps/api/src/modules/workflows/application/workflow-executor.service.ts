@@ -6,6 +6,7 @@ import { compileLeadFilter } from '../../leads/domain/lead-filter-ast';
 import { LEAD_CREATED_TYPE } from '../../outbox/outbox.constants';
 import {
   parseWorkflowDefinition,
+  WORKFLOW_MAX_STEPS,
   WORKFLOW_STEP_ADD_TAG,
   type WorkflowDefinition,
 } from '../domain/workflow-definition';
@@ -75,7 +76,7 @@ export class WorkflowExecutorService {
       if (!version) continue;
       let definition: WorkflowDefinition;
       try {
-        definition = parseWorkflowDefinition(version.definition);
+        definition = parseWorkflowDefinition(version.definition, { oversizedSteps: 'cap' });
       } catch {
         this.logger.warn({
           message: 'Skipping Fluxo with invalid published definition',
@@ -86,7 +87,8 @@ export class WorkflowExecutorService {
         continue;
       }
       if (definition.trigger.type !== LEAD_CREATED_TYPE) continue;
-      for (let stepIndex = 0; stepIndex < definition.steps.length; stepIndex += 1) {
+      const stepCount = Math.min(definition.steps.length, WORKFLOW_MAX_STEPS);
+      for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
         await this.executeStep({
           organizationId: input.organizationId,
           workflowId: workflow.id,
