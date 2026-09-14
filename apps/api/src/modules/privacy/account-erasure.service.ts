@@ -54,6 +54,7 @@ export class AccountErasureService {
           where: { userId, revokedAt: null },
           data: { refreshTokenEncrypted: null, revokedAt: now, lastError: 'account_erased' },
         });
+        // R6: account erasure of the titular is not Lead erasure. Casamentos stay.
         await tx.lead.updateMany({ where: { ownerId: userId }, data: { ownerId: null } });
         await tx.organizationMember.deleteMany({ where: { userId } });
         await tx.user.update({

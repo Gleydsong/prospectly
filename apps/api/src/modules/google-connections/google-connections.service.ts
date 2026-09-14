@@ -148,6 +148,7 @@ export class GoogleConnectionsService {
       where: { id: row.id },
       data: { refreshTokenEncrypted: null, revokedAt: now, lastError: null },
     });
+    // R6: disconnect stops ingest. Matched SyncedCommunication rows stay on the Lead.
     await this.audit.log({
       organizationId,
       userId,

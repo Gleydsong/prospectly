@@ -20,6 +20,7 @@ const makePrisma = () => {
     leadActivity: { create: jest.fn() },
     organizationMember: { findUnique: jest.fn() },
     task: { deleteMany: jest.fn() },
+    syncedCommunication: { deleteMany: jest.fn() },
     customFieldDefinition: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: jest.fn(async (operations: unknown[]) => Promise.all(operations)),
   };
@@ -33,6 +34,7 @@ const makePrisma = () => {
     };
     organizationMember: { findUnique: jest.Mock };
     task: { deleteMany: jest.Mock };
+    syncedCommunication: { deleteMany: jest.Mock };
     customFieldDefinition: { findMany: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -481,6 +483,7 @@ describe('LeadsService', () => {
     await service.softDelete('org1', 'l1');
 
     expect(prisma.task.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.syncedCommunication.deleteMany).not.toHaveBeenCalled();
     expect(prisma.lead.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ deletedAt: expect.any(Date) }) }),
     );

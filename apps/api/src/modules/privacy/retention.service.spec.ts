@@ -14,6 +14,7 @@ function makePrisma(overrides?: {
       deleteMany: overrides?.outboxDeleteMany ?? jest.fn().mockResolvedValue({ count: 0 }),
     },
     syncedCommunication: { deleteMany: jest.fn() },
+    lead: { deleteMany: jest.fn() },
   };
 }
 
@@ -32,6 +33,8 @@ describe('RetentionService', () => {
         data: expect.objectContaining({ data: expect.anything() }),
       }),
     );
+    expect(prisma.syncedCommunication.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.lead.deleteMany).not.toHaveBeenCalled();
   });
 
   it('deletes only OutboxEvent rows whose retainUntil has passed, in batches', async () => {

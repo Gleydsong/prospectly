@@ -19,6 +19,7 @@ export class RetentionService {
     outboxEventsDeleted: number;
   }> {
     return runWithBypass(async () => {
+      // R6: this job never deletes SyncedCommunication. Retention follows the Lead.
       const now = new Date();
       const revokedBefore = new Date(
         now.getTime() - RETENTION.revokedRefreshTokenDays * 24 * 60 * 60 * 1000,

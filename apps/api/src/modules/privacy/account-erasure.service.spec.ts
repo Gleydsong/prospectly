@@ -9,6 +9,7 @@ const makePrisma = () => {
     refreshToken: { updateMany: jest.fn() },
     googleConnection: { updateMany: jest.fn() },
     lead: { updateMany: jest.fn() },
+    syncedCommunication: { deleteMany: jest.fn() },
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
@@ -33,6 +34,7 @@ describe('AccountErasureService', () => {
         data: expect.objectContaining({ refreshTokenEncrypted: null }),
       }),
     );
+    expect(prisma.syncedCommunication.deleteMany).not.toHaveBeenCalled();
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

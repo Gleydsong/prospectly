@@ -42,7 +42,9 @@ const makePrisma = () => {
       findMany: jest.fn(),
       upsert: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
     },
+    syncedCommunication: { deleteMany: jest.fn(), delete: jest.fn() },
   };
   return prisma;
 };
@@ -210,6 +212,9 @@ describe('GoogleConnectionsService', () => {
     expect(prisma.googleConnection.update).not.toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ id: undefined }) }),
     );
+    expect(prisma.googleConnection.delete).not.toHaveBeenCalled();
+    expect(prisma.syncedCommunication.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.syncedCommunication.delete).not.toHaveBeenCalled();
   });
 
   it('lets an admin revoke another member and 404s when missing', async () => {
@@ -227,6 +232,8 @@ describe('GoogleConnectionsService', () => {
 
     await service.revoke('org-1', 'admin-1', 'u2');
     expect(prisma.googleConnection.update).toHaveBeenCalled();
+    expect(prisma.syncedCommunication.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.googleConnection.delete).not.toHaveBeenCalled();
     await expect(service.revoke('org-1', 'admin-1', 'u-missing')).rejects.toBeInstanceOf(
       NotFoundException,
     );
