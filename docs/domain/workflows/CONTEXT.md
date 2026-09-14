@@ -23,4 +23,5 @@ _Avoid_: Query string, AST livre, grafo
 - DRAFT aceita 0–10 passos. Publicar exige ≥1 passo e cria `WorkflowVersion` imutável.
 - O primeiro gatilho é `lead.created`. O primeiro passo é `add_tag`.
 - O worker aplica a versão publicada ACTIVE; redelivery não duplica LeadTag.
+- Um run por Fluxo+Lead+evento; passo `add_tag` não reemite o gatilho. Teto de 10 passos na publicação; JSON publicado oversized é capado no executor.
 - `doNotContact` e consentimento vencem qualquer execução futura. Não há cold outreach.

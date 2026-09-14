@@ -1,4 +1,8 @@
-import { parseWorkflowDefinition } from './workflow-definition';
+import {
+  assertNoTriggerReentry,
+  parseWorkflowDefinition,
+  stepWouldRetrigger,
+} from './workflow-definition';
 
 describe('parseWorkflowDefinition', () => {
   it('accepts lead.created with an add_tag step and optional Vista filter', () => {
@@ -47,5 +51,40 @@ describe('parseWorkflowDefinition', () => {
         filter: { field: 'email', op: 'eq', value: 'a@b.c' },
       }),
     ).toThrow('Unknown filter field');
+  });
+
+  it('rejects more than 10 steps so a malicious JSON cannot publish a storm', () => {
+    const steps = Array.from({ length: 11 }, (_, index) => ({
+      type: 'add_tag',
+      tagName: `tag-${index}`,
+    }));
+    expect(() =>
+      parseWorkflowDefinition({ trigger: { type: 'lead.created' }, steps }),
+    ).toThrow('steps cannot exceed 10');
+  });
+
+  it('does not treat add_tag as re-entering lead.created', () => {
+    expect(stepWouldRetrigger('lead.created', 'add_tag')).toBe(false);
+    expect(() =>
+      parseWorkflowDefinition({
+        trigger: { type: 'lead.created' },
+        steps: [{ type: 'add_tag', tagName: 'ok' }],
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects a definition whose step would emit the same DomainEvent as the trigger', () => {
+    expect(
+      stepWouldRetrigger('lead.created', 'add_tag', { add_tag: ['lead.created'] }),
+    ).toBe(true);
+    expect(() =>
+      assertNoTriggerReentry(
+        {
+          trigger: { type: 'lead.created' },
+          steps: [{ type: 'add_tag' }],
+        },
+        { add_tag: ['lead.created'] },
+      ),
+    ).toThrow('step would re-enter the Fluxo trigger');
   });
 });
