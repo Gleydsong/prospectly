@@ -11,6 +11,7 @@ import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   effectivePersona,
+  normalizePersonaOtherLabel,
   type ProfessionalPersona,
 } from '../../common/professional-persona';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
@@ -40,6 +41,7 @@ export class OrganizationsService {
         createdAt: true,
         updatedAt: true,
         defaultPersona: true,
+        personaOtherLabel: true,
         personaOnboardedAt: true,
         _count: { select: { members: true, leads: true } },
       },
@@ -222,6 +224,7 @@ export class OrganizationsService {
     organizationId: string,
     defaultPersona: ProfessionalPersona,
     actorId?: string,
+    personaOtherLabel?: string | null,
   ) {
     const organization = await this.prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
@@ -231,15 +234,19 @@ export class OrganizationsService {
       throw new NotFoundException('Organization not found');
     }
 
+    const normalizedLabel = normalizePersonaOtherLabel(defaultPersona, personaOtherLabel);
+
     const updated = await this.prisma.organization.update({
       where: { id: organizationId },
       data: {
         defaultPersona,
+        personaOtherLabel: normalizedLabel,
         ...(organization.personaOnboardedAt ? {} : { personaOnboardedAt: new Date() }),
       },
       select: {
         id: true,
         defaultPersona: true,
+        personaOtherLabel: true,
         personaOnboardedAt: true,
       },
     });
@@ -250,7 +257,7 @@ export class OrganizationsService {
       action: AUDIT_ACTIONS.ORG_SETTINGS_UPDATED,
       entity: 'Organization',
       entityId: organizationId,
-      metadata: { fields: ['defaultPersona'] },
+      metadata: { fields: ['defaultPersona', 'personaOtherLabel'] },
     });
 
     return updated;

@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   Equals,
   IsEmail,
@@ -8,6 +9,7 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 import {
@@ -53,6 +55,17 @@ export class RegisterDto {
   })
   @IsIn(PROFESSIONAL_PERSONAS)
   defaultPersona!: ProfessionalPersona;
+
+  @ApiPropertyOptional({
+    example: 'Fotógrafo',
+    description: 'Required (2–40 chars) when defaultPersona is outro',
+  })
+  @ValidateIf((o: RegisterDto) => o.defaultPersona === 'outro')
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(40)
+  personaOtherLabel?: string | null;
 
   @ApiProperty({
     example: true,

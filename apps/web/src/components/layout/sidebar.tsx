@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
@@ -159,6 +160,11 @@ export function Sidebar({
               />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-[color:var(--ink)]">{user.name}</p>
+                <Badge tone="slate" className="mt-0.5 max-w-full truncate">
+                  {user.effectivePersona === 'outro'
+                    ? user.personaOtherLabel?.trim() || t('persona.outro')
+                    : t(`persona.${user.effectivePersona ?? 'vendedor'}`)}
+                </Badge>
                 <p className="truncate text-xs text-[color:var(--ink-secondary)]">{user.email}</p>
               </div>
             </div>

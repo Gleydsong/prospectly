@@ -97,6 +97,64 @@ describe('RegisterPage', () => {
       expect.objectContaining({
         email: 'demo@prospectly.dev',
         defaultPersona: 'vendedor',
+        personaOtherLabel: null,
+      }),
+    );
+  });
+
+  it('reveals the other-label field for Outro and blocks submit without text', async () => {
+    renderWithProviders(<RegisterPage />, { initialEntries: ['/register'] });
+    const user = userEvent.setup({ delay: null });
+
+    expect(screen.queryByLabelText('Como você trabalha?')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Persona profissional'), 'outro');
+    expect(screen.getByLabelText('Como você trabalha?')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Nome'), 'Demo User');
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'secret12');
+    await user.type(screen.getByLabelText('Nome da organização'), 'Demo Organization');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+    expect(authApiMocks.register).not.toHaveBeenCalled();
+    expect(screen.getByText('Descreva em 2 a 40 caracteres.')).toBeInTheDocument();
+  });
+
+  it('sends personaOtherLabel when registering as Outro', async () => {
+    authApiMocks.register.mockResolvedValueOnce({
+      accessToken: 'token',
+      user: {
+        id: 'u1',
+        name: 'Demo User',
+        email: 'demo@prospectly.dev',
+        organizationId: 'org-1',
+        organizationName: 'Demo Organization',
+        role: 'OWNER',
+        locale: 'pt',
+        defaultPersona: 'outro',
+        personaOtherLabel: 'Fotógrafo',
+        personaOverride: null,
+        effectivePersona: 'outro',
+        personaOnboardedAt: '2026-09-14T00:00:00.000Z',
+      },
+    });
+    renderWithProviders(<RegisterPage />, { initialEntries: ['/register'] });
+    const user = userEvent.setup({ delay: null });
+
+    await user.type(screen.getByLabelText('Nome'), 'Demo User');
+    await user.type(screen.getByLabelText('E-mail'), 'demo@prospectly.dev');
+    await user.type(screen.getByLabelText('Senha'), 'secret12');
+    await user.type(screen.getByLabelText('Nome da organização'), 'Demo Organization');
+    await user.selectOptions(screen.getByLabelText('Persona profissional'), 'outro');
+    await user.type(screen.getByLabelText('Como você trabalha?'), 'Fotógrafo');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+    expect(authApiMocks.register).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPersona: 'outro',
+        personaOtherLabel: 'Fotógrafo',
       }),
     );
   });

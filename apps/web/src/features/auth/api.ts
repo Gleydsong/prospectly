@@ -28,6 +28,7 @@ export async function googleAuth(input: {
   locale?: 'pt' | 'en';
   acceptTerms?: true;
   defaultPersona?: ProfessionalPersona;
+  personaOtherLabel?: string | null;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/google', input, authRequestConfig);
   return data;
@@ -41,6 +42,7 @@ export async function register(input: {
   locale: 'pt' | 'en';
   acceptTerms: true;
   defaultPersona: ProfessionalPersona;
+  personaOtherLabel?: string | null;
 }): Promise<AuthResponse> {
   const { data } = await api.post<AuthResponse>('/auth/register', input, authRequestConfig);
   return data;

@@ -28,6 +28,7 @@ import { buildPasswordResetEmail } from './password-reset-email';
 import { RegisterDto } from './dto/register.dto';
 import {
   effectivePersona,
+  normalizePersonaOtherLabel,
   type ProfessionalPersona,
 } from '../../common/professional-persona';
 
@@ -48,6 +49,7 @@ export interface AuthResponse extends AuthTokens {
     avatarUrl?: string | null;
     emailVerifiedAt?: string | null;
     defaultPersona: ProfessionalPersona;
+    personaOtherLabel: string | null;
     personaOverride: ProfessionalPersona | null;
     effectivePersona: ProfessionalPersona;
     personaOnboardedAt: string | null;
@@ -103,6 +105,7 @@ export class AuthService {
         organizationName: dto.organizationName.trim(),
         locale: dto.locale,
         defaultPersona: dto.defaultPersona,
+        personaOtherLabel: normalizePersonaOtherLabel(dto.defaultPersona, dto.personaOtherLabel),
         personaOnboardedAt: new Date(),
       });
       const verifiedUser = await this.completeEmailVerificationAfterRegister(user);
@@ -198,6 +201,9 @@ export class AuthService {
     const locale = dto.locale ?? 'pt';
     const defaultPersona = dto.defaultPersona;
     const personaOnboardedAt = defaultPersona ? new Date() : null;
+    const personaOtherLabel = defaultPersona
+      ? normalizePersonaOtherLabel(defaultPersona, dto.personaOtherLabel)
+      : null;
 
     return runWithBypass(async () => {
       const { user, organizationId, role } = await this.provisionOwnerAccount({
@@ -210,6 +216,7 @@ export class AuthService {
         avatarUrl,
         emailVerifiedAt: emailVerified ? new Date() : null,
         defaultPersona: defaultPersona ?? 'vendedor',
+        personaOtherLabel,
         personaOnboardedAt,
       });
       if (emailVerified) {
@@ -615,6 +622,7 @@ export class AuthService {
     avatarUrl?: string | null;
     emailVerifiedAt?: Date | null;
     defaultPersona: ProfessionalPersona;
+    personaOtherLabel?: string | null;
     personaOnboardedAt: Date | null;
   }): Promise<{ user: User; organizationId: string; role: Role }> {
     const slug = await this.generateOrgSlug(input.organizationName);
@@ -627,6 +635,7 @@ export class AuthService {
           slug,
           creditBalance: SIGNUP_BONUS_CREDITS,
           defaultPersona: input.defaultPersona,
+          personaOtherLabel: input.personaOtherLabel ?? null,
           personaOnboardedAt: input.personaOnboardedAt,
         },
       });
@@ -716,6 +725,7 @@ export class AuthService {
         avatarUrl: user.avatarUrl ?? null,
         emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
         defaultPersona,
+        personaOtherLabel: organization.personaOtherLabel ?? null,
         personaOverride,
         effectivePersona: effectivePersona(defaultPersona, personaOverride),
         personaOnboardedAt: organization.personaOnboardedAt?.toISOString() ?? null,

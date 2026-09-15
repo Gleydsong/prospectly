@@ -1128,7 +1128,10 @@
     "orgDefault": "Persona padrão da organização",
     "override": "Sua persona nesta organização",
     "readOnly": "Apenas leitura. Peça a um membro para alterar a persona.",
-    "saveDefault": "Salvar persona"
+    "saveDefault": "Salvar persona",
+    "otherLabel": "Como você trabalha?",
+    "otherLabelPlaceholder": "Ex.: fotógrafo, consultor",
+    "otherLabelRequired": "Descreva em 2 a 40 caracteres."
   },
   "leadWebsites": {
     "title": "Sites",

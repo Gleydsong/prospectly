@@ -12,6 +12,7 @@ export interface OrganizationCurrent {
   createdAt: string;
   updatedAt: string;
   defaultPersona?: ProfessionalPersona;
+  personaOtherLabel?: string | null;
   personaOnboardedAt?: string | null;
   _count: { members: number; leads: number };
 }
@@ -71,14 +72,24 @@ export async function removeOrganizationMember(memberId: string): Promise<void> 
   await api.delete(`/organizations/members/${memberId}`);
 }
 
-export async function updateOrganizationPersona(
-  defaultPersona: ProfessionalPersona,
-): Promise<{ id: string; defaultPersona: ProfessionalPersona; personaOnboardedAt: string | null }> {
+export async function updateOrganizationPersona(input: {
+  defaultPersona: ProfessionalPersona;
+  personaOtherLabel?: string | null;
+}): Promise<{
+  id: string;
+  defaultPersona: ProfessionalPersona;
+  personaOtherLabel: string | null;
+  personaOnboardedAt: string | null;
+}> {
   const { data } = await api.patch<{
     id: string;
     defaultPersona: ProfessionalPersona;
+    personaOtherLabel: string | null;
     personaOnboardedAt: string | null;
-  }>('/organizations/current/persona', { defaultPersona });
+  }>('/organizations/current/persona', {
+    defaultPersona: input.defaultPersona,
+    personaOtherLabel: input.personaOtherLabel ?? null,
+  });
   return data;
 }
 

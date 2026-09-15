@@ -42,7 +42,12 @@ export class OrganizationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: PatchOrganizationPersonaDto,
   ) {
-    return this.organizations.updateDefaultPersona(organizationId, dto.defaultPersona, user.id);
+    return this.organizations.updateDefaultPersona(
+      organizationId,
+      dto.defaultPersona,
+      user.id,
+      dto.personaOtherLabel,
+    );
   }
 
   @Patch('me/persona-override')

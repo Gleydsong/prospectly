@@ -16,6 +16,7 @@ type GoogleSignInButtonProps = {
   organizationName?: string;
   locale?: 'pt' | 'en';
   defaultPersona?: ProfessionalPersona;
+  personaOtherLabel?: string | null;
   disabled?: boolean;
 };
 
@@ -49,6 +50,7 @@ function GoogleSignInButtonInner({
   organizationName,
   locale,
   defaultPersona,
+  personaOtherLabel,
   disabled,
 }: GoogleSignInButtonProps) {
   const { t } = useTranslation();
@@ -70,6 +72,11 @@ function GoogleSignInButtonInner({
           ...(organizationName?.trim() ? { organizationName: organizationName.trim() } : {}),
           ...(locale ? { locale } : {}),
           ...(defaultPersona ? { defaultPersona } : {}),
+          ...(defaultPersona === 'outro'
+            ? { personaOtherLabel: personaOtherLabel?.trim() || undefined }
+            : defaultPersona
+              ? { personaOtherLabel: null }
+              : {}),
         });
         await onSuccess(response);
       } catch (error) {
