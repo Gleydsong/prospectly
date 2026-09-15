@@ -271,10 +271,11 @@ describe('CampaignDetailPage', () => {
     );
   }
 
-  it('opens detail with assisted notice and real zero-event metrics', () => {
+  it('opens detail with real zero-event metrics and without the assisted notice', () => {
     renderDetail();
     expect(screen.getByRole('heading', { name: 'Padarias LX' })).toBeInTheDocument();
-    expect(screen.getByRole('note')).toHaveTextContent(/não envia/i);
+    expect(screen.queryByRole('note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/não envia/i)).not.toBeInTheDocument();
     expect(screen.getByText(/0 eventos registrados/i)).toBeInTheDocument();
   });
 

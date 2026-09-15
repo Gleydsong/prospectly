@@ -66,11 +66,11 @@ describe('ReportsPage', () => {
     mocks.useArchiveSavedReport.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
-  it('shows funnel conversion KPIs and the 90-day outbox notice', () => {
+  it('shows funnel conversion KPIs without the outbox retention notice', () => {
     renderWithProviders(<ReportsPage />, { withGoogle: false });
     expect(screen.getByRole('heading', { name: 'Relatórios' })).toBeInTheDocument();
-    expect(screen.getByText(/retenção do outbox \(90 dias\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/eventos antigos \(v1\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/retenção do outbox \(90 dias\)/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/eventos antigos \(v1\)/i)).not.toBeInTheDocument();
     expect(screen.getAllByText('Entradas').length).toBeGreaterThan(0);
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getAllByText('Manual').length).toBeGreaterThan(0);
