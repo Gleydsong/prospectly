@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   Equals,
   IsIn,
@@ -6,6 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -59,4 +61,15 @@ export class GoogleAuthDto {
   @IsOptional()
   @IsIn(PROFESSIONAL_PERSONAS)
   defaultPersona?: ProfessionalPersona;
+
+  @ApiPropertyOptional({
+    example: 'Fotógrafo',
+    description: 'Required (2–40 chars) when creating an account with defaultPersona outro',
+  })
+  @ValidateIf((o: GoogleAuthDto) => o.defaultPersona === 'outro')
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MinLength(2)
+  @MaxLength(40)
+  personaOtherLabel?: string | null;
 }

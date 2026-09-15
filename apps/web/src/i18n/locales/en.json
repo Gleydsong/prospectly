@@ -1128,7 +1128,10 @@
     "orgDefault": "Organization default persona",
     "override": "Your persona in this organization",
     "readOnly": "Read-only. Ask a member to change the persona.",
-    "saveDefault": "Save persona"
+    "saveDefault": "Save persona",
+    "otherLabel": "How do you work?",
+    "otherLabelPlaceholder": "e.g. photographer, consultant",
+    "otherLabelRequired": "Describe it in 2 to 40 characters."
   },
   "leadWebsites": {
     "title": "Sites",

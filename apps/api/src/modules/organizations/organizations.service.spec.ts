@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 
 import type { PrismaService } from '../../common/prisma/prisma.service';
@@ -313,6 +313,74 @@ describe('OrganizationsService persona', () => {
     );
     expect(prisma.organizationMember.update).not.toHaveBeenCalled();
     expect(result.defaultPersona).toBe('marketing');
+  });
+
+  it('persists personaOtherLabel when defaultPersona is outro', async () => {
+    const prisma = makePrisma();
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      defaultPersona: 'vendedor',
+      personaOnboardedAt: new Date(),
+    });
+    prisma.organization.update.mockResolvedValue({
+      id: 'org1',
+      defaultPersona: 'outro',
+      personaOtherLabel: 'Fotógrafo',
+      personaOnboardedAt: new Date(),
+    });
+    const service = makeService(prisma);
+
+    const result = await service.updateDefaultPersona('org1', 'outro', 'owner-1', ' Fotógrafo ');
+
+    expect(prisma.organization.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          defaultPersona: 'outro',
+          personaOtherLabel: 'Fotógrafo',
+        }),
+      }),
+    );
+    expect(result.personaOtherLabel).toBe('Fotógrafo');
+  });
+
+  it('rejects outro without a 2-40 character label', async () => {
+    const prisma = makePrisma();
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      personaOnboardedAt: new Date(),
+    });
+    const service = makeService(prisma);
+
+    await expect(service.updateDefaultPersona('org1', 'outro', 'owner-1')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.organization.update).not.toHaveBeenCalled();
+  });
+
+  it('clears personaOtherLabel when switching to vendedor', async () => {
+    const prisma = makePrisma();
+    prisma.organization.findFirst.mockResolvedValue({
+      id: 'org1',
+      personaOnboardedAt: new Date(),
+    });
+    prisma.organization.update.mockResolvedValue({
+      id: 'org1',
+      defaultPersona: 'vendedor',
+      personaOtherLabel: null,
+      personaOnboardedAt: new Date(),
+    });
+    const service = makeService(prisma);
+
+    await service.updateDefaultPersona('org1', 'vendedor', 'owner-1', 'leftover');
+
+    expect(prisma.organization.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          defaultPersona: 'vendedor',
+          personaOtherLabel: null,
+        }),
+      }),
+    );
   });
 
   it('MEMBER updates own persona override without changing org default', async () => {

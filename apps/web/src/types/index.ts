@@ -66,6 +66,7 @@ export interface AuthUser {
   defaultPersona?: ProfessionalPersona;
   personaOverride?: ProfessionalPersona | null;
   effectivePersona?: ProfessionalPersona;
+  personaOtherLabel?: string | null;
   personaOnboardedAt?: string | null;
 }
 

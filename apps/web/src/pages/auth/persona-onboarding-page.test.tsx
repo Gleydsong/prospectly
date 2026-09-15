@@ -52,9 +52,46 @@ describe('PersonaOnboardingPage', () => {
     await user.click(screen.getByRole('button', { name: /continuar/i }));
 
     await waitFor(() => {
-      expect(orgApi.updateOrganizationPersona).toHaveBeenCalledWith('desenvolvedor');
+      expect(orgApi.updateOrganizationPersona).toHaveBeenCalledWith({
+        defaultPersona: 'desenvolvedor',
+        personaOtherLabel: null,
+      });
       expect(useAuthStore.getState().user?.effectivePersona).toBe('desenvolvedor');
       expect(useAuthStore.getState().user?.personaOnboardedAt).toBe('2026-09-14T12:00:00.000Z');
+    });
+  });
+
+  it('reveals the other label and requires it before continuing', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<PersonaOnboardingPage />, { initialEntries: ['/onboarding/persona'] });
+
+    expect(screen.queryByLabelText('Como você trabalha?')).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText(/persona profissional/i), 'outro');
+    expect(screen.getByLabelText('Como você trabalha?')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /continuar/i }));
+    expect(orgApi.updateOrganizationPersona).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/2 a 40/i);
+  });
+
+  it('sends the trimmed other label when Outro is selected', async () => {
+    orgApi.updateOrganizationPersona.mockResolvedValueOnce({
+      defaultPersona: 'outro',
+      personaOtherLabel: 'Fotógrafo',
+      personaOnboardedAt: '2026-09-14T12:00:00.000Z',
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<PersonaOnboardingPage />, { initialEntries: ['/onboarding/persona'] });
+
+    await user.selectOptions(screen.getByLabelText(/persona profissional/i), 'outro');
+    await user.type(screen.getByLabelText('Como você trabalha?'), 'Fotógrafo');
+    await user.click(screen.getByRole('button', { name: /continuar/i }));
+
+    await waitFor(() => {
+      expect(orgApi.updateOrganizationPersona).toHaveBeenCalledWith({
+        defaultPersona: 'outro',
+        personaOtherLabel: 'Fotógrafo',
+      });
     });
   });
 });

@@ -30,13 +30,14 @@ import {
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
 
-type RegisterForm = {
+  type RegisterForm = {
   name: string;
   email: string;
   password: string;
   organizationName: string;
   locale: AppLocale;
   defaultPersona: ProfessionalPersona;
+  personaOtherLabel?: string;
   acceptTerms: boolean;
 };
 
@@ -71,9 +72,20 @@ export function RegisterPage() {
         organizationName: z.string().min(2, t('auth.orgRequired')),
         locale: z.enum(['pt', 'en']),
         defaultPersona: z.enum(PROFESSIONAL_PERSONAS),
+        personaOtherLabel: z.string().optional(),
         acceptTerms: z
           .boolean({ required_error: t('auth.acceptTermsRequired') })
           .refine((value) => value === true, { message: t('auth.acceptTermsRequired') }),
+      }).superRefine((data, ctx) => {
+        if (data.defaultPersona !== 'outro') return;
+        const trimmed = data.personaOtherLabel?.trim() ?? '';
+        if (trimmed.length < 2 || trimmed.length > 40) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['personaOtherLabel'],
+            message: t('persona.otherLabelRequired'),
+          });
+        }
       }),
     [t],
   );
@@ -86,13 +98,19 @@ export function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { locale: detectBrowserLocale(), defaultPersona: 'vendedor', acceptTerms: false },
+    defaultValues: {
+      locale: detectBrowserLocale(),
+      defaultPersona: 'vendedor',
+      personaOtherLabel: '',
+      acceptTerms: false,
+    },
   });
 
   const locale = watch('locale');
   const acceptTerms = watch('acceptTerms');
   const organizationName = watch('organizationName');
   const defaultPersona = watch('defaultPersona');
+  const personaOtherLabel = watch('personaOtherLabel');
 
   const finishAuth = async (response: AuthResponse, fallbackLocale?: AppLocale) => {
     setAuth(response);
@@ -151,6 +169,8 @@ export function RegisterPage() {
         organizationName: values.organizationName,
         locale: values.locale,
         defaultPersona: values.defaultPersona,
+        personaOtherLabel:
+          values.defaultPersona === 'outro' ? values.personaOtherLabel?.trim() : null,
         acceptTerms: true,
       });
       await finishAuth(response, values.locale);
@@ -251,9 +271,11 @@ export function RegisterPage() {
           value={defaultPersona}
           error={errors.defaultPersona?.message}
           onChange={(event) => {
-            setValue('defaultPersona', event.target.value as ProfessionalPersona, {
-              shouldValidate: true,
-            });
+            const next = event.target.value as ProfessionalPersona;
+            setValue('defaultPersona', next, { shouldValidate: true });
+            if (next !== 'outro') {
+              setValue('personaOtherLabel', '', { shouldValidate: true });
+            }
           }}
         >
           {PROFESSIONAL_PERSONAS.map((value) => (
@@ -262,6 +284,15 @@ export function RegisterPage() {
             </option>
           ))}
         </Select>
+        {defaultPersona === 'outro' ? (
+          <Input
+            label={t('persona.otherLabel')}
+            placeholder={t('persona.otherLabelPlaceholder')}
+            error={errors.personaOtherLabel?.message}
+            maxLength={40}
+            {...register('personaOtherLabel')}
+          />
+        ) : null}
 
         <label className="flex items-start gap-2 text-sm text-zinc-300">
           <input type="checkbox" className="mt-1" {...register('acceptTerms')} />
@@ -328,6 +359,7 @@ export function RegisterPage() {
           organizationName={organizationName}
           locale={locale}
           defaultPersona={defaultPersona}
+          personaOtherLabel={defaultPersona === 'outro' ? personaOtherLabel : null}
           disabled={!acceptTerms}
           onSuccess={(response) => finishAuth(response, locale)}
           onError={(message) => setServerError(message)}

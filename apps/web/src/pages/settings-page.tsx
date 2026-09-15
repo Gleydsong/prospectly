@@ -75,6 +75,7 @@ export function SettingsPage() {
   const [orgPersona, setOrgPersona] = useState<ProfessionalPersona>(
     user?.defaultPersona ?? 'vendedor',
   );
+  const [orgOtherLabel, setOrgOtherLabel] = useState(user?.personaOtherLabel ?? '');
   const [overrideValue, setOverrideValue] = useState(user?.personaOverride ?? '');
   const [orgMessage, setOrgMessage] = useState<string | null>(null);
   const [orgError, setOrgError] = useState<string | null>(null);
@@ -117,7 +118,10 @@ export function SettingsPage() {
   useEffect(() => {
     if (orgQuery.data?.name) setOrgName(orgQuery.data.name);
     if (orgQuery.data?.defaultPersona) setOrgPersona(orgQuery.data.defaultPersona);
-  }, [orgQuery.data?.name, orgQuery.data?.defaultPersona]);
+    if (orgQuery.data && 'personaOtherLabel' in orgQuery.data) {
+      setOrgOtherLabel(orgQuery.data.personaOtherLabel ?? '');
+    }
+  }, [orgQuery.data?.name, orgQuery.data?.defaultPersona, orgQuery.data?.personaOtherLabel]);
 
   useEffect(() => {
     setOverrideValue(user?.personaOverride ?? '');
@@ -183,10 +187,15 @@ export function SettingsPage() {
   });
 
   const saveOrgPersona = useMutation({
-    mutationFn: () => updateOrganizationPersona(orgPersona),
+    mutationFn: () =>
+      updateOrganizationPersona({
+        defaultPersona: orgPersona,
+        personaOtherLabel: orgPersona === 'outro' ? orgOtherLabel.trim() : null,
+      }),
     onSuccess: async (data) => {
       updateUser({
         defaultPersona: data.defaultPersona,
+        personaOtherLabel: data.personaOtherLabel,
         effectivePersona: user?.personaOverride ?? data.defaultPersona,
         personaOnboardedAt: data.personaOnboardedAt,
       });
@@ -264,6 +273,12 @@ export function SettingsPage() {
     (avatarPreview ?? null) !== (user?.avatarUrl ?? null);
 
   const orgDirty = orgName.trim() !== (orgQuery.data?.name ?? user?.organizationName ?? '');
+  const savedOrgPersona = orgQuery.data?.defaultPersona ?? user?.defaultPersona;
+  const savedOrgOtherLabel = orgQuery.data?.personaOtherLabel ?? user?.personaOtherLabel ?? '';
+  const orgPersonaDirty =
+    orgPersona !== savedOrgPersona ||
+    (orgPersona === 'outro' ? orgOtherLabel.trim() !== savedOrgOtherLabel : Boolean(savedOrgOtherLabel));
+  const orgPersonaInvalid = orgPersona === 'outro' && orgOtherLabel.trim().length < 2;
   const safeAvatarPreview = sanitizeAvatarSrc(avatarPreview);
 
   return (
@@ -433,7 +448,11 @@ export function SettingsPage() {
               label={t('persona.orgDefault')}
               value={orgPersona}
               disabled={!manage}
-              onChange={(event) => setOrgPersona(event.target.value as ProfessionalPersona)}
+              onChange={(event) => {
+                const next = event.target.value as ProfessionalPersona;
+                setOrgPersona(next);
+                if (next !== 'outro') setOrgOtherLabel('');
+              }}
             >
               {PROFESSIONAL_PERSONAS.map((value) => (
                 <option key={value} value={value}>
@@ -441,6 +460,19 @@ export function SettingsPage() {
                 </option>
               ))}
             </Select>
+            {orgPersona === 'outro' ? (
+              <Input
+                id="org-persona-other-label"
+                name="org-persona-other-label"
+                className="h-11 max-w-md"
+                label={t('persona.otherLabel')}
+                placeholder={t('persona.otherLabelPlaceholder')}
+                value={orgOtherLabel}
+                maxLength={40}
+                disabled={!manage}
+                onChange={(event) => setOrgOtherLabel(event.target.value)}
+              />
+            ) : null}
             {orgMessage ? <Alert tone="success">{orgMessage}</Alert> : null}
             {orgError ? <Alert tone="error">{orgError}</Alert> : null}
             {manage ? (
@@ -454,7 +486,7 @@ export function SettingsPage() {
                 </Button>
                 <Button
                   loading={saveOrgPersona.isPending}
-                  disabled={orgPersona === (orgQuery.data?.defaultPersona ?? user?.defaultPersona)}
+                  disabled={!orgPersonaDirty || orgPersonaInvalid}
                   onClick={() => saveOrgPersona.mutate()}
                 >
                   {t('persona.saveDefault')}

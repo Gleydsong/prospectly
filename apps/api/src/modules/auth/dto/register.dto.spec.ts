@@ -41,4 +41,24 @@ describe('RegisterDto', () => {
       ),
     ).resolves.toEqual(expect.objectContaining({ defaultPersona: 'desenvolvedor' }));
   });
+
+  it('rejects outro without personaOtherLabel', async () => {
+    await expect(
+      pipe.transform(
+        { ...validBase, defaultPersona: 'outro' },
+        { type: 'body', metatype: RegisterDto },
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('accepts outro with a trimmed personaOtherLabel', async () => {
+    await expect(
+      pipe.transform(
+        { ...validBase, defaultPersona: 'outro', personaOtherLabel: ' Fotógrafo ' },
+        { type: 'body', metatype: RegisterDto },
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({ defaultPersona: 'outro', personaOtherLabel: 'Fotógrafo' }),
+    );
+  });
 });
