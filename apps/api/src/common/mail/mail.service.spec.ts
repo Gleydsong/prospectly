@@ -58,7 +58,7 @@ describe('MailService', () => {
     const service = new MailService(
       makeConfig({
         'resend.apiKey': 're_test',
-        'resend.from': 'Prospectly <no-reply@prospectlyonboard.com>',
+        'resend.from': 'Prospectly <hello@prospectlyonboard.com>',
       }),
     );
 
@@ -72,6 +72,7 @@ describe('MailService', () => {
 
     expect(sendMock).toHaveBeenCalledWith(
       expect.objectContaining({
+        from: 'Prospectly <hello@prospectlyonboard.com>',
         to: 'ana@agency.dev',
         subject: 'Bem-vindo Bcc: evil@x.com',
         html: '<p>Hello</p>',

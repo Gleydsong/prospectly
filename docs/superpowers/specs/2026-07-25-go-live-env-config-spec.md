@@ -74,7 +74,7 @@ Preencher no **Dashboard Render** na primeira aplicação do Blueprint (`sync: f
 | A17 | `SMTP_HOST` | Must* | hostname SMTP | *Must se forgot-password for requisito de launch |
 | A18 | `SMTP_USER` | Must* | usuário | Auth SMTP |
 | A19 | `SMTP_PASSWORD` | Must* | senha / app password | Auth SMTP |
-| A20 | `SMTP_FROM` | Must* | `no-reply@dominio.com` | Remetente |
+| A20 | `SMTP_FROM` | Must* | `hello@dominio.com` | Remetente |
 | A21 | `GOOGLE_CLIENT_ID` | Must (se Google Sign-In) | OAuth Web Client ID | Verifica ID token em `POST /auth/google` |
 
 \*SMTP: se o launch aceitar “reset só via suporte”, pode ir para Should; o código ainda não envia e-mail até SMTP + implementação do TODO phase-6 estarem ok — tratar SMTP como Must para Go Live completo de auth.

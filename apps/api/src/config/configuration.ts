@@ -57,11 +57,11 @@ export const configuration = () => ({
     port: parseInt(process.env.SMTP_PORT ?? '587', 10),
     user: process.env.SMTP_USER,
     password: process.env.SMTP_PASSWORD,
-    from: process.env.SMTP_FROM ?? 'no-reply@prospectly.dev',
+    from: process.env.SMTP_FROM ?? 'hello@prospectlyonboard.com',
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? '',
-    from: process.env.RESEND_FROM ?? process.env.SMTP_FROM ?? 'no-reply@prospectly.dev',
+    from: process.env.RESEND_FROM ?? process.env.SMTP_FROM ?? 'hello@prospectlyonboard.com',
   },
   waitlist: {
     notifyTo: process.env.WAITLIST_NOTIFY_TO ?? '',
