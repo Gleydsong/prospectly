@@ -104,6 +104,7 @@ describe('AuthService', () => {
         password: 'Passw0rd!',
         organizationName: 'Agency',
         locale: 'pt',
+        defaultPersona: 'vendedor',
         acceptTerms: true,
       }),
     ).rejects.toMatchObject({
@@ -156,6 +157,7 @@ describe('AuthService', () => {
       password: 'Passw0rd!',
       organizationName: 'Agency',
       locale: 'en',
+      defaultPersona: 'vendedor',
       acceptTerms: true,
     });
 
@@ -228,6 +230,7 @@ describe('AuthService', () => {
       password: 'Passw0rd!',
       organizationName: 'Agency',
       locale: 'pt',
+      defaultPersona: 'vendedor',
       acceptTerms: true,
     });
 
@@ -286,6 +289,7 @@ describe('AuthService', () => {
       password: 'Passw0rd!',
       organizationName: 'Agency',
       locale: 'pt',
+      defaultPersona: 'vendedor',
       acceptTerms: true,
     });
 
@@ -343,6 +347,7 @@ describe('AuthService', () => {
       password: 'Passw0rd!',
       organizationName: 'Agency',
       locale: 'pt',
+      defaultPersona: 'vendedor',
       acceptTerms: true,
     });
 
@@ -357,6 +362,68 @@ describe('AuthService', () => {
     const payload = (mail.send as jest.Mock).mock.calls[0][0] as { html: string; text: string };
     expect(payload.html).toContain('Ativar minha conta');
     expect(payload.text).toContain('24 horas');
+  });
+
+  it('register with desenvolvedor persists organization.defaultPersona and personaOnboardedAt', async () => {
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue(null);
+    const createdUser = {
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt' as const,
+    };
+    const orgCreate = jest.fn().mockResolvedValue({ id: 'org1', name: 'Agency', slug: 'agency' });
+    (prisma.organization as unknown as { findUnique: jest.Mock }).findUnique = jest
+      .fn()
+      .mockResolvedValue(null);
+    (prisma.organization as unknown as { create: jest.Mock }).create = orgCreate;
+    (prisma.user as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue(createdUser);
+    (prisma.organizationMember as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ userId: 'u1', organizationId: 'org1', role: 'OWNER' });
+    (prisma.pipeline as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({ id: 'p1' });
+    (prisma.pipelineStage as unknown as { createMany: jest.Mock }).createMany = jest
+      .fn()
+      .mockResolvedValue({ count: 10 });
+    prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+      fn(prisma),
+    );
+    (prisma.organization as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({
+        id: 'org1',
+        name: 'Agency',
+        defaultPersona: 'desenvolvedor',
+        personaOnboardedAt: new Date('2026-09-14T12:00:00.000Z'),
+      });
+    prisma.organizationMember.findUnique.mockResolvedValue({ personaOverride: null });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue(createdUser);
+    (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+    const result = await service.register({
+      name: 'Ana',
+      email: 'ana@agency.dev',
+      password: 'Passw0rd!',
+      organizationName: 'Agency',
+      locale: 'pt',
+      defaultPersona: 'desenvolvedor',
+      acceptTerms: true,
+    });
+
+    expect(orgCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        defaultPersona: 'desenvolvedor',
+        personaOnboardedAt: expect.any(Date),
+      }),
+    });
+    expect(result.user.defaultPersona).toBe('desenvolvedor');
+    expect(result.user.personaOverride).toBeNull();
+    expect(result.user.effectivePersona).toBe('desenvolvedor');
+    expect(result.user.personaOnboardedAt).toBe('2026-09-14T12:00:00.000Z');
   });
 
   it('verifyEmail sends a welcome email after the first confirmation', async () => {
@@ -667,6 +734,120 @@ describe('AuthService', () => {
     });
     expect(result.user.organizationId).toBe('org-g');
     expect(result.accessToken).toBe('token');
+  });
+
+  it('googleAuth new account without defaultPersona sets vendedor and null personaOnboardedAt', async () => {
+    verifyIdToken.mockResolvedValue({
+      getPayload: () => ({
+        sub: 'google-sub-2',
+        email: 'nova@agency.dev',
+        email_verified: true,
+        name: 'Nova User',
+      }),
+    });
+
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+
+    const createdUser = {
+      id: 'u-google',
+      email: 'nova@agency.dev',
+      name: 'Nova User',
+      locale: 'pt' as const,
+      googleId: 'google-sub-2',
+    };
+    const orgCreate = jest.fn().mockResolvedValue({ id: 'org-g', name: 'Agency G', slug: 'agency-g' });
+    (prisma.organization as unknown as { findUnique: jest.Mock }).findUnique = jest
+      .fn()
+      .mockResolvedValue(null);
+    (prisma.organization as unknown as { create: jest.Mock }).create = orgCreate;
+    (prisma.user as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue(createdUser);
+    (prisma.organizationMember as unknown as { create: jest.Mock }).create = jest
+      .fn()
+      .mockResolvedValue({ userId: 'u-google', organizationId: 'org-g', role: 'OWNER' });
+    (prisma.pipeline as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({ id: 'p1' });
+    (prisma.pipelineStage as unknown as { createMany: jest.Mock }).createMany = jest
+      .fn()
+      .mockResolvedValue({ count: 10 });
+    prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => Promise<unknown>) =>
+      fn(prisma),
+    );
+    (prisma.organization as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({
+        id: 'org-g',
+        name: 'Agency G',
+        defaultPersona: 'vendedor',
+        personaOnboardedAt: null,
+      });
+    prisma.organizationMember.findUnique.mockResolvedValue({ personaOverride: null });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue(createdUser);
+    (prisma.refreshToken as unknown as { create: jest.Mock }).create = jest.fn().mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+    const result = await service.googleAuth({
+      idToken: 'valid-id-token',
+      organizationName: 'Agency G',
+      locale: 'pt',
+      acceptTerms: true,
+    });
+
+    expect(orgCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        defaultPersona: 'vendedor',
+        personaOnboardedAt: null,
+      }),
+    });
+    expect(result.user.defaultPersona).toBe('vendedor');
+    expect(result.user.personaOnboardedAt).toBeNull();
+    expect(result.user.effectivePersona).toBe('vendedor');
+  });
+
+  it('buildAuthResponse effectivePersona uses membership override', async () => {
+    verifyIdToken.mockResolvedValue({
+      getPayload: () => ({
+        sub: 'google-sub-1',
+        email: 'ana@agency.dev',
+        email_verified: true,
+        name: 'Ana',
+      }),
+    });
+
+    const prisma = makePrisma();
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'ana@agency.dev',
+      name: 'Ana',
+      locale: 'pt',
+      googleId: 'google-sub-1',
+      avatarUrl: null,
+      memberships: [{ organizationId: 'org1', role: 'OWNER' }],
+    });
+    prisma.organization.findUniqueOrThrow = jest.fn().mockResolvedValue({
+      id: 'org1',
+      name: 'Org',
+      defaultPersona: 'vendedor',
+      personaOnboardedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+    prisma.organizationMember.findUnique.mockResolvedValue({ personaOverride: 'desenvolvedor' });
+    (prisma.user as unknown as { findUniqueOrThrow: jest.Mock }).findUniqueOrThrow = jest
+      .fn()
+      .mockResolvedValue({ id: 'u1', email: 'ana@agency.dev', locale: 'pt' });
+    prisma.refreshToken.create = jest.fn().mockResolvedValue({});
+
+    const service = new AuthService(prisma, makeJwt(), makeConfig(), makeMail());
+    const result = await service.googleAuth({ idToken: 'valid-id-token' });
+
+    expect(result.user.defaultPersona).toBe('vendedor');
+    expect(result.user.personaOverride).toBe('desenvolvedor');
+    expect(result.user.effectivePersona).toBe('desenvolvedor');
+    expect(prisma.organizationMember.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId_organizationId: { userId: 'u1', organizationId: 'org1' } },
+      }),
+    );
   });
 
   it('googleAuth logs in existing googleId user', async () => {

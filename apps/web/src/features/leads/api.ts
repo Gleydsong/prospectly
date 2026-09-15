@@ -5,6 +5,8 @@ import type {
   LeadExportResult,
   LeadListItem,
   LeadStatus,
+  LeadWebsite,
+  LeadWebsiteKind,
   PaginatedResult,
   Tag,
 } from '@/types';
@@ -79,6 +81,32 @@ export async function updateLead(
 
 export async function deleteLead(id: string): Promise<void> {
   await api.delete(`/leads/${id}`);
+}
+
+export async function fetchLeadWebsites(leadId: string): Promise<LeadWebsite[]> {
+  const { data } = await api.get<LeadWebsite[]>(`/leads/${leadId}/websites`);
+  return data;
+}
+
+export async function createLeadWebsite(
+  leadId: string,
+  input: { url: string; label?: string; kind?: LeadWebsiteKind; notes?: string },
+): Promise<LeadWebsite> {
+  const { data } = await api.post<LeadWebsite>(`/leads/${leadId}/websites`, input);
+  return data;
+}
+
+export async function updateLeadWebsite(
+  leadId: string,
+  websiteId: string,
+  input: { url?: string; label?: string | null; kind?: LeadWebsiteKind; notes?: string | null },
+): Promise<LeadWebsite> {
+  const { data } = await api.patch<LeadWebsite>(`/leads/${leadId}/websites/${websiteId}`, input);
+  return data;
+}
+
+export async function deleteLeadWebsite(leadId: string, websiteId: string): Promise<void> {
+  await api.delete(`/leads/${leadId}/websites/${websiteId}`);
 }
 
 export async function fetchTags(): Promise<Tag[]> {

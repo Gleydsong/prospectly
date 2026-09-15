@@ -6,6 +6,7 @@ import { OutboxModule } from '../outbox/outbox.module';
 import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.module';
 import { LeadsController } from './leads.controller';
 import { LeadIngestionService } from './lead-ingestion.service';
+import { LeadWebsitesService } from './lead-websites.service';
 import { LeadsService } from './leads.service';
 
 @Module({
@@ -16,7 +17,7 @@ import { LeadsService } from './leads.service';
     CustomFieldsModule,
   ],
   controllers: [LeadsController],
-  providers: [LeadsService, LeadIngestionService],
+  providers: [LeadsService, LeadIngestionService, LeadWebsitesService],
   exports: [LeadsService, LeadIngestionService],
 })
 export class LeadsModule {}

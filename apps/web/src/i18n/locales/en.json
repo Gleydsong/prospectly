@@ -1113,5 +1113,38 @@
     "openInCalendar": "Open in Calendar",
     "noSubject": "(no subject)",
     "messageCount": "{{count}} messages"
+  },
+  "persona": {
+    "label": "Professional persona",
+    "vendedor": "Sales",
+    "desenvolvedor": "Developer",
+    "trafego_pago": "Paid traffic",
+    "marketing": "Marketing",
+    "outro": "Other",
+    "followOrg": "Follow organization",
+    "onboardingTitle": "How do you work?",
+    "onboardingSubtitle": "Choose this organization's default persona. Each member can override it later.",
+    "continue": "Continue",
+    "orgDefault": "Organization default persona",
+    "override": "Your persona in this organization",
+    "readOnly": "Read-only. Ask a member to change the persona.",
+    "saveDefault": "Save persona"
+  },
+  "leadWebsites": {
+    "title": "Sites",
+    "titleWon": "Client file — Sites",
+    "add": "Add site",
+    "url": "URL",
+    "labelField": "Label",
+    "kindLabel": "Type",
+    "kind": {
+      "site": "Site",
+      "landing": "Landing",
+      "app": "App"
+    },
+    "notes": "Notes",
+    "empty": "No websites recorded on this lead yet.",
+    "remove": "Remove",
+    "error": "Could not load or save websites."
   }
 }

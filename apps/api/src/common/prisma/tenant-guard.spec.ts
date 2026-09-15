@@ -101,4 +101,21 @@ describe('assertTenantOperation', () => {
       ).not.toThrow();
     });
   });
+
+  it('requires tenant context for LeadWebsite child rows', () => {
+    runWithTenant('', () => {
+      expect(() =>
+        assertTenantOperation('LeadWebsite', 'create', {
+          data: { url: 'https://loja.example', urlNormalized: 'https://loja.example' },
+        }),
+      ).toThrow(TenantScopeError);
+    });
+    runWithTenant('org-1', () => {
+      expect(() =>
+        assertTenantOperation('LeadWebsite', 'create', {
+          data: { url: 'https://loja.example', urlNormalized: 'https://loja.example' },
+        }),
+      ).not.toThrow();
+    });
+  });
 });

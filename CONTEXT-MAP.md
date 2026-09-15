@@ -12,6 +12,7 @@
 - [Agents](./docs/domain/agents/CONTEXT.md): fornece copiloto CRM e variantes de abordagem WhatsApp assistidas
 - [Communications](./docs/domain/communications/CONTEXT.md): associa e-mail e eventos de calendário da Conexão Google de uma pessoa ao cliente potencial
 - [Integrations](./docs/domain/integrations/CONTEXT.md): liga a organização a PluginTokens para agentes e editores
+- [Professional persona](./docs/domain/professional-persona/CONTEXT.md): persona profissional da organização/membro e Website do Lead (inventário de URLs)
 
 ## Relacionamentos
 
@@ -43,3 +44,7 @@
 - **Integrations → Organizations**: cada PluginToken pertence à organização da sessão; nunca chega `organizationId` do cliente
 - **Integrations ↛ Communications**: Conexão Google não é PluginToken
 - **Integrations ↛ Events**: PluginToken não publica DomainEvent
+- **Professional persona → OrganizationMember**: override de persona é por membership; nunca no User
+- **Professional persona → Organization**: defaultPersona e personaOnboardedAt pertencem ao tenant
+- **LeadWebsite → Lead**: inventário de URLs é filho do Lead; mesma organização da sessão
+- **LeadWebsite ↛ Website**: `LeadWebsite` não é o model de análise 1:1 `Website`

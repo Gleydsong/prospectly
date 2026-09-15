@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import type { Role } from '@/types';
+import type { ProfessionalPersona, Role } from '@/types';
 
 export interface OrganizationCurrent {
   id: string;
@@ -11,6 +11,8 @@ export interface OrganizationCurrent {
   currentPeriodEnd: string | null;
   createdAt: string;
   updatedAt: string;
+  defaultPersona?: ProfessionalPersona;
+  personaOnboardedAt?: string | null;
   _count: { members: number; leads: number };
 }
 
@@ -67,4 +69,30 @@ export async function updateOrganizationMemberRole(
 
 export async function removeOrganizationMember(memberId: string): Promise<void> {
   await api.delete(`/organizations/members/${memberId}`);
+}
+
+export async function updateOrganizationPersona(
+  defaultPersona: ProfessionalPersona,
+): Promise<{ id: string; defaultPersona: ProfessionalPersona; personaOnboardedAt: string | null }> {
+  const { data } = await api.patch<{
+    id: string;
+    defaultPersona: ProfessionalPersona;
+    personaOnboardedAt: string | null;
+  }>('/organizations/current/persona', { defaultPersona });
+  return data;
+}
+
+export async function updatePersonaOverride(
+  personaOverride: ProfessionalPersona | null,
+): Promise<{
+  defaultPersona: ProfessionalPersona;
+  personaOverride: ProfessionalPersona | null;
+  effectivePersona: ProfessionalPersona;
+}> {
+  const { data } = await api.patch<{
+    defaultPersona: ProfessionalPersona;
+    personaOverride: ProfessionalPersona | null;
+    effectivePersona: ProfessionalPersona;
+  }>('/organizations/me/persona-override', { personaOverride });
+  return data;
 }

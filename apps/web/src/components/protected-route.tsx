@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth.store';
 
 export function ProtectedRoute() {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const location = useLocation();
   const [ready, setReady] = useState(() => useAuthStore.getState().bootstrapped);
 
@@ -35,5 +36,11 @@ export function ProtectedRoute() {
   if (!accessToken) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
+
+  const needsPersonaOnboarding = user?.role === 'OWNER' && !user.personaOnboardedAt;
+  if (needsPersonaOnboarding && location.pathname !== '/onboarding/persona') {
+    return <Navigate to="/onboarding/persona" replace />;
+  }
+
   return <Outlet />;
 }

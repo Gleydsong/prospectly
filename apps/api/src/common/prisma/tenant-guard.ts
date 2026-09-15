@@ -53,6 +53,7 @@ export const CHILD_MODELS = new Set([
   'LeadContact',
   'LeadTag',
   'PipelineStage',
+  'LeadWebsite',
   'Website',
   'WebsiteAnalysis',
   'WebsiteAnalysisIssue',

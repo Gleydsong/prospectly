@@ -22,6 +22,20 @@ enum AppLocale {
   en
 }
 
+enum ProfessionalPersona {
+  vendedor
+  desenvolvedor
+  trafego_pago
+  marketing
+  outro
+}
+
+enum LeadWebsiteKind {
+  site
+  landing
+  app
+}
+
 enum LeadStatus {
   NEW
   TO_REVIEW
@@ -325,6 +339,8 @@ model Organization {
   updatedAt             DateTime         @updatedAt
   deletedAt             DateTime?
   creditBalance         Int              @default(400)
+  defaultPersona        ProfessionalPersona @default(vendedor)
+  personaOnboardedAt    DateTime?
 
   members      OrganizationMember[]
   leads        Lead[]
@@ -468,6 +484,7 @@ model OrganizationMember {
   userId         String
   organizationId String
   role           Role     @default(MEMBER)
+  personaOverride ProfessionalPersona?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -562,6 +579,7 @@ model Lead {
   syncedCommunications SyncedCommunication[]
   tasks              Task[]
   websiteRecord      Website?
+  leadWebsites       LeadWebsite[]
   scores             LeadScore[]
   campaignLeads      CampaignLead[]
   campaignActivities CampaignActivity[]
@@ -731,6 +749,25 @@ model PipelineStage {
 
   @@unique([pipelineId, order])
   @@index([pipelineId])
+}
+
+// ---------- Lead website inventory (persona module) ----------
+// Distinct from analysis Website (1:1). Do not merge or rename Website.
+
+model LeadWebsite {
+  id            String          @id @default(uuid())
+  leadId        String
+  url           String
+  urlNormalized String
+  label         String?
+  kind          LeadWebsiteKind @default(site)
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  lead          Lead            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, urlNormalized])
+  @@index([leadId])
 }
 
 // ---------- Website analysis (Phase 4) ----------

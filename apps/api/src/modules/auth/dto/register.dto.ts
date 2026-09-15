@@ -10,6 +10,11 @@ import {
   MinLength,
 } from 'class-validator';
 
+import {
+  PROFESSIONAL_PERSONAS,
+  type ProfessionalPersona,
+} from '../../../common/professional-persona';
+
 export class RegisterDto {
   @ApiProperty({ example: 'Ana Silva' })
   @IsString()
@@ -40,6 +45,14 @@ export class RegisterDto {
   @ApiProperty({ enum: ['pt', 'en'], example: 'pt' })
   @IsIn(['pt', 'en'])
   locale!: 'pt' | 'en';
+
+  @ApiProperty({
+    enum: PROFESSIONAL_PERSONAS,
+    example: 'vendedor',
+    description: 'Organization default professional persona',
+  })
+  @IsIn(PROFESSIONAL_PERSONAS)
+  defaultPersona!: ProfessionalPersona;
 
   @ApiProperty({
     example: true,

@@ -23,6 +23,10 @@ import { setAppLocale } from '@/i18n';
 import { getApiErrorCode, getApiErrorMessage, isApiTimeoutError } from '@/lib/api';
 import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
 import { useAuthStore } from '@/stores/auth.store';
+import {
+  PROFESSIONAL_PERSONAS,
+  type ProfessionalPersona,
+} from '@/features/organizations/professional-persona';
 
 const LANDING_URL = import.meta.env.VITE_LANDING_URL ?? 'http://localhost:3001';
 
@@ -32,6 +36,7 @@ type RegisterForm = {
   password: string;
   organizationName: string;
   locale: AppLocale;
+  defaultPersona: ProfessionalPersona;
   acceptTerms: boolean;
 };
 
@@ -65,6 +70,7 @@ export function RegisterPage() {
           .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, t('auth.passwordPattern')),
         organizationName: z.string().min(2, t('auth.orgRequired')),
         locale: z.enum(['pt', 'en']),
+        defaultPersona: z.enum(PROFESSIONAL_PERSONAS),
         acceptTerms: z
           .boolean({ required_error: t('auth.acceptTermsRequired') })
           .refine((value) => value === true, { message: t('auth.acceptTermsRequired') }),
@@ -80,12 +86,13 @@ export function RegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { locale: detectBrowserLocale(), acceptTerms: false },
+    defaultValues: { locale: detectBrowserLocale(), defaultPersona: 'vendedor', acceptTerms: false },
   });
 
   const locale = watch('locale');
   const acceptTerms = watch('acceptTerms');
   const organizationName = watch('organizationName');
+  const defaultPersona = watch('defaultPersona');
 
   const finishAuth = async (response: AuthResponse, fallbackLocale?: AppLocale) => {
     setAuth(response);
@@ -143,6 +150,7 @@ export function RegisterPage() {
         password: values.password,
         organizationName: values.organizationName,
         locale: values.locale,
+        defaultPersona: values.defaultPersona,
         acceptTerms: true,
       });
       await finishAuth(response, values.locale);
@@ -238,6 +246,22 @@ export function RegisterPage() {
           <option value="pt">{t('auth.languagePt')}</option>
           <option value="en">{t('auth.languageEn')}</option>
         </Select>
+        <Select
+          label={t('persona.label')}
+          value={defaultPersona}
+          error={errors.defaultPersona?.message}
+          onChange={(event) => {
+            setValue('defaultPersona', event.target.value as ProfessionalPersona, {
+              shouldValidate: true,
+            });
+          }}
+        >
+          {PROFESSIONAL_PERSONAS.map((value) => (
+            <option key={value} value={value}>
+              {t(`persona.${value}`)}
+            </option>
+          ))}
+        </Select>
 
         <label className="flex items-start gap-2 text-sm text-zinc-300">
           <input type="checkbox" className="mt-1" {...register('acceptTerms')} />
@@ -303,6 +327,7 @@ export function RegisterPage() {
           acceptTerms={acceptTerms ? true : undefined}
           organizationName={organizationName}
           locale={locale}
+          defaultPersona={defaultPersona}
           disabled={!acceptTerms}
           onSuccess={(response) => finishAuth(response, locale)}
           onError={(message) => setServerError(message)}

@@ -9,6 +9,10 @@ import type { Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  effectivePersona,
+  type ProfessionalPersona,
+} from '../../common/professional-persona';
 import { AUDIT_ACTIONS } from '../audit/audit.constants';
 import { AuditService } from '../audit/audit.service';
 import { EntitlementService } from '../billing/entitlement.service';
@@ -35,6 +39,8 @@ export class OrganizationsService {
         currentPeriodEnd: true,
         createdAt: true,
         updatedAt: true,
+        defaultPersona: true,
+        personaOnboardedAt: true,
         _count: { select: { members: true, leads: true } },
       },
     });
@@ -210,5 +216,76 @@ export class OrganizationsService {
       entityId: member.id,
       metadata: { removedUserId: member.userId, role: member.role },
     });
+  }
+
+  async updateDefaultPersona(
+    organizationId: string,
+    defaultPersona: ProfessionalPersona,
+    actorId?: string,
+  ) {
+    const organization = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true, personaOnboardedAt: true },
+    });
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const updated = await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        defaultPersona,
+        ...(organization.personaOnboardedAt ? {} : { personaOnboardedAt: new Date() }),
+      },
+      select: {
+        id: true,
+        defaultPersona: true,
+        personaOnboardedAt: true,
+      },
+    });
+
+    await this.audit.log({
+      organizationId,
+      userId: actorId,
+      action: AUDIT_ACTIONS.ORG_SETTINGS_UPDATED,
+      entity: 'Organization',
+      entityId: organizationId,
+      metadata: { fields: ['defaultPersona'] },
+    });
+
+    return updated;
+  }
+
+  async updatePersonaOverride(
+    organizationId: string,
+    userId: string,
+    personaOverride: ProfessionalPersona | null,
+  ) {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, userId },
+    });
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    const organization = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { defaultPersona: true },
+    });
+    if (!organization) {
+      throw new NotFoundException('Organization not found');
+    }
+
+    const updated = await this.prisma.organizationMember.update({
+      where: { id: member.id },
+      data: { personaOverride },
+      select: { personaOverride: true },
+    });
+
+    return {
+      defaultPersona: organization.defaultPersona,
+      personaOverride: updated.personaOverride,
+      effectivePersona: effectivePersona(organization.defaultPersona, updated.personaOverride),
+    };
   }
 }

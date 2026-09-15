@@ -9,6 +9,11 @@ import {
   ValidateIf,
 } from 'class-validator';
 
+import {
+  PROFESSIONAL_PERSONAS,
+  type ProfessionalPersona,
+} from '../../../common/professional-persona';
+
 export class GoogleAuthDto {
   @ApiPropertyOptional({ description: 'Google ID token (credential) from GIS / One Tap' })
   @ValidateIf((o: GoogleAuthDto) => !o.accessToken)
@@ -45,4 +50,13 @@ export class GoogleAuthDto {
   @IsOptional()
   @Equals(true, { message: 'You must accept the Terms of Use and Privacy Policy' })
   acceptTerms?: true;
+
+  @ApiPropertyOptional({
+    enum: PROFESSIONAL_PERSONAS,
+    example: 'vendedor',
+    description: 'Organization default professional persona when creating a new account via Google',
+  })
+  @IsOptional()
+  @IsIn(PROFESSIONAL_PERSONAS)
+  defaultPersona?: ProfessionalPersona;
 }

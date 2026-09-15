@@ -43,6 +43,15 @@ export {
 
 export type AppLocale = 'pt' | 'en';
 
+export type ProfessionalPersona =
+  | 'vendedor'
+  | 'desenvolvedor'
+  | 'trafego_pago'
+  | 'marketing'
+  | 'outro';
+
+export type LeadWebsiteKind = 'site' | 'landing' | 'app';
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -54,6 +63,10 @@ export interface AuthUser {
   /** Present after login/register; may be missing in older persisted sessions. */
   locale?: AppLocale;
   emailVerifiedAt?: string | null;
+  defaultPersona?: ProfessionalPersona;
+  personaOverride?: ProfessionalPersona | null;
+  effectivePersona?: ProfessionalPersona;
+  personaOnboardedAt?: string | null;
 }
 
 export interface Tag {
@@ -75,6 +88,7 @@ export interface LeadStage {
   id: string;
   name: string;
   color?: string | null;
+  isWon?: boolean;
 }
 
 export interface LeadListItem {
@@ -99,6 +113,18 @@ export interface LeadListItem {
   stage?: LeadStage | null;
   tags: Tag[];
   customFieldValues?: Record<string, string | number | null>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadWebsite {
+  id: string;
+  leadId: string;
+  url: string;
+  urlNormalized: string;
+  label?: string | null;
+  kind: LeadWebsiteKind;
+  notes?: string | null;
   createdAt: string;
   updatedAt: string;
 }
