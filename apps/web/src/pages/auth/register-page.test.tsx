@@ -117,8 +117,10 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Criar conta' }));
 
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Descreva em 2 a 40 caracteres.',
+    );
     expect(authApiMocks.register).not.toHaveBeenCalled();
-    expect(screen.getByText('Descreva em 2 a 40 caracteres.')).toBeInTheDocument();
   });
 
   it('sends personaOtherLabel when registering as Outro', async () => {
