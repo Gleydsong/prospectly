@@ -103,10 +103,6 @@ export function CampaignsPage() {
         }
       />
 
-      <Card className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]" role="note">
-        {t('campaigns.assistedNotice')}
-      </Card>
-
       <div className="flex flex-wrap gap-2" role="group" aria-label={t('campaigns.filterStatus')}>
         {STATUS_FILTERS.map((status) => (
           <Button

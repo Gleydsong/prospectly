@@ -92,8 +92,8 @@ describe('WorkflowsPage', () => {
     renderWithProviders(<WorkflowsPage />, { withGoogle: false });
     expect(screen.getByText('Nenhum fluxo ainda')).toBeInTheDocument();
     expect(
-      screen.getByText(/A execução \(aplicar a etiqueta\) chega no próximo recorte/i),
-    ).toBeInTheDocument();
+      screen.queryByText(/A execução \(aplicar a etiqueta\) chega no próximo recorte/i),
+    ).not.toBeInTheDocument();
   });
 
   it('creates a draft Fluxo and publishes it', async () => {
@@ -109,6 +109,9 @@ describe('WorkflowsPage', () => {
     renderWithProviders(<WorkflowsPage />, { withGoogle: false });
 
     await user.click(screen.getAllByRole('button', { name: 'Novo fluxo' })[0]!);
+    expect(
+      screen.getByText(/A execução \(aplicar a etiqueta\) chega no próximo recorte/i),
+    ).toBeInTheDocument();
     await user.type(screen.getByLabelText('Nome'), 'Novos leads');
     await user.type(screen.getByLabelText('Etiqueta'), 'alto-potencial');
     await user.selectOptions(screen.getByLabelText('Quem entra'), 'noWebsite');

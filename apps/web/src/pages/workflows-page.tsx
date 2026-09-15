@@ -180,13 +180,6 @@ export function WorkflowsPage() {
         }
       />
 
-      <Card
-        className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
-        role="note"
-      >
-        {t('workflows.executionNotice')}
-      </Card>
-
       <div aria-live="polite" className="sr-only">
         {liveMessage}
       </div>
