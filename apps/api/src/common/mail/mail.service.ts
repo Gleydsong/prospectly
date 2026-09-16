@@ -39,7 +39,7 @@ export class MailService {
     const from =
       this.config.get<string>('resend.from') ??
       this.config.get<string>('smtp.from') ??
-      'no-reply@prospectly.dev';
+      'hello@prospectlyonboard.com';
 
     if (resendKey) {
       try {
