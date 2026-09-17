@@ -8,6 +8,7 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { parseCorsOrigins } from './config/cors-origins';
+import { API_GLOBAL_PREFIX, API_GLOBAL_PREFIX_EXCLUDE, createCorsDelegate } from './config/http-surface';
 
 process.env.ROLE = 'api';
 
@@ -30,20 +31,10 @@ async function bootstrap() {
       config.get<string>('CORS_ORIGINS') ??
       'http://localhost:5173,http://localhost:3001',
   );
-  app.enableCors({
-    origin: corsOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Correlation-Id',
-      'X-Requested-With',
-    ],
-  });
+  app.enableCors(createCorsDelegate(corsOrigins));
 
-  app.setGlobalPrefix('api', {
-    exclude: ['health', 'health/live', 'health/ready'],
+  app.setGlobalPrefix(API_GLOBAL_PREFIX, {
+    exclude: API_GLOBAL_PREFIX_EXCLUDE,
   });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 

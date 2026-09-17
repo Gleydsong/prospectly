@@ -66,6 +66,9 @@ const LeadDetailPage = lazy(() =>
 const PersonaOnboardingPage = lazy(() =>
   import('@/pages/auth/persona-onboarding-page').then((m) => ({ default: m.PersonaOnboardingPage })),
 );
+const OauthConsentPage = lazy(() =>
+  import('@/pages/oauth/oauth-consent-page').then((m) => ({ default: m.OauthConsentPage })),
+);
 const PipelinePage = lazy(() =>
   import('@/pages/pipeline-page').then((m) => ({ default: m.PipelinePage })),
 );
@@ -106,6 +109,14 @@ export function App() {
       />
 
       <Route element={<ProtectedRoute />}>
+        <Route
+          path="/oauth/consent"
+          element={
+            <LazyPage>
+              <OauthConsentPage />
+            </LazyPage>
+          }
+        />
         <Route
           path="/onboarding/persona"
           element={

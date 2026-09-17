@@ -151,6 +151,16 @@
     "confirmPassword": "Confirm password",
     "passwordMismatch": "Passwords do not match"
   },
+  "oauth": {
+    "consentTitle": "Authorize MCP connection",
+    "consentSubtitle": "Choose the organization this agent may read.",
+    "chooseOrg": "Organization",
+    "allow": "Authorize",
+    "deny": "Deny",
+    "noOrgs": "You must be OWNER or ADMIN of an organization to authorize.",
+    "consentError": "We could not complete authorization. Please try again.",
+    "missingParams": "Incomplete OAuth request. Return to the client and try again."
+  },
   "principal": {
     "greeting": {
       "morning": "Good morning, {{name}}!",
@@ -480,6 +490,11 @@
     "pluginKeyError": "We could not generate the key right now. Please try again.",
     "copyPluginKey": "Copy key",
     "revokePluginKey": "Revoke",
+    "mcpTitle": "MCP connections",
+    "mcpDesc": "External agents authenticated with OAuth. Read-only: summary, leads, and searches.",
+    "mcpUrlLabel": "MCP server URL",
+    "mcpConnectionsEmpty": "No active MCP connection in this organization.",
+    "mcpRevoke": "Revoke connection",
     "planLabel": "Plan",
     "freeSearches": "Free demo: {{count}} searches",
     "periodEnd": "Period ends {{date}}",

@@ -16,6 +16,7 @@ export const configuration = () => ({
     sameSite: process.env.REFRESH_COOKIE_SAME_SITE,
   },
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:5173',
+  mcpResourceUrl: process.env.MCP_RESOURCE_URL ?? 'http://127.0.0.1:3000/mcp',
   landingUrl:
     process.env.FRONTEND_LANDING_URL ?? process.env.LANDING_URL ?? 'https://prospectlyonboard.com',
   corsOrigins:

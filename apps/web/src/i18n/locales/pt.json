@@ -151,6 +151,16 @@
     "confirmPassword": "Confirmar senha",
     "passwordMismatch": "As senhas não coincidem"
   },
+  "oauth": {
+    "consentTitle": "Autorizar ligação MCP",
+    "consentSubtitle": "Escolha a organização que o agente poderá ler.",
+    "chooseOrg": "Organização",
+    "allow": "Autorizar",
+    "deny": "Recusar",
+    "noOrgs": "Você precisa ser OWNER ou ADMIN de uma organização para autorizar.",
+    "consentError": "Não foi possível concluir a autorização. Tente novamente.",
+    "missingParams": "Pedido OAuth incompleto. Volte ao cliente e tente de novo."
+  },
   "principal": {
     "greeting": {
       "morning": "Bom dia, {{name}}!",
@@ -480,6 +490,11 @@
     "pluginKeyError": "Não foi possível gerar a chave agora. Tente novamente.",
     "copyPluginKey": "Copiar chave",
     "revokePluginKey": "Revogar",
+    "mcpTitle": "Ligações MCP",
+    "mcpDesc": "Agentes externos autenticados com OAuth. Só leitura: resumo, clientes potenciais e buscas.",
+    "mcpUrlLabel": "URL do servidor MCP",
+    "mcpConnectionsEmpty": "Nenhuma ligação MCP ativa nesta organização.",
+    "mcpRevoke": "Revogar ligação",
     "planLabel": "Plano",
     "freeSearches": "Demonstração grátis: {{count}} buscas",
     "periodEnd": "Período até {{date}}",

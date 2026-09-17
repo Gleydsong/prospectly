@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   createPluginToken,
+  fetchMcpConnections,
   fetchPluginTokens,
+  mcpPublicUrl,
+  revokeMcpConnection,
   revokePluginToken,
 } from '@/features/integrations/api';
 
@@ -23,6 +26,12 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const tokens = useQuery({
     queryKey: ['plugin-tokens'],
     queryFn: fetchPluginTokens,
+    enabled: canManage,
+  });
+
+  const connections = useQuery({
+    queryKey: ['mcp-connections'],
+    queryFn: fetchMcpConnections,
     enabled: canManage,
   });
 
@@ -48,6 +57,11 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
   const revokeToken = useMutation({
     mutationFn: revokePluginToken,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plugin-tokens'] }),
+  });
+
+  const revokeConnection = useMutation({
+    mutationFn: revokeMcpConnection,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['mcp-connections'] }),
   });
 
   if (!canManage) return null;
@@ -144,6 +158,49 @@ export function IntegrationsSettingsCard({ canManage }: { canManage: boolean }) 
               </ul>
             ) : null}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader
+          className="px-6 py-5 sm:px-8"
+          title={t('settings.mcpTitle')}
+          description={t('settings.mcpDesc')}
+        />
+        <CardContent className="space-y-4 px-6 pb-6 sm:px-8 sm:pb-8">
+          <div>
+            <p className="text-sm font-semibold text-[color:var(--ink)]">{t('settings.mcpUrlLabel')}</p>
+            <code className="mt-1 block overflow-x-auto rounded-control bg-[color:var(--surface-subtle)] px-3 py-2 text-xs text-[color:var(--ink)]">
+              {mcpPublicUrl()}
+            </code>
+          </div>
+          {!connections.isLoading && connections.data?.length ? (
+            <ul className="divide-y divide-[color:var(--border)] border-t border-[color:var(--border)] pt-2">
+              {connections.data.map((connection) => (
+                <li
+                  key={connection.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
+                >
+                  <span className="text-[color:var(--ink)]">
+                    {connection.clientName}
+                    <span className="ml-2 text-xs text-[color:var(--ink-muted)]">
+                      {new Date(connection.createdAt).toLocaleDateString()}
+                    </span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => revokeConnection.mutate(connection.id)}
+                  >
+                    {t('settings.mcpRevoke')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.mcpConnectionsEmpty')}</p>
+          )}
         </CardContent>
       </Card>
     </div>

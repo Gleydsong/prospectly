@@ -25,6 +25,10 @@ export const TENANT_MODELS = new Set([
   'MessageTemplate',
   'Integration',
   'PluginToken',
+  'McpConnection',
+  'OauthAuthorizationCode',
+  'OauthAccessToken',
+  'OauthRefreshToken',
   'AuditLog',
   'ScoreConfiguration',
   'UsageLedger',
@@ -71,6 +75,7 @@ export const GLOBAL_MODELS = new Set([
   'BillingWebhookEvent',
   'RefreshToken',
   'ConsentRecord',
+  'OauthClient',
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

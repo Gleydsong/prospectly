@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import { ProtectedRoute } from './protected-route';
 import { Role, type AuthUser } from '@/types';
@@ -26,6 +26,12 @@ const user: AuthUser = {
   effectivePersona: 'vendedor',
 };
 
+function LoginProbe() {
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  return <div>Tela de login from={from}</div>;
+}
+
 function renderProtected(initialPath = '/') {
   render(
     <MemoryRouter initialEntries={[initialPath]}>
@@ -33,8 +39,9 @@ function renderProtected(initialPath = '/') {
         <Route element={<ProtectedRoute />}>
           <Route index element={<div>Area logada</div>} />
           <Route path="/onboarding/persona" element={<div>Onboarding persona</div>} />
+          <Route path="/oauth/consent" element={<div>Consentimento MCP</div>} />
         </Route>
-        <Route path="/login" element={<div>Tela de login</div>} />
+        <Route path="/login" element={<LoginProbe />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -66,7 +73,35 @@ describe('ProtectedRoute', () => {
 
     renderProtected();
 
-    expect(await screen.findByText('Tela de login')).toBeInTheDocument();
+    expect(await screen.findByText(/Tela de login/)).toBeInTheDocument();
+  });
+
+  it('preserves the OAuth consent query string on the login return path', async () => {
+    bootstrapSession.mockImplementation(async () => {
+      useAuthStore.setState({ user: null, accessToken: null, bootstrapped: true });
+      return false;
+    });
+
+    renderProtected('/oauth/consent?client_id=c1&state=xyz');
+
+    expect(
+      await screen.findByText('Tela de login from=/oauth/consent?client_id=c1&state=xyz'),
+    ).toBeInTheDocument();
+  });
+
+  it('skips persona onboarding while authorizing an MCP connection', async () => {
+    bootstrapSession.mockImplementation(async () => {
+      useAuthStore.setState({
+        user: { ...user, personaOnboardedAt: null },
+        accessToken: 'restored-token',
+        bootstrapped: true,
+      });
+      return true;
+    });
+
+    renderProtected('/oauth/consent?client_id=c1');
+
+    expect(await screen.findByText('Consentimento MCP')).toBeInTheDocument();
   });
 
   it('redirects OWNER without persona onboarding to /onboarding/persona', async () => {

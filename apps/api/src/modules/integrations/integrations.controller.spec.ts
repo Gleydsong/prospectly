@@ -12,6 +12,12 @@ describe('IntegrationsController', () => {
     expect(
       Reflect.getMetadata(ROLES_KEY, IntegrationsController.prototype.revokePluginToken),
     ).toEqual(['OWNER', 'ADMIN']);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, IntegrationsController.prototype.listMcpConnections),
+    ).toEqual(['OWNER', 'ADMIN']);
+    expect(
+      Reflect.getMetadata(ROLES_KEY, IntegrationsController.prototype.revokeMcpConnection),
+    ).toEqual(['OWNER', 'ADMIN']);
   });
 
   it('does not expose outbound webhook routes', () => {
