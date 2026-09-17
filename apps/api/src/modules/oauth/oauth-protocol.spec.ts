@@ -23,6 +23,10 @@ describe('oauth-protocol', () => {
     expect(isAllowedRedirectUri('http://127.0.0.1:10000/callback')).toBe(true);
     expect(isAllowedRedirectUri('http://localhost:3000/cb')).toBe(true);
     expect(isAllowedRedirectUri('http://[::1]:8787/cb')).toBe(true);
+    expect(isAllowedRedirectUri('cursor://anysphere.cursor-mcp/oauth/callback')).toBe(true);
+    expect(isAllowedRedirectUri('https://www.cursor.com/agents/mcp/oauth/callback')).toBe(true);
+    expect(isAllowedRedirectUri('http://localhost:8787/callback')).toBe(true);
+    expect(isAllowedRedirectUri('cursor://evil.example/oauth/callback')).toBe(false);
     expect(isAllowedRedirectUri('http://evil.example/cb')).toBe(false);
     expect(isAllowedRedirectUri('javascript:alert(1)')).toBe(false);
     expect(isAllowedRedirectUri('https://cursor.example/cb#fragment')).toBe(false);
