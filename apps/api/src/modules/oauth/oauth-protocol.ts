@@ -16,6 +16,7 @@ export function isAllowedRedirectUri(uri: string): boolean {
   if (parsed.hash.length > 0) return false;
   if (parsed.username || parsed.password) return false;
 
+  if (isCursorNativeRedirect(parsed)) return true;
   if (parsed.protocol === 'https:') return true;
   if (parsed.protocol !== 'http:') return false;
 
@@ -24,6 +25,14 @@ export function isAllowedRedirectUri(uri: string): boolean {
     parsed.hostname === 'localhost' ||
     parsed.hostname === '::1' ||
     parsed.hostname === '[::1]'
+  );
+}
+
+function isCursorNativeRedirect(parsed: URL): boolean {
+  return (
+    parsed.protocol === 'cursor:' &&
+    parsed.hostname === 'anysphere.cursor-mcp' &&
+    parsed.pathname === '/oauth/callback'
   );
 }
 
