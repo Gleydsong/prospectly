@@ -102,6 +102,22 @@ describe('assertTenantOperation', () => {
     });
   });
 
+  it('applies tenant scope to MCP connections', () => {
+    const args = { where: { id: 'mcp-conn-1' } };
+    runWithTenant('org-1', () => {
+      assertTenantOperation('McpConnection', 'findFirst', args);
+    });
+    expect(args.where).toEqual({ id: 'mcp-conn-1', organizationId: 'org-1' });
+  });
+
+  it('does not inject organizationId on OauthClient lookups', () => {
+    const args = { where: { id: 'client-1' } };
+    runWithTenant('org-1', () => {
+      expect(() => assertTenantOperation('OauthClient', 'findFirst', args)).not.toThrow();
+    });
+    expect(args.where).toEqual({ id: 'client-1' });
+  });
+
   it('requires tenant context for LeadWebsite child rows', () => {
     runWithTenant('', () => {
       expect(() =>

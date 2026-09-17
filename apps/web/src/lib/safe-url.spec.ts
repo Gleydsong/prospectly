@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   assignCheckoutRedirect,
   assignGoogleOAuthRedirect,
+  assignOauthClientRedirect,
   buildGoogleMapsSearchUrl,
   buildGoogleWebSearchUrl,
   resolveInternalRedirect,
@@ -140,6 +141,29 @@ describe('assignGoogleOAuthRedirect', () => {
     expect(() => assignGoogleOAuthRedirect('https://evil.example/oauth')).toThrow(
       'Invalid Google OAuth redirect URL',
     );
+    expect(assign).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe('assignOauthClientRedirect', () => {
+  it('navigates when origin and path match the registered redirect_uri', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    assignOauthClientRedirect(
+      'http://127.0.0.1:10000/cb?code=mcc_x&state=xyz',
+      'http://127.0.0.1:10000/cb',
+    );
+    expect(assign).toHaveBeenCalledWith('http://127.0.0.1:10000/cb?code=mcc_x&state=xyz');
+    vi.unstubAllGlobals();
+  });
+
+  it('rejects a host that is not the registered redirect_uri', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', { assign, href: 'http://localhost/' });
+    expect(() =>
+      assignOauthClientRedirect('https://evil.example/cb?code=x', 'http://127.0.0.1:10000/cb'),
+    ).toThrow('Invalid OAuth redirect URL');
     expect(assign).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });

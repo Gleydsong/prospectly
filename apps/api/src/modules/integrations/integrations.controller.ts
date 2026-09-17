@@ -7,12 +7,16 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { PluginAccessService } from './plugin-access.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { runWithTenant } from '../../common/prisma/tenant-context';
+import { OauthService } from '../oauth/oauth.service';
 
 @ApiTags('integrations')
 @ApiBearerAuth()
 @Controller({ path: 'integrations', version: '1' })
 export class IntegrationsController {
-  constructor(private readonly plugins: PluginAccessService) {}
+  constructor(
+    private readonly plugins: PluginAccessService,
+    private readonly oauth: OauthService,
+  ) {}
 
   @Get('plugins/tokens')
   @Roles('OWNER', 'ADMIN')
@@ -38,6 +42,23 @@ export class IntegrationsController {
     @Param('id') id: string,
   ) {
     await this.plugins.revokeToken(organizationId, user.id, id);
+    return { revoked: true };
+  }
+
+  @Get('mcp/connections')
+  @Roles('OWNER', 'ADMIN')
+  listMcpConnections(@CurrentOrg() organizationId: string) {
+    return this.oauth.listConnections(organizationId);
+  }
+
+  @Delete('mcp/connections/:id')
+  @Roles('OWNER', 'ADMIN')
+  async revokeMcpConnection(
+    @CurrentOrg() organizationId: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    await this.oauth.revokeConnection(organizationId, user.id, id);
     return { revoked: true };
   }
 

@@ -318,6 +318,9 @@ model User {
   workflows            Workflow[]
   googleConnections    GoogleConnection[]
   savedReports         SavedReport[]
+  mcpConnections       McpConnection[]
+  oauthAuthorizationCodes OauthAuthorizationCode[]
+  oauthAccessTokens    OauthAccessToken[]
 
   @@index([email])
 }
@@ -357,6 +360,10 @@ model Organization {
   scoreConfigs       ScoreConfiguration[]
   integrations       Integration[]
   pluginTokens       PluginToken[]
+  mcpConnections     McpConnection[]
+  oauthAuthorizationCodes OauthAuthorizationCode[]
+  oauthAccessTokens  OauthAccessToken[]
+  oauthRefreshTokens OauthRefreshToken[]
   auditLogs          AuditLog[]
   usageLedgers       UsageLedger[]
   creditPurchases    CreditPurchase[]
@@ -1261,6 +1268,112 @@ model PluginToken {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, revokedAt])
+}
+
+model OauthClient {
+  id                       String    @id @default(uuid())
+  clientName               String
+  redirectUris             Json
+  tokenEndpointAuthMethod  String    @default("none")
+  lastUsedAt               DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  connections         McpConnection[]
+  authorizationCodes  OauthAuthorizationCode[]
+  accessTokens        OauthAccessToken[]
+}
+
+model McpConnection {
+  id             String    @id @default(uuid())
+  organizationId String
+  userId         String
+  clientId       String
+  clientName     String
+  scope          String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization       Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client             OauthClient             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  authorizationCodes OauthAuthorizationCode[]
+  accessTokens       OauthAccessToken[]
+  refreshTokens      OauthRefreshToken[]
+
+  @@index([organizationId, revokedAt])
+  @@index([userId])
+  @@index([clientId])
+}
+
+model OauthAuthorizationCode {
+  id            String    @id @default(uuid())
+  codeHash      String    @unique
+  clientId      String
+  userId        String
+  organizationId String
+  connectionId  String
+  redirectUri   String
+  codeChallenge String
+  resource      String
+  scope         String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  client       OauthClient   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   McpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([expiresAt])
+}
+
+model OauthAccessToken {
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique
+  clientId       String
+  userId         String
+  organizationId String
+  connectionId   String
+  resource       String
+  scope          String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  client       OauthClient          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connection   McpConnection        @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  refreshToken OauthRefreshToken?
+
+  @@index([organizationId])
+  @@index([connectionId])
+  @@index([expiresAt])
+}
+
+model OauthRefreshToken {
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique
+  accessTokenId  String    @unique
+  connectionId   String
+  organizationId String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  replacedById   String?
+  createdAt      DateTime  @default(now())
+
+  accessToken  OauthAccessToken @relation(fields: [accessTokenId], references: [id], onDelete: Cascade)
+  connection   McpConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([connectionId])
+  @@index([expiresAt])
 }
 
 model AuditLog {

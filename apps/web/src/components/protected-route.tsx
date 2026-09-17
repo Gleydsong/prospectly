@@ -34,11 +34,17 @@ export function ProtectedRoute() {
   }
 
   if (!accessToken) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return (
+      <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+    );
   }
 
   const needsPersonaOnboarding = user?.role === 'OWNER' && !user.personaOnboardedAt;
-  if (needsPersonaOnboarding && location.pathname !== '/onboarding/persona') {
+  if (
+    needsPersonaOnboarding &&
+    location.pathname !== '/onboarding/persona' &&
+    location.pathname !== '/oauth/consent'
+  ) {
     return <Navigate to="/onboarding/persona" replace />;
   }
 

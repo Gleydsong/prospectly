@@ -11,7 +11,7 @@
 - [Custom fields](./docs/domain/custom-fields/CONTEXT.md): guarda definições da organização de dados tipados no cliente potencial
 - [Agents](./docs/domain/agents/CONTEXT.md): fornece copiloto CRM e variantes de abordagem WhatsApp assistidas
 - [Communications](./docs/domain/communications/CONTEXT.md): associa e-mail e eventos de calendário da Conexão Google de uma pessoa ao cliente potencial
-- [Integrations](./docs/domain/integrations/CONTEXT.md): liga a organização a PluginTokens para agentes e editores
+- [Integrations](./docs/domain/integrations/CONTEXT.md): liga a organização a PluginTokens e Ligações MCP para agentes e editores externos
 - [Professional persona](./docs/domain/professional-persona/CONTEXT.md): persona profissional da organização/membro e Website do Lead (inventário de URLs)
 
 ## Relacionamentos
@@ -41,9 +41,10 @@
 - **Communications → User**: a Conexão Google é da pessoa; não reutiliza Integration nem Sign-In
 - **Communications → Lead**: a Comunicação sincronizada casa no cliente potencial; não é LeadActivity nem DomainEvent
 - **Communications ↛ Events**: retenção da Comunicação sincronizada segue o Lead, não `OutboxEvent.retainUntil`
-- **Integrations → Organizations**: cada PluginToken pertence à organização da sessão; nunca chega `organizationId` do cliente
-- **Integrations ↛ Communications**: Conexão Google não é PluginToken
-- **Integrations ↛ Events**: PluginToken não publica DomainEvent
+- **Integrations → Organizations**: cada PluginToken e cada Ligação MCP pertencem à organização escolhida; nunca chega `organizationId` do cliente
+- **Integrations ↛ Communications**: Conexão Google não é PluginToken nem Ligação MCP
+- **Integrations ↛ Events**: PluginToken e Ligação MCP não publicam DomainEvent
+- **Integrations ↛ Agents**: Ligação MCP não é Copiloto CRM nem Abordagem WhatsApp
 - **Professional persona → OrganizationMember**: override de persona é por membership; nunca no User
 - **Professional persona → Organization**: defaultPersona e personaOnboardedAt pertencem ao tenant
 - **LeadWebsite → Lead**: inventário de URLs é filho do Lead; mesma organização da sessão

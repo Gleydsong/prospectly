@@ -37,6 +37,22 @@ export function resolveInternalRedirect(from: unknown, fallback = '/'): string {
   return from;
 }
 
+/** Send the browser back to the OAuth client only if the URL matches the registered redirect_uri. */
+export function assignOauthClientRedirect(redirect: string, registeredRedirectUri: string): void {
+  let target: URL;
+  let expected: URL;
+  try {
+    target = new URL(redirect);
+    expected = new URL(registeredRedirectUri);
+  } catch {
+    throw new Error('Invalid OAuth redirect URL');
+  }
+  if (target.origin !== expected.origin || target.pathname !== expected.pathname) {
+    throw new Error('Invalid OAuth redirect URL');
+  }
+  window.location.assign(target.href);
+}
+
 /** Safe http(s) href for user-supplied websites; rejects javascript:/data: etc. */
 export function sanitizeExternalUrl(raw: string): string | null {
   const trimmed = raw.trim();

@@ -27,5 +27,9 @@ describe('PINO_REDACT_PATHS', () => {
     expect(PINO_REDACT_PATHS).toContain('*.signingSecret');
     expect(PINO_REDACT_PATHS).toContain('*.signingSecretCiphertext');
     expect(PINO_REDACT_PATHS).toContain('req.query.code');
+    expect(PINO_REDACT_PATHS).toContain('req.body.code');
+    expect(PINO_REDACT_PATHS).toContain('req.body.code_verifier');
+    expect(PINO_REDACT_PATHS).toContain('req.body.refresh_token');
+    expect(PINO_REDACT_PATHS).toContain('req.body.access_token');
   });
 });

@@ -48,6 +48,8 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { OpsModule } from './modules/ops/ops.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { IntegrationsModule } from './modules/integrations/integrations.module';
+import { OauthModule } from './modules/oauth/oauth.module';
+import { McpModule } from './modules/mcp/mcp.module';
 import { AgentsModule } from './modules/agents/agents.module';
 import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
@@ -127,6 +129,8 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     WaitlistModule,
     CampaignsModule,
     IntegrationsModule,
+    OauthModule,
+    McpModule,
     AgentsModule,
     OpportunityFinderModule,
     PrivacyModule,

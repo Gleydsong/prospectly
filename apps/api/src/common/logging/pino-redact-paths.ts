@@ -49,6 +49,10 @@ export const PINO_REDACT_PATHS = [
   '*.signingSecretCiphertext',
   'req.query.code',
   'req.query.state',
+  'req.body.code',
+  'req.body.code_verifier',
+  'req.body.refresh_token',
+  'req.body.access_token',
 ] as const;
 
 export const PINO_REDACT_CENSOR = '[REDACTED]';
