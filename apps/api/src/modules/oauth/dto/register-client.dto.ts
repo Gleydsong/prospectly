@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, ArrayMinSize } from 'class-validator';
+import { Allow, ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
 
 export class RegisterClientDto {
   @IsOptional()
@@ -13,4 +13,31 @@ export class RegisterClientDto {
   @IsOptional()
   @IsString()
   token_endpoint_auth_method?: string;
+
+  @Allow()
+  grant_types?: unknown;
+
+  @Allow()
+  response_types?: unknown;
+
+  @Allow()
+  logo_uri?: unknown;
+
+  @Allow()
+  scope?: unknown;
+
+  @Allow()
+  client_uri?: unknown;
+
+  @Allow()
+  contacts?: unknown;
+
+  @Allow()
+  software_id?: unknown;
+
+  @Allow()
+  software_version?: unknown;
+
+  @Allow()
+  application_type?: unknown;
 }
