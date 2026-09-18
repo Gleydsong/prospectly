@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   useCrmSuggest: vi.fn(),
   useCrmDailyFocus: vi.fn(),
   crmApplyMutateAsync: vi.fn(),
+  fetchLead: vi.fn(),
+  fetchLeads: vi.fn(),
 }));
 
 vi.mock('@/features/agents/hooks', () => ({
@@ -33,13 +35,23 @@ vi.mock('@/features/agents/hooks', () => ({
 }));
 
 vi.mock('@/features/leads/api', () => ({
-  fetchLead: vi.fn().mockResolvedValue({
-    id: 'lead-1',
-    companyName: 'Restaurante Central',
-    phone: '+5511999998888',
-    whatsapp: null,
-  }),
-  fetchLeads: vi.fn().mockResolvedValue({ data: [] }),
+  fetchLead: (...args: unknown[]) => mocks.fetchLead(...args),
+  fetchLeads: (...args: unknown[]) => mocks.fetchLeads(...args),
+}));
+
+vi.mock('@/features/pipeline/api', () => ({
+  fetchPipelines: vi.fn().mockResolvedValue([
+    {
+      id: 'pipeline-1',
+      name: 'Funil Principal',
+      isDefault: true,
+      stages: [
+        { id: 's-1', name: 'Novo', order: 0 },
+        { id: 's-2', name: 'Contato Feito', order: 1 },
+        { id: 's-3', name: 'Negociação', order: 2 },
+      ],
+    },
+  ]),
 }));
 
 function Wrapper({
@@ -63,6 +75,13 @@ function Wrapper({
 describe('AgentsCrmPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.fetchLead.mockResolvedValue({
+      id: 'lead-1',
+      companyName: 'Restaurante Central',
+      phone: '+5511999998888',
+      whatsapp: null,
+    });
+    mocks.fetchLeads.mockResolvedValue({ data: [] });
     mocks.useCrmDailyFocus.mockReturnValue({
       data: {
         items: [
@@ -130,11 +149,76 @@ describe('AgentsCrmPage', () => {
     const moveBtn = screen.getByRole('button', { name: /mover estágio/i });
     await user.click(moveBtn);
 
+    const option = await screen.findByRole('menuitem', { name: 'Contato Feito' });
+    await user.click(option);
+
     await waitFor(() => {
       expect(mocks.crmApplyMutateAsync).toHaveBeenCalledWith({
         leadId: 'lead-1',
         stageId: 's-2',
       });
     });
+  });
+
+  it('shows a friendly message and clears the selection when apply returns 404', async () => {
+    const user = userEvent.setup();
+    mocks.crmApplyMutateAsync.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { message: 'Lead not found' } },
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm?leadId=lead-1">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /mover estágio/i }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Contato Feito' }));
+
+    expect(
+      await screen.findByText(/Cliente potencial não encontrado/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+  });
+
+  it('shows a friendly message and returns to the picker when suggest returns 404', async () => {
+    mocks.useCrmSuggest.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: { isAxiosError: true, response: { status: 404, data: { message: 'Lead not found' } } },
+      refetch: vi.fn(),
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm?leadId=missing-lead">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    expect(
+      await screen.findByText(/Cliente potencial não encontrado/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Não foi possível sugerir/i)).not.toBeInTheDocument();
+  });
+
+  it('returns to the picker when fetchLead returns 404', async () => {
+    mocks.fetchLead.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { message: 'Lead not found' } },
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm?leadId=missing-lead">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    expect(
+      await screen.findByText(/Cliente potencial não encontrado/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
   });
 });

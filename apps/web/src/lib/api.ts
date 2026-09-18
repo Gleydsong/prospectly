@@ -72,6 +72,10 @@ export function getApiErrorCode(error: unknown): string | undefined {
   return data?.code ?? data?.error?.code;
 }
 
+export function getApiErrorStatus(error: unknown): number | undefined {
+  return axios.isAxiosError(error) ? error.response?.status : undefined;
+}
+
 export function isApiTimeoutError(error: unknown): boolean {
   return axios.isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT');
 }
