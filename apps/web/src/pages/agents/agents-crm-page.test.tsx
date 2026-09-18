@@ -42,6 +42,21 @@ vi.mock('@/features/leads/api', () => ({
   fetchLeads: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
+vi.mock('@/features/pipeline/api', () => ({
+  fetchPipelines: vi.fn().mockResolvedValue([
+    {
+      id: 'pipeline-1',
+      name: 'Funil Principal',
+      isDefault: true,
+      stages: [
+        { id: 's-1', name: 'Novo', order: 0 },
+        { id: 's-2', name: 'Contato Feito', order: 1 },
+        { id: 's-3', name: 'Negociação', order: 2 },
+      ],
+    },
+  ]),
+}));
+
 function Wrapper({
   children,
   initialEntry = '/agents/crm',
@@ -130,11 +145,36 @@ describe('AgentsCrmPage', () => {
     const moveBtn = screen.getByRole('button', { name: /mover estágio/i });
     await user.click(moveBtn);
 
+    const option = await screen.findByRole('menuitem', { name: 'Contato Feito' });
+    await user.click(option);
+
     await waitFor(() => {
       expect(mocks.crmApplyMutateAsync).toHaveBeenCalledWith({
         leadId: 'lead-1',
         stageId: 's-2',
       });
     });
+  });
+
+  it('shows a friendly message and clears the selection when apply returns 404', async () => {
+    const user = userEvent.setup();
+    mocks.crmApplyMutateAsync.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { message: 'Lead not found' } },
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm?leadId=lead-1">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /mover estágio/i }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Contato Feito' }));
+
+    expect(
+      await screen.findByText(/Cliente potencial não encontrado/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
   });
 });

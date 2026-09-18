@@ -11,13 +11,15 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   CrmDailyFocus,
+  CrmStagePicker,
+  LeadCardGrid,
   WhatsAppOutreachModal,
   type WhatsAppOutreachModalLead,
 } from '@/features/agents/components';
 import { useCrmApply, useCrmSuggest } from '@/features/agents/hooks';
 import type { CrmActionCode } from '@/features/agents/api';
 import { fetchLead, fetchLeads } from '@/features/leads/api';
-import { getApiErrorMessage } from '@/lib/api';
+import { getApiErrorMessage, getApiErrorStatus } from '@/lib/api';
 
 export function AgentsCrmPage() {
   const { t } = useTranslation();
@@ -58,24 +60,36 @@ export function AgentsCrmPage() {
     return () => window.clearTimeout(timer);
   }, [leadQuery]);
 
+  useEffect(() => {
+    if (!leadId || !suggest.isError) return;
+    if (getApiErrorStatus(suggest.error) !== 404) return;
+    setActionError(t('agents.crm.leadNotFound'));
+    setSearchParams({});
+  }, [leadId, suggest.isError, suggest.error, setSearchParams, t]);
+
   function selectLead(id: string) {
     setActionError(null);
     setActionOk(null);
     setSearchParams({ leadId: id });
   }
 
-  async function handleApply() {
-    if (!leadId || !suggest.data?.suggestedStage) return;
+  async function handleApply(stageId: string) {
+    if (!leadId) return;
     setActionError(null);
     setActionOk(null);
     try {
       await apply.mutateAsync({
         leadId,
-        stageId: suggest.data.suggestedStage.id,
+        stageId,
       });
       setActionOk(t('agents.crm.applySuccess'));
       await suggest.refetch();
     } catch (err) {
+      if (getApiErrorStatus(err) === 404) {
+        setActionError(t('agents.crm.leadNotFound'));
+        setSearchParams({});
+        return;
+      }
       setActionError(getApiErrorMessage(err) ?? t('agents.crm.applyError'));
     }
   }
@@ -104,6 +118,11 @@ export function AgentsCrmPage() {
 
       {!leadId ? (
         <div className="space-y-6">
+          {actionError ? (
+            <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+              {actionError}
+            </p>
+          ) : null}
           <CrmDailyFocus
             onSelectLeadForWhatsApp={(lead) => setWhatsAppModalLead(lead)}
           />
@@ -118,29 +137,13 @@ export function AgentsCrmPage() {
                 onChange={(event) => setLeadQuery(event.target.value)}
               />
               {leadsPicker.isLoading ? (
-                <Skeleton className="h-32" />
+                <Skeleton className="h-40" />
               ) : (
-                <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-                  {(leadsPicker.data?.data ?? []).map((lead) => (
-                    <li key={lead.id}>
-                      <button
-                        type="button"
-                        className="flex w-full min-h-11 items-center justify-between gap-3 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] px-3 py-2 text-left hover:border-[color:var(--border-strong)]"
-                        onClick={() => selectLead(lead.id)}
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-[color:var(--ink)]">
-                            {lead.companyName}
-                          </span>
-                          <span className="block truncate text-xs text-[color:var(--ink-muted)]">
-                            {[lead.city, lead.segment].filter(Boolean).join(' · ') || '—'}
-                          </span>
-                        </span>
-                        <span className="text-xs text-[color:var(--ink-muted)]">score {lead.score}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <LeadCardGrid
+                  leads={leadsPicker.data?.data ?? []}
+                  onSelect={selectLead}
+                  emptyLabel={t('agents.pickLeadEmpty')}
+                />
               )}
             </CardContent>
           </Card>
@@ -217,11 +220,6 @@ export function AgentsCrmPage() {
                   <Button size="sm" onClick={() => navigate(suggest.data.href)}>
                     {t('agents.crm.openHref')}
                   </Button>
-                  <Link to={`/leads/${suggest.data.leadId}`}>
-                    <Button size="sm" variant="secondary">
-                      {t('agents.crm.openLead')}
-                    </Button>
-                  </Link>
                   {preselected.data?.phone || preselected.data?.whatsapp ? (
                     <Button
                       size="sm"
@@ -242,14 +240,11 @@ export function AgentsCrmPage() {
                     </Button>
                   ) : null}
                   {suggest.data.canApplyStage ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      loading={apply.isPending}
-                      onClick={() => void handleApply()}
-                    >
-                      {t('agents.crm.moveStage')}
-                    </Button>
+                    <CrmStagePicker
+                      currentStageId={suggest.data.currentStage?.id}
+                      onSelect={(stageId) => void handleApply(stageId)}
+                      pending={apply.isPending}
+                    />
                   ) : null}
                 </div>
               </CardContent>
