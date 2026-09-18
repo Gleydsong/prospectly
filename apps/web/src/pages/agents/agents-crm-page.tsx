@@ -1,5 +1,5 @@
 import { ArrowLeft, MessageCircle, Workflow } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -42,6 +42,11 @@ export function AgentsCrmPage() {
     enabled: Boolean(leadId),
   });
 
+  const leadMissing =
+    Boolean(leadId) &&
+    ((suggest.isError && getApiErrorStatus(suggest.error) === 404) ||
+      (preselected.isError && getApiErrorStatus(preselected.error) === 404));
+
   const leadsPicker = useQuery({
     queryKey: ['agents', 'crm', 'lead-picker', leadSearch],
     queryFn: () =>
@@ -52,7 +57,7 @@ export function AgentsCrmPage() {
         sortBy: 'updatedAt',
         sortOrder: 'desc',
       }),
-    enabled: !leadId,
+    enabled: !leadId || leadMissing,
   });
 
   useEffect(() => {
@@ -60,12 +65,15 @@ export function AgentsCrmPage() {
     return () => window.clearTimeout(timer);
   }, [leadQuery]);
 
-  useEffect(() => {
-    if (!leadId || !suggest.isError) return;
-    if (getApiErrorStatus(suggest.error) !== 404) return;
+  const clearMissingLead = useCallback(() => {
     setActionError(t('agents.crm.leadNotFound'));
     setSearchParams({});
-  }, [leadId, suggest.isError, suggest.error, setSearchParams, t]);
+  }, [setSearchParams, t]);
+
+  useEffect(() => {
+    if (!leadMissing) return;
+    clearMissingLead();
+  }, [leadMissing, clearMissingLead]);
 
   function selectLead(id: string) {
     setActionError(null);
@@ -86,8 +94,7 @@ export function AgentsCrmPage() {
       await suggest.refetch();
     } catch (err) {
       if (getApiErrorStatus(err) === 404) {
-        setActionError(t('agents.crm.leadNotFound'));
-        setSearchParams({});
+        clearMissingLead();
         return;
       }
       setActionError(getApiErrorMessage(err) ?? t('agents.crm.applyError'));
@@ -116,11 +123,11 @@ export function AgentsCrmPage() {
         }
       />
 
-      {!leadId ? (
+      {!leadId || leadMissing ? (
         <div className="space-y-6">
-          {actionError ? (
+          {actionError || leadMissing ? (
             <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
-              {actionError}
+              {actionError ?? t('agents.crm.leadNotFound')}
             </p>
           ) : null}
           <CrmDailyFocus

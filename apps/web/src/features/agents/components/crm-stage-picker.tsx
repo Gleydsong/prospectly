@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { orderedPipelineStages } from '@/features/leads/components/lead-pipeline-stepper';
 import { fetchPipelines } from '@/features/pipeline/api';
 import { cn } from '@/lib/utils';
 
@@ -30,10 +31,7 @@ export function CrmStagePicker({
     enabled: open,
   });
 
-  const stages = useMemo(
-    () => (pipelines.data ?? []).flatMap((pipeline) => pipeline.stages ?? []),
-    [pipelines.data],
-  );
+  const stages = useMemo(() => orderedPipelineStages(pipelines.data), [pipelines.data]);
 
   useEffect(() => {
     if (!open) return;
@@ -78,6 +76,8 @@ export function CrmStagePicker({
       <div
         role="menu"
         aria-label={t('agents.crm.moveStage')}
+        aria-hidden={!open}
+        inert={!open}
         className={cn(
           'absolute left-0 top-full z-40 mt-2 w-56 origin-top rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] p-1.5 shadow-[0_16px_32px_-18px_rgba(0,0,0,0.65)]',
           'transition duration-150 ease-out',
