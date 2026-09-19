@@ -88,6 +88,8 @@ export class LeadsService {
       | 'category'
       | 'segment'
       | 'city'
+      | 'createdFrom'
+      | 'createdTo'
       | 'ownerId'
       | 'hasWebsite'
       | 'minScore'
@@ -392,6 +394,8 @@ export class LeadsService {
       | 'category'
       | 'segment'
       | 'city'
+      | 'createdFrom'
+      | 'createdTo'
       | 'ownerId'
       | 'hasWebsite'
       | 'minScore'
@@ -427,13 +431,15 @@ export class LeadsService {
         throw error;
       }
     }
+    const createdAt = this.createdAtRange(query.createdFrom, query.createdTo);
     return {
       ...tenant,
       ...(query.status ? { status: query.status } : {}),
       ...(query.source ? { source: query.source } : {}),
       ...(query.category ? { category: { equals: query.category, mode: 'insensitive' } } : {}),
       ...(query.segment ? { segment: { equals: query.segment, mode: 'insensitive' } } : {}),
-      ...(query.city ? { city: { equals: query.city, mode: 'insensitive' } } : {}),
+      ...(query.city ? { city: { contains: query.city, mode: 'insensitive' } } : {}),
+      ...(createdAt ? { createdAt } : {}),
       ...(query.ownerId ? { ownerId: query.ownerId } : {}),
       ...(query.hasWebsite === true ? { website: { not: null } } : {}),
       ...(query.hasWebsite === false ? { OR: [{ website: null }, { website: '' }] } : {}),
@@ -454,6 +460,7 @@ export class LeadsService {
               { tradeName: { contains: query.q, mode: 'insensitive' } },
               { email: { contains: query.q, mode: 'insensitive' } },
               { domain: { contains: query.q, mode: 'insensitive' } },
+              { city: { contains: query.q, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -579,6 +586,22 @@ export class LeadsService {
     );
   }
 
+  private createdAtRange(
+    createdFrom?: string,
+    createdTo?: string,
+  ): Prisma.DateTimeFilter | undefined {
+    if (!createdFrom && !createdTo) return undefined;
+    const gte = createdFrom ? utcDayStart(createdFrom) : undefined;
+    const lte = createdTo ? utcDayEnd(createdTo) : undefined;
+    if (gte && lte && gte.getTime() > lte.getTime()) {
+      throw new BadRequestException('createdFrom must be on or before createdTo');
+    }
+    return {
+      ...(gte ? { gte } : {}),
+      ...(lte ? { lte } : {}),
+    };
+  }
+
   private serialize(lead: Record<string, unknown>, detailed = false) {
     const { tags, ...rest } = lead as { tags?: Array<{ tag: unknown }> } & Record<string, unknown>;
     const serialized: Record<string, unknown> = {
@@ -593,6 +616,14 @@ export class LeadsService {
     }
     return serialized;
   }
+}
+
+function utcDayStart(value: string): Date {
+  return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+}
+
+function utcDayEnd(value: string): Date {
+  return new Date(`${value.slice(0, 10)}T23:59:59.999Z`);
 }
 
 const PROVENANCE_MISSING_FIELDS = [

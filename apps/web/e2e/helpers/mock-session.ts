@@ -11,6 +11,7 @@ export const E2E_AUTH = {
       role: 'OWNER',
       locale: 'pt',
       emailVerifiedAt: '2026-08-12T10:00:00.000Z',
+      personaOnboardedAt: '2026-01-01T00:00:00.000Z',
     },
     accessToken: 'e2e-token',
   },
@@ -41,6 +42,9 @@ export async function mockAuthenticatedSession(page: Page) {
         email: 'guia@prospectly.test',
         emailVerifiedAt: '2026-08-12T10:00:00.000Z',
         locale: 'pt',
+        memberships: [
+          { role: 'OWNER', organization: { id: 'org-1', name: 'Prospectly Test' } },
+        ],
       });
     }
     if (path.endsWith('/billing/current') || path.endsWith('/billing/status')) {

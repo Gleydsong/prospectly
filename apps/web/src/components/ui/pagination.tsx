@@ -23,6 +23,7 @@ export function Pagination({
       </p>
       <div className="flex justify-center gap-2 sm:justify-end">
         <Button
+          type="button"
           variant="outline"
           size="sm"
           disabled={page <= 1}
@@ -32,6 +33,7 @@ export function Pagination({
           <ChevronLeft className="h-4 w-4" />
         </Button>
         <Button
+          type="button"
           variant="outline"
           size="sm"
           disabled={page >= totalPages}

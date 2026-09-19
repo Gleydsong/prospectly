@@ -1,4 +1,5 @@
 import { Download, Send } from 'lucide-react';
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -130,6 +131,15 @@ export function SearchResults({
   onImportSelected: () => void;
   onImportOne: (resultId: string) => void;
 }) {
+  const searchIdRef = useRef(currentSearch?.id);
+  const lastResultsMetaRef = useRef(resultsMeta);
+  if (searchIdRef.current !== currentSearch?.id) {
+    searchIdRef.current = currentSearch?.id;
+    lastResultsMetaRef.current = undefined;
+  }
+  if (resultsMeta) lastResultsMetaRef.current = resultsMeta;
+  const paginationMeta = resultsMeta ?? lastResultsMetaRef.current;
+
   const exportResultsCsv = () => {
     const exportable = selectedResultIds.length
       ? results.filter((result) => selectedResultIds.includes(result.id))
@@ -254,7 +264,6 @@ export function SearchResults({
               </VirtualizedList>
             </div>
 
-            {resultsMeta ? <Pagination {...resultsMeta} onPageChange={onPageChange} /> : null}
             <p className="text-xs text-[color:var(--ink-muted)]">
               Resultados combinados de OpenStreetMap e Google Places quando disponíveis. Dados ©{' '}
               <a
@@ -269,6 +278,9 @@ export function SearchResults({
             </p>
           </>
         )}
+        {paginationMeta && !isError ? (
+          <Pagination {...paginationMeta} onPageChange={onPageChange} />
+        ) : null}
       </CardContent>
     </Card>
   );

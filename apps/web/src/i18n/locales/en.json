@@ -968,6 +968,11 @@
     "pickLeadEmpty": "No leads captured yet. Send leads to the CRM from search.",
     "searchLead": "Search lead",
     "searchLeadPlaceholder": "Name or city…",
+    "filterCity": "City",
+    "filterCityPlaceholder": "Filter by city",
+    "filterSentFrom": "Sent from",
+    "filterSentTo": "Sent until",
+    "sentToCrmOn": "Sent {{date}}",
     "changeLead": "Change lead",
     "catalog": {
       "crm-next-action": {

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import '@/i18n';
+import { formatDate } from '@/lib/utils';
 import type { LeadListItem, LeadStatus } from '@/types';
 
 import { LeadCardGrid } from './lead-card-grid';
@@ -38,6 +39,9 @@ describe('LeadCardGrid', () => {
 
     expect(screen.getByRole('button', { name: 'Padaria Alfa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Clínica Sorriso' })).toBeInTheDocument();
+    expect(
+      screen.getAllByText(new RegExp(`Enviado em ${formatDate('2026-01-01T00:00:00.000Z')}`)).length,
+    ).toBeGreaterThan(0);
   });
 
   it('calls onSelect with the lead id when a card is clicked', async () => {

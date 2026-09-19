@@ -968,6 +968,11 @@
     "pickLeadEmpty": "Nenhum cliente potencial captado ainda. Envie clientes potenciais para o CRM na busca.",
     "searchLead": "Buscar cliente potencial",
     "searchLeadPlaceholder": "Nome ou cidade…",
+    "filterCity": "Cidade",
+    "filterCityPlaceholder": "Filtrar por cidade",
+    "filterSentFrom": "Enviado de",
+    "filterSentTo": "Enviado até",
+    "sentToCrmOn": "Enviado em {{date}}",
     "changeLead": "Trocar cliente potencial",
     "catalog": {
       "crm-next-action": {

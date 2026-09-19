@@ -6,7 +6,24 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import '@/i18n';
+import type { LeadListItem, LeadStatus } from '@/types';
 import { AgentsCrmPage } from './agents-crm-page';
+
+function makePickerLead(
+  overrides: Partial<LeadListItem> & Pick<LeadListItem, 'id' | 'companyName'>,
+): LeadListItem {
+  return {
+    status: 'NEW' as LeadStatus,
+    source: 'SEARCH',
+    score: 35,
+    doNotContact: false,
+    tags: [],
+    createdAt: '2026-09-01T00:00:00.000Z',
+    updatedAt: '2026-09-01T00:00:00.000Z',
+    city: 'Afogados da Ingazeira',
+    ...overrides,
+  } as LeadListItem;
+}
 
 const mocks = vi.hoisted(() => ({
   useCrmSuggest: vi.fn(),
@@ -202,6 +219,81 @@ describe('AgentsCrmPage', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
     expect(screen.queryByText(/Não foi possível sugerir/i)).not.toBeInTheDocument();
+  });
+
+  it('paginates the picker so older CRM leads stay reachable after a new send', async () => {
+    const user = userEvent.setup();
+    const allLeads = Array.from({ length: 15 }, (_, index) =>
+      makePickerLead({
+        id: `lead-${index + 1}`,
+        companyName: `Empresa ${index + 1}`,
+      }),
+    );
+    mocks.fetchLeads.mockImplementation(async (query: { page?: number; pageSize?: number }) => {
+      const page = query.page ?? 1;
+      const pageSize = query.pageSize ?? 10;
+      const start = (page - 1) * pageSize;
+      return {
+        data: allLeads.slice(start, start + pageSize),
+        meta: {
+          page,
+          pageSize,
+          total: allLeads.length,
+          totalPages: Math.ceil(allLeads.length / pageSize),
+        },
+      };
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Empresa 1' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Empresa 13' })).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: 'Próxima página' }));
+
+    expect(await screen.findByRole('button', { name: 'Empresa 13' })).toBeInTheDocument();
+    expect(mocks.fetchLeads).toHaveBeenCalledWith(
+      expect.objectContaining({ page: 2 }),
+    );
+  });
+
+  it('filters the picker by city and CRM send date', async () => {
+    const user = userEvent.setup();
+    mocks.fetchLeads.mockResolvedValue({
+      data: [
+        makePickerLead({
+          id: 'lead-recife',
+          companyName: 'Studio Recife',
+          city: 'Recife',
+          createdAt: '2026-09-19T12:00:00.000Z',
+        }),
+      ],
+      meta: { page: 1, pageSize: 12, total: 1, totalPages: 1 },
+    });
+
+    render(
+      <Wrapper initialEntry="/agents/crm">
+        <AgentsCrmPage />
+      </Wrapper>,
+    );
+
+    await user.type(await screen.findByLabelText('Cidade'), 'Recife');
+    await user.type(screen.getByLabelText('Enviado de'), '2026-09-01');
+    await user.type(screen.getByLabelText('Enviado até'), '2026-09-19');
+
+    await waitFor(() => {
+      expect(mocks.fetchLeads).toHaveBeenCalledWith(
+        expect.objectContaining({
+          city: 'Recife',
+          createdFrom: '2026-09-01',
+          createdTo: '2026-09-19',
+        }),
+      );
+    });
   });
 
   it('returns to the picker when fetchLead returns 404', async () => {

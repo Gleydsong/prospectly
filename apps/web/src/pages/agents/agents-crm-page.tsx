@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
+import { Pagination } from '@/components/ui/pagination';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   CrmDailyFocus,
@@ -21,6 +22,8 @@ import type { CrmActionCode } from '@/features/agents/api';
 import { fetchLead, fetchLeads } from '@/features/leads/api';
 import { getApiErrorMessage, getApiErrorStatus } from '@/lib/api';
 
+const PICKER_PAGE_SIZE = 12;
+
 export function AgentsCrmPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -29,6 +32,11 @@ export function AgentsCrmPage() {
 
   const [leadQuery, setLeadQuery] = useState('');
   const [leadSearch, setLeadSearch] = useState('');
+  const [cityQuery, setCityQuery] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
+  const [pickerPage, setPickerPage] = useState(1);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionOk, setActionOk] = useState<string | null>(null);
   const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
@@ -48,22 +56,42 @@ export function AgentsCrmPage() {
       (preselected.isError && getApiErrorStatus(preselected.error) === 404));
 
   const leadsPicker = useQuery({
-    queryKey: ['agents', 'crm', 'lead-picker', leadSearch],
+    queryKey: [
+      'agents',
+      'crm',
+      'lead-picker',
+      leadSearch,
+      cityFilter,
+      createdFrom,
+      createdTo,
+      pickerPage,
+    ],
     queryFn: () =>
       fetchLeads({
-        page: 1,
-        pageSize: 10,
+        page: pickerPage,
+        pageSize: PICKER_PAGE_SIZE,
         q: leadSearch || undefined,
-        sortBy: 'updatedAt',
+        city: cityFilter || undefined,
+        createdFrom: createdFrom || undefined,
+        createdTo: createdTo || undefined,
+        sortBy: 'createdAt',
         sortOrder: 'desc',
       }),
+    placeholderData: (previous) => previous,
     enabled: !leadId || leadMissing,
   });
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLeadSearch(leadQuery.trim()), 250);
+    const timer = window.setTimeout(() => {
+      setLeadSearch(leadQuery.trim());
+      setCityFilter(cityQuery.trim());
+    }, 250);
     return () => window.clearTimeout(timer);
-  }, [leadQuery]);
+  }, [leadQuery, cityQuery]);
+
+  useEffect(() => {
+    setPickerPage(1);
+  }, [leadSearch, cityFilter, createdFrom, createdTo]);
 
   const clearMissingLead = useCallback(() => {
     setActionError(t('agents.crm.leadNotFound'));
@@ -137,20 +165,45 @@ export function AgentsCrmPage() {
           <Card>
             <CardHeader title={t('agents.pickLead')} />
             <CardContent className="space-y-3">
-              <Input
-                label={t('agents.searchLead')}
-                placeholder={t('agents.searchLeadPlaceholder')}
-                value={leadQuery}
-                onChange={(event) => setLeadQuery(event.target.value)}
-              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label={t('agents.searchLead')}
+                  placeholder={t('agents.searchLeadPlaceholder')}
+                  value={leadQuery}
+                  onChange={(event) => setLeadQuery(event.target.value)}
+                />
+                <Input
+                  label={t('agents.filterCity')}
+                  placeholder={t('agents.filterCityPlaceholder')}
+                  value={cityQuery}
+                  onChange={(event) => setCityQuery(event.target.value)}
+                />
+                <Input
+                  label={t('agents.filterSentFrom')}
+                  type="date"
+                  value={createdFrom}
+                  onChange={(event) => setCreatedFrom(event.target.value)}
+                />
+                <Input
+                  label={t('agents.filterSentTo')}
+                  type="date"
+                  value={createdTo}
+                  onChange={(event) => setCreatedTo(event.target.value)}
+                />
+              </div>
               {leadsPicker.isLoading ? (
                 <Skeleton className="h-40" />
               ) : (
-                <LeadCardGrid
-                  leads={leadsPicker.data?.data ?? []}
-                  onSelect={selectLead}
-                  emptyLabel={t('agents.pickLeadEmpty')}
-                />
+                <>
+                  <LeadCardGrid
+                    leads={leadsPicker.data?.data ?? []}
+                    onSelect={selectLead}
+                    emptyLabel={t('agents.pickLeadEmpty')}
+                  />
+                  {leadsPicker.data?.meta && leadsPicker.data.meta.totalPages > 1 ? (
+                    <Pagination {...leadsPicker.data.meta} onPageChange={setPickerPage} />
+                  ) : null}
+                </>
               )}
             </CardContent>
           </Card>

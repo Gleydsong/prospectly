@@ -5,6 +5,7 @@ import {
   Allow,
   ArrayMaxSize,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsIn,
   IsInt,
@@ -68,7 +69,22 @@ export class QueryLeadsDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   city?: string;
+
+  @ApiPropertyOptional({
+    description: 'Inclusive start calendar date (YYYY-MM-DD) for lead createdAt / CRM send time',
+  })
+  @IsOptional()
+  @IsDateString()
+  createdFrom?: string;
+
+  @ApiPropertyOptional({
+    description: 'Inclusive end calendar date (YYYY-MM-DD) for lead createdAt / CRM send time',
+  })
+  @IsOptional()
+  @IsDateString()
+  createdTo?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

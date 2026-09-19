@@ -53,6 +53,7 @@ export function SearchPage() {
   }, [currentSearch?.status, refetchResults]);
 
   const selectSearch = (id: string) => {
+    if (id === selectedSearchId) return;
     setSelectedSearchId(id);
     setResultsPage(1);
     setSelectedResultIds([]);
@@ -66,12 +67,17 @@ export function SearchPage() {
   };
 
   const toggleCurrentPage = () => {
-    setSelectedResultIds(allCurrentResultsSelected ? [] : selectableResultIds);
+    setSelectedResultIds((current) => {
+      if (allCurrentResultsSelected) {
+        const currentPage = new Set(selectableResultIds);
+        return current.filter((id) => !currentPage.has(id));
+      }
+      return [...new Set([...current, ...selectableResultIds])];
+    });
   };
 
   const changeResultsPage = (page: number) => {
     setResultsPage(page);
-    setSelectedResultIds([]);
   };
 
   const runImport = async (resultIds: string[], singleResultId?: string) => {

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PropsWithChildren } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -531,6 +531,216 @@ describe('SearchPage', () => {
     expect(
       screen.getByRole('link', { name: /Desbloquear todos os nichos/i }),
     ).toHaveAttribute('href', '/credits');
+  });
+
+  it('keeps selected results across pages and sends every selected id to the CRM', async () => {
+    const user = userEvent.setup();
+    mocks.importResults.mockResolvedValue({
+      imported: 2,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
+    });
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    mocks.useSearchResults.mockImplementation((_id: string, query?: { page?: number }) => {
+      const page = query?.page ?? 1;
+      const result =
+        page === 1
+          ? {
+              id: 'result-page-1',
+              data: {
+                externalId: 'node/1',
+                companyName: 'Barbearia Página Um',
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              normalizedData: {
+                externalId: 'node/1',
+                companyName: 'Barbearia Página Um',
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              websitePresence: 'NO_WEBSITE_REPORTED',
+              importedLeadId: null,
+              createdAt: '2026-07-22T10:00:00.000Z',
+            }
+          : {
+              id: 'result-page-2',
+              data: {
+                externalId: 'node/2',
+                companyName: 'Studio Página Dois',
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              normalizedData: {
+                externalId: 'node/2',
+                companyName: 'Studio Página Dois',
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              websitePresence: 'NO_WEBSITE_REPORTED',
+              importedLeadId: null,
+              createdAt: '2026-07-22T10:00:00.000Z',
+            };
+      return {
+        data: {
+          data: [result],
+          meta: { page, pageSize: 20, total: 2, totalPages: 2 },
+        },
+        isLoading: false,
+        isError: false,
+        isPlaceholderData: false,
+        refetch: vi.fn(),
+      };
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Selecionar Barbearia Página Um' }));
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+
+    const resultsPagination = screen.getAllByRole('navigation', { name: 'Paginação' })[0];
+    await user.click(within(resultsPagination!).getByRole('button', { name: 'Próxima página' }));
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    await user.click(screen.getByRole('checkbox', { name: 'Selecionar Studio Página Dois' }));
+
+    await user.click(screen.getByRole('button', { name: 'Enviar para CRM (2)' }));
+
+    expect(mocks.importResults).toHaveBeenCalledWith({
+      searchId: 'search-1',
+      resultIds: ['result-page-1', 'result-page-2'],
+    });
+  });
+
+  it('keeps the current selection when the already selected search is clicked again', async () => {
+    const user = userEvent.setup();
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    mocks.useSearchResults.mockReturnValue({
+      data: {
+        data: [
+          {
+            id: 'result-page-1',
+            data: {
+              externalId: 'node/1',
+              companyName: 'Barbearia Página Um',
+              city: 'Afogados da Ingazeira',
+              state: 'PE',
+              country: 'BR',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            normalizedData: {
+              externalId: 'node/1',
+              companyName: 'Barbearia Página Um',
+              city: 'Afogados da Ingazeira',
+              state: 'PE',
+              country: 'BR',
+              source: 'OPENSTREETMAP',
+              websitePresence: 'NO_WEBSITE_REPORTED',
+            },
+            websitePresence: 'NO_WEBSITE_REPORTED',
+            importedLeadId: null,
+            createdAt: '2026-07-22T10:00:00.000Z',
+          },
+        ],
+        meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      },
+      isLoading: false,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Selecionar Barbearia Página Um' }));
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+  });
+
+  it('merges select-all on the current page instead of replacing earlier selections', async () => {
+    const user = userEvent.setup();
+    mocks.importResults.mockResolvedValue({
+      imported: 2,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
+    });
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    mocks.useSearchResults.mockImplementation((_id: string, query?: { page?: number }) => {
+      const page = query?.page ?? 1;
+      const companyName = page === 1 ? 'Barbearia Página Um' : 'Studio Página Dois';
+      const id = page === 1 ? 'result-page-1' : 'result-page-2';
+      return {
+        data: {
+          data: [
+            {
+              id,
+              data: {
+                externalId: id,
+                companyName,
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              normalizedData: {
+                externalId: id,
+                companyName,
+                city: 'Afogados da Ingazeira',
+                state: 'PE',
+                country: 'BR',
+                source: 'OPENSTREETMAP',
+                websitePresence: 'NO_WEBSITE_REPORTED',
+              },
+              websitePresence: 'NO_WEBSITE_REPORTED',
+              importedLeadId: null,
+              createdAt: '2026-07-22T10:00:00.000Z',
+            },
+          ],
+          meta: { page, pageSize: 20, total: 2, totalPages: 2 },
+        },
+        isLoading: false,
+        isError: false,
+        isPlaceholderData: false,
+        refetch: vi.fn(),
+      };
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    await user.click(screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }));
+    const resultsPagination = screen.getAllByRole('navigation', { name: 'Paginação' })[0];
+    await user.click(within(resultsPagination!).getByRole('button', { name: 'Próxima página' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }));
+    await user.click(screen.getByRole('button', { name: 'Enviar para CRM (2)' }));
+
+    expect(mocks.importResults).toHaveBeenCalledWith({
+      searchId: 'search-1',
+      resultIds: ['result-page-1', 'result-page-2'],
+    });
   });
 
   it('orchestrates form, results and history from prospecting feature modules', async () => {
