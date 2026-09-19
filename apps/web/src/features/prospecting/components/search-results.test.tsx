@@ -69,4 +69,88 @@ describe('SearchResults virtualization', () => {
     expect(screen.getAllByText(/Resultado \d+/).length).toBeLessThan(40);
     expect(screen.queryByText('Resultado 39')).not.toBeInTheDocument();
   });
+
+  it('keeps pagination mounted while the next page is loading', () => {
+    const results = [resultAt(0)];
+    const { rerender } = render(
+      <SearchResults
+        currentSearch={{
+          id: 'search-1',
+          provider: 'OPENSTREETMAP',
+          input: {
+            categories: ['restaurant'],
+            category: 'restaurant',
+            city: 'São Paulo',
+            state: 'SP',
+            country: 'BR',
+            onlyWithoutWebsite: true,
+          },
+          status: 'COMPLETED',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }}
+        results={results}
+        resultsMeta={{ page: 1, pageSize: 20, total: 2, totalPages: 2 }}
+        isLoading={false}
+        isError={false}
+        error={null}
+        onRetry={() => undefined}
+        importSummary={null}
+        selectedResultIds={['result-0']}
+        selectableResultIds={['result-0']}
+        allCurrentResultsSelected
+        withoutWebsiteCount={1}
+        canImport
+        importingResultId={null}
+        importPending={false}
+        onToggleResult={() => undefined}
+        onToggleCurrentPage={() => undefined}
+        onPageChange={() => undefined}
+        onImportSelected={() => undefined}
+        onImportOne={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
+
+    rerender(
+      <SearchResults
+        currentSearch={{
+          id: 'search-1',
+          provider: 'OPENSTREETMAP',
+          input: {
+            categories: ['restaurant'],
+            category: 'restaurant',
+            city: 'São Paulo',
+            state: 'SP',
+            country: 'BR',
+            onlyWithoutWebsite: true,
+          },
+          status: 'COMPLETED',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }}
+        results={[]}
+        resultsMeta={undefined}
+        isLoading
+        isError={false}
+        error={null}
+        onRetry={() => undefined}
+        importSummary={null}
+        selectedResultIds={['result-0']}
+        selectableResultIds={[]}
+        allCurrentResultsSelected={false}
+        withoutWebsiteCount={0}
+        canImport
+        importingResultId={null}
+        importPending={false}
+        onToggleResult={() => undefined}
+        onToggleCurrentPage={() => undefined}
+        onPageChange={() => undefined}
+        onImportSelected={() => undefined}
+        onImportOne={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+  });
 });

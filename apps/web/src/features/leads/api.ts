@@ -20,6 +20,8 @@ export interface LeadsQuery {
   category?: string;
   segment?: string;
   city?: string;
+  createdFrom?: string;
+  createdTo?: string;
   ownerId?: string;
   tagId?: string;
   hasWebsite?: boolean;

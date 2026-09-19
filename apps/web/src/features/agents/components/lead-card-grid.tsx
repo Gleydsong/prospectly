@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
+
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { ScoreBadge } from '@/components/ui/score-badge';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import type { LeadListItem } from '@/types';
 
 export interface LeadCardGridProps {
@@ -11,6 +13,7 @@ export interface LeadCardGridProps {
 }
 
 export function LeadCardGrid({ leads, onSelect, className, emptyLabel }: LeadCardGridProps) {
+  const { t } = useTranslation();
   if (leads.length === 0) {
     return (
       <div
@@ -55,6 +58,9 @@ export function LeadCardGrid({ leads, onSelect, className, emptyLabel }: LeadCar
             </span>
             <span className="mt-3 flex items-center justify-between gap-2">
               <LeadStatusBadge status={lead.status} />
+              <span className="truncate text-[11px] text-[color:var(--ink-muted)]">
+                {t('agents.sentToCrmOn', { date: formatDate(lead.createdAt) })}
+              </span>
             </span>
           </button>
         );

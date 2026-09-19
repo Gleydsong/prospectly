@@ -5,7 +5,7 @@ const projectDirectory = fileURLToPath(new URL('.', import.meta.url));
 const e2ePort = process.env.E2E_PORT ?? '5173';
 const baseURL = `http://127.0.0.1:${e2ePort}`;
 const webServerCommand =
-  process.env.E2E_WEB_SERVER ?? `pnpm dev -- --host 127.0.0.1 --port ${e2ePort}`;
+  process.env.E2E_WEB_SERVER ?? `pnpm exec vite --host 127.0.0.1 --port ${e2ePort}`;
 
 export default defineConfig({
   testDir: './e2e',

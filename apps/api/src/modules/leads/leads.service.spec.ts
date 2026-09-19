@@ -263,6 +263,92 @@ describe('LeadsService', () => {
     );
   });
 
+  it('list city matches a partial city name', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      city: 'Afogados',
+    });
+
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          city: { contains: 'Afogados', mode: 'insensitive' },
+        }),
+      }),
+    );
+  });
+
+  it('list search q also matches city', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      q: 'Afogados',
+    });
+
+    expect(prisma.lead.findMany.mock.calls[0]?.[0]?.where.OR).toEqual(
+      expect.arrayContaining([{ city: { contains: 'Afogados', mode: 'insensitive' } }]),
+    );
+  });
+
+  it('list filters createdAt by inclusive createdFrom/createdTo calendar days', async () => {
+    const prisma = makePrisma();
+    prisma.lead.count.mockResolvedValue(0);
+    prisma.lead.findMany.mockResolvedValue([]);
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await service.list('org1', {
+      page: 1,
+      pageSize: 20,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      createdFrom: '2026-09-01',
+      createdTo: '2026-09-19',
+    });
+
+    expect(prisma.lead.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: {
+            gte: new Date('2026-09-01T00:00:00.000Z'),
+            lte: new Date('2026-09-19T23:59:59.999Z'),
+          },
+        }),
+      }),
+    );
+  });
+
+  it('list rejects createdFrom after createdTo', async () => {
+    const prisma = makePrisma();
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await expect(
+      service.list('org1', {
+        page: 1,
+        pageSize: 20,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+        createdFrom: '2026-09-20',
+        createdTo: '2026-09-19',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.lead.findMany).not.toHaveBeenCalled();
+  });
+
   it('list number custom field filter compiles a JSON path bound', async () => {
     const fieldId = '11111111-1111-4111-8111-111111111111';
     const prisma = makePrisma();
