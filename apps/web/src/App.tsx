@@ -64,7 +64,9 @@ const LeadDetailPage = lazy(() =>
   import('@/pages/leads/lead-detail-page').then((m) => ({ default: m.LeadDetailPage })),
 );
 const PersonaOnboardingPage = lazy(() =>
-  import('@/pages/auth/persona-onboarding-page').then((m) => ({ default: m.PersonaOnboardingPage })),
+  import('@/pages/auth/persona-onboarding-page').then((m) => ({
+    default: m.PersonaOnboardingPage,
+  })),
 );
 const OauthConsentPage = lazy(() =>
   import('@/pages/oauth/oauth-consent-page').then((m) => ({ default: m.OauthConsentPage })),
@@ -77,6 +79,9 @@ const CampaignsPage = lazy(() =>
 );
 const CampaignDetailPage = lazy(() =>
   import('@/pages/campaign-detail-page').then((m) => ({ default: m.CampaignDetailPage })),
+);
+const ResearchPage = lazy(() =>
+  import('@/pages/sdr/research-page').then((m) => ({ default: m.ResearchPage })),
 );
 
 function LazyPage({ children }: { children: ReactNode }) {
@@ -245,6 +250,14 @@ export function App() {
             element={
               <LazyPage>
                 <CampaignDetailPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="sdr/research"
+            element={
+              <LazyPage>
+                <ResearchPage />
               </LazyPage>
             }
           />
