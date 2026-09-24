@@ -22,3 +22,9 @@ export class InvalidSdrEvidenceError extends SdrDomainError {
     super(message);
   }
 }
+
+export class InvalidSdrDiscoveryError extends SdrDomainError {
+  constructor(message: string) {
+    super(message);
+  }
+}
