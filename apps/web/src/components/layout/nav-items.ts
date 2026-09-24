@@ -64,7 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/agents', labelKey: 'nav.agents', icon: Bot },
       { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
-      { to: '/sdr/research', labelKey: 'nav.sdr', icon: Telescope },
+      { to: '/sdr', labelKey: 'nav.sdr', icon: Telescope },
       { to: '/workflows', labelKey: 'nav.workflows', icon: Workflow },
       { to: '/reports', labelKey: 'nav.reports', icon: BarChart3 },
       { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
@@ -90,6 +90,7 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/agents/, labelKey: 'nav.conversas' },
   { pattern: /^\/campaigns/, labelKey: 'nav.campaigns' },
   { pattern: /^\/sdr\/research/, labelKey: 'nav.sdr' },
+  { pattern: /^\/sdr$/, labelKey: 'nav.sdr' },
   { pattern: /^\/workflows/, labelKey: 'nav.workflows' },
   { pattern: /^\/reports/, labelKey: 'nav.reports' },
   { pattern: /^\/tasks/, labelKey: 'nav.tasks' },

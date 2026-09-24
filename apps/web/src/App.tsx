@@ -83,6 +83,7 @@ const CampaignDetailPage = lazy(() =>
 const ResearchPage = lazy(() =>
   import('@/pages/sdr/research-page').then((m) => ({ default: m.ResearchPage })),
 );
+const SdrPage = lazy(() => import('@/pages/sdr/sdr-page').then((m) => ({ default: m.SdrPage })));
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -250,6 +251,14 @@ export function App() {
             element={
               <LazyPage>
                 <CampaignDetailPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="sdr"
+            element={
+              <LazyPage>
+                <SdrPage />
               </LazyPage>
             }
           />

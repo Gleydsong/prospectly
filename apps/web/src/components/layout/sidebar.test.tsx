@@ -75,7 +75,7 @@ describe('Sidebar persona tag', () => {
     );
 
     expect(screen.getByText('Vendedor')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'SDR' })).toHaveAttribute('href', '/sdr/research');
+    expect(screen.getByRole('link', { name: 'SDR' })).toHaveAttribute('href', '/sdr');
     expect(screen.queryByText('Fotógrafo')).not.toBeInTheDocument();
   });
 });
