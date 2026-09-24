@@ -35,6 +35,16 @@ Ledger em memória, ainda sem tabela Prisma:
 - `assess` devolve `SUPPORTED` só com evidência viva. Sem id, expirada, de outra organização ou de outro prospect devolve `BLOCK`.
 - Texto externo, inclusive instrução de prompt, fica armazenado como valor. Não cria um id nem autoriza envio.
 
+## PR discovery
+
+Contrato e provider falso, sem OSM, Google Places ou fila BullMQ:
+
+- `discoverProspects` devolve fatos. Não calcula score nem qualifica.
+- Resultado de outra organização é descartado.
+- Duplicata pelo host do site colapsa num prospect.
+- `discoveryJobId` é estável para a mesma organização e os mesmos filtros.
+- Critério com chave desconhecida, como `qualify`, é rejeitado.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
