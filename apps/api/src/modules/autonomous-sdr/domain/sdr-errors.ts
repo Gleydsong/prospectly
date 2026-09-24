@@ -10,3 +10,9 @@ export class InvalidProspectTransitionError extends SdrDomainError {
     super(`Prospect cannot move from ${from} to ${to}`);
   }
 }
+
+export class InvalidSdrCampaignError extends SdrDomainError {
+  constructor(message: string) {
+    super(message);
+  }
+}

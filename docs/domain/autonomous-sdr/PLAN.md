@@ -17,6 +17,15 @@ Seam público, sem migration e sem I/O:
 - `defaultAutonomyFlags` / `isAutonomyActionEnabled` — seis flags, default `false`, chave ausente ou desconhecida falha fechado.
 - `assertProspectTransition` — arestas explícitas; estado desconhecido ou salto ilegal lança `InvalidProspectTransitionError`.
 
+## PR campanha
+
+Agregado separado do `Campaign` do CRM, ainda sem migration:
+
+- `createSdrCampaign` exige ICP estruturado, organização e oferta. Texto livre é rejeitado.
+- WhatsApp com autonomia `AUTONOMOUS` é rejeitado.
+- `assertSdrCampaignTransition` só permite DRAFT → ACTIVE → PAUSED/COMPLETED.
+- `sdrCampaignOutreach` devolve ALLOW só com campanha ACTIVE, canal sem WhatsApp, autonomia AUTONOMOUS e flag `autonomousSending` ligada. Caso contrário BLOCK ou REQUIRE_APPROVAL.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
