@@ -87,6 +87,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `ConversationInbox` exige o segredo do webhook antes de gravar. O mesmo `eventId` cem vezes produz uma mensagem. `stop` vira `OPT_OUT` e `NOT_INTERESTED`, mesmo se o Choice do modelo disser `INTERESTED`. Essa supressão bloqueia o envio na policy. O corpo fica armazenado como texto.
 
+## PR follow-up
+
+`FollowUpScheduler` cancela se já existe resposta ou supressão. Sem a flag `autonomousFollowup`, antes do intervalo, ou com provider doente, não chama o provider. A mesma mensagem, repetida, gera uma entrega falsa.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
