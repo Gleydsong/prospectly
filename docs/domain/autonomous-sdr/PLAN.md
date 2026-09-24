@@ -71,6 +71,10 @@ Só um prospect `QUALIFIED` com evidência viva entra. Cada observação cita o 
 
 A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qualificado. O menu lateral ganha o item SDR. A tela pronta recebe o brief já decidido pelo domínio.
 
+## PR mensagens
+
+`composeSdrMessage` valida strategy, CTA, tom e claims. Claim sem evidência do brief devolve `BLOCK` e `unsupported_claim`. Falha do gerador devolve `BLOCK` e `generator_unavailable`, sem texto substituto. O texto externo não entra no corpo nem é enviado ao gerador.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
