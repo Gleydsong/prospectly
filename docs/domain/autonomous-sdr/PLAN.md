@@ -99,6 +99,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `SdrAuditLog` exige `traceId` e soma métricas por organização. Outra organização não lê o registro. Texto com `Bearer` ou `secret` é recusado e não entra no log.
 
+## PR segurança
+
+`assertTenantAccess` recusa organização diferente. `SdrRateLimit` para na chamada acima do limite, por organização. `webhookSecretMatches` compara o segredo com hash. `readUntrustedText` devolve o texto e `authorizesSend: false`.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
