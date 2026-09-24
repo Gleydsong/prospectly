@@ -1,0 +1,30 @@
+# Autonomous SDR — plano de implementação
+
+Plano vivo. Este documento descreve o alvo e o que o PR de fundação realmente entrega.
+
+## Arquitetura atual
+
+Monólito modular NestJS (`apps/api`), SPA React/Vite (`apps/web`), landing Next.js. PostgreSQL via Prisma é a fonte de verdade. Redis + BullMQ executam jobs. Tenant é `organizationId` da sessão JWT, com RLS. Campanha existente é CRM assistido (`Campaign`, `CampaignLead`). Agents proíbe disparo automático de WhatsApp e trata DNC como absoluto. Não há cliente Jev no repositório.
+
+## Arquitetura alvo
+
+O SDR entra como módulo de domínio no mesmo monólito, com workers e outbox já existentes. Jev julga. LLM redige. Código decide transições e score. Policy autoriza. PostgreSQL guarda o que aconteceu. Envio real não existe neste ciclo: provider falso, flags de autonomia desligadas.
+
+## Este PR (foundation)
+
+Seam público, sem migration e sem I/O:
+
+- `defaultAutonomyFlags` / `isAutonomyActionEnabled` — seis flags, default `false`, chave ausente ou desconhecida falha fechado.
+- `assertProspectTransition` — arestas explícitas; estado desconhecido ou salto ilegal lança `InvalidProspectTransitionError`.
+
+## Fora deste PR
+
+Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
+
+## Branches
+
+`main` → `feat/autonomous-sdr` (integração) → `feat/sdr-foundation` (este PR). PRs filhos apontam para `feat/autonomous-sdr`. Sem merge para `main`.
+
+## Riscos
+
+A máquina de estados ainda não cobre todo fechamento (`→ CLOSED`) fora de `MEETING_BOOKED`. Flags ainda não estão em `OrganizationFlag`. O model `Campaign` atual não deve ser reutilizado como control plane sem um agregado separado.
