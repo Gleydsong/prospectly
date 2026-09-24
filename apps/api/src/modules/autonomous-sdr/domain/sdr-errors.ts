@@ -16,3 +16,9 @@ export class InvalidSdrCampaignError extends SdrDomainError {
     super(message);
   }
 }
+
+export class InvalidSdrEvidenceError extends SdrDomainError {
+  constructor(message: string) {
+    super(message);
+  }
+}

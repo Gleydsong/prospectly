@@ -26,6 +26,15 @@ Agregado separado do `Campaign` do CRM, ainda sem migration:
 - `assertSdrCampaignTransition` só permite DRAFT → ACTIVE → PAUSED/COMPLETED.
 - `sdrCampaignOutreach` devolve ALLOW só com campanha ACTIVE, canal sem WhatsApp, autonomia AUTONOMOUS e flag `autonomousSending` ligada. Caso contrário BLOCK ou REQUIRE_APPROVAL.
 
+## PR evidência
+
+Ledger em memória, ainda sem tabela Prisma:
+
+- `record` exige organização, prospect, campo, valor textual e `https`.
+- `observe` só existe se citar evidência da mesma organização e do mesmo prospect.
+- `assess` devolve `SUPPORTED` só com evidência viva. Sem id, expirada, de outra organização ou de outro prospect devolve `BLOCK`.
+- Texto externo, inclusive instrução de prompt, fica armazenado como valor. Não cria um id nem autoriza envio.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
