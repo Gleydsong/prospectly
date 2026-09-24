@@ -91,6 +91,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `FollowUpScheduler` cancela se já existe resposta ou supressão. Sem a flag `autonomousFollowup`, antes do intervalo, ou com provider doente, não chama o provider. A mesma mensagem, repetida, gera uma entrega falsa.
 
+## PR memória
+
+`SdrMemoryProjection` reconstrói organização, campanha, prospect e conversa a partir dos registros recebidos. `rebuild` apaga a projeção anterior. Outra organização não lê a campanha nem a conversa. O texto da resposta entra em `untrustedReply`. A projeção não é a fonte da verdade.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
