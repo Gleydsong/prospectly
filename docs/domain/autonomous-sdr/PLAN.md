@@ -107,6 +107,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 A rota `/sdr` mostra campanha, autonomia, prospects, evidência, decisão, mensagem, fila de revisão e métricas. O envio autônomo aparece desligado no estado vazio. Aprovar ou rejeitar só muda a fila local. O menu SDR aponta para `/sdr`.
 
+## PR E2E
+
+O cenário local encadeia campanha, discovery falso, enrichment, decisão, research, mensagem, um envio falso, resposta, cancelamento de follow-up, auditoria e memória. Lead fraco não chega a research nem a envio. `stop` repetido cem vezes continua uma mensagem e bloqueia o envio. Campanha pausada não entrega.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
