@@ -79,6 +79,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `authorizeSdrSend` revalida na hora do efeito. Suppression devolve `BLOCK` antes de qualquer outra regra. Campanha pausada, limite diário e duplicata também bloqueiam. Fora do horário comercial, um envio que seria `ALLOW` vira `REQUIRE_APPROVAL`. A flag `autonomousSending` continua obrigatória.
 
+## PR outreach
+
+`OutreachGateway` só chama `FakeOutreachProvider` depois de `ALLOW`. Cem execuções da mesma mensagem produzem uma entrega e um evento `prospect.contacted`. Campanha pausada não chama o provider. O outbox é memória de processo.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
