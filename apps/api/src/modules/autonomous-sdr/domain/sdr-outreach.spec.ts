@@ -78,4 +78,30 @@ describe('OutreachGateway', () => {
     expect(provider.deliveries).toEqual([]);
     expect(gateway.publishPending()).toEqual([]);
   });
+
+  it('sends once when one hundred executions run together', async () => {
+    const provider = new FakeOutreachProvider();
+    const original = provider.send.bind(provider);
+    provider.send = async (delivery) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return original(delivery);
+    };
+    const gateway = new OutreachGateway(provider);
+
+    await Promise.all(Array.from({ length: 100 }, () => gateway.execute(allowed)));
+
+    expect(provider.deliveries).toHaveLength(1);
+    expect(gateway.publishPending()).toHaveLength(1);
+    expect(gateway.publishPending()).toEqual([]);
+  });
+
+  it('does not record prospect.contacted when the provider does not accept', async () => {
+    const provider = new FakeOutreachProvider();
+    provider.send = async () => ({ status: 'BLOCKED', provider: 'fake' });
+    const gateway = new OutreachGateway(provider);
+
+    await gateway.execute(allowed);
+
+    expect(gateway.publishPending()).toEqual([]);
+  });
 });
