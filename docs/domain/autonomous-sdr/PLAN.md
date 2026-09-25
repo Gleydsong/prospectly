@@ -55,6 +55,16 @@ Sinais fictícios de site viram evidência. Não há fetch HTTP.
 - Prospect sem `https` não chama o provider.
 - O texto da página fica em `value`. Não há campo de qualificação.
 
+## PR decisões Jev
+
+O parser aceita só os formatos instalados em `memory_shared.jev.models`: `noul`, `choice` e `score`. Não chama o gateway.
+
+- `opportunity-score-v1` combina os sinais em código. A nota do exemplo qualificado é 56.
+- `QUALIFIED` exige nota >= 55, ICP >= 50 e contactability >= 50.
+- Provider indisponível, tipo desconhecido ou strategy fora da allowlist devolve `REJECTED` e nota nula.
+- O texto do prospect fica no log como dado. Não altera a nota.
+- O log de outra organização não devolve a decisão.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
