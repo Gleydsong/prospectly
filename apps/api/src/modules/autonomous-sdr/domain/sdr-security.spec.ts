@@ -11,6 +11,8 @@ describe('SDR security checks', () => {
     expect(() => assertTenantAccess('org-a', 'org-b')).toThrow(InvalidSdrSecurityError);
     expect(webhookSecretMatches('wrong', 'test-webhook-secret')).toBe(false);
     expect(webhookSecretMatches('test-webhook-secret', 'test-webhook-secret')).toBe(true);
+    expect(webhookSecretMatches('', '')).toBe(false);
+    expect(webhookSecretMatches('test-webhook-secret', ' ')).toBe(false);
   });
 
   it('stops the third call in the same organization and keeps the reply from authorizing a send', () => {
