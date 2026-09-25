@@ -35,6 +35,7 @@ export type SdrWorkspaceView = {
   message: { status: 'READY' | 'BLOCK'; body: string | null };
   review: Array<{ prospectId: string; reason: string }>;
   metrics: { blocked: number };
+  seenLeadIds?: string[];
 };
 
 export const EMPTY_SDR_WORKSPACE: SdrWorkspaceView = {

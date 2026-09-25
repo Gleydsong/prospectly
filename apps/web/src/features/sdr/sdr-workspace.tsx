@@ -289,9 +289,9 @@ export function SdrWorkspace({ initial }: { initial: SdrWorkspaceView }) {
           <Card>
             <CardContent className="space-y-3 p-4">
               <h2 className="text-sm font-semibold text-[color:var(--ink)]">{t('nav.sdrReview')}</h2>
-              {summary ? (
+              {summary || initial.brief?.summary ? (
                 <button type="button" className="text-left text-sm text-[color:var(--brand)]" onClick={() => setTab('evidence')}>
-                  {summary}
+                  {summary || initial.brief?.summary}
                 </button>
               ) : (
                 <p className="text-sm text-[color:var(--ink-muted)]">{t('sdrUi.summaryEmpty')}</p>
