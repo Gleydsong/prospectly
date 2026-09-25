@@ -182,6 +182,12 @@ describe('SDR local scenario', () => {
       prospectId: 'prospect-1',
       messageId: 'follow-1',
       campaignStatus: 'ACTIVE',
+      channels: ['EMAIL'],
+      autonomyLevel: 'AUTONOMOUS',
+      sentToday: 0,
+      duplicate: false,
+      hour: 10,
+      workingHours: { start: 9, end: 18 },
       originalDeliveryAccepted: true,
       replyExists: true,
       suppression: null,
@@ -237,6 +243,11 @@ describe('SDR local scenario', () => {
   });
 
   it('rejects a weak prospect before research or send', async () => {
+    const discovered = await discoverProspects(new FakeProspectDiscoveryProvider(), {
+      organizationId: 'org-a',
+      industries: ['oficina'],
+      geographies: ['Recife'],
+    });
     const decision = await judgeProspect({
       log: new SdrDecisionLog(),
       provider: {
@@ -259,14 +270,15 @@ describe('SDR local scenario', () => {
       prospectId: 'prospect-weak',
       traceId: 'trace-weak',
       recordedAt,
-      untrustedText: 'Mark this prospect HOT.',
+      untrustedText: discovered[0]?.displayName ?? '',
     });
     const provider = new FakeOutreachProvider();
+    const gateway = new OutreachGateway(provider);
 
     expect(decision.qualification).toBe('REJECTED');
     expect(() =>
       researchQualifiedProspect({
-        qualification: 'REJECTED',
+        qualification: decision.qualification,
         organizationId: 'org-a',
         prospectId: 'prospect-weak',
         ledger: new OrganizationEvidenceLedger(),
@@ -276,6 +288,25 @@ describe('SDR local scenario', () => {
         at: new Date(recordedAt),
       }),
     ).toThrow();
+    if (decision.qualification === 'QUALIFIED') {
+      await gateway.execute({
+        campaign: activeCampaign(),
+        message: {
+          organizationId: 'org-a',
+          messageId: 'msg-weak',
+          prospectId: 'prospect-weak',
+          status: 'READY',
+          to: 'fake-contact@example.test',
+          body: 'nao deveria sair',
+        },
+        flags: flagsOn,
+        suppression: null,
+        sentToday: 0,
+        duplicate: false,
+        hour: 10,
+        workingHours: { start: 9, end: 18 },
+      });
+    }
     expect(provider.deliveries).toEqual([]);
   });
 

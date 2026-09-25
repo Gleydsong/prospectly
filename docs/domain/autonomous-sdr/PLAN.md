@@ -23,7 +23,7 @@ Agregado separado do `Campaign` do CRM, ainda sem migration:
 
 - `createSdrCampaign` exige ICP estruturado, organização e oferta. Texto livre é rejeitado.
 - WhatsApp com autonomia `AUTONOMOUS` é rejeitado.
-- `assertSdrCampaignTransition` só permite DRAFT → ACTIVE → PAUSED/COMPLETED.
+- `assertSdrCampaignTransition` permite DRAFT → ACTIVE, ACTIVE → PAUSED ou COMPLETED, PAUSED → ACTIVE ou COMPLETED. COMPLETED não reabre.
 - `sdrCampaignOutreach` devolve ALLOW só com campanha ACTIVE, canal sem WhatsApp, autonomia AUTONOMOUS e flag `autonomousSending` ligada. Caso contrário BLOCK ou REQUIRE_APPROVAL.
 
 ## PR evidência
@@ -111,13 +111,17 @@ A rota `/sdr` mostra campanha, autonomia, prospects, evidência, decisão, mensa
 
 O cenário local encadeia campanha, discovery falso, enrichment, decisão, research, mensagem, um envio falso, resposta, cancelamento de follow-up, auditoria e memória. Lead fraco não chega a research nem a envio. `stop` repetido cem vezes continua uma mensagem e bloqueia o envio. Campanha pausada não entrega.
 
-## Fora deste PR
+## Fora deste documento
 
-Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
+PostgreSQL como fonte da verdade do SDR, providers reais (Places, Jev ao vivo, LLM, Resend), HMAC de webhook e o merge da pilha em `main`.
 
 ## Branches
 
-`main` → `feat/autonomous-sdr` (integração) → `feat/sdr-foundation` (este PR). PRs filhos apontam para `feat/autonomous-sdr`. Sem merge para `main`.
+A integração `feat/autonomous-sdr` existe, mas os PRs filhos formam uma pilha encadeada, não apontam todos para ela:
+
+`main` → `feat/autonomous-sdr` → `feat/sdr-foundation` → `feat/sdr-campaign-domain` → `feat/sdr-evidence` → `feat/sdr-discovery` → `feat/sdr-enrichment` → `feat/sdr-jev-decisions` → `feat/sdr-research` → `feat/sdr-message-engine` → `feat/sdr-policy-engine` → `feat/sdr-outreach` → `feat/sdr-conversation` → `feat/sdr-followups` → `feat/sdr-memory` → `feat/sdr-observability` → `feat/sdr-security` → `feat/sdr-frontend` → `test/sdr-e2e-hardening`.
+
+Cada PR aponta para o pai imediato. Sem merge para `main`.
 
 ## Riscos
 
