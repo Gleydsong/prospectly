@@ -40,3 +40,9 @@ export class InvalidSdrResearchError extends SdrDomainError {
     super(message);
   }
 }
+
+export class InvalidSdrAuditError extends SdrDomainError {
+  constructor(message: string) {
+    super(message);
+  }
+}

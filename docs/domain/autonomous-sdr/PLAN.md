@@ -95,6 +95,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `SdrMemoryProjection` reconstrói organização, campanha, prospect e conversa a partir dos registros recebidos. `rebuild` apaga a projeção anterior. Outra organização não lê a campanha nem a conversa. O texto da resposta entra em `untrustedReply`. A projeção não é a fonte da verdade.
 
+## PR observabilidade
+
+`SdrAuditLog` exige `traceId` e soma métricas por organização. Outra organização não lê o registro. Texto com `Bearer` ou `secret` é recusado e não entra no log.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
