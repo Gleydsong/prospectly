@@ -75,6 +75,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `composeSdrMessage` valida strategy, CTA, tom e claims. Claim sem evidência do brief devolve `BLOCK` e `unsupported_claim`. Falha do gerador devolve `BLOCK` e `generator_unavailable`, sem texto substituto. O texto externo não entra no corpo nem é enviado ao gerador.
 
+## PR policy
+
+`authorizeSdrSend` revalida na hora do efeito. Suppression devolve `BLOCK` antes de qualquer outra regra. Campanha pausada, limite diário e duplicata também bloqueiam. Fora do horário comercial, um envio que seria `ALLOW` vira `REQUIRE_APPROVAL`. A flag `autonomousSending` continua obrigatória.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
