@@ -33,6 +33,7 @@ export function readUntrustedText(text: string): { data: string; authorizesSend:
 }
 
 export function webhookSecretMatches(provided: string, expected: string): boolean {
+  if (provided.trim() === '' || expected.trim() === '') return false;
   const providedHash = createHash('sha256').update(provided).digest();
   const expectedHash = createHash('sha256').update(expected).digest();
   return timingSafeEqual(providedHash, expectedHash);
