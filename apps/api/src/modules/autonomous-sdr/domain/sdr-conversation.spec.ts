@@ -74,4 +74,33 @@ describe('ConversationInbox', () => {
       }),
     ).toEqual({ action: 'BLOCK', reason: 'suppression' });
   });
+
+  it.each(['CONTACTED', 'REPLIED', 'INTERESTED'] as const)(
+    'records opt-out from %s even when the state cannot move',
+    (state) => {
+      const inbox = new ConversationInbox(secret);
+      inbox.receive({ ...reply, eventId: `evt-${state}`, body: 'pare', state });
+
+      expect(inbox.suppression('org-a', 'prospect-1')).toBe('OPT_OUT');
+    },
+  );
+
+  it.each(['pare', 'parar', 'sair', 'descadastrar', 'remover', 'não quero', 'nao quero'])(
+    'treats %s as opt-out',
+    (term) => {
+      const inbox = new ConversationInbox(secret);
+      inbox.receive({ ...reply, eventId: `evt-${term}`, body: term, state: 'CONTACTED' });
+      expect(inbox.suppression('org-a', 'prospect-1')).toBe('OPT_OUT');
+    },
+  );
+
+  it('rejects an empty webhook secret', () => {
+    expect(() => new ConversationInbox(' ')).toThrow();
+    const inbox = new ConversationInbox(secret);
+    expect(inbox.receive({ ...reply, secret: '', state: 'CONTACTED' })).toEqual({
+      status: 'REJECTED',
+      reason: 'unauthorized',
+    });
+    expect(inbox.messages('org-a')).toEqual([]);
+  });
 });
