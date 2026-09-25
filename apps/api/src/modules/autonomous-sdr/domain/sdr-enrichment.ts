@@ -35,8 +35,14 @@ export type EnrichDiscoveredProspectInput = {
   collectedAt: string;
 };
 
+const EVIDENCE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 function evidenceId(organizationId: string, prospectId: string, field: string): string {
   return `${organizationId}:${prospectId}:${field}`;
+}
+
+function expiresAtFrom(collectedAt: string): string {
+  return new Date(Date.parse(collectedAt) + EVIDENCE_TTL_MS).toISOString();
 }
 
 function remember(
@@ -54,7 +60,7 @@ function remember(
 ): EvidenceRecord {
   const existing = ledger.read(input.organizationId, input.id);
   if (existing) return existing;
-  return ledger.record({ ...input, confidence: 0.8, expiresAt: '2026-10-24T00:00:00.000Z' });
+  return ledger.record({ ...input, confidence: 0.8, expiresAt: expiresAtFrom(input.collectedAt) });
 }
 
 export async function enrichDiscoveredProspect(
