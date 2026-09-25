@@ -1,4 +1,4 @@
-import { JetBrains_Mono, Outfit } from 'next/font/google';
+import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 
 import type { HtmlLang } from '@/lib/document-locale';
@@ -7,14 +7,51 @@ import './globals.css';
 
 export { landingDocumentMetadata } from '@/lib/landing-og';
 
-const outfit = Outfit({
-  subsets: ['latin'],
+const outfit = localFont({
+  src: [
+    {
+      path: '../../node_modules/@fontsource/outfit/files/outfit-latin-400-normal.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/outfit/files/outfit-latin-500-normal.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/outfit/files/outfit-latin-600-normal.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/outfit/files/outfit-latin-700-normal.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+  ],
   variable: '--font-outfit',
   display: 'swap',
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
+const jetbrains = localFont({
+  src: [
+    {
+      path: '../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-600-normal.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+  ],
   variable: '--font-jetbrains',
   display: 'swap',
 });
