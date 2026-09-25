@@ -19,6 +19,10 @@ test('logs in with the local demo user and opens the SDR screen', async ({ page 
   await expect(page.getByRole('heading', { name: 'SDR' })).toBeVisible();
   await expect(page.getByText(/Autonomous sending is off|Envio autônomo desligado/)).toBeVisible();
   await expect(page.getByText('BLOCK')).toBeVisible();
+  await page.getByRole('button', { name: 'Rodar cenário local' }).click();
+  await expect(page.getByText(/Oficina Alfa · QUALIFIED · 56/)).toBeVisible();
+  await expect(page.getByText('ssl: absent')).toBeVisible();
+  await expect(page.getByText('QUALIFIED · trace-local')).toBeVisible();
 
   await page.goto('/sdr/research');
   await expect(

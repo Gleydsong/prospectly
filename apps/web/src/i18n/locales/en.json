@@ -40,6 +40,7 @@
     "themeToDark": "Switch to dark theme",
     "campaigns": "Campaigns",
     "sdr": "SDR",
+    "sdrRun": "Run local scenario",
     "sdrBlocked": "Research starts only for a qualified prospect with live evidence.",
     "sdrAngle": "Angle",
     "sdrObservations": "Observations",
