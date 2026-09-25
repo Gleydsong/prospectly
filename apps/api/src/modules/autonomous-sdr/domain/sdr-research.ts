@@ -53,6 +53,10 @@ export function researchQualifiedProspect(input: ResearchInput): ResearchBrief {
     if (!evidence || evidence.prospectId !== input.prospectId) {
       throw new InvalidSdrResearchError('research requires live evidence');
     }
+    if (evidence.field === 'pageText') {
+      observations.push({ statement: 'pageText cited', evidenceIds: [evidence.id] });
+      continue;
+    }
     observations.push({
       statement: `${evidence.field}: ${evidence.value}`,
       evidenceIds: [evidence.id],
