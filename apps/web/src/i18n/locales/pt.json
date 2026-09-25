@@ -1264,6 +1264,8 @@
     },
     "reasons": {
       "feature_flag": "Envio autônomo desligado",
+      "jev_rejected": "O Jev julgou que este lead não vale a pena",
+      "jev_unavailable": "O Jev não respondeu. Nenhuma mensagem foi pedida",
       "suppression": "Contato suprimido",
       "outside_working_hours": "Fora do horário",
       "daily_limit": "Limite diário",

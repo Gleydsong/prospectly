@@ -1264,6 +1264,8 @@
     },
     "reasons": {
       "feature_flag": "Autonomous sending is off",
+      "jev_rejected": "Jev judged this lead is not worth it",
+      "jev_unavailable": "Jev did not answer. No message was requested",
       "suppression": "Contact suppressed",
       "outside_working_hours": "Outside working hours",
       "daily_limit": "Daily limit",

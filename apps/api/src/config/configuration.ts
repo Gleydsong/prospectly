@@ -81,6 +81,12 @@ export const configuration = () => ({
     metricsToken: process.env.OPS_METRICS_TOKEN ?? '',
   },
   sentryDsn: process.env.SENTRY_DSN,
+  jev: {
+    apiUrl: process.env.TYPESAFE_API_URL ?? 'https://api.typesafe.ai/v1/systemone',
+    apiKey: process.env.TYPESAFE_API_KEY ?? '',
+    model: process.env.TYPESAFE_MODEL ?? 'jev-latest',
+    timeoutMs: parseInt(process.env.JEV_TIMEOUT_MS ?? '20000', 10),
+  },
   whatsappAi: {
     enabled: process.env.WHATSAPP_AI_ENABLED !== 'false',
     baseUrl: process.env.WHATSAPP_AI_BASE_URL ?? 'http://127.0.0.1:11434',

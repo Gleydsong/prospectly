@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { OllamaChatClient } from '../../agents/whatsapp-ai/ollama-chat.client';
+import { judgeProspect, SdrDecisionLog } from '../domain/sdr-decisions';
+import { SdrJevClient } from './sdr-jev.client';
 import { EMPTY_SDR_RUNTIME, type SdrRuntimeView } from './sdr-runtime.scenario';
 
 type QueueLead = {
@@ -26,6 +28,7 @@ export class SdrRuntimeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ollama: OllamaChatClient,
+    private readonly jev: SdrJevClient,
   ) {}
 
   async get(organizationId: string): Promise<SdrRuntimeView> {
@@ -47,8 +50,18 @@ export class SdrRuntimeService {
 
     const name = lead.tradeName?.trim() || lead.companyName;
     const industry = lead.category ?? lead.segment ?? undefined;
-    const qualification = qualify(lead.score);
-    const body = await this.draft(lead);
+    const decision = await judgeProspect({
+      log: new SdrDecisionLog(),
+      provider: this.jev,
+      organizationId,
+      campaignId: 'lead-queue',
+      prospectId: lead.id,
+      traceId: lead.id,
+      recordedAt: new Date().toISOString(),
+      untrustedText: lead.website ?? '',
+    });
+    const worthIt = decision.qualification === 'QUALIFIED' && decision.opportunityScore != null;
+    const body = worthIt ? await this.draft(lead) : null;
     const view: SdrRuntimeView = {
       campaign: { name: 'Fila de leads', status: 'ACTIVE', channel: 'EMAIL' },
       autonomy: {
@@ -60,20 +73,28 @@ export class SdrRuntimeService {
         {
           id: lead.id,
           name,
-          score: lead.score,
-          state: qualification,
+          score: decision.opportunityScore,
+          state: decision.qualification,
           geography: lead.city ?? undefined,
           industry,
         },
       ],
-      signals: signalsFor(lead),
+      signals: {
+        ...signalsFor(lead),
+        opportunity: decision.opportunityScore,
+      },
       evidence: evidenceFor(lead),
-      decision: { qualification, traceId: lead.id },
-      brief: industry
+      decision: { qualification: decision.qualification, traceId: lead.id },
+      brief: worthIt
         ? { angle: 'website_problem', summary: `${name}${lead.city ? ` · ${lead.city}` : ''}` }
         : null,
       message: { status: 'BLOCK', body },
-      review: [{ prospectId: lead.id, reason: 'feature_flag' }],
+      review: [
+        {
+          prospectId: lead.id,
+          reason: worthIt ? 'feature_flag' : decision.failure ? 'jev_unavailable' : 'jev_rejected',
+        },
+      ],
       metrics: { blocked: 1 },
       seenLeadIds: [...seen, lead.id],
     };
@@ -132,12 +153,6 @@ export class SdrRuntimeService {
     const place = lead.city ? ` em ${lead.city}` : '';
     return `Olá. Vi ${lead.tradeName?.trim() || lead.companyName}${place} e queria entender se faz sentido conversar. Posso enviar uma mensagem curta?`;
   }
-}
-
-function qualify(score: number): 'QUALIFIED' | 'REVIEW' | 'REJECTED' {
-  if (score >= 55) return 'QUALIFIED';
-  if (score < 35) return 'REJECTED';
-  return 'REVIEW';
 }
 
 function signalsFor(lead: QueueLead): NonNullable<SdrRuntimeView['signals']> {

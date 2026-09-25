@@ -16,6 +16,8 @@ export async function fetchSdrRuntime(): Promise<SdrWorkspaceView> {
 }
 
 export async function runSdrRuntime(): Promise<SdrWorkspaceView> {
-  const { data } = await api.post<SdrWorkspaceView>('/sdr/runtime/run');
+  const { data } = await api.post<SdrWorkspaceView>('/sdr/runtime/run', undefined, {
+    timeout: 90_000,
+  });
   return data;
 }
