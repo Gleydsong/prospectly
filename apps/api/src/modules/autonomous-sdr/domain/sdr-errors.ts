@@ -46,3 +46,9 @@ export class InvalidSdrAuditError extends SdrDomainError {
     super(message);
   }
 }
+
+export class InvalidSdrSecurityError extends SdrDomainError {
+  constructor(message: string) {
+    super(message);
+  }
+}

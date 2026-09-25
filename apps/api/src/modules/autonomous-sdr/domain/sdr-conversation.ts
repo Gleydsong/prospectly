@@ -1,8 +1,7 @@
-import { timingSafeEqual, createHash } from 'node:crypto';
-
 import { assertProspectTransition, type ProspectState } from './prospect-state';
 import { parseJevAnswer } from './sdr-decisions';
 import type { SuppressionReason } from './sdr-policy';
+import { webhookSecretMatches } from './sdr-security';
 
 const INTENTS = new Set([
   'INTERESTED',
@@ -35,13 +34,6 @@ type StoredReply = {
 export type ReplyReceipt =
   | { status: 'ACCEPTED'; intent: string; state: ProspectState }
   | { status: 'REJECTED'; reason: 'unauthorized' | 'invalid_intent' | 'invalid_transition' };
-
-function sameSecret(left: string, right: string): boolean {
-  if (left.trim() === '' || right.trim() === '') return false;
-  const leftHash = createHash('sha256').update(left).digest();
-  const rightHash = createHash('sha256').update(right).digest();
-  return timingSafeEqual(leftHash, rightHash);
-}
 
 function nextState(start: ProspectState, intent: string): ProspectState {
   if (intent === 'OPT_OUT') {
@@ -93,7 +85,7 @@ export class ConversationInbox {
     state: ProspectState;
     intent: IntentChoice;
   }): ReplyReceipt {
-    if (!sameSecret(input.secret, this.secret))
+    if (!webhookSecretMatches(input.secret, this.secret))
       return { status: 'REJECTED', reason: 'unauthorized' };
     const key = `${input.organizationId}\u0000${input.eventId}`;
     const existing = this.replies.find(
