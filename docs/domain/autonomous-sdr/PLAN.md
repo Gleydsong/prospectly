@@ -45,6 +45,16 @@ Contrato e provider falso, sem OSM, Google Places ou fila BullMQ:
 - `discoveryJobId` é estável para a mesma organização e os mesmos filtros.
 - Critério com chave desconhecida, como `qualify`, é rejeitado.
 
+## PR enrichment
+
+Sinais fictícios de site viram evidência. Não há fetch HTTP.
+
+- `FakeWebsiteEnrichmentProvider` só conhece `https://oficina-alfa.example`.
+- `enrichDiscoveredProspect` grava categoria pública e sinais `ssl`, `mobile` e `pageText` no ledger.
+- A segunda execução reutiliza os mesmos ids.
+- Prospect sem `https` não chama o provider.
+- O texto da página fica em `value`. Não há campo de qualificação.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
