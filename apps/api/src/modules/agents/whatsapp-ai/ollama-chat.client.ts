@@ -14,6 +14,12 @@ type OllamaChatResponse = {
   message?: { content?: string };
 };
 
+export function resolveOllamaTimeoutMs(raw: unknown): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 45_000;
+  return Math.min(value, 60_000);
+}
+
 @Injectable()
 export class OllamaChatClient {
   private readonly logger = new Logger(OllamaChatClient.name);
@@ -37,8 +43,7 @@ export class OllamaChatClient {
       this.config.get<string>('whatsappAi.baseUrl') ?? 'http://127.0.0.1:11434'
     ).replace(/\/$/, '');
     const model = this.config.get<string>('whatsappAi.model') ?? 'qwen3:8b';
-    const rawTimeout = Number(this.config.get<number>('whatsappAi.timeoutMs') ?? 15000);
-    const timeoutMs = Number.isFinite(rawTimeout) && rawTimeout > 0 ? Math.min(rawTimeout, 15000) : 15000;
+    const timeoutMs = resolveOllamaTimeoutMs(this.config.get('whatsappAi.timeoutMs'));
     const apiKey = this.config.get<string>('whatsappAi.apiKey') ?? '';
     const generationSeed = Number.isFinite(seed) ? Math.abs(Math.floor(seed)) : 0;
 

@@ -1,4 +1,4 @@
-import { OllamaChatClient } from './ollama-chat.client';
+import { OllamaChatClient, resolveOllamaTimeoutMs } from './ollama-chat.client';
 
 describe('OllamaChatClient', () => {
   const lead = {
@@ -10,6 +10,11 @@ describe('OllamaChatClient', () => {
 
   afterEach(() => {
     jest.restoreAllMocks();
+  });
+
+  it('keeps a cloud timeout above the old 15 second cap', () => {
+    expect(resolveOllamaTimeoutMs(50_000)).toBe(50_000);
+    expect(resolveOllamaTimeoutMs(undefined)).toBe(45_000);
   });
 
   it('returns null when disabled', async () => {

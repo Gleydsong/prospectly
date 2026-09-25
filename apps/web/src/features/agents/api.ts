@@ -158,7 +158,7 @@ export async function fetchWhatsappVariants(input: {
   sequenceStage?: WhatsappSequenceStage;
 }): Promise<WhatsappVariantsResult> {
   const { data } = await api.post<WhatsappVariantsResult>('/agents/whatsapp/variants', input, {
-    timeout: 35_000,
+    timeout: 70_000,
   });
   return data;
 }
