@@ -65,6 +65,12 @@ O parser aceita só os formatos instalados em `memory_shared.jev.models`: `noul`
 - O texto do prospect fica no log como dado. Não altera a nota.
 - O log de outra organização não devolve a decisão.
 
+## PR research
+
+Só um prospect `QUALIFIED` com evidência viva entra. Cada observação cita o id da evidência. O texto externo não escolhe o ângulo nem entra no gancho.
+
+A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qualificado. O menu lateral ganha o item SDR. A tela pronta recebe o brief já decidido pelo domínio.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.

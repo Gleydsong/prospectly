@@ -47,7 +47,13 @@ describe('Sidebar persona tag', () => {
     }));
 
     renderWithProviders(
-      <Sidebar open onClose={() => undefined} isDesktop collapsed={false} onCollapse={() => undefined} />,
+      <Sidebar
+        open
+        onClose={() => undefined}
+        isDesktop
+        collapsed={false}
+        onCollapse={() => undefined}
+      />,
       { withGoogle: false },
     );
 
@@ -58,11 +64,18 @@ describe('Sidebar persona tag', () => {
 
   it('shows the translated persona when it is not Outro', () => {
     renderWithProviders(
-      <Sidebar open onClose={() => undefined} isDesktop collapsed={false} onCollapse={() => undefined} />,
+      <Sidebar
+        open
+        onClose={() => undefined}
+        isDesktop
+        collapsed={false}
+        onCollapse={() => undefined}
+      />,
       { withGoogle: false },
     );
 
     expect(screen.getByText('Vendedor')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'SDR' })).toHaveAttribute('href', '/sdr/research');
     expect(screen.queryByText('Fotógrafo')).not.toBeInTheDocument();
   });
 });
