@@ -384,12 +384,26 @@ model Organization {
   syncedCommunications   SyncedCommunication[]
   organizationFlags      OrganizationFlag[]
   savedReports           SavedReport[]
+  sdrRuntime             SdrRuntime?
 
   @@index([planStatus])
   @@index([stripeCustomerId])
   @@index([asaasSubscriptionId])
   @@index([asaasPaymentId])
   @@index([paymentProvider])
+}
+
+/// Estado persistido do Autonomous SDR por organização. Uma linha. Envio autônomo começa desligado.
+model SdrRuntime {
+  id             String   @id @default(uuid())
+  organizationId String   @unique
+  view           Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 /// Org-scoped product capability toggles. Keys are allowlisted in code; missing row = OFF.

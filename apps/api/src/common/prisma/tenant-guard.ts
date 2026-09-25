@@ -50,6 +50,7 @@ export const TENANT_MODELS = new Set([
   'SyncedCommunication',
   'OrganizationFlag',
   'SavedReport',
+  'SdrRuntime',
 ]);
 
 /** Child rows without organizationId — require an active tenant context. */

@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+
+import { fetchSdrRuntime, runSdrRuntime } from '@/features/sdr/api';
 
 export type SdrWorkspaceView = {
   campaign: { name: string; status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' };
@@ -109,5 +112,25 @@ export function SdrWorkspace({ initial }: { initial: SdrWorkspaceView }) {
 }
 
 export function SdrPage() {
-  return <SdrWorkspace initial={EMPTY_SDR_WORKSPACE} />;
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const query = useQuery({ queryKey: ['sdr-runtime'], queryFn: fetchSdrRuntime });
+  const run = useMutation({
+    mutationFn: runSdrRuntime,
+    onSuccess: (view) => {
+      queryClient.setQueryData(['sdr-runtime'], view);
+    },
+  });
+  const view = query.data ?? EMPTY_SDR_WORKSPACE;
+
+  return (
+    <>
+      <div className="px-6 pt-6">
+        <button type="button" onClick={() => run.mutate()} disabled={run.isPending}>
+          {t('nav.sdrRun')}
+        </button>
+      </div>
+      <SdrWorkspace key={view.decision?.traceId ?? 'empty'} initial={view} />
+    </>
+  );
 }
