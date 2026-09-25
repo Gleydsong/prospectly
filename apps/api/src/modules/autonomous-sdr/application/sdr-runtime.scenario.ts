@@ -9,15 +9,39 @@ import { authorizeSdrSend } from '../domain/sdr-policy';
 import { researchQualifiedProspect } from '../domain/sdr-research';
 
 export type SdrRuntimeView = {
-  campaign: { name: string; status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' };
+  campaign: {
+    name: string;
+    status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+    objective?: string;
+    icp?: string;
+    channel?: string;
+    maxProspectsPerDay?: number;
+    maxMessagesPerDay?: number;
+    maxFollowUps?: number;
+  };
   autonomy: {
     autonomousSending: boolean;
     autonomousFollowup: boolean;
     autonomousReply: boolean;
   };
-  prospects: Array<{ id: string; name: string; score: number | null; state: string }>;
+  prospects: Array<{
+    id: string;
+    name: string;
+    score: number | null;
+    state: string;
+    geography?: string;
+    industry?: string;
+  }>;
+  signals?: {
+    icp: number;
+    websiteNeed: number;
+    activity: number;
+    contact: number;
+    opportunity: number | null;
+  };
   evidence: Array<{ id: string; field: string; value: string }>;
   decision: { qualification: string; traceId: string } | null;
+  brief?: { angle: string; summary: string } | null;
   message: { status: 'READY' | 'BLOCK'; body: string | null };
   review: Array<{ prospectId: string; reason: string }>;
   metrics: { blocked: number };
@@ -39,6 +63,15 @@ export const EMPTY_SDR_RUNTIME: SdrRuntimeView = {
 };
 
 const recordedAt = '2026-09-24T12:00:00.000Z';
+const judgeSignals = {
+  icpFit: 0.8,
+  websiteNeed: 0.5,
+  businessActivity: 0.7,
+  commercialOpportunity: 0.6,
+  contactability: 1,
+  buyingSignals: 0,
+  risk: 0.2,
+};
 
 export async function runLocalSdrScenario(): Promise<SdrRuntimeView> {
   const flags = defaultAutonomyFlags();
@@ -85,25 +118,25 @@ export async function runLocalSdrScenario(): Promise<SdrRuntimeView> {
           answers: {
             icpFit: {
               type: 'score',
-              score: 0.8,
+              score: judgeSignals.icpFit,
               legend: { '0': 'none', '1': 'full' },
-              probabilities: { '1': 0.8 },
+              probabilities: { '1': judgeSignals.icpFit },
               confidence: 0.9,
             },
-            businessActivity: { type: 'noul', noul: 0.7 },
-            websiteNeed: { type: 'noul', noul: 0.5 },
+            businessActivity: { type: 'noul', noul: judgeSignals.businessActivity },
+            websiteNeed: { type: 'noul', noul: judgeSignals.websiteNeed },
             commercialOpportunity: {
               type: 'score',
-              score: 0.6,
+              score: judgeSignals.commercialOpportunity,
               legend: { '0': 'none', '1': 'full' },
-              probabilities: { '1': 0.6 },
+              probabilities: { '1': judgeSignals.commercialOpportunity },
               confidence: 0.8,
             },
-            contactability: { type: 'noul', noul: 1 },
-            buyingSignals: { type: 'noul', noul: 0 },
+            contactability: { type: 'noul', noul: judgeSignals.contactability },
+            buyingSignals: { type: 'noul', noul: judgeSignals.buyingSignals },
             risk: {
               type: 'score',
-              score: 0.2,
+              score: judgeSignals.risk,
               legend: { '0': 'none', '1': 'full' },
               probabilities: { '0': 0.8 },
               confidence: 0.7,
@@ -166,7 +199,10 @@ export async function runLocalSdrScenario(): Promise<SdrRuntimeView> {
       autonomyLevel: 'AUTONOMOUS',
       limits: { maxMessagesPerDay: 2 },
     },
-    message: { organizationId: 'scenario', status: composed.status === 'READY' ? 'READY' : 'BLOCK' },
+    message: {
+      organizationId: 'scenario',
+      status: composed.status === 'READY' ? 'READY' : 'BLOCK',
+    },
     flags,
     suppression: null,
     sentToday: 0,
@@ -175,8 +211,18 @@ export async function runLocalSdrScenario(): Promise<SdrRuntimeView> {
     workingHours: { start: 9, end: 18 },
   });
 
+  const prospect = discovered[0];
   return {
-    campaign: { name: draft.name, status: 'ACTIVE' },
+    campaign: {
+      name: draft.name,
+      status: 'ACTIVE',
+      objective: draft.objective,
+      icp: `${draft.icp.industries.join(', ')} · ${draft.icp.geographies.join(', ')}`,
+      channel: draft.channels[0],
+      maxProspectsPerDay: draft.limits.maxProspectsPerDay,
+      maxMessagesPerDay: draft.limits.maxMessagesPerDay,
+      maxFollowUps: draft.limits.maxFollowUps,
+    },
     autonomy: {
       autonomousSending: flags.autonomousSending,
       autonomousFollowup: flags.autonomousFollowup,
@@ -185,21 +231,31 @@ export async function runLocalSdrScenario(): Promise<SdrRuntimeView> {
     prospects: [
       {
         id: 'prospect-1',
-        name: discovered[0]?.displayName ?? 'Oficina Alfa',
+        name: prospect?.displayName ?? 'Oficina Alfa',
         score: decision.opportunityScore,
         state: 'QUALIFIED',
+        geography: prospect?.geography,
+        industry: prospect?.facts.find((fact) => fact.field === 'category')?.value,
       },
     ],
+    signals: {
+      icp: Math.round(judgeSignals.icpFit * 100),
+      websiteNeed: Math.round(judgeSignals.websiteNeed * 100),
+      activity: Math.round(judgeSignals.businessActivity * 100),
+      contact: Math.round(judgeSignals.contactability * 100),
+      opportunity: decision.opportunityScore,
+    },
     evidence: evidence.map((item) => ({ id: item.id, field: item.field, value: item.value })),
     decision: { qualification: decision.qualification, traceId: decision.traceId },
+    brief: {
+      angle: brief.angle,
+      summary: brief.observations.map((item) => item.statement).join(' '),
+    },
     message: {
       status: policy.action === 'ALLOW' ? 'READY' : 'BLOCK',
       body: composed.status === 'READY' ? composed.message.body : null,
     },
-    review:
-      policy.action === 'ALLOW'
-        ? []
-        : [{ prospectId: 'prospect-1', reason: policy.reason }],
+    review: policy.action === 'ALLOW' ? [] : [{ prospectId: 'prospect-1', reason: policy.reason }],
     metrics: { blocked: policy.action === 'ALLOW' ? 0 : 1 },
   };
 }

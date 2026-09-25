@@ -69,7 +69,7 @@ export function AppLayout() {
   const sidebarExpanded = isDesktop ? !sidebarCollapsed : navOpen;
 
   return (
-    <div className="flex min-h-dvh bg-[color:var(--bg-app)]">
+    <div className="flex h-dvh overflow-hidden bg-[color:var(--bg-app)]">
       <a
         href="#conteudo-principal"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[80] focus:rounded-control focus:bg-[color:var(--ink)] focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-[color:var(--bg-app)] focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-sky-400"
@@ -85,7 +85,7 @@ export function AppLayout() {
       />
       <div
         className={cn(
-          'flex min-w-0 flex-1 flex-col transition-[padding] duration-200 motion-reduce:transition-none',
+          'flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-200 motion-reduce:transition-none',
           isDesktop && !sidebarCollapsed && 'pl-sidebar',
         )}
       >
@@ -99,7 +99,11 @@ export function AppLayout() {
           isDesktop={isDesktop}
         />
         <EmailVerificationBanner />
-        <main id="conteudo-principal" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 lg:px-6">
+        <main
+          id="conteudo-principal"
+          tabIndex={-1}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-5 lg:px-6"
+        >
           <Outlet />
         </main>
         <AppFooter />

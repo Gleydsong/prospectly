@@ -6,8 +6,23 @@ describe('runLocalSdrScenario', () => {
 
     expect(view.autonomy.autonomousSending).toBe(false);
     expect(view.prospects).toEqual([
-      { id: 'prospect-1', name: 'Oficina Alfa', score: 56, state: 'QUALIFIED' },
+      {
+        id: 'prospect-1',
+        name: 'Oficina Alfa',
+        score: 56,
+        state: 'QUALIFIED',
+        geography: 'Recife',
+        industry: 'oficina',
+      },
     ]);
+    expect(view.signals).toEqual({
+      icp: 80,
+      websiteNeed: 50,
+      activity: 70,
+      contact: 100,
+      opportunity: 56,
+    });
+    expect(view.brief?.summary).toBe('ssl: absent');
     expect(view.decision).toEqual({ qualification: 'QUALIFIED', traceId: 'trace-local' });
     expect(view.message.status).toBe('BLOCK');
     expect(view.review).toEqual([{ prospectId: 'prospect-1', reason: 'feature_flag' }]);

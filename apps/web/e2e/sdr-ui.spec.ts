@@ -15,9 +15,12 @@ test.describe('SDR screens', () => {
     await page.goto('/sdr');
 
     await expect(page.getByRole('heading', { name: 'SDR' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Análise detalhada' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Tarefas' })).toHaveCount(0);
     await expect(page.getByText('Envio autônomo desligado')).toBeVisible();
-    await expect(page.getByText('Sem campanha · DRAFT')).toBeVisible();
-    await expect(page.getByText('BLOCK')).toBeVisible();
+    await expect(page.getByText('Sem campanha')).toBeVisible();
+    await expect(page.getByText('Rascunho')).toBeVisible();
+    await expect(page.getByText('Bloqueada')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Aprovar' })).toHaveCount(0);
 
     if (testInfo.project.name === 'desktop-chromium') {

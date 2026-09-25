@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { EMPTY_SDR_WORKSPACE, type SdrWorkspaceView } from '@/pages/sdr/sdr-page';
+import { EMPTY_SDR_WORKSPACE, type SdrWorkspaceView } from '@/features/sdr/types';
 
 function isWorkspace(value: unknown): value is SdrWorkspaceView {
   if (!value || typeof value !== 'object') return false;

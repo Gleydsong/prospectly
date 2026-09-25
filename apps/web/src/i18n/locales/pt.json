@@ -1191,5 +1191,110 @@
     "empty": "Nenhum site registado neste cliente potencial.",
     "remove": "Remover",
     "error": "Não foi possível carregar ou guardar os sites."
+  },
+  "sdrUi": {
+    "sendingOn": "Envio autônomo ligado",
+    "status": "Status",
+    "tabsLabel": "Seções do prospect",
+    "summary": "Resumo da análise",
+    "summaryEmpty": "Rode o cenário local para ver o resumo.",
+    "recommendation": "Recomendação",
+    "sendEmail": "Enviar email agora",
+    "icp": "ICP",
+    "channel": "Canal",
+    "dailyLimit": "Limite: {{count}} prospects/dia",
+    "evidenceFound": "Evidências encontradas",
+    "suggestedMessage": "Mensagem sugerida",
+    "messageEmpty": "Nenhuma mensagem pronta.",
+    "channelBlocked": "Este canal não envia sozinho.",
+    "useMessage": "Usar esta mensagem",
+    "regenerate": "Regenerar",
+    "messageSelected": "Mensagem selecionada para revisão.",
+    "nextActions": "Próximas ações",
+    "history": "Histórico de ações",
+    "tabs": {
+      "overview": "Visão geral",
+      "analysis": "Análise detalhada",
+      "evidence": "Evidências",
+      "messages": "Mensagens",
+      "history": "Histórico",
+      "tasks": "Tarefas"
+    },
+    "rings": {
+      "icp": "ICP Match",
+      "websiteNeed": "Necessidade de site",
+      "activity": "Atividade comercial",
+      "contact": "Contato",
+      "opportunity": "Oportunidade"
+    },
+    "band": {
+      "high": "Alta",
+      "mid": "Média",
+      "low": "Baixa",
+      "empty": "Sem score"
+    },
+    "captions": {
+      "icp": { "high": "Boa aderência", "mid": "Aderência parcial", "low": "Baixa aderência", "empty": "Sem sinal" },
+      "websiteNeed": { "high": "Alta necessidade", "mid": "Necessidade média", "low": "Necessidade baixa", "empty": "Sem sinal" },
+      "activity": { "high": "Negócio ativo", "mid": "Atividade moderada", "low": "Pouca atividade", "empty": "Sem sinal" },
+      "contact": { "high": "Contato disponível", "mid": "Contato limitado", "low": "Sem contato", "empty": "Sem sinal" },
+      "opportunity": { "high": "Alta", "mid": "Média", "low": "Baixa", "empty": "Sem score" }
+    },
+    "angles": {
+      "website_problem": "O ângulo permitido é problema de site. O envio continua na revisão humana.",
+      "default": "O texto externo não autoriza envio."
+    },
+    "objectives": {
+      "BOOK_MEETING": "Objetivo: Marcar reunião"
+    },
+    "qualifications": {
+      "QUALIFIED": "Qualificado",
+      "REJECTED": "Rejeitado",
+      "REVIEW": "Em revisão"
+    },
+    "campaignStatus": {
+      "DRAFT": "Rascunho",
+      "ACTIVE": "Ativa",
+      "PAUSED": "Pausada",
+      "COMPLETED": "Concluída"
+    },
+    "messageStatus": {
+      "BLOCK": "Bloqueada",
+      "READY": "Pronta"
+    },
+    "reasons": {
+      "feature_flag": "Envio autônomo desligado",
+      "suppression": "Contato suprimido",
+      "outside_working_hours": "Fora do horário",
+      "daily_limit": "Limite diário",
+      "campaign_not_active": "Campanha inativa",
+      "duplicate": "Envio duplicado"
+    },
+    "evidence": {
+      "ssl": "Site da empresa",
+      "sslAbsent": "Não utiliza SSL",
+      "mobile": "Site mobile",
+      "mobileMissing": "Experiência ruim em dispositivos móveis",
+      "pageText": "Texto da página",
+      "pageTextStored": "Texto externo armazenado. Não autoriza envio.",
+      "category": "Categoria pública"
+    },
+    "evidenceTone": {
+      "red": "Problema",
+      "mint": "Positivo",
+      "slate": "Registrado"
+    },
+    "channels": {
+      "EMAIL": "Email",
+      "WHATSAPP": "WhatsApp",
+      "LINKEDIN": "LinkedIn"
+    },
+    "actions": {
+      "initial": "Enviar email inicial",
+      "ready": "Pronta para revisão",
+      "wait": "Aguardar resposta",
+      "followupOff": "Follow-up autônomo desligado",
+      "followupOn": "Até {{count}} follow-ups"
+    }
   }
 }

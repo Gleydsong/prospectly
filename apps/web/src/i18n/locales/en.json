@@ -1191,5 +1191,110 @@
     "empty": "No websites recorded on this lead yet.",
     "remove": "Remove",
     "error": "Could not load or save websites."
+  },
+  "sdrUi": {
+    "sendingOn": "Autonomous sending is on",
+    "status": "Status",
+    "tabsLabel": "Prospect sections",
+    "summary": "Analysis summary",
+    "summaryEmpty": "Run the local scenario to see the summary.",
+    "recommendation": "Recommendation",
+    "sendEmail": "Send email now",
+    "icp": "ICP",
+    "channel": "Channel",
+    "dailyLimit": "Limit: {{count}} prospects/day",
+    "evidenceFound": "Evidence found",
+    "suggestedMessage": "Suggested message",
+    "messageEmpty": "No message is ready.",
+    "channelBlocked": "This channel does not send on its own.",
+    "useMessage": "Use this message",
+    "regenerate": "Regenerate",
+    "messageSelected": "Message selected for review.",
+    "nextActions": "Next actions",
+    "history": "Action history",
+    "tabs": {
+      "overview": "Overview",
+      "analysis": "Detailed analysis",
+      "evidence": "Evidence",
+      "messages": "Messages",
+      "history": "History",
+      "tasks": "Tasks"
+    },
+    "rings": {
+      "icp": "ICP Match",
+      "websiteNeed": "Website need",
+      "activity": "Commercial activity",
+      "contact": "Contact",
+      "opportunity": "Opportunity"
+    },
+    "band": {
+      "high": "High",
+      "mid": "Medium",
+      "low": "Low",
+      "empty": "No score"
+    },
+    "captions": {
+      "icp": { "high": "Good fit", "mid": "Partial fit", "low": "Weak fit", "empty": "No signal" },
+      "websiteNeed": { "high": "High need", "mid": "Medium need", "low": "Low need", "empty": "No signal" },
+      "activity": { "high": "Active business", "mid": "Moderate activity", "low": "Little activity", "empty": "No signal" },
+      "contact": { "high": "Contact available", "mid": "Limited contact", "low": "No contact", "empty": "No signal" },
+      "opportunity": { "high": "High", "mid": "Medium", "low": "Low", "empty": "No score" }
+    },
+    "angles": {
+      "website_problem": "The allowed angle is a website problem. Sending stays in human review.",
+      "default": "External text does not authorize a send."
+    },
+    "objectives": {
+      "BOOK_MEETING": "Objective: Book a meeting"
+    },
+    "qualifications": {
+      "QUALIFIED": "Qualified",
+      "REJECTED": "Rejected",
+      "REVIEW": "In review"
+    },
+    "campaignStatus": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed"
+    },
+    "messageStatus": {
+      "BLOCK": "Blocked",
+      "READY": "Ready"
+    },
+    "reasons": {
+      "feature_flag": "Autonomous sending is off",
+      "suppression": "Contact suppressed",
+      "outside_working_hours": "Outside working hours",
+      "daily_limit": "Daily limit",
+      "campaign_not_active": "Campaign is inactive",
+      "duplicate": "Duplicate send"
+    },
+    "evidence": {
+      "ssl": "Company website",
+      "sslAbsent": "Does not use SSL",
+      "mobile": "Mobile site",
+      "mobileMissing": "Poor experience on mobile devices",
+      "pageText": "Page text",
+      "pageTextStored": "External text is stored. It does not authorize a send.",
+      "category": "Public category"
+    },
+    "evidenceTone": {
+      "red": "Problem",
+      "mint": "Positive",
+      "slate": "Recorded"
+    },
+    "channels": {
+      "EMAIL": "Email",
+      "WHATSAPP": "WhatsApp",
+      "LINKEDIN": "LinkedIn"
+    },
+    "actions": {
+      "initial": "Send initial email",
+      "ready": "Ready for review",
+      "wait": "Wait for a reply",
+      "followupOff": "Autonomous follow-up is off",
+      "followupOn": "Up to {{count}} follow-ups"
+    }
   }
 }
