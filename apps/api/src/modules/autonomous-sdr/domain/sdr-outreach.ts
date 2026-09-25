@@ -54,47 +54,65 @@ type SendInput = {
 };
 
 export class OutreachGateway {
-  private readonly sent = new Map<string, DeliveryReceipt>();
+  private readonly inflight = new Map<string, Promise<DeliveryReceipt>>();
   private readonly outbox: OutboxEvent[] = [];
 
   constructor(private readonly provider: OutreachProvider) {}
 
-  async execute(input: SendInput): Promise<DeliveryReceipt> {
+  execute(input: SendInput): Promise<DeliveryReceipt> {
     const key = `${input.message.organizationId}\u0000${input.message.messageId}`;
-    const existing = this.sent.get(key);
+    const existing = this.inflight.get(key);
     if (existing) return existing;
 
-    const decision = authorizeSdrSend(input);
-    if (decision.action !== 'ALLOW') {
-      return {
-        status: 'BLOCKED',
-        provider: 'fake',
-        action: decision.action,
-        reason: decision.reason,
-      };
-    }
+    const run = this.deliver(input, key);
+    this.inflight.set(key, run);
+    return run;
+  }
 
-    const receipt = await this.provider.send({
-      organizationId: input.message.organizationId,
-      messageId: input.message.messageId,
-      to: input.message.to,
-      body: input.message.body,
-    });
-    this.sent.set(key, receipt);
-    this.outbox.push({
-      organizationId: input.message.organizationId,
-      type: 'prospect.contacted',
-      messageId: input.message.messageId,
-      status: 'pending',
-    });
-    return receipt;
+  private async deliver(input: SendInput, key: string): Promise<DeliveryReceipt> {
+    try {
+      const decision = authorizeSdrSend(input);
+      if (decision.action !== 'ALLOW') {
+        this.inflight.delete(key);
+        return {
+          status: 'BLOCKED',
+          provider: 'fake',
+          action: decision.action,
+          reason: decision.reason,
+        };
+      }
+
+      const receipt = await this.provider.send({
+        organizationId: input.message.organizationId,
+        messageId: input.message.messageId,
+        to: input.message.to,
+        body: input.message.body,
+      });
+      if (receipt.status !== 'ACCEPTED') {
+        this.inflight.delete(key);
+        return receipt;
+      }
+      this.outbox.push({
+        organizationId: input.message.organizationId,
+        type: 'prospect.contacted',
+        messageId: input.message.messageId,
+        status: 'pending',
+      });
+      return receipt;
+    } catch (error) {
+      this.inflight.delete(key);
+      throw error;
+    }
   }
 
   publishPending(): OutboxEvent[] {
+    const published: OutboxEvent[] = [];
     for (const event of this.outbox) {
-      if (event.status === 'pending') event.status = 'published';
+      if (event.status !== 'pending') continue;
+      event.status = 'published';
+      published.push(event);
     }
-    return this.outbox.filter((event) => event.status === 'published');
+    return published;
   }
 
   list(organizationId: string): OutboxEvent[] {

@@ -15,6 +15,22 @@ const prospect: DiscoveredProspect = {
 };
 
 describe('enrichDiscoveredProspect', () => {
+  it('expires evidence after the collection date instead of a fixed day', async () => {
+    const ledger = new OrganizationEvidenceLedger();
+    const recorded = await enrichDiscoveredProspect({
+      ledger,
+      provider: new FakeWebsiteEnrichmentProvider(),
+      prospect,
+      prospectId: 'prospect-late',
+      collectedAt: '2026-11-01T00:00:00.000Z',
+    });
+
+    expect(recorded[0]?.expiresAt?.toISOString()).toBe('2026-12-01T00:00:00.000Z');
+    expect(
+      ledger.assess('org-a', 'prospect-late', [recorded[0]!.id], new Date('2026-11-15T00:00:00.000Z')),
+    ).toBe('SUPPORTED');
+  });
+
   it('turns fake website signals and the public category into evidence', async () => {
     const ledger = new OrganizationEvidenceLedger();
     const provider = new FakeWebsiteEnrichmentProvider();
