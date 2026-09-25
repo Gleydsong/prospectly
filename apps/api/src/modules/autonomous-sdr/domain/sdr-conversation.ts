@@ -14,7 +14,7 @@ const INTENTS = new Set([
   'UNKNOWN',
 ]);
 
-const OPT_OUT_TEXT = /\bstop\b/i;
+const OPT_OUT_TEXT = /\b(stop|pare|parar|sair|descadastrar|remover)\b|n[aã]o quero/i;
 
 type IntentChoice = {
   type: 'choice';
@@ -37,12 +37,25 @@ export type ReplyReceipt =
   | { status: 'REJECTED'; reason: 'unauthorized' | 'invalid_intent' | 'invalid_transition' };
 
 function sameSecret(left: string, right: string): boolean {
+  if (left.trim() === '' || right.trim() === '') return false;
   const leftHash = createHash('sha256').update(left).digest();
   const rightHash = createHash('sha256').update(right).digest();
   return timingSafeEqual(leftHash, rightHash);
 }
 
 function nextState(start: ProspectState, intent: string): ProspectState {
+  if (intent === 'OPT_OUT') {
+    if (start === 'CONTACTED') {
+      assertProspectTransition('CONTACTED', 'REPLIED');
+      assertProspectTransition('REPLIED', 'NOT_INTERESTED');
+      return 'NOT_INTERESTED';
+    }
+    if (start === 'REPLIED') {
+      assertProspectTransition('REPLIED', 'NOT_INTERESTED');
+      return 'NOT_INTERESTED';
+    }
+    return start;
+  }
   assertProspectTransition(start, 'REPLIED');
   if (intent === 'INTERESTED' || intent === 'MEETING_REQUEST') {
     assertProspectTransition('REPLIED', 'INTERESTED');
@@ -67,7 +80,9 @@ export class ConversationInbox {
   private readonly replies: StoredReply[] = [];
   private readonly suppressed = new Map<string, SuppressionReason>();
 
-  constructor(private readonly secret: string) {}
+  constructor(private readonly secret: string) {
+    if (secret.trim() === '') throw new Error('webhook secret is required');
+  }
 
   receive(input: {
     organizationId: string;
@@ -100,12 +115,16 @@ export class ConversationInbox {
       }
     } else {
       intent = 'OPT_OUT';
+      this.suppressed.set(`${input.organizationId}\u0000${input.prospectId}`, 'OPT_OUT');
     }
 
     let state: ProspectState;
     try {
       state = nextState(input.state, intent);
     } catch {
+      if (intent === 'OPT_OUT') {
+        return { status: 'ACCEPTED', intent, state: input.state };
+      }
       return { status: 'REJECTED', reason: 'invalid_transition' };
     }
 
