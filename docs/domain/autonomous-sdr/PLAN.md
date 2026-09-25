@@ -83,6 +83,10 @@ A rota autenticada `/sdr/research` mostra o bloqueio enquanto não há brief qua
 
 `OutreachGateway` só chama `FakeOutreachProvider` depois de `ALLOW`. Cem execuções da mesma mensagem produzem uma entrega e um evento `prospect.contacted`. Campanha pausada não chama o provider. O outbox é memória de processo.
 
+## PR conversa
+
+`ConversationInbox` exige o segredo do webhook antes de gravar. O mesmo `eventId` cem vezes produz uma mensagem. `stop` vira `OPT_OUT` e `NOT_INTERESTED`, mesmo se o Choice do modelo disser `INTERESTED`. Essa supressão bloqueia o envio na policy. O corpo fica armazenado como texto.
+
 ## Fora deste PR
 
 Schema, campanha SDR, evidência, discovery, enrichment, Jev, research, mensagens, policy de envio, outreach, conversa persistida, follow-up worker, memória, observabilidade, UI, E2E.
