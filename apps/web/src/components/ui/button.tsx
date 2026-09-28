@@ -12,7 +12,8 @@ const variants: Record<Variant, string> = {
   glass: 'cta-glass',
   secondary:
     'border border-[color:var(--cta-secondary-border)] bg-[color:var(--cta-secondary-bg)] text-[color:var(--cta-secondary-ink)] hover:bg-[color:var(--cta-secondary-hover)]',
-  ghost: 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--cta-ghost-hover)] hover:text-[color:var(--ink)]',
+  ghost:
+    'text-[color:var(--ink-secondary)] hover:bg-[color:var(--cta-ghost-hover)] hover:text-[color:var(--ink)]',
   outline:
     'border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] text-[color:var(--ink)] hover:bg-[color:var(--bg-subtle)]',
   danger: 'bg-red-600 text-white hover:bg-red-500',
@@ -39,7 +40,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       aria-busy={loading || undefined}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-control font-semibold tracking-tight transition-[color,background,box-shadow,transform] duration-200 active:scale-[0.98]',
-        'focus-visible:outline-none',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)]',
         'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         sizes[size],
