@@ -9,9 +9,21 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, leadingIcon, ...props }, ref) => {
-    const autoId = useId();
-    const inputId = (id ?? props.name ?? autoId).replace(/:/g, '');
+  (
+    {
+      className,
+      label,
+      error,
+      id,
+      leadingIcon,
+      'aria-describedby': ariaDescribedBy,
+      'aria-invalid': ariaInvalid,
+      ...props
+    },
+    ref,
+  ) => {
+    const autoId = useId().replace(/:/g, '');
+    const inputId = id ?? props.name ?? autoId;
     return (
       <div className="w-full">
         {label ? (
@@ -34,8 +46,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${inputId}-error` : undefined}
+            aria-invalid={error ? true : ariaInvalid}
+            aria-describedby={cn(error ? `${inputId}-error` : undefined, ariaDescribedBy)}
             className={cn(
               'field-control h-11 w-full rounded-control px-3 text-sm',
               'placeholder:text-[color:var(--ink-muted)]',
@@ -48,7 +60,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
         </div>
         {error ? (
-          <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}

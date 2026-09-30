@@ -9,13 +9,29 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, error, id, children, leadingIcon, ...props }, ref) => {
-    const autoId = useId();
+  (
+    {
+      className,
+      label,
+      error,
+      id,
+      children,
+      leadingIcon,
+      'aria-describedby': ariaDescribedBy,
+      'aria-invalid': ariaInvalid,
+      ...props
+    },
+    ref,
+  ) => {
+    const autoId = useId().replace(/:/g, '');
     const inputId = id ?? props.name ?? autoId;
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]"
+          >
             {label}
           </label>
         ) : null}
@@ -31,7 +47,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           <select
             ref={ref}
             id={inputId}
-            aria-invalid={error ? true : undefined}
+            aria-invalid={error ? true : ariaInvalid}
+            aria-describedby={cn(error ? `${inputId}-error` : undefined, ariaDescribedBy)}
             className={cn(
               'field-control h-11 w-full rounded-control px-3 text-sm',
               'focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]',
@@ -45,7 +62,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           </select>
         </div>
         {error ? (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
