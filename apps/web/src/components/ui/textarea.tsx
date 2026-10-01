@@ -8,20 +8,39 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, id, ...props }, ref) => {
-    const autoId = useId();
+  (
+    {
+      className,
+      label,
+      error,
+      id,
+      'aria-describedby': ariaDescribedBy,
+      'aria-invalid': ariaInvalid,
+      ...props
+    },
+    ref,
+  ) => {
+    const autoId = useId().replace(/:/g, '');
     const inputId = id ?? props.name ?? autoId;
+
+    const describedBy =
+      [error ? `${inputId}-error` : null, ariaDescribedBy].filter(Boolean).join(' ') || undefined;
+
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]"
+          >
             {label}
           </label>
         ) : null}
         <textarea
           ref={ref}
           id={inputId}
-          aria-invalid={error ? true : undefined}
+          aria-invalid={error ? true : ariaInvalid}
+          aria-describedby={describedBy}
           className={cn(
             'field-control min-h-[96px] w-full rounded-control px-3 py-2 text-sm',
             'placeholder:text-[color:var(--ink-muted)]',
@@ -32,7 +51,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error ? (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
