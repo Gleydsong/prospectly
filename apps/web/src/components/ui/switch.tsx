@@ -18,15 +18,21 @@ export function Switch({
   id,
 }: SwitchProps) {
   const switchId = id ?? `switch-${label.replace(/\s+/g, '-').toLowerCase()}`;
+  const descriptionId = description ? `${switchId}-description` : undefined;
 
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        <label htmlFor={switchId} className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]">
+        <label
+          htmlFor={switchId}
+          className="cursor-pointer text-sm font-semibold text-[color:var(--ink)]"
+        >
           {label}
         </label>
         {description ? (
-          <p className="mt-0.5 text-sm leading-5 text-[color:var(--ink-muted)]">{description}</p>
+          <p id={descriptionId} className="mt-0.5 text-sm leading-5 text-[color:var(--ink-muted)]">
+            {description}
+          </p>
         ) : null}
       </div>
       <button
@@ -34,6 +40,7 @@ export function Switch({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-describedby={descriptionId}
         disabled={disabled}
         onClick={() => onCheckedChange(!checked)}
         className={cn(
