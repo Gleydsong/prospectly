@@ -1,0 +1,3 @@
+## 2024-05-18 - Safe ARIA merging for form controls
+**Learning:** When building reusable UI components (like Select or Textarea) that internalize state (like generated IDs for error messages), spreading `{...props}` can inadvertently overwrite internal ARIA attributes (like `aria-invalid` or `aria-describedby`) if the consumer passes their own.
+**Action:** Always apply internal ARIA attributes *after* spreading `{...props}`. Merge any consumer-provided attributes (e.g. `props["aria-describedby"]`) with the internal ones (e.g. `${inputId}-error`) to ensure both sets of semantics are preserved for screen readers.
