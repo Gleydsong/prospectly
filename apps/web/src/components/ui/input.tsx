@@ -34,8 +34,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${inputId}-error` : undefined}
             className={cn(
               'field-control h-11 w-full rounded-control px-3 text-sm',
               'placeholder:text-[color:var(--ink-muted)]',
@@ -45,6 +43,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               className,
             )}
             {...props}
+            aria-invalid={error ? true : props['aria-invalid']}
+            aria-describedby={[props['aria-describedby'], error ? `${inputId}-error` : undefined].filter(Boolean).join(' ') || undefined}
           />
         </div>
         {error ? (
