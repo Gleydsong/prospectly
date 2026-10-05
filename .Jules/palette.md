@@ -1,0 +1,3 @@
+## 2024-10-24 - Safely merge ARIA attributes in form controls
+**Learning:** When building accessible React form components, applying ARIA attributes (like `aria-invalid` or `aria-describedby`) before spreading `{...props}` causes them to be overwritten if the parent provides its own ARIA props. Additionally, React's `useId()` produces IDs with colons, which can break CSS selectors, but sanitizing user-provided `id` props breaks external references.
+**Action:** Always sanitize `useId()` output (`useId().replace(/:/g, '')`) without altering user-provided IDs. Merge internal `aria-describedby` values (like error message IDs) with `props['aria-describedby']`, and explicitly apply these ARIA attributes *after* spreading `{...props}`.
