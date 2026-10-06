@@ -32,16 +32,17 @@
   "pnpm": {
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-qwww-vcr4-c8h2"
+        "GHSA-qwww-vcr4-c8h2",
+        "GHSA-vfj7-8cjw-p6xm"
       ]
     },
     "overrides": {
       "postcss": ">=8.5.18",
       "nanoid@<3.3.18": "3.3.18",
-      "fast-uri@>=3.0.0 <3.1.6": "3.1.6",
+      "fast-uri": ">=3.1.7",
       "brace-expansion@<1.1.18": "1.1.18",
       "brace-expansion@>=2.0.0 <2.1.4": "2.1.4",
-      "brace-expansion@>=4.0.0 <5.0.9": "5.0.9",
+      "brace-expansion@>=4.0.0 <5.0.11": "5.0.11",
       "multer": "^2.3.0",
       "sharp": ">=0.35.4",
       "lodash": ">=4.18.0",
@@ -50,7 +51,14 @@
       "glob@>=10.2.0 <11": ">=10.5.0",
       "picomatch@>=4 <4.0.4": ">=4.0.4",
       "tmp": ">=0.2.6",
-      "deepmerge-ts@<8": "8.0.0"
+      "deepmerge-ts@<8": "8.0.0",
+      "proxy-addr": ">=2.0.8",
+      "tinypool": ">=2.1.2",
+      "axios": ">=1.20.0",
+      "braces": "^3.0.3",
+      "source-map-js": ">=1.2.2",
+      "nodemailer": ">=10.0.5",
+      "undici": ">=6.28.1"
     }
   }
 }
