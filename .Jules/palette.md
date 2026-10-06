@@ -1,0 +1,3 @@
+## 2026-10-06 - React useId() and ARIA Attribute Merging
+**Learning:** React's `useId()` includes colons (e.g., `:r0:`), which breaks CSS selectors if used directly. Also, when building form components that manage internal ARIA states (like error message IDs for `aria-describedby` or `aria-invalid`), these attributes get overwritten if we spread `{...props}` *after* setting them.
+**Action:** Always sanitize `useId()` output by stripping colons (`useId().replace(/:/g, '')`). Always apply internal ARIA attributes explicitly *after* spreading `{...props}`, and ensure they safely concatenate with any user-provided ARIA strings.
