@@ -182,7 +182,9 @@ export function SettingsPage() {
     onError: (err) => {
       const msg = getApiErrorMessage(err);
       setOrgMessage(null);
-      setOrgError(msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'));
+      setOrgError(
+        msg === 'EMAIL_NOT_VERIFIED' ? t('settings.emailGateHint') : msg || t('settings.orgError'),
+      );
     },
   });
 
@@ -277,7 +279,9 @@ export function SettingsPage() {
   const savedOrgOtherLabel = orgQuery.data?.personaOtherLabel ?? user?.personaOtherLabel ?? '';
   const orgPersonaDirty =
     orgPersona !== savedOrgPersona ||
-    (orgPersona === 'outro' ? orgOtherLabel.trim() !== savedOrgOtherLabel : Boolean(savedOrgOtherLabel));
+    (orgPersona === 'outro'
+      ? orgOtherLabel.trim() !== savedOrgOtherLabel
+      : Boolean(savedOrgOtherLabel));
   const orgPersonaInvalid = orgPersona === 'outro' && orgOtherLabel.trim().length < 2;
   const safeAvatarPreview = sanitizeAvatarSrc(avatarPreview);
 
@@ -582,7 +586,10 @@ export function SettingsPage() {
             ) : (
               <ul className="divide-y divide-[color:var(--border)]">
                 {(members.data ?? []).map((member: OrgMember) => (
-                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <li
+                    key={member.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-4"
+                  >
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color:var(--surface-hover)] text-xs font-semibold text-[color:var(--ink)]">
                         {initials(member.user.name)}
@@ -591,7 +598,9 @@ export function SettingsPage() {
                         <p className="truncate text-sm font-medium text-[color:var(--ink)]">
                           {member.user.name}
                         </p>
-                        <p className="truncate text-xs text-[color:var(--ink-muted)]">{member.user.email}</p>
+                        <p className="truncate text-xs text-[color:var(--ink-muted)]">
+                          {member.user.email}
+                        </p>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
