@@ -319,6 +319,7 @@ export function DashboardPage() {
                   <button
                     key={tab.key}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => setStatus(tab.status)}
                     className={cn(
                       'inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
@@ -346,6 +347,7 @@ export function DashboardPage() {
             <div className="inline-flex items-center self-start rounded-control border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] p-1 sm:self-auto">
               <button
                 type="button"
+                aria-pressed={view === 'list'}
                 className={cn(
                   'inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-2.5 text-xs font-semibold transition-colors',
                   view === 'list'
@@ -359,6 +361,7 @@ export function DashboardPage() {
               </button>
               <button
                 type="button"
+                aria-pressed={view === 'kanban'}
                 className={cn(
                   'inline-flex min-h-9 items-center gap-1.5 rounded-[8px] px-2.5 text-xs font-semibold transition-colors',
                   view === 'kanban'
