@@ -1,0 +1,3 @@
+## 2023-10-25 - [Merging ARIA attributes in generic form controls]
+**Learning:** When building generic form controls (like `Input`, `Select`, `Textarea`), spreading user-provided props `{...props}` before applying internal ARIA attributes (e.g., `aria-invalid`, `aria-describedby`) can inadvertently overwrite the user's intent if not handled properly. Also, auto-generated IDs using `useId()` should be sanitized to remove colons (`:`) to prevent CSS selector issues, but user-provided IDs should not be sanitized.
+**Action:** Always apply internal ARIA attributes *after* spreading `{...props}` and safely merge them (e.g., combining `aria-describedby` space-separated values). Only sanitize the auto-generated `useId()` and respect user-provided IDs.
