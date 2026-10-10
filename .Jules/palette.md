@@ -1,0 +1,3 @@
+## 2024-03-24 - [Consistent ARIA connections for form errors]
+**Learning:** Found that while `Input` components had properly linked error messages (`aria-describedby` pointing to the error message `id`), `Select` and `Textarea` were missing this connection. This pattern of inconsistent accessibility implementations across similar form controls can easily happen and leaves screen reader users without crucial context when validation fails.
+**Action:** Always verify that all related form controls (Inputs, Selects, Textareas, Checkboxes) share the exact same accessibility patterns, particularly around error states (`aria-invalid` and `aria-describedby`) and `id` generation (stripping colons).
