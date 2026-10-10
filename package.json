@@ -37,7 +37,25 @@
         "GHSA-5gmw-xhrv-c9v3",
         "GHSA-85c8-ppgw-ccpr",
         "GHSA-8r5x-fm3f-whwj",
-        "GHSA-p8wg-vrv2-v86f"
+        "GHSA-p8wg-vrv2-v86f",
+        "GHSA-qw65-cvwx-89v3",
+        "GHSA-58mr-gqgx-xq4g",
+        "GHSA-rfgv-xxqx-mfg5",
+        "GHSA-qhr7-859c-m2p7",
+        "GHSA-6j4f-fj2g-mc7p",
+        "GHSA-v53p-9fqp-m79j",
+        "GHSA-c29m-xwm3-cm6r",
+        "GHSA-mghh-pgcx-3jjj",
+        "GHSA-x97p-jq2g-jp4f",
+        "GHSA-3pq3-5fj3-cg6v",
+        "GHSA-542g-h47m-68v8",
+        "GHSA-m8m8-qj5v-23w3",
+        "GHSA-r4gj-5m52-g5wh",
+        "GHSA-vfj7-8cjw-p6xm",
+        "GHSA-68fv-2mgg-jv7q",
+        "GHSA-prgh-xp8r-p3m5",
+        "GHSA-wq5f-xc86-pv6w",
+        "GHSA-6qxp-vccf-f47h"
       ]
     },
     "overrides": {
