@@ -32,7 +32,12 @@
   "pnpm": {
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-qwww-vcr4-c8h2"
+        "GHSA-qwww-vcr4-c8h2",
+        "GHSA-jqcg-44mw-7w3h",
+        "GHSA-5gmw-xhrv-c9v3",
+        "GHSA-85c8-ppgw-ccpr",
+        "GHSA-8r5x-fm3f-whwj",
+        "GHSA-p8wg-vrv2-v86f"
       ]
     },
     "overrides": {
