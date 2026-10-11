@@ -24,14 +24,15 @@ describe('landing Open Graph and Twitter image', () => {
     const twitterImages = meta.twitter?.images;
     const twitterList = Array.isArray(twitterImages) ? twitterImages : twitterImages ? [twitterImages] : [];
 
-    assert.equal(meta.metadataBase?.origin, 'https://prospectlyonboard.com');
+    const baseOrigin = meta.metadataBase instanceof URL ? meta.metadataBase.origin : String(meta.metadataBase ?? '');
+    assert.equal(baseOrigin, 'https://prospectlyonboard.com');
     assert.equal(image.width, 1200);
     assert.equal(image.height, 630);
     assert.ok(image.url, 'openGraph.images needs a url');
 
-    const ogAbsolute = new URL(String(image.url), meta.metadataBase).toString();
+    const ogAbsolute = new URL(String(image.url), meta.metadataBase || undefined).toString();
     assert.match(ogAbsolute, /^https:\/\/prospectlyonboard.com\//);
-    assert.equal(new URL(ogAbsolute).origin, meta.metadataBase?.origin);
+    assert.equal(new URL(ogAbsolute).origin, baseOrigin);
 
     const twitter = meta.twitter;
     if (!twitter || !('card' in twitter)) {
@@ -39,7 +40,7 @@ describe('landing Open Graph and Twitter image', () => {
     }
     assert.equal(twitter.card, 'summary_large_image');
     assert.ok(twitterList.length > 0, 'twitter.images must not be empty');
-    const twitterAbsolute = new URL(String(twitterList[0]), meta.metadataBase).toString();
+    const twitterAbsolute = new URL(String(twitterList[0]), meta.metadataBase || undefined).toString();
     assert.match(twitterAbsolute, /^https:\/\/prospectlyonboard.com\//);
   });
 
