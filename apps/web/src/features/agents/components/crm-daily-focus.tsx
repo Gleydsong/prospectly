@@ -120,6 +120,7 @@ export function CrmDailyFocus({ onSelectLeadForWhatsApp, className }: CrmDailyFo
         <div className="flex flex-wrap gap-1 border-b border-[color:var(--border)] pb-2">
           <button
             type="button"
+            aria-pressed={activeTab === 'overdue'}
             className={cn(
               'flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-medium transition-colors',
               activeTab === 'overdue'
@@ -139,6 +140,7 @@ export function CrmDailyFocus({ onSelectLeadForWhatsApp, className }: CrmDailyFo
 
           <button
             type="button"
+            aria-pressed={activeTab === 'hot'}
             className={cn(
               'flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-medium transition-colors',
               activeTab === 'hot'
@@ -158,6 +160,7 @@ export function CrmDailyFocus({ onSelectLeadForWhatsApp, className }: CrmDailyFo
 
           <button
             type="button"
+            aria-pressed={activeTab === 'stale'}
             className={cn(
               'flex items-center gap-1.5 rounded-control px-3 py-1.5 text-xs font-medium transition-colors',
               activeTab === 'stale'
