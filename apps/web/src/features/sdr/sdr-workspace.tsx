@@ -122,6 +122,7 @@ function MessagePanel({
           <button
             key={id}
             type="button"
+            aria-pressed={channel === id}
             className={`rounded-control px-3 py-1 text-sm ${channel === id ? 'bg-[color:var(--brand-soft)] font-medium text-[color:var(--brand)]' : 'text-[color:var(--ink-muted)]'}`}
             onClick={() => onChannel(id)}
           >
