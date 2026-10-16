@@ -12,7 +12,11 @@ vi.mock('@/lib/safe-url', () => ({
 describe('handleCheckoutResult', () => {
   it('stores an Asaas PIX checkout for the in-app QR page', () => {
     sessionStorage.clear();
-    const navigationError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const originalLocation = window.location;
+    const assignMock = vi.fn();
+    // @ts-expect-error - overriding for jsdom tests
+    delete window.location;
+    window.location = { ...originalLocation, assign: assignMock };
 
     handleCheckoutResult(
       {
@@ -34,7 +38,8 @@ describe('handleCheckoutResult', () => {
         purpose: 'credits',
       }),
     );
-    navigationError.mockRestore();
+    expect(assignMock).toHaveBeenCalledWith('/billing/pix');
+    window.location = originalLocation;
   });
 
   it('saves Asaas card redirect intent and calls the host allowlist', () => {
