@@ -15,6 +15,29 @@ const workerProdConfig = {
 };
 
 describe('role-aware environment validation', () => {
+  it.each(['api', 'worker'])('%s starts in production without the owner URL', (role) => {
+    const { DATABASE_URL: _owner, ...runtimeConfig } = workerProdConfig;
+    expect(() =>
+      validateEnv({ ...apiConfig, ...runtimeConfig, DATABASE_URL: undefined, ROLE: role }),
+    ).not.toThrow();
+  });
+
+  it.each(['api', 'worker'])('%s rejects owner fallback in production and staging', (role) => {
+    for (const nodeEnv of ['production', 'staging']) {
+      for (const appUrl of [undefined, '', '   ']) {
+        expect(() =>
+          validateEnv({
+            ...apiConfig,
+            ...workerProdConfig,
+            ROLE: role,
+            NODE_ENV: nodeEnv,
+            DATABASE_APP_URL: appUrl,
+          }),
+        ).toThrow('DATABASE_APP_URL');
+      }
+    }
+  });
+
   it('does not require JWT or billing secrets for ROLE=worker in production', () => {
     expect(() => validateEnv(workerProdConfig)).not.toThrow();
   });
@@ -31,7 +54,9 @@ describe('role-aware environment validation', () => {
 
   it('requires REDIS_URL for ROLE=worker', () => {
     const { REDIS_URL: _omit, ...withoutRedis } = workerProdConfig;
-    expect(() => validateEnv(withoutRedis)).toThrow('Missing required environment variables: REDIS_URL');
+    expect(() => validateEnv(withoutRedis)).toThrow(
+      'Missing required environment variables: REDIS_URL',
+    );
   });
 
   it('requires DATABASE_APP_URL for ROLE=worker in production', () => {
