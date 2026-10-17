@@ -10,6 +10,7 @@ if (shouldFailFastNextCommand()) {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  poweredByHeader: false,
   async redirects() {
     return [
       { source: '/v2', destination: '/', permanent: true },
