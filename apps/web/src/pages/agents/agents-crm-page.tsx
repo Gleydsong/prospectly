@@ -39,7 +39,10 @@ export function AgentsCrmPage() {
   const [pickerPage, setPickerPage] = useState(1);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionOk, setActionOk] = useState<string | null>(null);
-  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
+  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(
+    null,
+  );
+  const [applyMissingLeadId, setApplyMissingLeadId] = useState<string | null>(null);
 
   const suggest = useCrmSuggest(leadId);
   const apply = useCrmApply();
@@ -52,7 +55,8 @@ export function AgentsCrmPage() {
 
   const leadMissing =
     Boolean(leadId) &&
-    ((suggest.isError && getApiErrorStatus(suggest.error) === 404) ||
+    (applyMissingLeadId === leadId ||
+      (suggest.isError && getApiErrorStatus(suggest.error) === 404) ||
       (preselected.isError && getApiErrorStatus(preselected.error) === 404));
 
   const leadsPicker = useQuery({
@@ -106,6 +110,7 @@ export function AgentsCrmPage() {
   function selectLead(id: string) {
     setActionError(null);
     setActionOk(null);
+    setApplyMissingLeadId(null);
     setSearchParams({ leadId: id });
   }
 
@@ -122,6 +127,7 @@ export function AgentsCrmPage() {
       await suggest.refetch();
     } catch (err) {
       if (getApiErrorStatus(err) === 404) {
+        setApplyMissingLeadId(leadId);
         clearMissingLead();
         return;
       }
@@ -158,9 +164,7 @@ export function AgentsCrmPage() {
               {actionError ?? t('agents.crm.leadNotFound')}
             </p>
           ) : null}
-          <CrmDailyFocus
-            onSelectLeadForWhatsApp={(lead) => setWhatsAppModalLead(lead)}
-          />
+          <CrmDailyFocus onSelectLeadForWhatsApp={(lead) => setWhatsAppModalLead(lead)} />
 
           <Card>
             <CardHeader title={t('agents.pickLead')} />
@@ -215,7 +219,9 @@ export function AgentsCrmPage() {
               <p className="text-sm font-medium text-[color:var(--ink)]">
                 {preselected.data?.companyName ?? suggest.data?.companyName ?? '…'}
               </p>
-              <p className="text-xs text-[color:var(--ink-muted)]">{t('agents.crm.selectedLead')}</p>
+              <p className="text-xs text-[color:var(--ink-muted)]">
+                {t('agents.crm.selectedLead')}
+              </p>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setSearchParams({})}>
               {t('agents.changeLead')}
@@ -245,12 +251,16 @@ export function AgentsCrmPage() {
                   }
                 >
                   <p className="text-sm font-medium text-[color:var(--ink)]">{actionLabel}</p>
-                  <p className="mt-1 text-sm text-[color:var(--ink-muted)]">{suggest.data.rationale}</p>
+                  <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
+                    {suggest.data.rationale}
+                  </p>
                 </div>
 
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs uppercase text-[color:var(--ink-muted)]">{t('agents.crm.currentStage')}</dt>
+                    <dt className="text-xs uppercase text-[color:var(--ink-muted)]">
+                      {t('agents.crm.currentStage')}
+                    </dt>
                     <dd className="text-[color:var(--ink)]">
                       {suggest.data.currentStage?.name ?? t('agents.crm.noStage')}
                     </dd>
