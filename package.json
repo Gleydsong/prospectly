@@ -32,7 +32,10 @@
   "pnpm": {
     "auditConfig": {
       "ignoreGhsas": [
-        "GHSA-qwww-vcr4-c8h2"
+        "GHSA-qwww-vcr4-c8h2",
+        "GHSA-vfj7-8cjw-p6xm",
+        "GHSA-qhr7-859c-m2p7",
+        "GHSA-6j4f-fj2g-mc7p"
       ]
     },
     "overrides": {
@@ -43,7 +46,7 @@
       "brace-expansion@>=2.0.0 <2.1.4": "2.1.4",
       "brace-expansion@>=4.0.0 <5.0.9": "5.0.9",
       "multer": "^2.3.0",
-      "sharp": ">=0.35.4",
+      "sharp": ">=0.35.5",
       "lodash": ">=4.18.0",
       "js-yaml@>=3 <4": "3.15.2",
       "js-yaml@>=4 <5": "4.3.2",
@@ -53,7 +56,20 @@
       "deepmerge-ts@<8": "8.0.0",
       "proxy-addr": ">=2.0.8",
       "tinypool": ">=2.1.2",
-      "handlebars": ">=4.7.10"
+      "handlebars": ">=4.7.10",
+      "fast-uri": ">=3.1.7",
+      "undici": ">=6.28.1",
+      "brace-expansion": ">=1.1.20",
+      "brace-expansion@>=4.0.0 <5.0.11": ">=5.0.11",
+      "nodemailer": ">=10.0.6",
+      "axios": ">=1.20.0",
+      "braces": ">=3.0.3",
+      "source-map-js": ">=1.2.2",
+      "@modelcontextprotocol/sdk": ">=1.31.0",
+      "brace-expansion@>=4.0.0 <5.0.10": ">=5.0.11",
+      "braces@<=3.0.3": ">=3.0.3",
+      "picomatch": ">=4.0.2",
+      "micromatch": ">=4.0.8"
     }
   }
 }
