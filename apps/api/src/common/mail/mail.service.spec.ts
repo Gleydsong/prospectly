@@ -1,9 +1,11 @@
 import type { ConfigService } from '@nestjs/config';
 import { ServiceUnavailableException } from '@nestjs/common';
+import nodemailer from 'nodemailer';
 
 import { MailService } from './mail.service';
 
 const sendMock = jest.fn();
+const smtpSendMock = jest.fn();
 
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
@@ -13,7 +15,7 @@ jest.mock('resend', () => ({
   })),
 }));
 
-const makeConfig = (values: Record<string, string | undefined>) =>
+const makeConfig = (values: Record<string, string | number | undefined>) =>
   ({
     get: (key: string) => values[key],
   }) as unknown as ConfigService;
@@ -22,6 +24,11 @@ describe('MailService', () => {
   beforeEach(() => {
     sendMock.mockReset();
     sendMock.mockResolvedValue({ data: { id: 're_123' }, error: null });
+    smtpSendMock.mockReset();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('isConfigured is true when Resend key exists', () => {
@@ -79,6 +86,56 @@ describe('MailService', () => {
         tags: [{ name: 'template', value: 'welcome' }],
       }),
     );
+  });
+
+  it('sends through SMTP with configured transport and sanitized message', async () => {
+    smtpSendMock.mockResolvedValue({ messageId: 'smtp_123' });
+    const createTransport = jest
+      .spyOn(nodemailer, 'createTransport')
+      .mockReturnValue({ sendMail: smtpSendMock } as never);
+    const service = new MailService(
+      makeConfig({
+        'smtp.host': 'smtp.example.com',
+        'smtp.port': 2525,
+        'smtp.user': 'mailer',
+        'smtp.password': 'secret',
+        'smtp.from': 'Prospectly <hello@example.com>',
+      }),
+    );
+
+    await expect(
+      service.send({
+        to: 'ana@agency.dev',
+        subject: 'Bem-vindo\nBcc: evil@x.com',
+        text: 'Hello',
+        html: '<p>Hello</p>',
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(createTransport).toHaveBeenCalledWith({
+      host: 'smtp.example.com',
+      port: 2525,
+      secure: false,
+      auth: { user: 'mailer', pass: 'secret' },
+    });
+    expect(smtpSendMock).toHaveBeenCalledWith({
+      from: 'Prospectly <hello@example.com>',
+      to: 'ana@agency.dev',
+      subject: 'Bem-vindo Bcc: evil@x.com',
+      text: 'Hello',
+      html: '<p>Hello</p>',
+    });
+  });
+
+  it('maps SMTP send failures to ServiceUnavailableException', async () => {
+    smtpSendMock.mockRejectedValue(new Error('connection refused'));
+    jest.spyOn(nodemailer, 'createTransport').mockReturnValue({ sendMail: smtpSendMock } as never);
+    const service = new MailService(makeConfig({ 'smtp.host': 'smtp.example.com' }));
+
+    await expect(
+      service.send({ to: 'ana@agency.dev', subject: 'Hi', text: 'Hello' }),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(smtpSendMock).toHaveBeenCalledTimes(1);
   });
 
   it('rejects header injection in the recipient', async () => {
