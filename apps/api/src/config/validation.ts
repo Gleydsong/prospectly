@@ -2,8 +2,8 @@ import { parseRefreshCookieSameSite } from '../common/auth/refresh-cookie';
 import { parseProcessRole } from './process-role';
 import { parseRedisConnection } from './redis';
 
-const API_REQUIRED_VARS = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
-const WORKER_REQUIRED_VARS = ['DATABASE_URL', 'REDIS_URL'] as const;
+const API_REQUIRED_VARS = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'] as const;
+const WORKER_REQUIRED_VARS = ['REDIS_URL'] as const;
 
 const WEAK_JWT_PATTERNS = [
   /change-me/i,
@@ -30,27 +30,21 @@ function assertStrongJwtSecret(key: string, value: string, nodeEnv: string): voi
 
 export function validateEnv(config: Record<string, unknown>): Record<string, unknown> {
   const role = parseProcessRole(config);
-  const requiredVars = role === 'worker' ? WORKER_REQUIRED_VARS : API_REQUIRED_VARS;
+  const nodeEnv =
+    typeof config.NODE_ENV === 'string' ? config.NODE_ENV : (process.env.NODE_ENV ?? 'development');
+  const isProdLike = nodeEnv === 'production' || nodeEnv === 'staging';
+  const databaseVar = isProdLike ? 'DATABASE_APP_URL' : 'DATABASE_URL';
+  const requiredVars = [
+    databaseVar,
+    ...(role === 'worker' ? WORKER_REQUIRED_VARS : API_REQUIRED_VARS),
+  ];
   const missing = requiredVars.filter((key) => {
     const value = config[key];
-    return typeof value !== 'string' || value.length === 0;
+    return typeof value !== 'string' || value.trim().length === 0;
   });
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-  }
-
-  const nodeEnv =
-    typeof config.NODE_ENV === 'string' ? config.NODE_ENV : (process.env.NODE_ENV ?? 'development');
-
-  const isProdLike = nodeEnv === 'production' || nodeEnv === 'staging';
-  if (isProdLike) {
-    const appUrl = config.DATABASE_APP_URL;
-    if (typeof appUrl !== 'string' || appUrl.length === 0) {
-      throw new Error(
-        'DATABASE_APP_URL is required in production (runtime role without BYPASSRLS)',
-      );
-    }
   }
 
   if (role === 'api') {

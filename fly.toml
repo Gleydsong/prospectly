@@ -1,0 +1,54 @@
+# fly.toml app configuration file generated for prospectly-api
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = "prospectly-api"
+primary_region = "gru"
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[deploy]
+  release_command = "./scripts/fly-release.sh"
+
+[processes]
+  app = "env ROLE=api node dist/main.js"
+  worker = "env ROLE=worker node dist/worker.js"
+
+[http_service]
+  processes = ["app"]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health/ready"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[env]
+  PORT = "3000"
+  NODE_ENV = "production"
+  JWT_ACCESS_EXPIRES_IN = "15m"
+  JWT_REFRESH_EXPIRES_IN = "7d"
+  REFRESH_COOKIE_SAME_SITE = "lax"
+  FRONTEND_URL = "https://app.prospectlyonboard.com"
+  CORS_ORIGINS = "https://app.prospectlyonboard.com,https://prospectlyonboard.com"
+  ASAAS_ENABLED = "true"
+  PIX_PROVIDER = "ASAAS"
+  ASAAS_API_BASE_URL = "https://api.asaas.com/v3"
+  ASAAS_HTTP_TIMEOUT_MS = "15000"
+  OSM_USER_AGENT = "Prospectly/1.0 (https://prospectlyonboard.com)"
+  SMTP_PORT = "587"
+  LOG_LEVEL = "info"
+  WORKER_SHUTDOWN_TIMEOUT_MS = "30000"
+  OUTBOX_WORKER_CONCURRENCY = "2"
