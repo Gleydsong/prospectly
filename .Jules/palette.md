@@ -1,0 +1,3 @@
+## 2024-05-01 - Fix ID Sanitization in Form Controls
+**Learning:** `useId()` in React generates IDs with colons (e.g., `:r0:`), which can break CSS selectors if unescaped. However, when sanitizing this output, it's crucial to only strip colons from the auto-generated ID and not inadvertently alter explicit, user-provided `id` or `name` props, which might intentionally include specific characters or match exact strings for other logic.
+**Action:** When implementing or modifying base form controls that utilize `useId()` as a fallback, ensure the sanitization logic (e.g., `.replace(/:/g, '')`) is strictly applied to the `useId()` output variable itself, before it's used in any fallback chains evaluating user props.
