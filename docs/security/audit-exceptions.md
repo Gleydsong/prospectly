@@ -1,35 +1,42 @@
 # Dependências — exceções e política de audit
 
-Atualizado: **2026-09-09**.
+Atualizado: **2026-10-17**.
 
 ## Política de CI
 
-| Nível | Comportamento |
-|-------|----------------|
-| **critical** | Bloqueia (`pnpm audit --audit-level=critical`) |
-| **high** | Bloqueia (`pnpm audit --audit-level=high`) — sem `continue-on-error` |
-| **high (runtime)** | Também validado por `node scripts/audit-runtime.cjs` |
-| moderate/low | Monitorado |
+| Nível              | Comportamento                                                        |
+| ------------------ | -------------------------------------------------------------------- |
+| **critical**       | Bloqueia (`pnpm audit --audit-level=critical`)                       |
+| **high**           | Bloqueia (`pnpm audit --audit-level=high`) — sem `continue-on-error` |
+| **high (runtime)** | Também validado por `node scripts/audit-runtime.cjs`                 |
+| moderate/low       | Monitorado                                                           |
 
 ## Remediações aplicadas
 
-| Pacote | Ação | Advisory / cadeia | Remover override quando |
-|--------|------|-------------------|-------------------------|
-| `multer` | `pnpm.overrides` `^2.3.0` | GHSA-xf7r-hgr6-v32p, GHSA-v52c-386h-88mc, GHSA-5528-5vmv-3xc2, GHSA-72gw-mp4g-v24j, GHSA-wc9g-mqfw-jrwm, GHSA-qfvm-cv95-jqjf, GHSA-535w-7cp7-47q4 — via `@nestjs/platform-express` | Nest pinar multer ≥2.3.0 |
-| `next` | direto `^15.5.24` em `apps/landing` | GHSA-p293-qw3h-jr36, GHSA-2xp9-vwfh-vxw4 | — |
-| `sharp` | `pnpm.overrides` `>=0.35.4` | GHSA-rgj7-g3m4-5g8c — via `next` (landing) | Next depender de sharp ≥0.35.4 |
-| `lodash` | `pnpm.overrides` `>=4.18.0` | GHSA-r5fr-rjxr-66jc — via `@nestjs/config` | `@nestjs/config` pinar lodash ≥4.18.0 |
-| `js-yaml` (v3) | `pnpm.overrides` `js-yaml@>=3 <4` → `3.15.2` | GHSA-2883-xcg3-v3hh — via Jest / istanbul | Istanbul/Jest pinar js-yaml ≥3.15.2 |
-| `js-yaml` (v4) | `pnpm.overrides` `js-yaml@>=4 <5` → `4.3.2` | GHSA-2883-xcg3-v3hh — via `@nestjs/swagger`, commitlint | Swagger/cosmiconfig pinar js-yaml ≥4.3.2 |
-| `glob` (v10) | `pnpm.overrides` `glob@>=10.2.0 <11` → `>=10.5.0` | GHSA-5j98-mcp5-4vw2 — via `@nestjs/cli` (toolchain) | Nest CLI pinar glob ≥10.5.0 |
-| `picomatch` (v4) | `pnpm.overrides` `picomatch@>=4 <4.0.4` → `>=4.0.4` | GHSA-c2c7-rcm5-vvqj — via Nest CLI / angular-devkit | Devkit pinar picomatch ≥4.0.4 |
-| `tmp` | `pnpm.overrides` `>=0.2.6` | GHSA-ph9p-34f9-6g65 — via Nest CLI / inquirer | external-editor pinar tmp ≥0.2.6 |
-| `postcss` | `pnpm.overrides` `>=8.5.18` | GHSA-r28c-9q8g-f849 — transitiva via Next | Next pinar postcss seguro |
-| `deepmerge-ts` | `pnpm.overrides` `8.0.0` | GHSA-ggr8-5vv4-36mx — via `prisma` / `@prisma/config` | Prisma pinar `deepmerge-ts` ≥8 |
-| `fast-uri` | `pnpm.overrides` `>=3.0.0 <3.1.6` → `3.1.6` | GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp — via ajv / Nest CLI / commitlint | ajv pinar fast-uri ≥3.1.6 |
-| `brace-expansion` | overrides por major | tooling (eslint/nest-cli) | ESLint 9 / Nest CLI atualizado |
-| `react-router` / `react-router-dom` | Direto `^7.18.2` + `auditConfig.ignoreGhsas` | Ver seção abaixo | Quando o advisory DB do npm listar `>=7.18.2` como patched **ou** existir `react-router-dom@8` compatível com React 18 SPA |
-| `nodemailer` | direto `^9.1.0` em `apps/api` | GHSA-2x7j-588g-ccc2 | — |
+| Pacote                              | Ação                                                                                   | Advisory / cadeia                                                                                                                                                                  | Remover override quando                                                                                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `multer`                            | `pnpm.overrides` `^2.3.0`                                                              | GHSA-xf7r-hgr6-v32p, GHSA-v52c-386h-88mc, GHSA-5528-5vmv-3xc2, GHSA-72gw-mp4g-v24j, GHSA-wc9g-mqfw-jrwm, GHSA-qfvm-cv95-jqjf, GHSA-535w-7cp7-47q4 — via `@nestjs/platform-express` | Nest pinar multer ≥2.3.0                                                                                                   |
+| `next`                              | direto `^15.5.24` em `apps/landing`                                                    | GHSA-p293-qw3h-jr36, GHSA-2xp9-vwfh-vxw4                                                                                                                                           | —                                                                                                                          |
+| `sharp`                             | `pnpm.overrides` `^0.35.5`                                                             | GHSA-rgj7-g3m4-5g8c, GHSA-wq5f-xc86-pv6w — via `next` (landing)                                                                                                                    | Next depender de sharp ≥0.35.5                                                                                             |
+| `lodash`                            | `pnpm.overrides` `>=4.18.0`                                                            | GHSA-r5fr-rjxr-66jc — via `@nestjs/config`                                                                                                                                         | `@nestjs/config` pinar lodash ≥4.18.0                                                                                      |
+| `js-yaml` (v3)                      | `pnpm.overrides` `js-yaml@>=3 <4` → `3.15.2`                                           | GHSA-2883-xcg3-v3hh — via Jest / istanbul                                                                                                                                          | Istanbul/Jest pinar js-yaml ≥3.15.2                                                                                        |
+| `js-yaml` (v4)                      | `pnpm.overrides` `js-yaml@>=4 <5` → `4.3.2`                                            | GHSA-2883-xcg3-v3hh — via `@nestjs/swagger`, commitlint                                                                                                                            | Swagger/cosmiconfig pinar js-yaml ≥4.3.2                                                                                   |
+| `glob` (v10)                        | `pnpm.overrides` `glob@>=10.2.0 <11` → `>=10.5.0`                                      | GHSA-5j98-mcp5-4vw2 — via `@nestjs/cli` (toolchain)                                                                                                                                | Nest CLI pinar glob ≥10.5.0                                                                                                |
+| `picomatch` (v4)                    | `pnpm.overrides` `picomatch@>=4 <4.0.4` → `>=4.0.4`                                    | GHSA-c2c7-rcm5-vvqj — via Nest CLI / angular-devkit                                                                                                                                | Devkit pinar picomatch ≥4.0.4                                                                                              |
+| `tmp`                               | `pnpm.overrides` `>=0.2.6`                                                             | GHSA-ph9p-34f9-6g65 — via Nest CLI / inquirer                                                                                                                                      | external-editor pinar tmp ≥0.2.6                                                                                           |
+| `postcss`                           | `pnpm.overrides` `>=8.5.18`                                                            | GHSA-r28c-9q8g-f849 — transitiva via Next                                                                                                                                          | Next pinar postcss seguro                                                                                                  |
+| `deepmerge-ts`                      | `pnpm.overrides` `8.0.0`                                                               | GHSA-ggr8-5vv4-36mx — via `prisma` / `@prisma/config`                                                                                                                              | Prisma pinar `deepmerge-ts` ≥8                                                                                             |
+| `fast-uri`                          | `pnpm.overrides` `>=3.0.0 <3.1.7` → `^3.1.7`                                           | GHSA-5jgf-p345-68v8, GHSA-f65p-4m7j-42xc, GHSA-fph4-wmhf-6fwf, GHSA-jqff-g426-hqxp, GHSA-qw65-cvwx-89v3, GHSA-58mr-gqgx-xq4g — via ajv / Nest CLI / commitlint                     | ajv pinar fast-uri ≥3.1.7                                                                                                  |
+| `brace-expansion`                   | overrides `>=1 <1.1.20` → `^1.1.20`, `>=2 <2.1.4` → `2.1.4`, `>=4 <5.0.11` → `^5.0.11` | GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p — tooling (eslint/nest-cli)                                                                                                               | ESLint 9 / Nest CLI atualizado                                                                                             |
+| `react-router` / `react-router-dom` | Direto `^7.18.2` + `auditConfig.ignoreGhsas`                                           | Ver seção abaixo                                                                                                                                                                   | Quando o advisory DB do npm listar `>=7.18.2` como patched **ou** existir `react-router-dom@8` compatível com React 18 SPA |
+| `nodemailer`                        | direto `^10.0.6` em `apps/api`                                                         | GHSA-2x7j-588g-ccc2, GHSA-v53p-9fqp-m79j, GHSA-prgh-xp8r-p3m5                                                                                                                      | —                                                                                                                          |
+| `proxy-addr`                        | override `^2.0.8`                                                                      | GHSA-jqcg-44mw-7w3h — Express/Nest/MCP                                                                                                                                             | Dependências passarem a exigir ≥2.0.8                                                                                      |
+| `tinypool`                          | override `^2.1.2`                                                                      | GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr — Vitest 3                                                                                                                                | Vitest exigir tinypool ≥2.1.2; manter validação do runner                                                                  |
+| `handlebars`                        | override `^4.7.10`                                                                     | GHSA-8r5x-fm3f-whwj, GHSA-p8wg-vrv2-v86f — ts-jest                                                                                                                                 | ts-jest exigir ≥4.7.10                                                                                                     |
+| `axios`                             | direto `^1.20.0` em `apps/web`                                                         | GHSA-c29m-xwm3-cm6r, GHSA-mghh-pgcx-3jjj, GHSA-x97p-jq2g-jp4f, GHSA-3pq3-5fj3-cg6v, GHSA-542g-h47m-68v8, GHSA-m8m8-qj5v-23w3, GHSA-r4gj-5m52-g5wh                                  | —                                                                                                                          |
+| `@modelcontextprotocol/sdk`         | direto `^1.31.0` em `apps/api`                                                         | GHSA-6qxp-vccf-f47h                                                                                                                                                                | —                                                                                                                          |
+| `undici`                            | override `^6.28.1`                                                                     | GHSA-rfgv-xxqx-mfg5 — Cheerio                                                                                                                                                      | Cheerio exigir ≥6.28.1                                                                                                     |
+| `source-map-js`                     | override `^1.2.2`                                                                      | GHSA-68fv-2mgg-jv7q — PostCSS/Next                                                                                                                                                 | PostCSS exigir ≥1.2.2                                                                                                      |
 
 ## React Router (`GHSA-qwww-vcr4-c8h2`)
 
@@ -41,7 +48,13 @@ Atualizado: **2026-09-09**.
 
 ## Exceções temporárias (toolchain)
 
-Nenhuma high toolchain fica sem remediação no lockfile. Overrides acima cobrem as cadeias Nest CLI / Next.
+### Braces (`GHSA-vfj7-8cjw-p6xm`)
+
+- Aprovada pelo coordenador na issue #344 em **2026-10-17**; dono: mantenedores do Prospectly. Revisão até **2026-11-17**.
+- `braces@3.0.3` permanece no lockfile: o audit informa `patched_versions: <0.0.0` (nenhuma versão corrigida). O advisory high está em `pnpm.auditConfig.ignoreGhsas` por exceção explícita; isso não corrige o pacote.
+- Caminhos: `lint-staged > micromatch > braces`; `@nestjs/cli`/`@nestjs/schematics > chokidar > braces`; Jest/ts-jest > micromatch; ESLint e Tailwind > micromatch/chokidar. São ferramentas de desenvolvimento/build/teste, sem importação de `braces` no código de produto.
+- Risco residual: consumo excessivo de CPU/memória ao expandir padrões maliciosos na toolchain. Executar apenas padrões/configurações confiáveis; os gates critical/high continuam ativos para os demais advisories.
+- Remover a exceção quando houver versão corrigida aplicável ou quando as cadeias acima eliminarem `braces`; verificar novamente no prazo de revisão. Nenhuma outra exceção foi adicionada na #344.
 
 ## Critério para nova exceção / ignoreGhsas
 
