@@ -107,6 +107,31 @@ describe('LeadIngestionService', () => {
       duplicate: { domain: 'example.com' },
     },
     {
+      description:
+        'normalized website domain starting with http prefix without scheme (issue #318)',
+      candidate: { companyName: 'Nova Loja', website: 'httpsolucoes.com.br' },
+      duplicate: { domain: 'httpsolucoes.com.br' },
+    },
+    {
+      description: 'normalized website domain with www prefix and uppercase',
+      candidate: { companyName: 'Nova Loja', website: 'www.Acme.com' },
+      duplicate: { domain: 'acme.com' },
+    },
+    {
+      description: 'normalized website domain with https scheme and path',
+      candidate: { companyName: 'Nova Loja', website: 'https://acme.com/path' },
+      duplicate: { domain: 'acme.com' },
+    },
+    {
+      description: 'explicit domain taking precedence over website',
+      candidate: {
+        companyName: 'Nova Loja',
+        domain: 'WWW.ExplicitDomain.COM',
+        website: 'https://other-domain.com/ignored',
+      },
+      duplicate: { domain: 'explicitdomain.com' },
+    },
+    {
       description: 'lowercase email',
       candidate: { companyName: 'Nova Loja', email: 'VENDAS@EXAMPLE.COM' },
       duplicate: { email: 'vendas@example.com' },
@@ -258,6 +283,32 @@ describe('LeadIngestionService', () => {
       }),
     );
     expect(prisma.tag.upsert).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives precedence to explicit domain over website during ingestion', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue(null);
+    prisma.lead.findMany.mockResolvedValue([]);
+    prisma.lead.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'lead-new', ...data }),
+    );
+    const service = new LeadIngestionService(prisma);
+
+    const result = await service.ingest('org-1', 'user-1', {
+      companyName: 'Nova Empresa',
+      website: 'https://ignored-website.com/path',
+      domain: 'WWW.Explicit.COM',
+    });
+
+    expect(result.status).toBe('IMPORTED');
+    expect(prisma.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          domain: 'explicit.com',
+          website: 'https://ignored-website.com/path',
+        }),
+      }),
+    );
   });
 
   it('keeps Portuguese phone numbers without forcing Brazil country code on ingest', async () => {
@@ -430,7 +481,12 @@ describe('LeadIngestionService', () => {
       companyName: 'Padaria Central',
     });
     const outbox = makeOutbox();
-    const duplicateService = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+    const duplicateService = new LeadIngestionService(
+      prisma,
+      undefined,
+      undefined,
+      outbox as never,
+    );
 
     await duplicateService.ingest('org-1', 'user-1', {
       companyName: 'Padaria Central',
@@ -462,7 +518,12 @@ describe('LeadIngestionService', () => {
     prisma.lead.findFirst.mockResolvedValue(null);
     prisma.lead.findMany.mockResolvedValue([]);
     prisma.lead.create.mockImplementation(({ data }) =>
-      Promise.resolve({ id: 'lead-new', ownerId: data.ownerId, stageId: null, source: data.source }),
+      Promise.resolve({
+        id: 'lead-new',
+        ownerId: data.ownerId,
+        stageId: null,
+        source: data.source,
+      }),
     );
     const outbox = makeOutbox();
     outbox.appendLeadCreated.mockRejectedValue(new Error('outbox fail'));

@@ -1,10 +1,4 @@
-import {
-  Inject,
-  Injectable,
-  Logger,
-  NotFoundException,
-  Optional,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Prisma } from '@prisma/client';
 import type { Queue } from 'bullmq';
@@ -27,6 +21,7 @@ import {
 } from './website-analysis.constants';
 import { computeSeoAudit } from './seo-audit';
 import { WEBSITE_ANALYZER } from './website-analysis.tokens';
+import { normalizeLeadDomain } from '../leads/domain/lead-domain';
 
 const SEO_SEVERITY_TO_ISSUE: Record<SeoFinding['severity'], 'CRITICAL' | 'WARNING' | 'INFO'> = {
   HIGH: 'CRITICAL',
@@ -40,14 +35,6 @@ function seoFindingToIssue(finding: SeoFinding) {
     severity: SEO_SEVERITY_TO_ISSUE[finding.severity],
     message: finding.title,
   };
-}
-
-function extractDomain(url: string): string | null {
-  try {
-    return new URL(url).hostname.replace(/^www\./i, '') || null;
-  } catch {
-    return null;
-  }
 }
 
 function normalizeWebsiteUrl(raw: string): string {
@@ -70,7 +57,12 @@ export class WebsiteAnalysisService {
     @Optional() private readonly metrics?: MetricsService,
   ) {}
 
-  async enqueueForLead(organizationId: string, leadId: string, force = false, correlationId?: string) {
+  async enqueueForLead(
+    organizationId: string,
+    leadId: string,
+    force = false,
+    correlationId?: string,
+  ) {
     const lead = await this.prisma.lead.findFirst({
       where: { id: leadId, organizationId, deletedAt: null },
       select: { id: true, website: true },
@@ -89,13 +81,13 @@ export class WebsiteAnalysisService {
         data: {
           leadId,
           url: websiteUrl,
-          domain: extractDomain(websiteUrl),
+          domain: normalizeLeadDomain(websiteUrl),
         },
       });
     } else if (website.url !== websiteUrl) {
       website = await this.prisma.website.update({
         where: { id: website.id },
-        data: { url: websiteUrl, domain: extractDomain(websiteUrl) },
+        data: { url: websiteUrl, domain: normalizeLeadDomain(websiteUrl) },
       });
     }
 
@@ -321,7 +313,12 @@ export class WebsiteAnalysisService {
    * Must never reject: Node 22 terminates the process on unhandled rejections,
    * which would crash the API/worker after the lead write already succeeded.
    */
-  async onLeadUpsert(organizationId: string, leadId: string, website?: string | null, correlationId?: string) {
+  async onLeadUpsert(
+    organizationId: string,
+    leadId: string,
+    website?: string | null,
+    correlationId?: string,
+  ) {
     if (website?.trim()) {
       try {
         await this.enqueueForLead(organizationId, leadId, false, correlationId);
