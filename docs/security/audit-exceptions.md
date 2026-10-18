@@ -40,6 +40,7 @@ Atualizado: **2026-10-17**.
 
 ## React Router (`GHSA-qwww-vcr4-c8h2`)
 
+- Dono: mantenedores do Prospectly. Validade até **2027-01-01**, alinhada à exceção em `scripts/audit-runtime.cjs`; revisar e remover conforme as condições abaixo.
 - Advisory **oficial** (GitHub): patched `>=7.18.2` e `>=8.3.0`; afeta **somente** APIs RSC instáveis.
 - App web é **SPA Vite** com `BrowserRouter` — **não** usa RSC / React Server Components.
 - `react-router-dom@8` **não existe** no npm; `react-router@8.3.0` exige React `>=19.2.7`.
