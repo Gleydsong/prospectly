@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   SavedViewVisibility,
   type CampaignLeadResult,
@@ -59,9 +59,9 @@ export class CampaignsService {
     private readonly prisma: PrismaService,
     private readonly templates: TemplatesService,
     private readonly audit: AuditService,
-    @Optional() private readonly suppression?: SuppressionService,
-    @Optional() private readonly outbox?: OutboxService,
-    @Optional() private readonly leads?: LeadsService,
+    private readonly suppression: SuppressionService,
+    private readonly outbox: OutboxService,
+    private readonly leads: LeadsService,
   ) {}
 
   async list(organizationId: string, query: QueryCampaignsDto) {
@@ -448,24 +448,23 @@ export class CampaignsService {
         });
       }
 
-      const outboxEvent =
-        emitDoNotContact && this.outbox
-          ? await this.outbox.appendLeadDoNotContactSet(tx, {
-              organizationId,
+      const outboxEvent = emitDoNotContact
+        ? await this.outbox.appendLeadDoNotContactSet(tx, {
+            organizationId,
+            leadId,
+            actorId: userId,
+            payload: {
               leadId,
-              actorId: userId,
-              payload: {
-                leadId,
-                source: 'CAMPAIGN_OPT_OUT',
-                campaignId,
-              },
-            })
-          : null;
+              source: 'CAMPAIGN_OPT_OUT',
+              campaignId,
+            },
+          })
+        : null;
 
       return [created, outboxEvent] as const;
     });
 
-    if (event && this.outbox) {
+    if (event) {
       try {
         await this.outbox.dispatch(event);
       } catch {
@@ -474,7 +473,7 @@ export class CampaignsService {
     }
 
     if (dto.result === 'OPT_OUT') {
-      await this.suppression?.suppressFromLead(organizationId, leadId, 'campaign_opt_out');
+      await this.suppression.suppressFromLead(organizationId, leadId, 'campaign_opt_out');
     }
 
     await this.audit.log({
@@ -804,10 +803,6 @@ export class CampaignsService {
     userId: string,
     viewId: string,
   ): Promise<string[]> {
-    if (!this.leads) {
-      throw new BadRequestException('Saved view membership is unavailable');
-    }
-
     const view = await this.prisma.savedView.findFirst({
       where: {
         id: viewId,

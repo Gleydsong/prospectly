@@ -117,9 +117,10 @@ function normalizeTagNames(names: string[] | undefined): string[] {
 export class LeadIngestionService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly suppression: SuppressionService,
+    private readonly outbox: OutboxService,
+    // Best-effort enrichment; suppression and durable events remain mandatory.
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
-    @Optional() private readonly suppression?: SuppressionService,
-    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   async ingest(
@@ -130,12 +131,11 @@ export class LeadIngestionService {
     const normalized = this.normalizeCandidate(candidate);
 
     if (
-      this.suppression &&
-      (await this.suppression.isSuppressed(organizationId, {
+      await this.suppression.isSuppressed(organizationId, {
         email: normalized.email,
         phone: normalized.phone,
         domain: normalized.domain,
-      }))
+      })
     ) {
       return { status: 'SUPPRESSED' };
     }
@@ -205,23 +205,21 @@ export class LeadIngestionService {
           },
           include: INGESTED_LEAD_INCLUDE,
         });
-        const event = this.outbox
-          ? await this.outbox.appendLeadCreated(transaction, {
-              organizationId,
-              leadId: lead.id,
-              actorId,
-              payload: {
-                leadId: lead.id,
-                source: lead.source,
-                ownerId: lead.ownerId ?? null,
-                stageId: lead.stageId ?? null,
-              },
-            })
-          : null;
+        const event = await this.outbox.appendLeadCreated(transaction, {
+          organizationId,
+          leadId: lead.id,
+          actorId,
+          payload: {
+            leadId: lead.id,
+            source: lead.source,
+            ownerId: lead.ownerId ?? null,
+            stageId: lead.stageId ?? null,
+          },
+        });
         return { status: 'IMPORTED' as const, lead, event };
       });
 
-      if (result.status === 'IMPORTED' && result.event && this.outbox) {
+      if (result.status === 'IMPORTED' && result.event) {
         try {
           await this.outbox.dispatch(result.event);
         } catch {

@@ -1,4 +1,7 @@
 import type { PrismaService } from '../../common/prisma/prisma.service';
+import type { OutboxService } from '../outbox/outbox.service';
+import type { SuppressionService } from '../privacy/suppression.service';
+import type { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import {
   LeadIngestionService,
   normalizeBrazilianPhone,
@@ -25,6 +28,31 @@ const makePrisma = () => {
   };
 };
 
+const makeSuppression = (isSuppressed = false) => ({
+  isSuppressed: jest.fn().mockResolvedValue(isSuppressed),
+  suppressIdentifiers: jest.fn().mockResolvedValue(undefined),
+  suppressFromLead: jest.fn().mockResolvedValue(undefined),
+});
+
+const makeOutbox = () => ({
+  appendLeadCreated: jest.fn().mockResolvedValue({ id: 'evt-created' }),
+  appendLeadDoNotContactSet: jest.fn().mockResolvedValue({ id: 'evt-dnc' }),
+  dispatch: jest.fn().mockResolvedValue(undefined),
+});
+
+const makeService = (
+  prisma: PrismaService,
+  suppression = makeSuppression(),
+  outbox = makeOutbox(),
+  websiteAnalysis?: WebsiteAnalysisService,
+) =>
+  new LeadIngestionService(
+    prisma,
+    suppression as unknown as SuppressionService,
+    outbox as unknown as OutboxService,
+    websiteAnalysis,
+  );
+
 describe('LeadIngestionService', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -45,7 +73,7 @@ describe('LeadIngestionService', () => {
       id: 'lead-existing',
       companyName: 'Padaria Central',
     });
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: 'Padaria Central',
@@ -81,7 +109,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-org-b', tags: [], ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-b', 'user-1', {
       companyName: 'Padaria Central',
@@ -139,7 +167,7 @@ describe('LeadIngestionService', () => {
   ])('returns DUPLICATE for a matching $description', async ({ candidate, duplicate }) => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue({ id: 'lead-existing', companyName: 'Loja Existente' });
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-1', 'user-1', candidate);
 
@@ -174,7 +202,7 @@ describe('LeadIngestionService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ id: 'lead-existing', companyName: 'Loja Existente' });
       prisma.lead.create.mockRejectedValue({ code: 'P2002' });
-      const service = new LeadIngestionService(prisma);
+      const service = makeService(prisma);
 
       const result = await service.ingest('org-1', 'user-1', candidate);
 
@@ -192,7 +220,7 @@ describe('LeadIngestionService', () => {
       id: 'lead-existing',
       companyName: 'Café São João',
     });
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: '  CAFE SAO-JOAO ',
@@ -220,7 +248,7 @@ describe('LeadIngestionService', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 'lead-winner', companyName: 'Café São João' });
     prisma.lead.create.mockRejectedValue({ code: 'P2002' });
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     await expect(
       service.ingest('org-1', 'user-1', {
@@ -250,7 +278,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-new', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: '  Restaurante da Ana  ',
@@ -292,7 +320,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-new', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: 'Nova Empresa',
@@ -318,7 +346,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-pt', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     await service.ingest('org-1', 'user-1', {
       companyName: 'Pastelaria Lisboa',
@@ -347,7 +375,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-wa', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     await service.ingest('org-1', 'user-1', {
       companyName: 'Barbearia Nacuca',
@@ -371,7 +399,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-fixo', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     await service.ingest('org-1', 'user-1', {
       companyName: 'Cartório Central',
@@ -395,7 +423,7 @@ describe('LeadIngestionService', () => {
     prisma.lead.create.mockImplementation(({ data }) =>
       Promise.resolve({ id: 'lead-explicit', ...data }),
     );
-    const service = new LeadIngestionService(prisma);
+    const service = makeService(prisma);
 
     await service.ingest('org-1', 'user-1', {
       companyName: 'Clínica Vila',
@@ -415,8 +443,8 @@ describe('LeadIngestionService', () => {
 
   it('does not import identifiers present on the suppression list', async () => {
     const prisma = makePrisma();
-    const suppression = { isSuppressed: jest.fn().mockResolvedValue(true) };
-    const service = new LeadIngestionService(prisma, undefined, suppression as never);
+    const suppression = makeSuppression(true);
+    const service = makeService(prisma, suppression);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: 'Opt Out Ltda',
@@ -424,12 +452,12 @@ describe('LeadIngestionService', () => {
     });
 
     expect(result.status).toBe('SUPPRESSED');
+    expect(suppression.isSuppressed).toHaveBeenCalledWith('org-1', {
+      email: 'optout@example.com',
+      phone: undefined,
+      domain: undefined,
+    });
     expect(prisma.lead.create).not.toHaveBeenCalled();
-  });
-
-  const makeOutbox = () => ({
-    appendLeadCreated: jest.fn().mockResolvedValue({ id: 'evt-created' }),
-    dispatch: jest.fn().mockResolvedValue(undefined),
   });
 
   it('persists lead.created in the ingest transaction and dispatches after commit', async () => {
@@ -446,7 +474,7 @@ describe('LeadIngestionService', () => {
       }),
     );
     const outbox = makeOutbox();
-    const service = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+    const service = makeService(prisma, makeSuppression(), outbox);
 
     const result = await service.ingest('org-1', 'user-1', {
       companyName: 'Cantina da Estação',
@@ -481,12 +509,7 @@ describe('LeadIngestionService', () => {
       companyName: 'Padaria Central',
     });
     const outbox = makeOutbox();
-    const duplicateService = new LeadIngestionService(
-      prisma,
-      undefined,
-      undefined,
-      outbox as never,
-    );
+    const duplicateService = makeService(prisma, makeSuppression(), outbox);
 
     await duplicateService.ingest('org-1', 'user-1', {
       companyName: 'Padaria Central',
@@ -498,13 +521,8 @@ describe('LeadIngestionService', () => {
     expect(outbox.dispatch).not.toHaveBeenCalled();
 
     const suppressedOutbox = makeOutbox();
-    const suppression = { isSuppressed: jest.fn().mockResolvedValue(true) };
-    const suppressedService = new LeadIngestionService(
-      prisma,
-      undefined,
-      suppression as never,
-      suppressedOutbox as never,
-    );
+    const suppression = makeSuppression(true);
+    const suppressedService = makeService(prisma, suppression, suppressedOutbox);
     await suppressedService.ingest('org-1', 'user-1', {
       companyName: 'Opt Out Ltda',
       email: 'optout@example.com',
@@ -527,7 +545,7 @@ describe('LeadIngestionService', () => {
     );
     const outbox = makeOutbox();
     outbox.appendLeadCreated.mockRejectedValue(new Error('outbox fail'));
-    const service = new LeadIngestionService(prisma, undefined, undefined, outbox as never);
+    const service = makeService(prisma, makeSuppression(), outbox);
 
     await expect(
       service.ingest('org-1', 'user-1', { companyName: 'Cantina da Estação' }),
