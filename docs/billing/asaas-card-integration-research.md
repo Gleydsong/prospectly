@@ -1,6 +1,8 @@
 # Pesquisa de integração: Asaas para cartões na Prospectly
 
-**Data da pesquisa:** 25/08/2026
+> Registro histórico da data indicada abaixo; as referências de infraestrutura e provedores descrevem aquele baseline. Para operação atual, consulte [deploy](../deploy/overview.md) e [pagamentos](../billing/payments.md).
+
+> **Data da pesquisa:** 25/08/2026
 
 **Classificação:** research; nenhuma implementação foi realizada.
 

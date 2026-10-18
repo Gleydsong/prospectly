@@ -92,34 +92,18 @@ pnpm dev
 | `docker compose --profile ai up -d`   | Sobe Postgres + Redis + Ollama (IA)                       |
 | `docker compose --profile full up -d` | Sobe stack completa (db, redis, ollama, api, web, worker) |
 
-### Conversion Studio — IA no site do lead
-
-A geração de landing usa Ollama/Llama **dentro** do fluxo da ferramenta: o usuário escolhe o lead e clica **Gerar site do lead**. Não há integração externa na UI.
-
-```bash
-# Dev local: infra + Ollama
-docker compose --profile ai up -d
-docker compose exec ollama ollama pull llama3.1
-
-# apps/api/.env
-LANDING_AI_PROVIDER=ollama
-LANDING_AI_BASE_URL=http://127.0.0.1:11434
-LANDING_AI_MODEL=llama3.1
-
-# API HTTP + worker BullMQ (mesmo comando)
-pnpm --filter @prospectly/api run dev
-```
-
 ## Fase 3 — pesquisa OpenStreetMap e importação CSV
 
 ### Serviços e variáveis de ambiente
 
-A API executa os processors BullMQ no mesmo processo NestJS. PostgreSQL persiste
-pesquisas, resultados, importações e erros; Redis persiste os jobs. Portanto,
-Redis é obrigatório tanto para criar pesquisas quanto para confirmar importações
-CSV. O `docker-compose.yml` já sobe Redis com AOF e faz a API aguardar o healthcheck
-de PostgreSQL e Redis no profile `full`; não é necessário um container de worker
-separado nesta fase.
+PostgreSQL persiste pesquisas, resultados, importações e erros; Redis persiste os jobs BullMQ.
+Portanto, Redis é obrigatório tanto para criar pesquisas quanto para confirmar importações CSV.
+A API HTTP (`ROLE=api`, `AppModule`) é estritamente desacoplada dos consumidores: todos os 8 processors BullMQ
+(`ProspectingProcessor`, `ImportsProcessor`, `ScoringProcessor`, `WebsiteAnalysisProcessor`,
+`OpportunityFinderProcessor`, `RetentionProcessor`, `OutboxProcessor`, `GmailIngestProcessor`)
+mais o `GmailSyncScheduler` são registrados exclusivamente no `WorkersModule`, executado pelo
+processo dedicado de worker (`ROLE=worker`). Em desenvolvimento local, `pnpm dev` ou
+`pnpm --filter @prospectly/api run dev` inicia a API HTTP e o worker concorrentemente.
 
 Configure em `apps/api/.env`:
 
@@ -219,8 +203,8 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 
 ### Operação e rollout
 
-- Deploy em produção (Render Blueprint): ver [`docs/deploy/render.md`](docs/deploy/render.md) e `render.yaml` na raiz.
-- Billing (PIX e cartão pelo Asaas; Stripe só legado): [`docs/billing/payments.md`](docs/billing/payments.md).
+- Deploy em produção: ver [`docs/deploy/overview.md`](docs/deploy/overview.md) (visão geral da arquitetura), [`docs/deploy/fly.md`](docs/deploy/fly.md) (API, worker, Postgres e Redis no Fly.io) e [`docs/deploy/vercel.md`](docs/deploy/vercel.md) (web e landing na Vercel).
+- Billing (PIX e cartão pelo Asaas; Stripe e AbacatePay apenas no histórico): [`docs/billing/payments.md`](docs/billing/payments.md).
 - Estado operacional do billing, rollback Appmax ou continuação Asaas: [`docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md`](docs/handoffs/2026-08-25-billing-appmax-rollback-asaas.md).
 - `GET /health/ready` verifica **PostgreSQL**. Redis fora não tira a API do ar:
   webhooks Asaas, pagamentos e créditos continuam corretos (mais lentos / sem fila
@@ -238,8 +222,8 @@ A tela de resultados exibe essa atribuição com link para os termos do OpenStre
 - [x] **Fase 2 — Leads (base):** CRUD, filtros, paginação, tags, responsáveis, detalhes, atividades, tarefas
 - [x] **Fase 3 — Prospecção:** pesquisa OpenStreetMap, filas BullMQ, importação seletiva e CSV com deduplicação
 - [x] **Fase 4 — Análise:** fila BullMQ, análise de website, proteção SSRF, scoring configurável por organização
-- [ ] **Fase 5 — CRM:** pipeline Kanban drag-and-drop, templates, campanhas
-- [ ] **Fase 6 — Dashboard e produção:** relatórios, testes E2E Playwright, observabilidade, deploy
+- [x] **Fase 5 — CRM:** pipeline Kanban drag-and-drop, templates, campanhas
+- [x] **Fase 6 — Dashboard e produção:** relatórios, testes E2E Playwright, observabilidade, deploy
 
 ## Segurança
 

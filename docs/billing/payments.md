@@ -4,13 +4,13 @@
 
 O Prospectly encaminha PIX e checkout de cartão hospedado pelo **Asaas**. `PIX_PROVIDER=ASAAS` e `ASAAS_ENABLED=true` são os defaults de produção. O provedor legado AbacatePay foi descontinuado e completamente removido da base de código. Contratos legados do Stripe **não** são migrados nem cancelados automaticamente.
 
-| Produto | Preço | Método | Provedor |
-| ----------------- | -------: | --------------------- | --------------------- |
-| 2.000 créditos | R$ 14,99 | PIX | Asaas |
-| 2.000 créditos | R$ 14,99 | Cartão de crédito ou débito | Fatura hospedada Asaas |
-| 5.000 créditos | R$ 23,99 | PIX | Asaas |
-| 5.000 créditos | R$ 23,99 | Cartão de crédito ou débito | Fatura hospedada Asaas |
-| Acesso mensal ilimitado | R$ 49,99 | PIX | Asaas |
+| Produto                 |    Preço | Método                       | Provedor                 |
+| ----------------------- | -------: | ---------------------------- | ------------------------ |
+| 2.000 créditos          | R$ 14,99 | PIX                          | Asaas                    |
+| 2.000 créditos          | R$ 14,99 | Cartão de crédito ou débito  | Fatura hospedada Asaas   |
+| 5.000 créditos          | R$ 23,99 | PIX                          | Asaas                    |
+| 5.000 créditos          | R$ 23,99 | Cartão de crédito ou débito  | Fatura hospedada Asaas   |
+| Acesso mensal ilimitado | R$ 49,99 | PIX                          | Asaas                    |
 | Acesso mensal ilimitado | R$ 49,99 | Cartão de crédito recorrente | Checkout hospedado Asaas |
 
 A API guarda identificadores legados do Stripe. Não há runtime de checkout Stripe. Todo PIX e cartão é processado pelo Asaas.
@@ -25,23 +25,21 @@ A API guarda identificadores legados do Stripe. Não há runtime de checkout Str
 - O Prospectly guarda um perfil de cobrança mínimo da organização e **nunca** recebe número, validade ou CVV do cartão.
 - Estorno e chargeback de pacotes geram reversão total auditável e podem deixar saldo de créditos negativo.
 - Estornos parciais **não** viram créditos parciais neste MVP. A inbox mantém o evento como falho para revisão de suporte, em vez de alterar o benefício em silêncio.
-- `ASAAS_ENABLED` default é true e `PIX_PROVIDER` default é `ASAAS`. Credenciais de sandbox e produção ficam fora do repositório.
+- `fly.toml` configura `ASAAS_ENABLED=true` e `PIX_PROVIDER=ASAAS`; sem configuração, `asaas.enabled` no código é false. Credenciais de sandbox e produção ficam fora do repositório.
 
 ## Assistente de sandbox
 
-Roteiro completo (crédito, débito hospedado, recorrência, timeout, refund, chargeback) e wizard que **não persiste segredos**: [asaas-sandbox-homologation.md](./asaas-sandbox-homologation.md).
+Roteiro completo (crédito, débito hospedado, recorrência, timeout, refund, chargeback) e configuração manual sem persistir segredos no repositório: [asaas-sandbox-homologation.md](./asaas-sandbox-homologation.md).
 
-```bash
-bash scripts/asaas-sandbox-homologation-wizard.sh
-```
+Configure manualmente os secrets com `fly secrets set -a <app-homologacao>`, conforme [fly.md](../deploy/fly.md). O wizard antigo é legado da Render e será reescrito na [issue #351](https://github.com/Gleydsong/prospectly/issues/351); não o use como procedimento atual.
 
-1. Conta e API Key só no Sandbox (`https://sandbox.asaas.com/`). Guarda `ASAAS_API_KEY` no Render, nunca no git.
+1. Conta e API Key só no Sandbox (`https://sandbox.asaas.com/`). Guarda `ASAAS_API_KEY` nos secrets da plataforma (Fly.io), nunca no git.
 2. Token de webhook gerado no Asaas (32–255 chars) = `ASAAS_WEBHOOK_TOKEN`. Header `asaas-access-token`.
 3. URL: `https://api.prospectlyonboard.com/api/v1/billing/webhook/asaas`.
-4. `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. `ASAAS_ENABLED=true` neste Blueprint é o cutover PIX autorizado; unset no código continua `false`.
+4. `ASAAS_API_BASE_URL=https://api-sandbox.asaas.com/v3`. `ASAAS_ENABLED=true` é o cutover PIX autorizado; unset no código continua `false`.
 5. Produção (`https://api.asaas.com/v3`) exige autorização explícita e smoke.
 
-Ver [deploy na Render](../deploy/render.md) para ambiente e webhook.
+Ver [deploy no Fly.io](../deploy/fly.md) para ambiente e webhook.
 
 ## Runbook de suporte `REVIEW_REQUIRED`
 

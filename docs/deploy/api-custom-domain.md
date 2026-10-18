@@ -1,104 +1,115 @@
-# Domínio próprio da API (`api.prospectlyonboard.com`)
+# Domínios Próprios e DNS (`prospectlyonboard.com`)
 
-Issue: [Spec: Domínio próprio da API (OAuth/cookies/CORS)](https://github.com/Gleydsong/prospectly/issues/179).
+Topologia de domínios em produção, configuração de DNS no Namecheap, certificados TLS e arquitetura de cookies de autenticação (SEC-001).
 
-Produção fala só com `https://api.prospectlyonboard.com`. O app está em `https://app.prospectlyonboard.com`. Cookie de refresh: `SameSite=Lax` + `Secure`, **host-only** (sem `Domain=`). CORS: lista explícita, sem `*`.
+---
 
-O worker continua interno. Produção Asaas (`api.asaas.com`) **não** entra neste cutover.
+## 1. Topologia de Domínios em Produção
 
-O subdomínio `https://prospectly-api.onrender.com` está **desligado** (Render Subdomain disabled). Pedidos públicos devolvem **404** com `x-render-routing: blocked-render-subdomain` — não há redirect para o host canónico. Rollback: Settings → Custom Domains → Render Subdomain → Enabled.
+O Prospectly opera em quatro domínios sob a mesma zona raiz registrável (`prospectlyonboard.com`):
 
-O CNAME `api` no Namecheap **continua** a apontar para `prospectly-api.onrender.com`. Isso é o alvo DNS interno da Render; não reactivar o subdomínio público.
+| Domínio                     | Destino / Provedor                | Aplicação            | Finalidade                                       |
+| --------------------------- | --------------------------------- | -------------------- | ------------------------------------------------ |
+| `api.prospectlyonboard.com` | **Fly.io** (`prospectly-api`)     | API NestJS           | Endpoints REST, autenticação, webhooks e OpenAPI |
+| `app.prospectlyonboard.com` | **Vercel** (`prospectly-web`)     | Web React / Vite SPA | Aplicação de prospecção autenticada              |
+| `prospectlyonboard.com`     | **Vercel** (`prospectly-landing`) | Next.js 15           | Site institucional (domínio raiz / apex)         |
+| `www.prospectlyonboard.com` | **Vercel** (`prospectly-landing`) | Next.js 15           | Redirecionamento canônico para a landing         |
 
-Não desligar o onrender do **web** (`prospectly-web.onrender.com`).
+---
 
-## Estado actual (tickets 1–3)
+## 2. Configuração de DNS no Namecheap
 
-| Check | Estado |
-| --- | --- |
-| CNAME + TLS + `GET /health/ready` no host novo | 200 |
-| App `VITE_API_URL` | `https://api.prospectlyonboard.com/api/v1` |
-| `REFRESH_COOKIE_SAME_SITE` | `lax` |
-| Google redirect URI | só `https://api.prospectlyonboard.com/api/v1/google-connections/callback` |
-| Webhook Asaas sandbox | só a URL no host novo |
-| `prospectly-api.onrender.com` | 404 Render, sem redirect |
+No painel do Namecheap (**Domain List** → **Manage** `prospectlyonboard.com` → **Advanced DNS**):
 
-## Wizard (ticket 1 — humano, já corrido)
+| Tipo             | Host  | Valor / Alvo                                   | TTL                |
+| ---------------- | ----- | ---------------------------------------------- | ------------------ |
+| **A Record**     | `api` | IPv4 alocado no Fly.io (`fly ips allocate-v4`) | Automático / 1 min |
+| **AAAA Record**  | `api` | IPv6 alocado no Fly.io (`fly ips allocate-v6`) | Automático / 1 min |
+| **CNAME Record** | `app` | `cname.vercel-dns.com.`                        | Automático / 1 min |
+| **A Record**     | `@`   | `76.76.21.21` (Vercel Anycast IP)              | Automático / 1 min |
+| **CNAME Record** | `www` | `cname.vercel-dns.com.`                        | Automático / 1 min |
 
-Não inventar secrets. Não colar chaves na issue.
+---
+
+## 3. Emissão de Certificados TLS
+
+### Fly.io (`api.prospectlyonboard.com`)
+
+Após configurar os registros DNS no Namecheap, adicione e verifique o certificado no Fly:
 
 ```bash
-./scripts/api-custom-domain-wizard.sh
+# Adicionar o certificado
+fly certs add api.prospectlyonboard.com -a prospectly-api
+
+# Verificar status da emissão
+fly certs show api.prospectlyonboard.com -a prospectly-api
 ```
 
-O wizard cobre DNS/TLS/OAuth/env (overlap). O ticket 3 (tirar URI/onrender velhos) está fechado — ver checklist abaixo. Não reabras overlap no Console nem um segundo webhook onrender.
+### Vercel (`app.prospectlyonboard.com`, `prospectlyonboard.com`, `www.prospectlyonboard.com`)
 
-## DNS / TLS
+No dashboard de cada projeto na Vercel:
 
-1. Render → `prospectly-api` → Settings → Custom Domains → `api.prospectlyonboard.com`.
-2. Namecheap → Advanced DNS → CNAME `api` → `prospectly-api.onrender.com` (alvo da Render; o host público é o CNAME).
-3. Probe:
+1. Vá em **Settings** → **Domains**.
+2. Adicione os respectivos domínios; a Vercel valida a propagação do DNS e provisiona os certificados Let's Encrypt automaticamente.
+
+---
+
+## 4. Política de Cookies e Sessão (SEC-001)
+
+### Por que `SameSite=Lax` funciona entre `app.` e `api.`?
+
+Tanto `app.prospectlyonboard.com` quanto `api.prospectlyonboard.com` compartilham o mesmo domínio registrável (`prospectlyonboard.com`). Pela especificação de cookies do IETF:
+
+- Requisições da Web SPA para a API são consideradas **same-site** (embora sejam cross-origin por diferirem no subdomínio).
+- O cookie de refresh é configurado com:
+  - `HttpOnly`: Inacessível por JavaScript.
+  - `Secure`: Transmitido unicamente sobre HTTPS.
+  - `SameSite=Lax`: Permitido em requisições de mesma zona registrável e navegações top-level.
+  - **Host-only:** Sem atributo `Domain=`. O cookie é restrito ao host da API (`api.prospectlyonboard.com`), impedindo que outros subdomínios leiam o cookie diretamente.
+
+### Variáveis de Ambiente no Backend
+
+No `fly.toml`:
+
+```toml
+[env]
+  REFRESH_COOKIE_SAME_SITE = "lax"
+  FRONTEND_URL = "https://app.prospectlyonboard.com"
+  CORS_ORIGINS = "https://app.prospectlyonboard.com,https://prospectlyonboard.com"
+```
+
+---
+
+## 5. Integrações Externas e Redirects
+
+### Google OAuth (Cloud Console)
+
+No Google Cloud Console → **APIs & Services** → **Credentials**:
+
+1. **Authorized JavaScript Origins:**
+   - `https://app.prospectlyonboard.com`
+   - `http://localhost:5173` (para desenvolvimento local)
+2. **Authorized Redirect URIs:**
+   - `https://api.prospectlyonboard.com/api/v1/google-connections/callback`
+   - `http://localhost:3000/api/v1/google-connections/callback` (desenvolvimento local)
+
+### Webhook Asaas
+
+No painel do Asaas (Produção):
+
+- **URL do Webhook:** `https://api.prospectlyonboard.com/api/v1/billing/webhook/asaas`
+- **Token de Autenticação:** Deve corresponder ao valor de `ASAAS_WEBHOOK_TOKEN` configurado nas secrets do Fly.
+- **Cabeçalho:** `asaas-access-token`
+
+---
+
+## 6. Validação e Testes de Conectividade
 
 ```bash
+# 1. Health check da API no host próprio
 curl -i https://api.prospectlyonboard.com/health/ready
-curl -i https://prospectly-api.onrender.com/health/ready
-# esperado: 200 no host novo; 404 + x-render-routing: blocked-render-subdomain no onrender
-```
+# Esperado: HTTP 200 {"status":"ok","database":"ready"}
 
-## Cookie (SEC-001)
-
-`onrender.com` é public suffix: `*.onrender.com` **não** são same-site entre si.
-
-Produção actual: browser fala com `app.prospectlyonboard.com` **e** `api.prospectlyonboard.com` → same-site / cross-origin → `REFRESH_COOKIE_SAME_SITE=lax` + `Secure`, cookie **host-only**.
-
-Não voltes a `none` sem motivo. Não ponhas `Domain=.onrender.com`. Não reponhas `VITE_API_URL` no host onrender (está 404).
-
-Deploy API + web juntos se mudares cookie ou `VITE_API_URL`.
-
-## Env público (colar no Dashboard, não nesta doc)
-
-| Variável | Serviço | Valor alvo |
-| --- | --- | --- |
-| `FRONTEND_URL` | api | `https://app.prospectlyonboard.com` |
-| `CORS_ORIGINS` | api | `https://app.prospectlyonboard.com,https://prospectlyonboard.com,https://www.prospectlyonboard.com` (sem `*`) |
-| `GOOGLE_OAUTH_REDIRECT_URI` | api (+ worker se existir) | `https://api.prospectlyonboard.com/api/v1/google-connections/callback` |
-| `REFRESH_COOKIE_SAME_SITE` | api | `lax` |
-| `VITE_API_URL` | web (rebuild) | `https://api.prospectlyonboard.com/api/v1` |
-| `NEXT_PUBLIC_API_URL` | landing (rebuild) | o mesmo |
-
-`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: tira newline no fim depois de colar no Render (`invalid_client`). O boot da API já faz `.trim()` nestes valores.
-
-Google Cloud Console: **um** redirect URI — o host canónico. Origens JS: `https://app.prospectlyonboard.com` (+ localhost / web onrender se ainda servirem o app). Sem `*`.
-
-## Webhook Asaas (sandbox)
-
-URL: `https://api.prospectlyonboard.com/api/v1/billing/webhook/asaas`.
-
-Um webhook. Mesmo `ASAAS_WEBHOOK_TOKEN`. Não uses `api.asaas.com`. Não recrie URL onrender — o host velho é 404.
-
-## Probe Playwright
-
-O spec `apps/web/e2e/api-custom-domain.probe.spec.ts` faz skip se o CNAME não resolver:
-
-```bash
+# 2. Executar probe Playwright da Web SPA
 pnpm --filter @prospectly/web exec playwright test --config playwright.probe.config.ts
 ```
-
-Health 200, `Access-Control-Allow-Origin: https://app.prospectlyonboard.com`, credentials true. Login cookie e callback OAuth continuam manuais (`invalid_grant` ≠ `invalid_client`).
-
-## Ticket 3 — overlap fechado
-
-1. Google Console: remover `https://prospectly-api.onrender.com/api/v1/google-connections/callback`. Não apagar origem JS `http://localhost:5173` nem a do app.
-2. Asaas sandbox: apagar webhook cuja URL era o host onrender. Fica só o webhook do host novo.
-3. Render → `prospectly-api` → Settings → Custom Domains → **Render Subdomain** → Disabled (sudo no Dashboard). Só a API. Web onrender fica.
-4. Verificar: onrender 404; host novo 200; bundle do app só `https://api.prospectlyonboard.com/api/v1`.
-
-## Tickets
-
-1. Wizard DNS/TLS/OAuth/env — feito.
-2. Cliente a falar só com o host novo — feito.
-3. Overlap: URI/onrender velhos fora — feito.
-
-## Fora de escopo
-
-Ligar `api.asaas.com`, Microsoft/MCP, mudar o domínio do app, feature flags por org.
