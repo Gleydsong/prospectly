@@ -14,7 +14,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label ? (
-          <label htmlFor={inputId} className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]">
+          <label
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-semibold text-[color:var(--ink)]"
+          >
             {label}
           </label>
         ) : null}
@@ -22,6 +25,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={inputId}
           aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${inputId}-error` : undefined}
           className={cn(
             'field-control min-h-[96px] w-full rounded-control px-3 py-2 text-sm',
             'placeholder:text-[color:var(--ink-muted)]',
@@ -32,7 +36,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error ? (
-          <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+          <p
+            id={`${inputId}-error`}
+            className="mt-1 text-sm text-red-600 dark:text-red-400"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
