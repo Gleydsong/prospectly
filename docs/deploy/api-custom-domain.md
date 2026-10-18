@@ -93,6 +93,13 @@ No Google Cloud Console → **APIs & Services** → **Credentials**:
    - `https://api.prospectlyonboard.com/api/v1/google-connections/callback`
    - `http://localhost:3000/api/v1/google-connections/callback` (desenvolvimento local)
 
+Configure também a variável do backend; cadastrar o URI no Google Console não altera o fallback local do código:
+
+```bash
+fly secrets set -a prospectly-api \
+  GOOGLE_OAUTH_REDIRECT_URI="https://api.prospectlyonboard.com/api/v1/google-connections/callback"
+```
+
 ### Webhook Asaas
 
 No painel do Asaas (Produção):
@@ -108,7 +115,7 @@ No painel do Asaas (Produção):
 ```bash
 # 1. Health check da API no host próprio
 curl -i https://api.prospectlyonboard.com/health/ready
-# Esperado: HTTP 200 {"status":"ok","database":"ready"}
+# Esperado: HTTP 200 {"status":"ready","timestamp":"<ISO-8601>"}
 
 # 2. Executar probe Playwright da Web SPA
 pnpm --filter @prospectly/web exec playwright test --config playwright.probe.config.ts
