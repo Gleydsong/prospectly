@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('self-hosted app fonts', () => {
-  test('login uses local Inter and JetBrains Mono without Google Fonts', async ({ page }) => {
+  test('login uses local Outfit and JetBrains Mono without Google Fonts', async ({ page }) => {
     const googleFontUrls: string[] = [];
     const localFontUrls: string[] = [];
 
@@ -15,12 +15,12 @@ test.describe('self-hosted app fonts', () => {
       }
     });
 
-    await page.goto('/login');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('heading', { level: 2 })).toBeVisible();
 
     const light = await page.evaluate(async () => {
       await document.fonts.ready;
-      await document.fonts.load('16px Inter');
+      await document.fonts.load('16px Outfit');
       await document.fonts.load('16px "JetBrains Mono"');
 
       const probe = document.createElement('code');
@@ -33,7 +33,7 @@ test.describe('self-hosted app fonts', () => {
         body: getComputedStyle(document.body).fontFamily,
         heading: getComputedStyle(document.querySelector('h2')!).fontFamily,
         mono: getComputedStyle(probe).fontFamily,
-        interReady: document.fonts.check('16px Inter'),
+        outfitReady: document.fonts.check('16px Outfit'),
         jetbrainsReady: document.fonts.check('16px "JetBrains Mono"'),
         theme: document.documentElement.className,
       };
@@ -42,15 +42,15 @@ test.describe('self-hosted app fonts', () => {
     });
 
     expect(googleFontUrls, 'app must not fetch Google Fonts').toEqual([]);
-    expect(localFontUrls.some((url) => /inter/i.test(url))).toBe(true);
+    expect(localFontUrls.some((url) => /outfit/i.test(url))).toBe(true);
     expect(localFontUrls.some((url) => /jetbrains/i.test(url))).toBe(true);
     expect(localFontUrls.every((url) => !/fonts\.google/i.test(url))).toBe(true);
 
     expect(light.theme).toMatch(/\blight\b/);
-    expect(light.body).toMatch(/Inter/);
-    expect(light.heading).toMatch(/Inter/);
+    expect(light.body).toMatch(/Outfit/);
+    expect(light.heading).toMatch(/Outfit/);
     expect(light.mono).toMatch(/JetBrains Mono/);
-    expect(light.interReady).toBe(true);
+    expect(light.outfitReady).toBe(true);
     expect(light.jetbrainsReady).toBe(true);
 
     await page.locator('[data-theme-toggle]').click();
@@ -61,14 +61,14 @@ test.describe('self-hosted app fonts', () => {
       return {
         body: getComputedStyle(document.body).fontFamily,
         heading: getComputedStyle(document.querySelector('h2')!).fontFamily,
-        interReady: document.fonts.check('16px Inter'),
+        outfitReady: document.fonts.check('16px Outfit'),
         jetbrainsReady: document.fonts.check('16px "JetBrains Mono"'),
       };
     });
 
-    expect(dark.body).toMatch(/Inter/);
-    expect(dark.heading).toMatch(/Inter/);
-    expect(dark.interReady).toBe(true);
+    expect(dark.body).toMatch(/Outfit/);
+    expect(dark.heading).toMatch(/Outfit/);
+    expect(dark.outfitReady).toBe(true);
     expect(dark.jetbrainsReady).toBe(true);
     expect(googleFontUrls).toEqual([]);
   });

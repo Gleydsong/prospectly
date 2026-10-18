@@ -17,7 +17,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <button
       type="button"
       className={cn(
-        'theme-toggle theme-toggle-ios inline-flex h-11 w-11 shrink-0 items-center justify-center',
+        'theme-toggle theme-toggle-ios inline-flex relative h-10 w-[84px] shrink-0 items-center justify-center',
         className,
       )}
       onClick={(event) => {
@@ -27,11 +27,20 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           y: rect.top + rect.height / 2,
         });
       }}
-      aria-label={isDark ? t('nav.themeToLight') : t('nav.themeToDark')}
+      role="switch"
+      aria-checked={isDark}
+      aria-label={t('nav.themeToggle')}
+      data-mode={theme}
       title={isDark ? t('nav.themeToLight') : t('nav.themeToDark')}
       data-theme-toggle
     >
-      {isDark ? <Moon className="h-5 w-5" aria-hidden /> : <Sun className="h-5 w-5" aria-hidden />}
+      <span className="theme-toggle__thumb" aria-hidden />
+      <span className="theme-toggle__icon theme-toggle__sun">
+        <Sun className="h-5 w-5" aria-hidden />
+      </span>
+      <span className="theme-toggle__icon theme-toggle__moon">
+        <Moon className="h-5 w-5" aria-hidden />
+      </span>
     </button>
   );
 }
