@@ -75,6 +75,44 @@ describe('WebsiteAnalysisService.enqueueForLead', () => {
     expect(prisma.websiteAnalysis.create).toHaveBeenCalled();
   });
 
+  it('normalizes website domain using normalizeLeadDomain when creating website record (issue #318)', async () => {
+    const prisma = {
+      lead: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'lead-1', website: 'httpsolucoes.com.br' }),
+      },
+      website: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 'web-1',
+          url: 'https://httpsolucoes.com.br',
+          domain: 'httpsolucoes.com.br',
+        }),
+        update: jest.fn(),
+      },
+      websiteAnalysis: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'an-1', status: 'PENDING' }),
+      },
+    };
+    const queue = { add: jest.fn().mockResolvedValue({}) };
+    const service = new WebsiteAnalysisService(
+      prisma as never,
+      { recalculate: jest.fn() } as never,
+      {} as never,
+      queue as never,
+    );
+
+    await service.enqueueForLead('org-1', 'lead-1');
+
+    expect(prisma.website.create).toHaveBeenCalledWith({
+      data: {
+        leadId: 'lead-1',
+        url: 'https://httpsolucoes.com.br',
+        domain: 'httpsolucoes.com.br',
+      },
+    });
+  });
+
   it('re-enqueues a PENDING analysis after Redis loss', async () => {
     const prisma = {
       websiteAnalysis: {
@@ -160,7 +198,12 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
     return { prisma, tx };
   }
 
-  const job = { organizationId: 'org-1', leadId: 'lead-1', analysisId: 'an-1', url: 'https://demo.dev' };
+  const job = {
+    organizationId: 'org-1',
+    leadId: 'lead-1',
+    analysisId: 'an-1',
+    url: 'https://demo.dev',
+  };
 
   it('passes lead context to the analyzer and persists the SEO audit plus SEO issues', async () => {
     const { prisma, tx } = buildPrisma();
@@ -186,11 +229,18 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
           renderBlockingScripts: 0,
           hasAddress: true,
         },
-        issues: [{ code: 'NO_META_DESCRIPTION', severity: 'INFO', message: 'Missing meta description' }],
+        issues: [
+          { code: 'NO_META_DESCRIPTION', severity: 'INFO', message: 'Missing meta description' },
+        ],
       }),
     };
     const scoring = { recalculate: jest.fn() };
-    const service = new WebsiteAnalysisService(prisma as never, scoring as never, analyzer as never, {} as never);
+    const service = new WebsiteAnalysisService(
+      prisma as never,
+      scoring as never,
+      analyzer as never,
+      {} as never,
+    );
 
     await service.processAnalysis(job);
 
@@ -218,7 +268,9 @@ describe('WebsiteAnalysisService.processAnalysis', () => {
     const codes = update.data.issues.create.map((issue) => issue.code);
     expect(codes).toContain('NO_META_DESCRIPTION');
     expect(codes).toContain('SEO_CSR_SHELL');
-    expect(update.data.issues.create.find((issue) => issue.code === 'SEO_CSR_SHELL')?.severity).toBe('CRITICAL');
+    expect(
+      update.data.issues.create.find((issue) => issue.code === 'SEO_CSR_SHELL')?.severity,
+    ).toBe('CRITICAL');
     expect(scoring.recalculate).toHaveBeenCalledWith('lead-1');
   });
 

@@ -6,6 +6,7 @@ import { WebsiteAnalysisService } from '../website-analysis/website-analysis.ser
 import { OutboxService } from '../outbox/outbox.service';
 import { SuppressionService } from '../privacy/suppression.service';
 import { classifyBrazilianPhone } from './brazilian-phone';
+import { normalizeLeadDomain } from './domain/lead-domain';
 
 const INGESTED_LEAD_INCLUDE = {
   owner: { select: { id: true, name: true, email: true } },
@@ -106,26 +107,6 @@ export function buildProbableDuplicateKey(
 ): string | undefined {
   if (!city?.trim() || !state?.trim()) return undefined;
   return `${normalizeComparable(companyName)}|${normalizeComparable(city)}|${state.trim().toUpperCase()}`;
-}
-
-function normalizeDomain(website?: string, domain?: string): string | undefined {
-  if (domain) {
-    return (
-      domain
-        .trim()
-        .replace(/^www\./i, '')
-        .toLowerCase() || undefined
-    );
-  }
-  if (!website) {
-    return undefined;
-  }
-  try {
-    const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
-    return url.hostname.replace(/^www\./i, '').toLowerCase() || undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function normalizeTagNames(names: string[] | undefined): string[] {
@@ -278,9 +259,7 @@ export class LeadIngestionService {
 
   private normalizeCandidate(candidate: LeadIngestionCandidate) {
     const country = candidate.country?.trim().toUpperCase() || 'BR';
-    const phone = candidate.phone
-      ? normalizePhoneForCountry(candidate.phone, country)
-      : undefined;
+    const phone = candidate.phone ? normalizePhoneForCountry(candidate.phone, country) : undefined;
     const explicitWhatsapp = candidate.whatsapp
       ? normalizePhoneForCountry(candidate.whatsapp, country)
       : undefined;
@@ -293,12 +272,12 @@ export class LeadIngestionService {
       phone,
       whatsapp,
       email: candidate.email?.trim().toLowerCase(),
-      domain: normalizeDomain(candidate.website, candidate.domain),
+      domain:
+        normalizeLeadDomain(candidate.domain) ??
+        normalizeLeadDomain(candidate.website) ??
+        undefined,
       city: candidate.city?.trim(),
-      state:
-        country === 'BR'
-          ? candidate.state?.trim().toUpperCase()
-          : candidate.state?.trim(),
+      state: country === 'BR' ? candidate.state?.trim().toUpperCase() : candidate.state?.trim(),
       country,
       probableDuplicateKey: buildProbableDuplicateKey(
         candidate.companyName,

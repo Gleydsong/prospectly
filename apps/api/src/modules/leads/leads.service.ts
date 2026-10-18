@@ -22,6 +22,7 @@ import {
   hasCustomFieldLeaves,
   InvalidLeadFilterError,
 } from './domain/lead-filter-ast';
+import { normalizeLeadDomain } from './domain/lead-domain';
 import {
   buildProbableDuplicateKey,
   LeadIngestionService,
@@ -165,7 +166,7 @@ export class LeadsService {
   async update(organizationId: string, id: string, dto: UpdateLeadDto) {
     const existing = await this.ensureLead(organizationId, id);
 
-    const domain = dto.website !== undefined ? this.extractDomain(dto.website) : undefined;
+    const domain = dto.website !== undefined ? normalizeLeadDomain(dto.website) : undefined;
     const phone = dto.phone === undefined ? undefined : normalizeBrazilianPhone(dto.phone);
     const probableDuplicateKey = buildProbableDuplicateKey(
       dto.companyName ?? existing.companyName,
@@ -559,18 +560,6 @@ export class LeadsService {
       'code' in error &&
       (error as { code?: unknown }).code === 'P2002'
     );
-  }
-
-  private extractDomain(website?: string | null): string | null {
-    if (!website) {
-      return null;
-    }
-    try {
-      const url = new URL(website.startsWith('http') ? website : `https://${website}`);
-      return url.hostname.replace(/^www\./, '').toLowerCase();
-    } catch {
-      return null;
-    }
   }
 
   private async upsertTags(organizationId: string, names: string[]) {

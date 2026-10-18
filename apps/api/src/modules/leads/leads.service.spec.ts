@@ -168,6 +168,37 @@ describe('LeadsService', () => {
     });
   });
 
+  it.each([
+    ['httpsolucoes.com.br', 'httpsolucoes.com.br'],
+    ['www.Acme.com', 'acme.com'],
+    ['https://acme.com/path', 'acme.com'],
+  ])('update detects a duplicate domain for %s (issue #318)', async (website, domain) => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockImplementation(({ where }) => {
+      if (where.id === 'lead-1') {
+        return Promise.resolve({ id: 'lead-1', organizationId: 'org1' });
+      }
+      if (where.OR?.some((condition: { domain?: string }) => condition.domain === domain)) {
+        return Promise.resolve({ id: 'lead-existing', companyName: 'HTTP Solucoes' });
+      }
+      return Promise.resolve(null);
+    });
+    const service = new LeadsService(prisma, makeIngestion(), makeEntitlements() as never);
+
+    await expect(service.update('org1', 'lead-1', { website })).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(prisma.lead.update).not.toHaveBeenCalled();
+    expect(prisma.lead.findFirst).toHaveBeenLastCalledWith({
+      where: {
+        organizationId: 'org1',
+        OR: [{ domain }],
+        id: { not: 'lead-1' },
+      },
+      select: { id: true, companyName: true },
+    });
+  });
+
   it('update recomputes the probable duplicate fingerprint from existing and changed fields', async () => {
     const prisma = makePrisma();
     prisma.lead.findFirst.mockResolvedValue({
