@@ -53,26 +53,25 @@ describe('nginx.conf security headers and caching configuration', () => {
     expect(assetHeaders['Cache-Control']).toBe('public, immutable');
     expect(assetMaxAge).toBe(30 * 24 * 60 * 60);
     expect(assetHeaders['Strict-Transport-Security']).toBe('max-age=15552000; includeSubDomains');
+    // HTML must remain fresh when a new bundle is deployed.
+    expect(serverHeaders['Cache-Control']).toBeUndefined();
   });
 
   it('configures Content-Security-Policy with required directives and Google OAuth support', () => {
-    const csp = serverHeaders['Content-Security-Policy'];
-    expect(csp).toBeDefined();
-
-    expect(csp).toContain("default-src 'self'");
-    expect(csp).toContain("base-uri 'self'");
-    expect(csp).toContain("object-src 'none'");
-    expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).toContain("script-src 'self' https://accounts.google.com");
-    expect(csp).toContain('frame-src https://accounts.google.com');
-
-    const connectSrcMatch = csp.match(/connect-src\s+([^;]+)/);
-    expect(connectSrcMatch).toBeDefined();
-
-    const connectSrcDirectives = connectSrcMatch![1].split(/\s+/);
-    expect(connectSrcDirectives).toContain("'self'");
-    expect(connectSrcDirectives).toContain('https:');
-    expect(connectSrcDirectives).toContain('https://accounts.google.com');
+    expect(serverHeaders['Content-Security-Policy']).toBe(
+      [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "script-src 'self' https://accounts.google.com",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https: https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com",
+        'frame-src https://accounts.google.com',
+      ].join('; '),
+    );
   });
 
   it('configures SPA fallback routing for client-side navigation', () => {
