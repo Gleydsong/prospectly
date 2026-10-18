@@ -39,7 +39,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       aria-busy={loading || undefined}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-control font-semibold tracking-tight transition-[color,background,box-shadow,transform] duration-200 active:scale-[0.98]',
-        'focus-visible:outline-none',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)]',
         'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         variants[variant],
         sizes[size],
