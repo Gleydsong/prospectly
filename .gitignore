@@ -15,7 +15,6 @@ out/
 .next/
 .turbo/
 .swc/
-.vercel/
 coverage/
 *.tsbuildinfo
 *.pid

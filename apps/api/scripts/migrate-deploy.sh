@@ -1,15 +1,15 @@
 #!/bin/sh
 set -eu
 
-echo "==> [Fly.io Release] Starting database migrations..."
+echo "==> [Migrate Deploy] Starting database migrations..."
 
 if [ -z "${MIGRATION_DATABASE_URL:-}" ]; then
   echo "ERROR: MIGRATION_DATABASE_URL is not set. Migrations require the owner database connection string." >&2
   exit 1
 fi
 
-# Map the dedicated owner secret only in this release process. Fly secrets are app-wide;
-# this avoids accidental runtime fallback, but does not isolate secrets from machines.
+# Map the dedicated owner connection string only in this migration process;
+# this avoids accidental runtime fallback.
 export DATABASE_URL="$MIGRATION_DATABASE_URL"
 unset MIGRATION_DATABASE_URL
 
@@ -36,4 +36,4 @@ else
   npx --no-install prisma migrate deploy --schema="${SCHEMA_PATH}"
 fi
 
-echo "==> [Fly.io Release] Migrations applied successfully."
+echo "==> [Migrate Deploy] Migrations applied successfully."

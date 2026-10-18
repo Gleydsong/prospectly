@@ -30,12 +30,12 @@ RUN pnpm --filter @prospectly/api deploy --prod /prod/api
 RUN cp -R /app/apps/api/dist /prod/api/dist \
   && cp -R /app/apps/api/prisma /prod/api/prisma \
   && cp -R /app/apps/api/scripts /prod/api/scripts \
-  && chmod +x /prod/api/scripts/fly-release.sh
+  && chmod +x /prod/api/scripts/migrate-deploy.sh
 # Generate @prisma/client into the pruned node_modules (CLI comes from build tree)
 WORKDIR /prod/api
 RUN /app/apps/api/node_modules/.bin/prisma generate --schema=/prod/api/prisma/schema.prisma \
   && rm -f /prod/api/prisma/seed.ts
-# Install Prisma CLI matching @prisma/client version for Fly.io release_command migrations
+# Install Prisma CLI matching @prisma/client version for release migrations
 RUN PRISMA_VERSION="$(node -p "require('/app/apps/api/node_modules/@prisma/client/package.json').version")" \
   && (cd /tmp && npm install -g "prisma@${PRISMA_VERSION}") \
   && npm cache clean --force
@@ -53,7 +53,7 @@ RUN ln -s /usr/local/lib/node_modules/prisma/build/index.js /usr/local/bin/prism
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/package.json ./package.json
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/node_modules ./node_modules
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/dist ./dist
-# Prisma schema and migrations for Fly.io release_command (run once before machines boot)
+# Prisma schema and migrations for release migrations (run once before machines boot)
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/prisma ./prisma
 # Operational and release scripts
 COPY --from=pruned --chown=nestjs:nodejs /prod/api/scripts ./scripts
@@ -62,7 +62,7 @@ USER nestjs
 
 # Optional target for standalone migrate job: docker build --target migrate
 FROM runner AS migrate
-CMD ["./scripts/fly-release.sh"]
+CMD ["./scripts/migrate-deploy.sh"]
 
 # Worker target — no HTTP, no migrate (migrations run once on API release).
 # Build: docker build --target worker -f apps/api/Dockerfile .
@@ -70,7 +70,7 @@ FROM runner AS worker
 ENV ROLE=worker
 CMD ["node", "dist/worker.js"]
 
-# Default / API target (last stage) — used by Fly.io and default docker builds.
+# Default / API target (last stage) — default docker builds.
 FROM runner AS api
 ENV ROLE=api
 EXPOSE 3000
