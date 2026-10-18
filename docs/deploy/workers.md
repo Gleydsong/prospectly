@@ -1,129 +1,123 @@
-# Workers Prospectly (BullMQ)
+# Workers BullMQ no Fly.io
 
-API HTTP e worker BullMQ são processos distintos. PostgreSQL é a fonte da verdade; Redis/BullMQ é só transporte recuperável. ADR: [`docs/adr/0006-separate-bullmq-worker.md`](../adr/0006-separate-bullmq-worker.md).
+No Prospectly, o processo de API HTTP e o processo de Worker BullMQ são completamente separados. O PostgreSQL é a fonte canônica da verdade; o Redis e o BullMQ funcionam como mecanismo de transporte assíncrono e recuperável.
 
-## Papéis
+Referência arquitetural: ADR [`docs/adr/0006-separate-bullmq-worker.md`](../adr/0006-separate-bullmq-worker.md).
 
-| Processo | Entrypoint | Responsabilidade |
-|---------|------------|----------------|
-| API | `apps/api/src/main.ts` → `node apps/api/dist/main.js` (produção Node) | HTTP, produtores de fila, reconciliadores de dispatch, `RetentionScheduler`, polling de webhook Asaas. **Zero** `@Processor`. |
-| Worker | `apps/api/src/worker.ts` → `node apps/api/dist/worker.js` | Application context Nest **sem** `listen`. Processors BullMQ. **Zero** HTTP, migrations, schedulers, reconciliadores ou webhook polling. |
+---
 
-`main.ts` força `ROLE=api`. `worker.ts` força `ROLE=worker`. `validateEnv` é role-aware: worker exige `DATABASE_URL`, `REDIS_URL` e `DATABASE_APP_URL` em produção; não exige JWT/billing.
+## 1. Segregação de Papéis e Processos
 
-## Pool Prisma (P2028)
+A aplicação divide responsabilidades de acordo com a variável de ambiente `ROLE`:
 
-API HTTP e worker **não** partilham um pool ilimitado. `PrismaService` injeta `connection_limit` / `pool_timeout` na URL se ainda não estiverem lá:
+| Papel      | Entrypoint e Comando Fly              | Módulo Principal                         | Responsabilidades                                                                                                                                                    |
+| ---------- | ------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API**    | `env ROLE=api node dist/main.js`      | `AppModule`                              | Servidor HTTP NestJS (Express), autenticação, endpoints REST, produtores de fila (`queue.add`), reconciliadores de dispatch e webhooks Asaas. **Zero `@Processor`**. |
+| **Worker** | `env ROLE=worker node dist/worker.js` | `WorkerModule` (importa `WorkersModule`) | Application context NestJS **sem listener HTTP**. Consumo das filas BullMQ, processamento assíncrono e agendamentos. **Zero HTTP, zero migrations**.                 |
 
-| Processo | `ROLE` | `connection_limit` | `pool_timeout` |
-|----------|--------|--------------------|----------------|
-| API HTTP | `api` | 5 | 10s |
-| Worker BullMQ | `worker` | 3 | 10s |
+### Validação de Ambiente por Papel (`validateEnv`)
 
-O processor de outbox corre com concorrência **2** (`OUTBOX_WORKER_CONCURRENCY`), abaixo do teto do worker, para um burst de `OutboxEvent` não esgotar o Postgres da API.
+A inicialização valida as variáveis estritamente necessárias para o papel:
 
-Relatórios (só na API) usa `SET LOCAL statement_timeout = 8s` na transação de leitura. Timeout / `P2028` / `P2024` → HTTP **503** `REPORTS_QUERY_TIMEOUT` («Relatórios indisponível. Tente de novo.»), sem retry interno. Login e ficha não passam por essa transação.
+- **API (`ROLE=api`):** Em produção/staging, exige `DATABASE_APP_URL`, `JWT_ACCESS_SECRET` e `JWT_REFRESH_SECRET`; com Asaas habilitado, exige `ASAAS_API_KEY` e `ASAAS_WEBHOOK_TOKEN`. `CORS_ORIGINS` e a configuração Google devem ser preenchidos para suas funcionalidades, mas não são obrigatórios em `validateEnv`.
+- **Worker (`ROLE=worker`):** Em produção/staging, exige `DATABASE_APP_URL` e `REDIS_URL`. **Não** exige secrets de JWT, cookie ou controllers da API.
 
-Wizard humano depois do merge: confirmar `max_connections` do Postgres no Render. Não inventar credenciais nem subir o teto no Git.
+---
 
-Filas: prospecting, imports, scoring, website-analysis, opportunity-finder, privacy-retention, outbox.
+## 2. Processors Registrados no `WorkersModule`
 
-Composição:
+O `WorkersModule` concentra todos os consumidores de tarefas em segundo plano. O sistema conta com **8 processors dedicados mais o `GmailSyncScheduler`**:
 
-- `WorkersModule` — os sete processors (incluindo `RetentionProcessor` e `OutboxProcessor`).
-- `ApiDispatchModule` — reconciliadores de prospecting, imports, website-analysis, opportunity-finder e outbox. Só no `AppModule`.
-- `PrivacyModule` — scheduler + HTTP de privacidade. Só na API.
-- `PrivacyRetentionModule` — `RetentionService` + fila. API e worker.
-- `BillingCoreModule` — serviços de crédito/entitlement. `BillingModule` (API) adiciona controller + `AsaasWebhookService`.
+1. **`ProspectingProcessor`:** Execução assíncrona de buscas locais (OpenStreetMap Nominatim/Overpass e Google Places) e enriquecimento preliminar de leads.
+2. **`ImportsProcessor`:** Ingestão de arquivos CSV em staging, validação linha a linha, deduplicação e carga no banco de dados.
+3. **`ScoringProcessor`:** Cálculo de pontuações de oportunidade para leads com base nos pesos definidos pela organização.
+4. **`WebsiteAnalysisProcessor`:** Auditoria técnica de sites (detecção de CMS/framework, SEO on-page, performance e segurança SSRF).
+5. **`OpportunityFinderProcessor`:** Varredura proativa de nichos e regiões para prospecção automatizada.
+6. **`RetentionProcessor`:** Execução periódica da política de retenção de dados e expiração de logs/eventos (LGPD).
+7. **`OutboxProcessor`:** Processamento da fila de eventos de domínio (`OutboxEvent`) para disparar workflows e notificações.
+8. **`GmailIngestProcessor`:** Sincronização e ingestão assíncrona de e-mails da Conexão Google com correspondência de leads.
+9. **`GmailSyncScheduler`:** Agendador periódico que distribui jobs de sincronização incremental para contas Google ativas.
 
-## Desenvolvimento local
+> [!NOTE]
+> O `AppModule` **não importa** o `WorkersModule`. O servidor HTTP apenas enfileira jobs; nenhum processor é instanciado na API.
 
-```bash
-pnpm --filter @prospectly/api run dev          # API + worker
-pnpm --filter @prospectly/api run dev:api
-pnpm --filter @prospectly/api run dev:worker
-pnpm --filter @prospectly/api run build
-pnpm --filter @prospectly/api run start        # API
-pnpm --filter @prospectly/api run start:worker
+---
+
+## 3. Dimensionamento e Execução no Fly.io
+
+No [`fly.toml`](../../fly.toml), os processos são declarados sob `[processes]`:
+
+```toml
+[processes]
+  app = "env ROLE=api node dist/main.js"
+  worker = "env ROLE=worker node dist/worker.js"
 ```
 
-## Docker (imagem, não o runtime live da API)
+### Escalonamento de Instâncias
 
-A API **live** na Render é runtime **Node**, não Docker. O Dockerfile ainda tem targets `api` / `worker` para builds locais e um eventual corte Docker.
+O worker deve ser escalado como uma máquina dedicada na mesma região do banco e da API:
 
 ```bash
-docker build -f apps/api/Dockerfile -t prospectly-api --target api .
-docker build -f apps/api/Dockerfile -t prospectly-worker --target worker .
+fly scale count app=1 worker=1 --region gru
 ```
 
-Não rode `prisma migrate deploy` no worker.
+- **Por que `worker=1`?**
+  A existência de uma única instância de worker em produção previne que schedulers em memória (como o `GmailSyncScheduler`) sejam disparados em duplicidade.
+- **Sem Autostop:**
+  O worker opera continuamente e não escuta portas de rede, permanecendo ativo para drenar jobs a qualquer momento.
 
-## Encerramento gracioso
+---
 
-`SIGTERM` / `SIGINT`:
+## 4. Pool de Conexões do PostgreSQL e Redis
 
-1. Para intake BullMQ via `app.close()`.
-2. Espera jobs em voo até `WORKER_SHUTDOWN_TIMEOUT_MS` (default `30000`).
-3. Fecha Redis/Prisma.
-4. Loga `Worker shutdown complete` (ou force exit).
+Para evitar exaustão de conexões no banco de dados (erro Prisma `P2028`), o `PrismaService` define limites automáticos conforme o `ROLE`:
 
-## Migrations
+| Processo          | `ROLE`   | `connection_limit` | `pool_timeout` |
+| ----------------- | -------- | ------------------ | -------------- |
+| **API HTTP**      | `api`    | 5                  | 10s            |
+| **Worker BullMQ** | `worker` | 3                  | 10s            |
 
-Uma vez por release, fora do worker. Ver [`migrations.md`](./migrations.md).
+Adicionalmente, o processamento de outbox respeita a concorrência configurada:
 
-## Render — não sincronize o Blueprint
+- `OUTBOX_WORKER_CONCURRENCY=2`: Garante que rajadas de eventos não monopolizem o pool do worker.
 
-Produção observada (2026-09-03), **não** igual ao `render.yaml`:
+### Configuração do Redis
 
-| Recurso | Live | `render.yaml` | Ação |
-| --- | --- | --- | --- |
-| `prospectly-api` | Node, `0.5c-512mb`, frankfurt, commit `03e4f60` | Docker starter | não sync |
-| `prospectly-web` | static starter | static | não sync |
-| landing `prospectly` | **free** | landing starter | não sync |
-| `prospectly-db` | `0.1c-256mb`, disk 1GB | `basic-256mb`, disk 5GB | não sync |
-| `prospectly-redis` | **free**, noeviction | starter | não sync |
-| `prospectly-worker` | ausente | não declarado | criar **só** este serviço |
+O Redis roda em máquina Fly privada (`prospectly-redis.flycast:6379`) e **deve** ser configurado com:
 
-Custo de tabela do worker Starter / `0.5c-512mb`: **US$7/mês**. Workspace Hobby sem taxa extra. Qualquer preview de Blueprint que mude Redis/DB/landing/API: **parar**.
+- `maxmemory-policy noeviction`: Impede descarte silencioso de jobs pendentes quando a memória atinge o limite.
+- Persistência AOF (Append-Only File): Garante durabilidade dos jobs enfileirados em caso de reinício.
 
-### Serviço worker (operação dirigida)
+---
 
-- tipo API: `background_worker` (Blueprint: `type: worker`)
-- nome: `prospectly-worker`
-- runtime: **node** (igual à API live)
-- região: `frankfurt`
-- plano: `starter` / `0.5c-512mb`
-- branch: `main` depois do rollout; no corte pode apontar para a branch do worker
-- build: o mesmo da API (`pnpm install --frozen-lockfile --filter @prospectly/api... --config.production=false && pnpm --filter @prospectly/shared-types run build && pnpm --filter @prospectly/api exec prisma generate && pnpm --filter @prospectly/api run build`)
-- start: `node apps/api/dist/worker.js`
-- `autoDeploy`: `no` até o worker estar live; depois `checksPass` se a API já estiver sem processors
-- env: `ROLE=worker`, `NODE_ENV=production`, `WORKER_SHUTDOWN_TIMEOUT_MS=30000`
-- copiar da API (valores via Dashboard/API, nunca no Git): `DATABASE_URL`, `DATABASE_APP_URL`, `REDIS_URL` (privados da mesma região), `OSM_USER_AGENT`, `GOOGLE_PLACES_API_KEY`, `OPPORTUNITY_AI_*` / `WHATSAPP_AI_*` se os jobs de opportunity usarem, `LOG_LEVEL`, `SENTRY_DSN`
-- **não** copiar JWT, Asaas, AbacatePay, SMTP, `GOOGLE_CLIENT_ID`, `OPS_METRICS_TOKEN`, CORS
+## 5. Encerramento Gracioso (Graceful Shutdown)
 
-## Rollout sem perda
+Ao receber sinais de terminação do sistema operacional (`SIGTERM` ou `SIGINT`):
 
-1. Worker-capable no Git: `WorkerModule` sem reconcilers/schedulers/webhook.
-2. Manter API antiga consumindo até o worker live (janela curta com dois consumidores BullMQ é aceitável).
-3. Criar **um** worker Starter; esperar live.
-4. Log: `BullMQ worker context started (no HTTP listener)`.
-5. Confirmar consumo de job controlado. Não alterar dados de cliente.
-6. Deploy da API **sem** `WorkersModule`. `GET /health/ready` → 200.
-7. Confirmar: worker processa; API não processa; filas drenam; sem scheduler/reconciler duplicado; sem pico anómalo de conexões Postgres.
+1. O worker encerra a ingestão de novos jobs das filas via `app.close()`.
+2. Aguarda a conclusão dos jobs em andamento até o tempo limite definido por `WORKER_SHUTDOWN_TIMEOUT_MS` (padrão: `30000` ms / 30 segundos).
+3. Fecha conexões com o Redis e o PostgreSQL de maneira ordenada.
+4. Emite log de encerramento completo: `Worker shutdown complete`.
 
-Se `autoDeployTrigger=checksPass` na API impedir a ordem: pause auto-deploy da API, suba o worker, só então redesploy da API.
+---
 
-## Rollback
+## 6. Desenvolvimento Local
 
-1. Reverter a API para a revisão que ainda importava `WorkersModule` (fallback inline).
-2. Confirmar `/health/ready` e consumo na API.
-3. **Depois** suspender `prospectly-worker` para parar a cobrança.
-4. Não apagar filas Redis nem registros Postgres.
+Para executar os processos em ambiente de desenvolvimento:
 
-## Critérios de aceite
+```bash
+# Executa API e Worker simultaneamente via scripts/dev-with-worker.mjs
+pnpm --filter @prospectly/api run dev
 
-- 1 worker Starter, zero upgrades colaterais.
-- API e worker na mesma região / rede privada.
-- API sem `@Processor`; worker sem HTTP, migrate, scheduler ou reconciler API-only.
-- Os seis grupos de processamento cobertos, incluindo retention.
-- Graceful shutdown, RLS (`DATABASE_APP_URL` + `runWithTenant`), auditoria, idempotência e retries preservados.
+# Ou em terminais separados:
+pnpm --filter @prospectly/api run dev:api     # Somente API HTTP (ROLE=api)
+pnpm --filter @prospectly/api run dev:worker  # Somente Worker BullMQ (ROLE=worker)
+```
+
+---
+
+## Relacionados
+
+- Deploy geral no Fly.io: [`docs/deploy/fly.md`](./fly.md)
+- Migrations e segregação de roles: [`docs/deploy/migrations.md`](./migrations.md)
+- Módulo dos workers: [`apps/api/src/modules/workers/workers.module.ts`](../../apps/api/src/modules/workers/workers.module.ts)

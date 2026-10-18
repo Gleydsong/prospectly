@@ -17,7 +17,7 @@ Ações:
 1. Confirme que o processo da API está no ar: `GET /health/live` e `GET /health/ready`.
 2. Chame `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` e anote profundidades de fila + contadores recentes de fail/retry.
 3. Filtre os logs da API por `correlationId` da requisição HTTP de origem (`x-correlation-id`).
-4. Se o Redis estiver saudável mas os workers parecerem ociosos, reinicie o serviço da API (hoje os workers rodam in-process com o HTTP).
+4. Se o Redis estiver saudável mas os workers parecerem ociosos, inspecione os logs e reinicie apenas a máquina do processo `worker` no Fly.io; o worker é separado do HTTP. Consulte [workers.md](../deploy/workers.md).
 5. Para uma pesquisa/importação travada isolada, inspecione o status da entidade no app/DB. Prefira retry controlado pela UI do produto em vez de editar Redis na mão.
 6. Evite apagar chaves Redis às cegas — o BullMQ guarda estado de job sob prefixos de fila.
 
@@ -33,24 +33,24 @@ Sintomas:
 
 Ações:
 
-1. Verifique se a instância Key Value da Render (`prospectly-redis`) está no ar e não esgotada.
-2. Confirme `REDIS_URL` no serviço da API e que a política continua `noeviction` (obrigatório para BullMQ; **não** mude para LRU).
+1. Verifique se a máquina Redis privada no Fly.io (`prospectly-redis`) está no ar e não esgotada.
+2. Confirme `REDIS_URL` nos processos API e worker e que a política continua `noeviction` (obrigatório para BullMQ; **não** mude para LRU).
 3. A partir do host/rede da API, teste conectividade com o Redis (somente rede privada).
 4. Restaure o Redis. Quando voltar, reconfira `ops/metrics` e as profundidades de fila. Reconciliadores reenfileiram `PENDING`/`PROCESSING` stale a partir do Postgres.
 5. Se houve perda de dados num Redis efêmero/recriado, jobs em voo no Redis terão sumido — o Postgres ainda tem pesquisas, imports, Opportunity Finder, análises de site e a inbox Asaas. Os reconciliadores (~5s) republicam com o mesmo `jobId`.
 
 Não troque o Redis para políticas de eviction voláteis.
 
-### Política de TTL (plano 25 MB)
+### Política de TTL
 
-| Uso | TTL | Fonte da verdade |
-| --- | --- | --- |
-| Throttle HTTP (hits + block) | TTL do throttler via script Lua atômico (`INCR` + `PEXPIRE`) | Não financeira; fail-open se Redis cair |
-| Nominatim 1 rps | `PX` no slot Lua | Fail-closed de propósito (política OSM) |
-| Locks / debounce / cache | TTL curto | Postgres |
-| Jobs BullMQ | Coordenação volátil | Linha Postgres (`PENDING`/`PROCESSING` + `jobDispatchedAt`) + inbox `BillingWebhookEvent` |
+| Uso                          | TTL                                                          | Fonte da verdade                                                                          |
+| ---------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Throttle HTTP (hits + block) | TTL do throttler via script Lua atômico (`INCR` + `PEXPIRE`) | Não financeira; fail-open se Redis cair                                                   |
+| Nominatim 1 rps              | `PX` no slot Lua                                             | Fail-closed de propósito (política OSM)                                                   |
+| Locks / debounce / cache     | TTL curto                                                    | Postgres                                                                                  |
+| Jobs BullMQ                  | Coordenação volátil                                          | Linha Postgres (`PENDING`/`PROCESSING` + `jobDispatchedAt`) + inbox `BillingWebhookEvent` |
 
-Chaves permanentes desnecessárias são um risco neste plano. `maxmemory-policy` deve permanecer `noeviction` enquanto houver filas BullMQ.
+Chaves permanentes desnecessárias são um risco na instância Redis. `maxmemory-policy` deve permanecer `noeviction` enquanto houver filas BullMQ.
 
 ## Falha de provedor
 
@@ -74,8 +74,8 @@ Nunca cole payloads crus de provedor, API keys ou PII de lead em tickets/canais 
 
 Use quando um deploy introduzir pico de erros, filas travadas ou regressão de auth/ops.
 
-1. Identifique o deploy ruim na Render (serviço API `prospectly-api`) e o deploy saudável anterior.
-2. Faça rollback do serviço da API para o último deploy conhecido como bom. Prefira rolar API + web juntos quando a mudança cruzou a fronteira do cookie de refresh / `withCredentials`.
+1. Identifique a release ruim no Fly.io (`fly releases list -a prospectly-api`) e a imagem saudável anterior.
+2. Faça rollback da imagem compartilhada API/worker com `fly deploy --image <imagem_anterior> -a prospectly-api`, conforme [migrations.md](../deploy/migrations.md#5-rollback). Prefira rolar API + web juntos quando a mudança cruzou a fronteira do cookie de refresh / `withCredentials`.
 3. Confirme `GET /health/ready` ready e `GET /api/v1/ops/metrics` (token de ops) com profundidades de fila se recuperando.
 4. Observe `http.errors5xx`, job `failed`/`retries` e status do Redis por 10–15 minutos.
 5. Se migrations foram aplicadas no release ruim, **não** assuma que rollback de imagem desfaz o schema — siga o guia Prisma / docs de deploy antes de reprocessar jobs.
@@ -83,11 +83,11 @@ Use quando um deploy introduzir pico de erros, filas travadas ou regressão de a
 
 ## Checagens rápidas
 
-| Checagem | Esperado |
-|-------|----------|
-| `GET /health` | OK estilo liveness público, sem internos |
-| `GET /health/ready` | ready quando **Postgres** responde. Redis down não deve derrubar o health da API |
-| `GET /api/v1/ops/metrics` sem `OPS_METRICS_TOKEN` configurado | 404 |
-| `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` ausente/errado | 401 |
-| `GET /api/v1/ops/metrics` só com JWT de tenant | 401 (ou 404 se o token não estiver definido) |
-| `GET /api/v1/ops/metrics` com token de ops correto | JSON com `http`, `jobs`, `queues`, `redis`, `reliability` |
+| Checagem                                                              | Esperado                                                                         |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `GET /health`                                                         | OK estilo liveness público, sem internos                                         |
+| `GET /health/ready`                                                   | ready quando **Postgres** responde. Redis down não deve derrubar o health da API |
+| `GET /api/v1/ops/metrics` sem `OPS_METRICS_TOKEN` configurado         | 404                                                                              |
+| `GET /api/v1/ops/metrics` com `X-Prospectly-Ops-Token` ausente/errado | 401                                                                              |
+| `GET /api/v1/ops/metrics` só com JWT de tenant                        | 401 (ou 404 se o token não estiver definido)                                     |
+| `GET /api/v1/ops/metrics` com token de ops correto                    | JSON com `http`, `jobs`, `queues`, `redis`, `reliability`                        |

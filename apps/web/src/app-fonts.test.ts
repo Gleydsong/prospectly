@@ -20,9 +20,9 @@ describe('self-hosted app fonts', () => {
     expect(nginx).not.toContain('fonts.gstatic.com');
   });
 
-  it('keeps the Render static CSP on font-src self', () => {
-    const render = readFileSync(join(webRoot, '../../render.yaml'), 'utf8');
-    expect(render).toMatch(/font-src 'self'/);
-    expect(render).not.toMatch(/font-src 'self' https:\/\/fonts\.gstatic\.com/);
+  it('keeps the Vercel static CSP on font-src self', () => {
+    const vercel = readFileSync(join(webRoot, 'vercel.json'), 'utf8');
+    expect(vercel).toMatch(/font-src 'self'/);
+    expect(vercel).not.toMatch(/font-src 'self' https:\/\/fonts\.gstatic\.com/);
   });
 });

@@ -41,25 +41,25 @@ Caminhos paralelos: CSV client-side na search page; export CSV de leads (OWNER, 
 ```
 OWNER/ADMIN
  → BillingProfile (cpfCnpj plaintext)
- → Asaas/Abacate (HTTPS)
+ → Asaas (HTTPS; PIX e cartão hospedado)
  → BillingWebhookEvent.payload
 ```
 
-Webhook Abacate: secret em header **ou** query (risco de access log). Stripe legado sem handler ativo.
+Webhook Asaas: autenticação pelo header `asaas-access-token`. AbacatePay e Stripe pertencem ao histórico; não são caminhos ativos de checkout.
 
 ## Fronteiras do sistema
 
-| Fronteira | Dados | Controlo técnico |
-| --- | --- | --- |
-| Browser ↔ API | PII da sessão | CORS allowlist, JWT, HTTPS em prod |
-| API ↔ Postgres | Tudo persistido | RLS + tenant guard |
-| API ↔ Redis | IDs de job, throttle | Sem e-mail como chave |
-| API ↔ OSM/Places | Queries geo + POIs | UA identificável; Places API key |
-| API ↔ Ollama | Nome empresa, cidade, sinais | Sanitizer |
-| API ↔ e-mail | E-mail do usuário | Tokens hashed |
-| API ↔ gateways | Perfil pagador | Sem PAN |
-| API ↔ logs host | req metadata | Pino redact |
+| Fronteira        | Dados                        | Controlo técnico                   |
+| ---------------- | ---------------------------- | ---------------------------------- |
+| Browser ↔ API    | PII da sessão                | CORS allowlist, JWT, HTTPS em prod |
+| API ↔ Postgres   | Tudo persistido              | RLS + tenant guard                 |
+| API ↔ Redis      | IDs de job, throttle         | Sem e-mail como chave              |
+| API ↔ OSM/Places | Queries geo + POIs           | UA identificável; Places API key   |
+| API ↔ Ollama     | Nome empresa, cidade, sinais | Sanitizer                          |
+| API ↔ e-mail     | E-mail do usuário            | Tokens hashed                      |
+| API ↔ gateways   | Perfil pagador               | Sem PAN                            |
+| API ↔ logs host  | req metadata                 | Pino redact                        |
 
 ## Backups
 
-Snapshots Postgres no Render: **não** são expurgados pelo job de retenção. Pedido de exclusão vs backup = **LEGAL_REVIEW_REQUIRED** + runbook de restore.
+Backups do Postgres no Fly.io (política e restore a confirmar pelo operador): **não** são expurgados pelo job de retenção. Pedido de exclusão vs backup = **LEGAL_REVIEW_REQUIRED** + runbook de restore.
