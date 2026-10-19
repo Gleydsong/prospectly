@@ -3,6 +3,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import {
   AiProviderUnavailableException,
   AiRateLimitException,
+  AiRequestAbortedException,
   AiTimeoutException,
   LlmMessage,
   LlmStreamChunk,
@@ -142,6 +143,9 @@ export class OpenAiCompatibleClient {
         rawJson: payload,
       };
     } catch (error) {
+      if (req.signal?.aborted) {
+        throw new AiRequestAbortedException();
+      }
       if (controller.signal.aborted) {
         throw new AiTimeoutException(
           `Request to ${req.baseUrl} timed out after ${timeoutMs}ms`,
@@ -217,6 +221,9 @@ export class OpenAiCompatibleClient {
       clearTimeout(timer);
       if (req.signal) {
         req.signal.removeEventListener('abort', onExternalAbort);
+      }
+      if (req.signal?.aborted) {
+        throw new AiRequestAbortedException();
       }
       if (controller.signal.aborted) {
         throw new AiTimeoutException(`Stream request to ${req.baseUrl} timed out`, timeoutMs);
@@ -317,6 +324,18 @@ export class OpenAiCompatibleClient {
       }
 
       yield { isDone: true };
+    } catch (error) {
+      if (req.signal?.aborted) {
+        throw new AiRequestAbortedException();
+      }
+      if (controller.signal.aborted) {
+        throw new AiTimeoutException(`Stream request to ${req.baseUrl} timed out`, timeoutMs);
+      }
+      throw new AiProviderUnavailableException(
+        'Failed to read provider stream',
+        req.baseUrl,
+        error instanceof Error ? new Error(error.name) : undefined,
+      );
     } finally {
       clearTimeout(timer);
       if (req.signal) {

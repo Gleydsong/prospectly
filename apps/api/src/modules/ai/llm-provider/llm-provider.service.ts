@@ -225,14 +225,19 @@ export class LlmProviderService {
           error instanceof AiRateLimitException ||
           error instanceof AiProviderUnavailableException;
 
-        if (!isRetryable || attempt === maxRetries) {
+        if (!isRetryable || req.signal?.aborted || attempt === maxRetries) {
           break;
         }
       }
     }
 
     // Attempt fallback to Groq if configured and primary was Cloudflare
-    if (fallback === 'groq' && primaryProvider === 'cloudflare' && lastError) {
+    if (
+      fallback === 'groq' &&
+      primaryProvider === 'cloudflare' &&
+      lastError &&
+      !req.signal?.aborted
+    ) {
       const errorMeta = this.sanitizeErrorMetadata(lastError);
       this.logger.warn({
         message: 'Primary provider failed, attempting fallback to Groq',
@@ -475,7 +480,12 @@ export class LlmProviderService {
         primaryError instanceof AiRateLimitException ||
         primaryError instanceof AiProviderUnavailableException;
 
-      if (fallback === 'groq' && primaryProvider === 'cloudflare' && isRetryable) {
+      if (
+        fallback === 'groq' &&
+        primaryProvider === 'cloudflare' &&
+        isRetryable &&
+        !req.signal?.aborted
+      ) {
         const errorMeta = this.sanitizeErrorMetadata(primaryError);
         this.logger.warn({
           message:

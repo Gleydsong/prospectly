@@ -147,6 +147,13 @@ export class AiRateLimitException extends AiException {
   }
 }
 
+export class AiRequestAbortedException extends AiException {
+  constructor() {
+    super('AI request was cancelled by the caller', 'AI_REQUEST_ABORTED');
+    this.name = 'AiRequestAbortedException';
+  }
+}
+
 export class AiTimeoutException extends AiException {
   constructor(
     message = 'AI request timed out',

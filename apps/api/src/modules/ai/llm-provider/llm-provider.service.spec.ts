@@ -913,6 +913,128 @@ describe('LlmProviderService', () => {
       );
     });
 
+    it.each(['chat', 'streamChat'] as const)(
+      'does not retry or fall back when caller cancels %s',
+      async (method) => {
+        const controller = new AbortController();
+        const mockFetch = jest.fn().mockImplementation((_url, options) => {
+          if (options.signal.aborted)
+            return Promise.reject(new DOMException('synthetic caller abort', 'AbortError'));
+          return new Promise((_resolve, reject) => {
+            options.signal.addEventListener(
+              'abort',
+              () => reject(new DOMException('synthetic caller abort', 'AbortError')),
+              { once: true },
+            );
+            controller.abort();
+          });
+        });
+        service = createService({}, mockFetch as unknown as typeof fetch);
+        const req = {
+          context: defaultContext,
+          messages: [{ role: 'user' as const, content: 'Hi' }],
+          signal: controller.signal,
+        };
+        const call =
+          method === 'chat'
+            ? service.chat(req, mockFetch as unknown as typeof fetch)
+            : (async () => {
+                for await (const _chunk of service.streamChat(
+                  req,
+                  mockFetch as unknown as typeof fetch,
+                )) {
+                  /* drain */
+                }
+              })();
+        await expect(call).rejects.toEqual(expect.objectContaining({ code: 'AI_REQUEST_ABORTED' }));
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('does not fall back when caller cancels stream after headers before first delta', async () => {
+      const controller = new AbortController();
+      const mockFetch = jest.fn().mockImplementation((_url, options) => {
+        if (options.signal.aborted)
+          return Promise.reject(new DOMException('synthetic caller abort', 'AbortError'));
+        return Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(stream) {
+                options.signal.addEventListener(
+                  'abort',
+                  () => stream.error(new DOMException('synthetic caller abort', 'AbortError')),
+                  { once: true },
+                );
+                controller.abort();
+              },
+            }),
+          ),
+        );
+      });
+      service = createService({}, mockFetch as unknown as typeof fetch);
+      await expect(async () => {
+        for await (const _chunk of service.streamChat(
+          {
+            context: defaultContext,
+            messages: [{ role: 'user', content: 'Hi' }],
+            signal: controller.signal,
+          },
+          mockFetch as unknown as typeof fetch,
+        )) {
+          /* drain */
+        }
+      }).rejects.toEqual(expect.objectContaining({ code: 'AI_REQUEST_ABORTED' }));
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back when a stream times out after headers before the first delta', async () => {
+      let calls = 0;
+      const mockFetch = jest.fn().mockImplementation((_url, options) => {
+        calls++;
+        if (calls === 1) {
+          return Promise.resolve(
+            new Response(
+              new ReadableStream({
+                start(controller) {
+                  options.signal.addEventListener(
+                    'abort',
+                    () => {
+                      controller.error(new DOMException('synthetic stream abort', 'AbortError'));
+                    },
+                    { once: true },
+                  );
+                },
+              }),
+            ),
+          );
+        }
+        return Promise.resolve(
+          new Response('data: {"choices":[{"delta":{"content":"fallback"}}]}\n\ndata: [DONE]\n\n'),
+        );
+      });
+      service = createService(
+        { 'ai.timeoutMs': 10, 'ai.maxRetries': 0 },
+        mockFetch as unknown as typeof fetch,
+      );
+      const chunks = [];
+      for await (const chunk of service.streamChat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'Hi' }],
+        },
+        mockFetch as unknown as typeof fetch,
+      )) {
+        if (chunk.contentDelta) chunks.push(chunk.contentDelta);
+      }
+      expect(chunks).toEqual(['fallback']);
+      expect(calls).toBe(2);
+      expect(prismaMock.aiRun.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ status: AiRunStatus.COMPLETED, provider: 'groq' }),
+        }),
+      );
+    });
+
     it('Defeito 6 (both fail): streamChat calls both primary and fallback if both return 429', async () => {
       let callCount = 0;
       const mockFetch = jest.fn().mockImplementation(() => {
