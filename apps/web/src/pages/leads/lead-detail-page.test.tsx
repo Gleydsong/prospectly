@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   fetchTasks: vi.fn(),
   useCustomFields: vi.fn(),
   updateLead: vi.fn(),
+  analyzeWebsite: vi.fn(),
 }));
 
 vi.mock('@/features/leads/hooks', () => ({
@@ -47,7 +48,9 @@ vi.mock('@/features/tasks/hooks', () => ({
   useUpdateTask: () => ({ mutateAsync: mocks.updateTask, isPending: false }),
 }));
 
-vi.mock('@/features/scoring/api', () => ({ requestLeadWebsiteAnalysis: vi.fn() }));
+vi.mock('@/features/scoring/api', () => ({
+  requestLeadWebsiteAnalysis: (...args: unknown[]) => mocks.analyzeWebsite(...args),
+}));
 
 vi.mock('@/features/agents/hooks', () => ({
   useCrmSuggest: () => ({ data: null, isLoading: false, isError: false }),
@@ -116,6 +119,7 @@ function renderPage() {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/leads/lead-1']}>
+        <Link to="/leads/lead-2">Outro cliente</Link>
         <Routes>
           <Route path="/leads/:id" element={<LeadDetailPage />} />
           <Route path="/pipeline" element={<p>Página do funil</p>} />
@@ -187,16 +191,13 @@ describe('LeadDetailPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(
-      await screen.findByRole('button', { name: 'Novos' }, { timeout: 5000 }),
-    );
+    await user.click(screen.getByText('Funil do cliente'));
+    await user.click(await screen.findByRole('button', { name: 'Novos' }, { timeout: 5000 }));
 
     await waitFor(() => {
       expect(mocks.moveLeadToStage).toHaveBeenCalledWith('lead-1', 'stage-new');
     });
-    expect(
-      await screen.findByText('Cliente movido para a etapa “Novos” do funil.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Cliente movido para a etapa “Novos” do funil.')).toBeVisible();
   });
 
   it('abre o funil quando o cliente já possui uma etapa', async () => {
@@ -208,6 +209,7 @@ describe('LeadDetailPage', () => {
     const user = userEvent.setup();
     renderPage();
 
+    await user.click(screen.getByText('Funil do cliente'));
     await user.click(screen.getByRole('button', { name: 'Ver no funil' }));
 
     expect(await screen.findByText('Página do funil')).toBeVisible();
@@ -227,7 +229,7 @@ describe('LeadDetailPage', () => {
     expect(screen.getByText(/oportunidade de presença online/i)).toBeInTheDocument();
   });
 
-  it('não exibe auditoria técnica nem observações no card de informações', () => {
+  it('exibe notas persistidas em seu próprio card sem auditoria técnica nas informações', () => {
     mocks.useLead.mockReturnValue({
       data: {
         ...baseLead,
@@ -239,9 +241,9 @@ describe('LeadDetailPage', () => {
 
     expect(screen.queryByText('Origem & Auditoria Técnica')).not.toBeInTheDocument();
     expect(screen.queryByText('Observações')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Importado do Google Places. Validação manual de website necessária.'),
-    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Notas')).toHaveValue(
+      'Importado do Google Places. Validação manual de website necessária.',
+    );
   });
 
   it('conclui tarefa no checkbox e registra na timeline', async () => {
@@ -316,8 +318,85 @@ describe('LeadDetailPage', () => {
 
     await user.click(await screen.findByRole('button', { name: /chamar no whatsapp/i }));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /mensagem whatsapp: medic saúde/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /chamar no whatsapp/i })).toBeInTheDocument();
+  });
+  it.each([{ doNotContact: true }, { suppressed: true }])(
+    'bloqueia WhatsApp no cabeçalho e nos canais: %j',
+    async (flags) => {
+      mocks.useLead.mockReturnValue({ ...mocks.useLead(), data: { ...baseLead, ...flags } });
+      renderPage();
+      expect(screen.getByRole('button', { name: 'Chamar no WhatsApp' })).toBeDisabled();
+      expect(screen.queryByRole('link', { name: 'WhatsApp' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    },
+  );
+
+  it('salva LeadStatus pelo stepper e notas pela integração existente', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByRole('button', { name: 'Respondeu' }));
+    expect(mocks.updateLead).toHaveBeenCalledWith({ status: 'RESPONDED' });
+    await user.type(screen.getByLabelText('Notas'), 'Retornar amanhã');
+    await user.click(screen.getByRole('button', { name: 'Salvar notas' }));
+    expect(mocks.updateLead).toHaveBeenCalledWith({ notes: 'Retornar amanhã' });
+  });
+
+  it('separa a saúde do site da oportunidade e agrupa problemas reais', async () => {
+    mocks.useLead.mockReturnValue({
+      ...mocks.useLead(),
+      data: {
+        ...baseLead,
+        score: 92,
+        website: 'https://example.com',
+        websiteRecord: {
+          analyses: [
+            {
+              id: 'a1',
+              status: 'COMPLETED',
+              seoHealthScore: 32,
+              issues: [
+                { id: 'i1', code: 'NO_HTTPS', severity: 'CRITICAL', message: 'No HTTPS' },
+                { id: 'i2', code: 'NO_CONTACT_FORM', severity: 'INFO', message: 'No form' },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    const user = userEvent.setup();
+    mocks.analyzeWebsite.mockResolvedValue({});
+    renderPage();
+    expect(screen.getByRole('meter', { name: 'Saúde do site' })).toHaveAttribute(
+      'aria-valuenow',
+      '32',
+    );
+    expect(screen.getByText('Score de oportunidade')).toBeVisible();
+    expect(screen.getByText('Segurança e acesso')).toBeVisible();
+    expect(screen.getByText('Experiência e contato')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Reanalisar site' }));
+    expect(mocks.analyzeWebsite).toHaveBeenCalledWith('lead-1');
+  });
+  it('não leva notas em edição para outro cliente ao navegar', async () => {
+    mocks.useLead.mockImplementation((id) => ({
+      data: { ...baseLead, id, notes: id === 'lead-2' ? 'Nota do segundo cliente' : '' },
+      isLoading: false,
+      refetch: vi.fn(),
+    }));
+    const user = userEvent.setup();
+    renderPage();
+    await user.type(screen.getByLabelText('Notas'), 'Rascunho do primeiro');
+    await user.click(screen.getByRole('link', { name: 'Outro cliente' }));
+    expect(screen.getByLabelText('Notas')).toHaveValue('Nota do segundo cliente');
+    expect(screen.getByRole('button', { name: 'Salvar notas' })).toBeDisabled();
+  });
+
+  it('traduz ficha e controles de histórico para inglês', async () => {
+    await i18n.changeLanguage('en');
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'Customer file' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Contact on WhatsApp' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Recent history' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Record' })).toHaveClass('border');
+    expect(screen.getByLabelText('Notes')).toBeVisible();
   });
 });

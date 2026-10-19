@@ -44,11 +44,7 @@ export {
 export type AppLocale = 'pt' | 'en';
 
 export type ProfessionalPersona =
-  | 'vendedor'
-  | 'desenvolvedor'
-  | 'trafego_pago'
-  | 'marketing'
-  | 'outro';
+  'vendedor' | 'desenvolvedor' | 'trafego_pago' | 'marketing' | 'outro';
 
 export type LeadWebsiteKind = 'site' | 'landing' | 'app';
 
@@ -110,6 +106,7 @@ export interface LeadListItem {
   rating?: number | null;
   reviewCount?: number | null;
   doNotContact: boolean;
+  suppressed?: boolean;
   owner?: LeadOwner | null;
   stage?: LeadStage | null;
   tags: Tag[];

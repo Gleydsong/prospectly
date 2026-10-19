@@ -1,3 +1,4 @@
+import type { LeadStatus } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -57,6 +58,7 @@ export function useUpdateLead(id: string) {
   return useMutation({
     mutationFn: (
       input: Partial<CreateLeadInput> & {
+        status?: LeadStatus;
         customFieldValues?: Record<string, string | number | null>;
       },
     ) => updateLead(id, input),

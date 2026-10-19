@@ -74,6 +74,7 @@ export async function createLead(input: CreateLeadInput): Promise<LeadDetail> {
 export async function updateLead(
   id: string,
   input: Partial<CreateLeadInput> & {
+    status?: LeadStatus;
     customFieldValues?: Record<string, string | number | null>;
   },
 ): Promise<LeadDetail> {

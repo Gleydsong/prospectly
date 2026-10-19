@@ -1,5 +1,7 @@
 import { Globe, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +13,7 @@ export function resolveWebsitePitch(
   city?: string | null,
 ): string {
   const norm = `${category ?? ''} ${segment ?? ''}`.toLowerCase();
-  const citySuffix = city?.trim() ? ` em ${city.trim()}` : '';
+  const citySuffix = city?.trim() ? i18n.t('clientFile.inCity', { city: city.trim() }) : '';
 
   if (
     norm.includes('restaurant') ||
@@ -23,7 +25,7 @@ export function resolveWebsitePitch(
     norm.includes('comida') ||
     norm.includes('gastronom')
   ) {
-    return `Sem site cadastrado — argumento comercial para ofertar cardápio digital ou pedidos online${citySuffix}.`;
+    return i18n.t('clientFile.pitchFood', { citySuffix });
   }
 
   if (
@@ -44,14 +46,14 @@ export function resolveWebsitePitch(
     norm.includes('gym') ||
     norm.includes('academia')
   ) {
-    return `Sem site cadastrado — argumento comercial para ofertar agendamento online ou catálogo de serviços${citySuffix}.`;
+    return i18n.t('clientFile.pitchServices', { citySuffix });
   }
 
   if (norm.includes('hotel') || norm.includes('hostel') || norm.includes('pousada')) {
-    return `Sem site cadastrado — argumento comercial para ofertar reservas diretas e presença online${citySuffix}.`;
+    return i18n.t('clientFile.pitchHotel', { citySuffix });
   }
 
-  return `Sem site cadastrado — argumento comercial para ofertar presença online no Google ou site institucional${citySuffix}.`;
+  return i18n.t('clientFile.pitchGeneric', { citySuffix });
 }
 
 export function LeadWebsiteGap({
@@ -71,6 +73,7 @@ export function LeadWebsiteGap({
   pending?: boolean;
   onSaveUrl: (url: string) => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +82,10 @@ export function LeadWebsiteGap({
 
   return (
     <div className="rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] p-3">
-      <p className="text-sm font-medium text-[color:var(--ink)]">Oportunidade de presença online</p>
-      <p className="mt-1 text-xs leading-relaxed text-[color:var(--ink-muted)]">
-        {pitch}
+      <p className="text-sm font-medium text-[color:var(--ink)]">
+        {t('clientFile.onlineOpportunity')}
       </p>
+      <p className="mt-1 text-xs leading-relaxed text-[color:var(--ink-muted)]">{pitch}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {googleHref ? (
           <a
@@ -92,12 +95,12 @@ export function LeadWebsiteGap({
             className="inline-flex h-8 items-center gap-1.5 rounded-control border border-[color:var(--border)] px-2.5 text-xs font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)]"
           >
             <Search className="h-3.5 w-3.5" aria-hidden />
-            Buscar no Google
+            {t('clientFile.searchGoogle')}
           </a>
         ) : null}
         <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
           <Plus className="h-3.5 w-3.5" aria-hidden />
-          Inserir URL
+          {t('clientFile.insertUrl')}
         </Button>
       </div>
       {open ? (
@@ -107,7 +110,7 @@ export function LeadWebsiteGap({
             event.preventDefault();
             const href = sanitizeExternalUrl(draft);
             if (!href) {
-              setError('Informe uma URL http(s) válida.');
+              setError(t('clientFile.invalidUrl'));
               return;
             }
             setError(null);
@@ -119,12 +122,12 @@ export function LeadWebsiteGap({
           <Input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder={`site da ${companyName}`}
-            aria-label="URL do site"
+            placeholder={t('clientFile.companyWebsite', { name: companyName })}
+            aria-label={t('clientFile.websiteUrl')}
             leadingIcon={<Globe className="h-4 w-4" />}
           />
-          <Button type="submit" size="sm" loading={pending}>
-            Salvar
+          <Button type="submit" variant="outline" size="sm" loading={pending}>
+            {t('clientFile.save')}
           </Button>
         </form>
       ) : null}

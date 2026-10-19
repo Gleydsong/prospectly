@@ -186,9 +186,7 @@ describe('PipelinePage', () => {
     await user.click(whatsappBtn);
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: /mensagem whatsapp: café central/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /chamar no whatsapp/i })).toBeInTheDocument();
   });
 
   it('renders horizontal scroll navigation buttons and responds to clicks', async () => {
