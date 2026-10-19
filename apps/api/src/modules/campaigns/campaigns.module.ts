@@ -3,14 +3,15 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { LeadsModule } from '../leads/leads.module';
 import { OutboxModule } from '../outbox/outbox.module';
-import { PrivacyModule } from '../privacy/privacy.module';
+import { SuppressionModule } from '../privacy/suppression.module';
 import { CampaignsService } from './application/campaigns.service';
 import { TemplatesService } from './application/templates.service';
 import { CampaignsController } from './presentation/campaigns.controller';
 import { TemplatesController } from './presentation/templates.controller';
 
 @Module({
-  imports: [AuditModule, OutboxModule, LeadsModule, PrivacyModule],
+  imports: [AuditModule, OutboxModule, LeadsModule, SuppressionModule],
+
   controllers: [CampaignsController, TemplatesController],
   providers: [CampaignsService, TemplatesService],
   exports: [CampaignsService, TemplatesService],

@@ -3,7 +3,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { CustomFieldsModule } from '../custom-fields/custom-fields.module';
 import { BillingCoreModule } from '../billing/billing-core.module';
 import { OutboxModule } from '../outbox/outbox.module';
-import { PrivacyModule } from '../privacy/privacy.module';
+import { SuppressionModule } from '../privacy/suppression.module';
 import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.module';
 import { LeadsController } from './leads.controller';
 import { LeadIngestionService } from './lead-ingestion.service';
@@ -15,9 +15,10 @@ import { LeadsService } from './leads.service';
     forwardRef(() => WebsiteAnalysisModule),
     BillingCoreModule,
     OutboxModule,
-    PrivacyModule,
+    SuppressionModule,
     CustomFieldsModule,
   ],
+
   controllers: [LeadsController],
   providers: [LeadsService, LeadIngestionService, LeadWebsitesService],
   exports: [LeadsService, LeadIngestionService],

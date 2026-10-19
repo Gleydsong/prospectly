@@ -7,25 +7,19 @@ import { PrivacyController } from './privacy.controller';
 import { PrivacyService } from './privacy.service';
 import { PrivacyRetentionModule } from './privacy-retention.module';
 import { RetentionScheduler } from './retention.scheduler';
-import { SuppressionService } from './suppression.service';
+import { SuppressionModule } from './suppression.module';
 
 @Global()
 @Module({
-  imports: [PrivacyRetentionModule],
+  imports: [PrivacyRetentionModule, SuppressionModule],
   controllers: [PrivacyController],
   providers: [
     PrivacyService,
     ConsentService,
-    SuppressionService,
     AccountExportService,
     AccountErasureService,
     RetentionScheduler,
   ],
-  exports: [
-    ConsentService,
-    SuppressionService,
-    AccountExportService,
-    AccountErasureService,
-  ],
+  exports: [ConsentService, SuppressionModule, AccountExportService, AccountErasureService],
 })
 export class PrivacyModule {}

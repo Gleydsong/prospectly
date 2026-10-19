@@ -14,7 +14,6 @@ import { LeadsModule } from './leads/leads.module';
 import { LeadsService } from './leads/leads.service';
 import { OUTBOX_QUEUE } from './outbox/outbox.constants';
 import { OutboxService } from './outbox/outbox.service';
-import { PRIVACY_RETENTION_QUEUE } from './privacy/retention.constants';
 import { SuppressionService } from './privacy/suppression.service';
 import { SCORING_QUEUE } from './scoring/scoring.constants';
 import { TasksModule } from './tasks/tasks.module';
@@ -56,8 +55,6 @@ describe('Required Dependencies DI Proof (Issue #319)', () => {
       })
         .overrideProvider(getQueueToken(OUTBOX_QUEUE))
         .useValue(mockQueue)
-        .overrideProvider(getQueueToken(PRIVACY_RETENTION_QUEUE))
-        .useValue(mockQueue)
         .overrideProvider(getQueueToken(WEBSITE_ANALYSIS_QUEUE))
         .useValue(mockQueue)
         .overrideProvider(getQueueToken(SCORING_QUEUE))
@@ -81,8 +78,6 @@ describe('Required Dependencies DI Proof (Issue #319)', () => {
         imports: [TestGlobalPrismaModule, LeadsModule],
       })
         .overrideProvider(getQueueToken(OUTBOX_QUEUE))
-        .useValue(mockQueue)
-        .overrideProvider(getQueueToken(PRIVACY_RETENTION_QUEUE))
         .useValue(mockQueue)
         .overrideProvider(getQueueToken(WEBSITE_ANALYSIS_QUEUE))
         .useValue(mockQueue)

@@ -15,6 +15,8 @@ function providerTokens(mod: object): unknown[] {
   );
 }
 
+import { SuppressionModule } from './suppression.module';
+
 describe('PrivacyModule', () => {
   it('keeps the retention scheduler on the API and leaves the processor out', () => {
     const tokens = providerTokens(PrivacyModule);
@@ -23,13 +25,20 @@ describe('PrivacyModule', () => {
 
     const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, PrivacyModule) as unknown[];
     expect(imports).toContain(PrivacyRetentionModule);
+    expect(imports).toContain(SuppressionModule);
+
+    const exports = Reflect.getMetadata(MODULE_METADATA.EXPORTS, PrivacyModule) as unknown[];
+    expect(exports).toContain(SuppressionModule);
   });
 });
 
 describe('PrivacyRetentionModule', () => {
   it('exports RetentionService for both producer and consumer graphs', () => {
     expect(providerTokens(PrivacyRetentionModule)).toContain(RetentionService);
-    const exports = Reflect.getMetadata(MODULE_METADATA.EXPORTS, PrivacyRetentionModule) as unknown[];
+    const exports = Reflect.getMetadata(
+      MODULE_METADATA.EXPORTS,
+      PrivacyRetentionModule,
+    ) as unknown[];
     expect(exports).toContain(RetentionService);
   });
 });
