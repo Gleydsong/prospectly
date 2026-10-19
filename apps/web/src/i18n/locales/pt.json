@@ -359,8 +359,8 @@
     "mapCities": "{{count}} principais cidades",
     "moreMetrics": "Mais métricas",
     "rec": {
-      "HIGH_POTENTIAL_IDLE": "{{count}} cliente(s) potencial(is) com alto potencial ainda em estágio inicial.",
-      "STALE_LEADS": "{{count}} cliente(s) potencial(is) sem atividade há mais de sete dias.",
+      "HIGH_POTENTIAL_IDLE": "{{count}} cliente(s) com alto potencial ainda em estágio inicial.",
+      "STALE_LEADS": "{{count}} cliente(s) sem atividade há mais de sete dias.",
       "OVERDUE_FOLLOW_UPS": "{{count}} acompanhamento(s) atrasado(s).",
       "FREE_SEARCH_QUOTA": "Cota gratuita de buscas: {{count}} restante(s)."
     }
@@ -641,6 +641,7 @@
     "ARCHIVED": "Arquiv."
   },
   "leads": {
+    "createClient": "Criar cliente",
     "title": "Clientes",
     "search": "Pesquisa de empresas",
     "imports": "Importar clientes por CSV",
@@ -967,7 +968,7 @@
     "createSuccess": "Fluxo \"{{name}}\" guardado.",
     "publishSuccess": "Fluxo \"{{name}}\" publicado. A execução ainda não corre.",
     "emptyTitle": "Nenhum fluxo ainda",
-    "emptyDescription": "Crie um rascunho com o gatilho lead.created e um passo de etiqueta. Publicar congela a versão; nada executa ainda.",
+    "emptyDescription": "Crie um rascunho com o gatilho de criação de cliente e um passo de etiqueta. Publicar congela a versão; nada executa ainda.",
     "executionNotice": "Publicar deixa o fluxo ACTIVE com uma versão imutável. A execução (aplicar a etiqueta) chega no próximo recorte — nada corre hoje.",
     "tagRequiredToPublish": "Indique uma etiqueta para publicar.",
     "fields": {

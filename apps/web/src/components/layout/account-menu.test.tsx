@@ -46,6 +46,20 @@ describe('Footer account menu', () => {
     expect(onNavigate).toHaveBeenCalledOnce();
   });
 
+  it('closes with Escape and restores focus to the trigger', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AccountMenu onNavigate={vi.fn()} />, { withGoogle: false });
+    const trigger = screen.getByRole('button', { name: 'Ana Conta e ajuda' });
+    await user.click(trigger);
+    screen.getByRole('link', { name: 'Minha conta' }).focus();
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'Minha conta' })).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('link', { name: 'Minha conta' })).toBeInTheDocument();
+  });
+
   it('closes the drawer when the profile avatar navigates', async () => {
     const onNavigate = vi.fn();
     renderWithProviders(<AccountMenu onNavigate={onNavigate} />, { withGoogle: false });

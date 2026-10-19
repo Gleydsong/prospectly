@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -25,6 +26,7 @@ const leadSchema = z.object({
 type LeadForm = z.infer<typeof leadSchema>;
 
 export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const createLead = useCreateLead();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -64,7 +66,7 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   return (
-    <Modal open={open} onClose={close} title="Novo cliente potencial" className="max-w-2xl">
+    <Modal open={open} onClose={close} title={t('principal.newClient')} className="max-w-2xl">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
@@ -98,7 +100,7 @@ export function LeadFormModal({ open, onClose }: { open: boolean; onClose: () =>
             Cancelar
           </Button>
           <Button type="submit" loading={isSubmitting}>
-            Criar lead
+            {t('leads.createClient')}
           </Button>
         </div>
       </form>
