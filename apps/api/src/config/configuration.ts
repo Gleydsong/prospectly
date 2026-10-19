@@ -105,4 +105,29 @@ export const configuration = () => ({
     timeoutMs: parseInt(process.env.OPPORTUNITY_AI_TIMEOUT_MS ?? '25000', 10),
     apiKey: process.env.OPPORTUNITY_AI_API_KEY ?? process.env.WHATSAPP_AI_API_KEY ?? '',
   },
+  ai: {
+    provider: (process.env.AI_PROVIDER ?? 'disabled').toLowerCase().trim(),
+    model:
+      process.env.AI_MODEL ??
+      (process.env.AI_PROVIDER?.toLowerCase().trim() === 'groq'
+        ? 'openai/gpt-oss-120b'
+        : '@cf/openai/gpt-oss-120b'),
+    fallbackProvider: (process.env.AI_FALLBACK_PROVIDER ?? 'none').toLowerCase().trim(),
+    fallbackModel: process.env.AI_FALLBACK_MODEL ?? 'openai/gpt-oss-120b',
+    cloudflare: {
+      accountId: stripEnvString(process.env.CLOUDFLARE_ACCOUNT_ID),
+      apiToken: stripEnvString(process.env.CLOUDFLARE_AI_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN),
+      baseUrl: stripEnvString(
+        process.env.CLOUDFLARE_AI_BASE_URL,
+        `https://api.cloudflare.com/client/v4/accounts/${stripEnvString(process.env.CLOUDFLARE_ACCOUNT_ID)}/ai/v1`,
+      ),
+    },
+    groq: {
+      apiKey: stripEnvString(process.env.GROQ_API_KEY),
+      baseUrl: stripEnvString(process.env.GROQ_BASE_URL, 'https://api.groq.com/openai/v1'),
+    },
+    timeoutMs: parseInt(process.env.AI_TIMEOUT_MS ?? '30000', 10),
+    maxRetries: parseInt(process.env.AI_MAX_RETRIES ?? '2', 10),
+    dailyBudgetTokens: parseInt(process.env.AI_DAILY_BUDGET_TOKENS ?? '100000', 10),
+  },
 });
