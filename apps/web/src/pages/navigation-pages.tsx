@@ -1,7 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchDashboardCharts } from '@/features/dashboard/api';
-import { LeadsMapCard } from '@/features/dashboard/components/leads-map-card';
-import { Alert } from '@/components/ui/alert';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -17,7 +13,6 @@ const Finder = lazy(() =>
 );
 const Imports = lazy(() => import('./imports-page').then((m) => ({ default: m.ImportsPage })));
 const Clients = lazy(() => import('./leads/leads-page').then((m) => ({ default: m.LeadsPage })));
-const Pipeline = lazy(() => import('./pipeline-page').then((m) => ({ default: m.PipelinePage })));
 const Lists = lazy(() => import('./campaigns-page').then((m) => ({ default: m.CampaignsPage })));
 
 function Destination({
@@ -95,43 +90,27 @@ export function ProspectDestination() {
 
 export function ClientsDestination() {
   const [params] = useSearchParams();
-  const view = params.get('vista');
+  if (params.get('vista') === 'listas') return <ListsDestination />;
   return (
-    <Destination
-      parameter="vista"
-      options={[
-        { value: 'lista', label: 'nav.list' },
-        { value: 'quadro', label: 'nav.board' },
-        { value: 'mapa', label: 'nav.map' },
-        { value: 'listas', label: 'nav.campaigns' },
-      ]}
-    >
-      {view === 'quadro' ? (
-        <Pipeline />
-      ) : view === 'listas' ? (
-        <Lists />
-      ) : view === 'mapa' ? (
-        <ClientsMap />
-      ) : (
-        <Clients />
-      )}
-    </Destination>
+    <Suspense fallback={<RouteFallback />}>
+      <Clients />
+    </Suspense>
   );
 }
 
-/** Temporary destination using the existing portfolio map until the Clients issue. */
-function ClientsMap() {
+export function ListsDestination() {
   const { t } = useTranslation();
-  const charts = useQuery({
-    queryKey: ['dashboard', 'charts', { period: 'all' }],
-    queryFn: () => fetchDashboardCharts({ period: 'all' }),
-  });
-  if (charts.isError) return <Alert>{t('common.errorGeneric')}</Alert>;
   return (
-    <LeadsMapCard
-      loading={charts.isPending}
-      pins={charts.data?.mapPins ?? []}
-      cities={charts.data?.byCity ?? []}
-    />
+    <div className="space-y-5">
+      <Link
+        to="/clientes?vista=lista"
+        className="text-sm font-medium text-[color:var(--brand-hover)]"
+      >
+        {t('clientsViews.backToClients')}
+      </Link>
+      <Suspense fallback={<RouteFallback />}>
+        <Lists />
+      </Suspense>
+    </div>
   );
 }

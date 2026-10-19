@@ -20,6 +20,7 @@ vi.mock('@/pages/navigation-pages', () => ({
   HomeDestination: () => <Destination />,
   ProspectDestination: () => <Destination />,
   ClientsDestination: () => <Destination />,
+  ListsDestination: () => <Destination />,
 }));
 vi.mock('@/pages/leads/lead-detail-page', () => ({ LeadDetailPage: () => <Destination /> }));
 vi.mock('@/pages/campaign-detail-page', () => ({ CampaignDetailPage: () => <Destination /> }));

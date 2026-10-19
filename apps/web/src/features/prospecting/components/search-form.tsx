@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock, Search, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useBillingStatus } from '@/features/billing/hooks';
-import { planLabel, SearchQuotaBanner } from '@/features/prospecting/components/search-quota-banner';
+import {
+  planLabel,
+  SearchQuotaBanner,
+} from '@/features/prospecting/components/search-quota-banner';
 import {
   useCreateSearch,
   useGeoCities,
@@ -75,6 +78,12 @@ export function SearchForm({
   onError: (message: string) => void;
 }) {
   const { t } = useTranslation();
+  const [params] = useSearchParams();
+  const initialCountry = (PROSPECTING_COUNTRY_CODES as readonly string[]).includes(
+    params.get('country') ?? '',
+  )
+    ? (params.get('country') as SearchFormValues['country'])
+    : 'BR';
   const categoriesQuery = useProspectingCategories();
   const billingQuery = useBillingStatus();
   const createSearch = useCreateSearch();
@@ -96,10 +105,10 @@ export function SearchForm({
     resolver: zodResolver(searchSchema),
     defaultValues: {
       categories: [],
-      country: 'BR',
-      city: '',
+      country: initialCountry,
+      city: (params.get('city') ?? '').slice(0, 120),
       neighborhood: '',
-      state: '',
+      state: (params.get('state') ?? '').slice(0, 120),
       onlyWithoutWebsite: false,
     },
   });
@@ -111,13 +120,19 @@ export function SearchForm({
   const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
   const regions = regionsQuery.data ?? [];
   const cities = citiesQuery.data ?? [];
+  const previousCountry = useRef(selectedCountry);
+  const previousRegion = useRef(selectedRegion);
 
   useEffect(() => {
+    if (previousCountry.current === selectedCountry) return;
+    previousCountry.current = selectedCountry;
     setValue('state', '');
     setValue('city', '');
   }, [selectedCountry, setValue]);
 
   useEffect(() => {
+    if (previousRegion.current === selectedRegion) return;
+    previousRegion.current = selectedRegion;
     setValue('city', '');
   }, [selectedRegion, setValue]);
 

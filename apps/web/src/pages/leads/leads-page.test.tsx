@@ -1,15 +1,28 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { useAuthStore } from '@/stores/auth.store';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders as renderProviders } from '@/test/render';
+
+const renderWithProviders: typeof renderProviders = (...args) => {
+  const result = renderProviders(...args);
+  const filters = screen.queryByText('Filtros e vistas');
+  if (filters) fireEvent.click(filters);
+  return result;
+};
 import type { SavedView } from '@/features/saved-views/api';
 import { LeadStatus, Role } from '@/types';
 
 import { LeadsPage } from './leads-page';
+
+vi.mock('@/features/leads/components/clients-map', () => ({
+  default: ({ filters }: { filters: unknown }) => (
+    <div data-testid="clients-map">{JSON.stringify(filters)}</div>
+  ),
+}));
 
 const mocks = vi.hoisted(() => ({
   useLeads: vi.fn(),
@@ -63,6 +76,7 @@ vi.mock('@/features/leads/api', async () => {
     await vi.importActual<typeof import('@/features/leads/api')>('@/features/leads/api');
   return {
     ...actual,
+    fetchLeads: vi.fn().mockResolvedValue({ data: [], meta: { page: 1, total: 0, totalPages: 0 } }),
     exportLeadsCsv: (...args: unknown[]) => mocks.exportLeadsCsv(...args),
     downloadCsvFile: (...args: unknown[]) => mocks.downloadCsvFile(...args),
   };
@@ -81,6 +95,16 @@ const viewFixture: SavedView = {
   updatedAt: '2026-09-05T12:00:00.000Z',
   canEdit: true,
 };
+
+function LocationProbe() {
+  const location = useLocation();
+  return (
+    <output data-testid="location">
+      {location.pathname}
+      {location.search}
+    </output>
+  );
+}
 
 function setUser(role: Role = Role.OWNER) {
   useAuthStore.setState({
@@ -472,7 +496,7 @@ describe('LeadsPage saved views', () => {
 
     renderWithProviders(<LeadsPage />, { initialEntries: ['/leads'], withGoogle: false });
 
-    await user.click(screen.getByRole('button', { name: 'Kanban' }));
+    await user.click(screen.getByRole('button', { name: 'Quadro' }));
     await user.click(screen.getByRole('button', { name: /salvar visualização|guardar vista/i }));
     const dialog = await screen.findByRole('dialog', {
       name: /salvar visualização da lista|guardar vista da lista/i,
@@ -908,5 +932,74 @@ describe('LeadsPage saved views', () => {
     expect(open).toHaveFocus();
     await user.keyboard('{Enter}');
     expect(screen.getByText('Detalhe do cliente')).toBeInTheDocument();
+  });
+  it('persists Lista, Quadro and Mapa in the URL while sharing city, segment and search filters', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <LeadsPage />
+        <LocationProbe />
+      </>,
+      {
+        initialEntries: ['/clientes?q=Padaria'],
+        withGoogle: false,
+      },
+    );
+    fireEvent.change(screen.getByLabelText('Filtrar por cidade'), { target: { value: 'Lisboa' } });
+    fireEvent.change(screen.getByLabelText('Filtrar por segmento'), {
+      target: { value: 'Alimentação' },
+    });
+    fireEvent.change(screen.getByLabelText('Filtrar por status'), {
+      target: { value: LeadStatus.QUALIFIED },
+    });
+    await user.click(screen.getByRole('button', { name: 'Quadro' }));
+    expect(screen.getByTestId('location')).toHaveTextContent('/clientes?q=Padaria&vista=quadro');
+    expect(screen.getByRole('listitem', { name: 'Qualificado' })).toBeInTheDocument();
+    expect(screen.getByRole('listitem', { name: 'Negociação' })).toBeInTheDocument();
+    expect(mocks.useLeads).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        q: 'Padaria',
+        city: 'Lisboa',
+        segment: 'Alimentação',
+        status: LeadStatus.QUALIFIED,
+      }),
+      expect.anything(),
+    );
+    await user.click(screen.getByRole('button', { name: 'Mapa' }));
+    expect(await screen.findByTestId('clients-map')).toHaveTextContent(
+      JSON.stringify({
+        status: LeadStatus.QUALIFIED,
+        segment: 'Alimentação',
+        city: 'Lisboa',
+        q: 'Padaria',
+      }),
+    );
+    expect(screen.getByTestId('location')).toHaveTextContent('vista=mapa');
+    await user.click(screen.getByRole('button', { name: 'Lista' }));
+    expect(screen.queryByTestId('clients-map')).not.toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('vista=lista');
+    expect(screen.getByLabelText('Filtrar por cidade')).toHaveValue('Lisboa');
+    expect(screen.getByRole('link', { name: 'Listas' })).toHaveAttribute(
+      'href',
+      '/clientes/listas',
+    );
+  });
+
+  it('opens a shared map URL directly and refuses to broaden unsupported saved-view filters', async () => {
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?vista=mapa&view=view-1'],
+      withGoogle: false,
+    });
+    expect(await screen.findByText(/O mapa suporta os filtros de status/)).toBeInTheDocument();
+    expect(screen.queryByTestId('clients-map')).not.toBeInTheDocument();
+  });
+
+  it('opens the board directly from the URL', () => {
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?vista=quadro'],
+      withGoogle: false,
+    });
+    expect(screen.getByRole('button', { name: 'Quadro' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('listitem')).toHaveLength(Object.values(LeadStatus).length);
   });
 });

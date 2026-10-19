@@ -12,7 +12,12 @@ import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
 import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
 import { LegacyRedirect } from '@/components/legacy-redirect';
-import { HomeDestination, ProspectDestination, ClientsDestination } from '@/pages/navigation-pages';
+import {
+  HomeDestination,
+  ProspectDestination,
+  ClientsDestination,
+  ListsDestination,
+} from '@/pages/navigation-pages';
 import { WorkflowsPage } from '@/pages/workflows-page';
 
 const SettingsPage = lazy(() =>
@@ -129,6 +134,7 @@ export function App() {
           />
           <Route path="prospectar" element={<ProspectDestination />} />
           <Route path="clientes" element={<ClientsDestination />} />
+          <Route path="clientes/listas" element={<ListsDestination />} />
           <Route
             path="clientes/:id"
             element={

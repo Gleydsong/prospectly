@@ -1,6 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import { LeadsController } from '../../modules/leads/leads.controller';
+import { LeadsService } from '../../modules/leads/leads.service';
+import { LeadWebsitesService } from '../../modules/leads/lead-websites.service';
+import { LeadMapService } from '../../modules/leads/lead-map.service';
 import type { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 
@@ -636,6 +642,136 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     });
 
     expect(changed).toBe(0);
+  });
+
+  it('isolates HTTP map pins and server groups using the restricted RLS role', async () => {
+    const password = `rls-${randomUUID()}`;
+    await prisma!.$executeRawUnsafe(`ALTER ROLE prospectly_app LOGIN PASSWORD '${password}'`);
+    const runtimeUrl = new URL(databaseUrl!);
+    runtimeUrl.username = 'prospectly_app';
+    runtimeUrl.password = password;
+    const runtimePrisma = extendPrismaClient(
+      new PrismaClient({ datasources: { db: { url: runtimeUrl.toString() } } }),
+    );
+    const mapService = new LeadMapService(runtimePrisma as unknown as PrismaService);
+    const fixturePrefix = `map-${randomUUID()}`;
+    const moduleRef = await Test.createTestingModule({
+      controllers: [LeadsController],
+      providers: [
+        { provide: LeadsService, useValue: {} },
+        { provide: LeadWebsitesService, useValue: {} },
+        { provide: LeadMapService, useValue: mapService },
+      ],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    // Test authentication fixture. Production obtains both values from its JWT guards.
+    app.use(
+      (
+        req: { headers: Record<string, string>; user?: { organizationId: string } },
+        _res: unknown,
+        next: () => void,
+      ) => {
+        const org = req.headers['x-test-org'];
+        if (org) {
+          req.user = { organizationId: org };
+          runWithTenant(org, next);
+        } else {
+          next();
+        }
+      },
+    );
+    app.useGlobalPipes(
+      new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }),
+    );
+    await app.init();
+    try {
+      await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        await tx.$executeRaw`
+          UPDATE "Lead" SET latitude = 10, longitude = 10, segment = 'Retail', city = 'Lisboa'
+          WHERE id IN (${leadA}, ${leadB})
+        `;
+      });
+      const bbox = '-180,-90,180,90';
+      for (const [org, id, name] of [
+        [orgA, leadA, 'Lead A'],
+        [orgB, leadB, 'Lead B'],
+      ] as const) {
+        const response = await request(app.getHttpServer())
+          .get('/leads/map')
+          .set('x-test-org', org)
+          .query({ bbox, status: 'NEW', segment: 'retail', city: 'lis', q: 'Lead' })
+          .expect(200);
+        expect(response.body).toEqual({
+          pins: [{ id, name, latitude: 10, longitude: 10, status: 'NEW' }],
+          clusters: [],
+          meta: { total: 1, grouped: false, limit: 500 },
+        });
+      }
+      await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgA)
+        .query({ bbox: '0,0,Infinity,10' })
+        .expect(400);
+      await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgA)
+        .query({ bbox, organizationId: orgB })
+        .expect(400);
+      expect(await mapService.list(orgA, { bbox })).toEqual({
+        pins: [],
+        clusters: [],
+        meta: { total: 0, grouped: false, limit: 500 },
+      });
+      // Explicit organizationId alone cannot bypass a different active tenant.
+      expect((await runWithTenant(orgA, () => mapService.list(orgB, { bbox }))).meta.total).toBe(0);
+      const filtered = await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgA)
+        .query({ bbox, status: 'WON' })
+        .expect(200);
+      expect(filtered.body.meta.total).toBe(0);
+
+      await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "Lead" (id, "organizationId", "companyName", source, status, score,
+            latitude, longitude, "createdAt", "updatedAt")
+          SELECT ${fixturePrefix} || n::text, ${orgA}, 'Map client', 'MANUAL', 'NEW', 0,
+            10, 10, NOW(), NOW() FROM generate_series(1, 500) AS n
+        `;
+      });
+      const grouped = await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgA)
+        .query({ bbox })
+        .expect(200);
+      expect(grouped.body).toEqual({
+        pins: [],
+        clusters: [{ latitude: 10, longitude: 10, count: 501 }],
+        meta: { total: 501, grouped: true, limit: 500 },
+      });
+      const foreign = await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgB)
+        .query({ bbox })
+        .expect(200);
+      expect(foreign.body.meta).toEqual({ total: 1, grouped: false, limit: 500 });
+      const indexes = await prisma!.$queryRaw<Array<{ indexdef: string }>>`
+        SELECT indexdef FROM pg_indexes WHERE indexname = 'Lead_organizationId_latitude_longitude_idx'
+      `;
+      expect(indexes[0]?.indexdef).toContain('("organizationId", latitude, longitude)');
+    } finally {
+      await app.close();
+      await runtimePrisma.$disconnect();
+      await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        await tx.$executeRaw`DELETE FROM "Lead" WHERE id LIKE ${`${fixturePrefix}%`}`;
+        await tx.$executeRaw`UPDATE "Lead" SET latitude = NULL, longitude = NULL, segment = NULL, city = NULL
+          WHERE id IN (${leadA}, ${leadB})`;
+      });
+      await prisma!.$executeRawUnsafe('ALTER ROLE prospectly_app NOLOGIN PASSWORD NULL');
+    }
   });
 
   it('keeps tenant GUCs on the same connection as extended client queries', async () => {
