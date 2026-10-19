@@ -1523,6 +1523,8 @@
   },
   "clientsViews": {
     "backToClients": "Voltar aos clientes",
+    "pipelineStages": "Etapas do pipeline",
+    "foreignAreaHint": "A prospecção nesta área está disponível apenas para o Brasil.",
     "loadingMap": "A carregar o mapa…",
     "filterStatus": "Filtrar por status",
     "allStatuses": "Todos os status",

@@ -17,6 +17,7 @@ import {
   ProspectDestination,
   ClientsDestination,
   ListsDestination,
+  PipelineDestination,
 } from '@/pages/navigation-pages';
 import { WorkflowsPage } from '@/pages/workflows-page';
 
@@ -134,6 +135,7 @@ export function App() {
           />
           <Route path="prospectar" element={<ProspectDestination />} />
           <Route path="clientes" element={<ClientsDestination />} />
+          <Route path="clientes/etapas" element={<PipelineDestination />} />
           <Route path="clientes/listas" element={<ListsDestination />} />
           <Route
             path="clientes/:id"
@@ -169,7 +171,7 @@ export function App() {
           <Route path="imports" element={<LegacyRedirect to="/prospectar?aba=importar" />} />
           <Route path="leads" element={<LegacyRedirect to="/clientes" />} />
           <Route path="leads/:id" element={<LegacyRedirect to="/clientes/:id" />} />
-          <Route path="pipeline" element={<LegacyRedirect to="/clientes?vista=quadro" />} />
+          <Route path="pipeline" element={<LegacyRedirect to="/clientes/etapas" />} />
           <Route
             path="agents"
             element={

@@ -757,6 +757,32 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         .query({ bbox })
         .expect(200);
       expect(foreign.body.meta).toEqual({ total: 1, grouped: false, limit: 500 });
+      // A crossing viewport includes both sides of the date line, excludes its middle,
+      // and still cannot include a matching pin belonging to another organization.
+      await prisma!.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
+        await tx.$executeRaw`
+          INSERT INTO "Lead" (id, "organizationId", "companyName", source, status, score,
+            latitude, longitude, "createdAt", "updatedAt")
+          VALUES (${`${fixturePrefix}-east`}, ${orgA}, 'Date line east', 'MANUAL', 'NEW', 0,
+                    0, 179, NOW(), NOW()),
+                 (${`${fixturePrefix}-west`}, ${orgA}, 'Date line west', 'MANUAL', 'NEW', 0,
+                    0, -179, NOW(), NOW()),
+                 (${`${fixturePrefix}-middle`}, ${orgA}, 'Date line middle', 'MANUAL', 'NEW', 0,
+                    0, 0, NOW(), NOW()),
+                 (${`${fixturePrefix}-foreign`}, ${orgB}, 'Date line foreign', 'MANUAL', 'NEW', 0,
+                    0, 179, NOW(), NOW())
+        `;
+      });
+      const crossing = await request(app.getHttpServer())
+        .get('/leads/map')
+        .set('x-test-org', orgA)
+        .query({ bbox: '170,-5,-170,5' })
+        .expect(200);
+      expect(crossing.body.pins.map((pin: { id: string }) => pin.id).sort()).toEqual(
+        [`${fixturePrefix}-east`, `${fixturePrefix}-west`].sort(),
+      );
+      expect(crossing.body.meta).toEqual({ total: 2, grouped: false, limit: 500 });
       const indexes = await prisma!.$queryRaw<Array<{ indexdef: string }>>`
         SELECT indexdef FROM pg_indexes WHERE indexname = 'Lead_organizationId_latitude_longitude_idx'
       `;

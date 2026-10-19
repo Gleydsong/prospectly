@@ -106,6 +106,30 @@ describe('Clients map portfolio', () => {
     expect(url.searchParams.has('area')).toBe(false);
   });
 
+  it('disables regional prospecting for a foreign city unsupported by the search form', async () => {
+    vi.mocked(api.get).mockImplementation(async (url) => ({
+      data:
+        url === '/leads/map'
+          ? { pins, clusters: [], meta: { total: 1, grouped: false, limit: 500 } }
+          : { ...details, city: 'Lisboa', state: 'Lisboa', country: 'PT' },
+    }));
+    renderWithProviders(<ClientsMap filters={{ city: 'Lisboa' }} />);
+    fireEvent.change(await screen.findByRole('combobox'), { target: { value: 'saved-a' } });
+    await screen.findByRole('heading', { name: 'Clínica Horizonte' });
+    expect(screen.getByRole('button', { name: 'Prospectar nesta área' })).toBeDisabled();
+    expect(
+      screen.getByTitle('A prospecção nesta área está disponível apenas para o Brasil.'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an error state in the map header instead of remaining on loading', async () => {
+    vi.mocked(api.get).mockRejectedValue(new Error('network'));
+    renderWithProviders(<ClientsMap filters={{}} />);
+    await screen.findByRole('button', { name: 'Tentar novamente' });
+    expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
+
   it('does not offer outreach when selected client is do-not-contact', async () => {
     vi.mocked(api.get).mockImplementation(async (url) => ({
       data:

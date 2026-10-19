@@ -33,6 +33,7 @@ export default function ClientsMap({ filters }: { filters: ClientMapFilters }) {
     setSelectedId('');
   }, [filterKey]);
   const client = detail.data;
+  const canProspectArea = !selectedId || client?.country === 'BR';
   const website = client?.website ? sanitizeExternalUrl(client.website) : null;
   const whatsapp =
     client && !client.doNotContact ? toWhatsAppDigits(client.whatsapp || client.phone || '') : null;
@@ -46,11 +47,13 @@ export default function ClientsMap({ filters }: { filters: ClientMapFilters }) {
     <section className="space-y-4" aria-label={t('clientsMap.title')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[color:var(--ink-secondary)]" aria-live="polite">
-          {query.data
-            ? t('clientsMap.count', { count: query.data.meta.total })
-            : t('common.loading')}
+          {query.isError
+            ? '—'
+            : query.data
+              ? t('clientsMap.count', { count: query.data.meta.total })
+              : t('common.loading')}
         </p>
-        {areaCity ? (
+        {areaCity && canProspectArea ? (
           <Link
             to={`/prospectar?${area}`}
             className="rounded-control border border-[color:var(--border)] px-4 py-2 text-sm text-[color:var(--ink)]"
@@ -58,13 +61,15 @@ export default function ClientsMap({ filters }: { filters: ClientMapFilters }) {
             {t('clientsMap.prospectArea')}
           </Link>
         ) : (
-          <span title={t('clientsMap.selectAreaHint')}>
+          <span title={t(areaCity ? 'clientsViews.foreignAreaHint' : 'clientsMap.selectAreaHint')}>
             <Button variant="secondary" disabled>
               {t('clientsMap.prospectArea')}
             </Button>
-            <span className="ml-2 text-sm text-[color:var(--ink-secondary)]">
-              {t('clientsMap.selectAreaHint')}
-            </span>
+            {!areaCity ? (
+              <span className="ml-2 text-sm text-[color:var(--ink-secondary)]">
+                {t('clientsMap.selectAreaHint')}
+              </span>
+            ) : null}
           </span>
         )}
       </div>

@@ -84,6 +84,12 @@ export function SearchForm({
   )
     ? (params.get('country') as SearchFormValues['country'])
     : 'BR';
+  const initialCountryParam = params.get('country');
+  const hasSupportedInitialCountry =
+    initialCountryParam === null ||
+    (PROSPECTING_COUNTRY_CODES as readonly string[]).includes(initialCountryParam);
+  const initialCity = hasSupportedInitialCountry ? (params.get('city') ?? '').slice(0, 120) : '';
+  const initialRegion = hasSupportedInitialCountry ? (params.get('state') ?? '').slice(0, 120) : '';
   const categoriesQuery = useProspectingCategories();
   const billingQuery = useBillingStatus();
   const createSearch = useCreateSearch();
@@ -106,9 +112,9 @@ export function SearchForm({
     defaultValues: {
       categories: [],
       country: initialCountry,
-      city: (params.get('city') ?? '').slice(0, 120),
+      city: initialCity,
       neighborhood: '',
-      state: (params.get('state') ?? '').slice(0, 120),
+      state: initialRegion,
       onlyWithoutWebsite: false,
     },
   });
@@ -123,6 +129,7 @@ export function SearchForm({
   const cities = citiesQuery.data ?? [];
   const previousCountry = useRef(selectedCountry);
   const previousRegion = useRef(selectedRegion);
+  const preserveInitialCity = useRef(Boolean(initialCity && !initialRegion));
 
   useEffect(() => {
     if (previousCountry.current === selectedCountry) return;
@@ -134,8 +141,12 @@ export function SearchForm({
   useEffect(() => {
     if (previousRegion.current === selectedRegion) return;
     previousRegion.current = selectedRegion;
+    if (initialCity && selectedCity === initialCity && preserveInitialCity.current) {
+      preserveInitialCity.current = false;
+      return;
+    }
     setValue('city', '');
-  }, [selectedRegion, setValue]);
+  }, [selectedRegion, selectedCity, initialCity, setValue]);
 
   const addCategory = (value: string) => {
     if (!value) return;

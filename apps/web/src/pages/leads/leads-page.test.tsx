@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -956,23 +956,27 @@ describe('LeadsPage saved views', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/clientes?q=Padaria&vista=quadro');
     expect(screen.getByRole('listitem', { name: 'Qualificado' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { name: 'Negociação' })).toBeInTheDocument();
-    expect(mocks.useLeads).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        q: 'Padaria',
-        city: 'Lisboa',
-        segment: 'Alimentação',
-        status: LeadStatus.QUALIFIED,
-      }),
-      expect.anything(),
-    );
+    await waitFor(() => {
+      expect(mocks.useLeads).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          q: 'Padaria',
+          city: 'Lisboa',
+          segment: 'Alimentação',
+          status: LeadStatus.QUALIFIED,
+        }),
+        expect.anything(),
+      );
+    });
     await user.click(screen.getByRole('button', { name: 'Mapa' }));
-    expect(await screen.findByTestId('clients-map')).toHaveTextContent(
-      JSON.stringify({
-        status: LeadStatus.QUALIFIED,
-        segment: 'Alimentação',
-        city: 'Lisboa',
-        q: 'Padaria',
-      }),
+    await waitFor(() =>
+      expect(screen.getByTestId('clients-map')).toHaveTextContent(
+        JSON.stringify({
+          status: LeadStatus.QUALIFIED,
+          segment: 'Alimentação',
+          city: 'Lisboa',
+          q: 'Padaria',
+        }),
+      ),
     );
     expect(screen.getByTestId('location')).toHaveTextContent('vista=mapa');
     await user.click(screen.getByRole('button', { name: 'Lista' }));
@@ -994,6 +998,49 @@ describe('LeadsPage saved views', () => {
     expect(screen.queryByTestId('clients-map')).not.toBeInTheDocument();
   });
 
+  it('gives an explicit URL layout precedence over a saved layout', async () => {
+    const view: SavedView = { ...viewFixture, definition: { layout: 'table' } };
+    mocks.useSavedViews.mockReturnValue({ data: [view], isLoading: false, isError: false });
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?vista=quadro&view=view-1'],
+      withGoogle: false,
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Quadro' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
+  });
+
+  it('uses the saved layout when the URL has no vista parameter', async () => {
+    const view: SavedView = { ...viewFixture, definition: { layout: 'kanban' } };
+    mocks.useSavedViews.mockReturnValue({ data: [view], isLoading: false, isError: false });
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?view=view-1'],
+      withGoogle: false,
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Quadro' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    );
+  });
+
+  it('allows a map for a saved view whose only extra is sorting', async () => {
+    const view: SavedView = {
+      ...viewFixture,
+      definition: { sortBy: 'companyName', sortOrder: 'asc' } as never,
+    };
+    mocks.useSavedViews.mockReturnValue({ data: [view], isLoading: false, isError: false });
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?vista=mapa&view=view-1'],
+      withGoogle: false,
+    });
+    expect(await screen.findByTestId('clients-map')).toBeInTheDocument();
+  });
+
   it('opens the board directly from the URL', () => {
     renderWithProviders(<LeadsPage />, {
       initialEntries: ['/clientes?vista=quadro'],
@@ -1001,5 +1048,43 @@ describe('LeadsPage saved views', () => {
     });
     expect(screen.getByRole('button', { name: 'Quadro' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getAllByRole('listitem')).toHaveLength(Object.values(LeadStatus).length);
+  });
+
+  it('offers a direct link to the existing stage pipeline from clients', () => {
+    renderWithProviders(<LeadsPage />, {
+      initialEntries: ['/clientes?vista=lista'],
+      withGoogle: false,
+    });
+    expect(screen.getByRole('link', { name: 'Etapas do pipeline' })).toHaveAttribute(
+      'href',
+      '/clientes/etapas',
+    );
+  });
+
+  it('debounces city and segment filters before querying clients', () => {
+    vi.useFakeTimers();
+    try {
+      renderWithProviders(<LeadsPage />, {
+        initialEntries: ['/clientes?vista=lista'],
+        withGoogle: false,
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por cidade'), {
+        target: { value: 'Lisboa' },
+      });
+      fireEvent.change(screen.getByLabelText('Filtrar por segmento'), {
+        target: { value: 'Saúde' },
+      });
+      expect(mocks.useLeads).toHaveBeenLastCalledWith(
+        expect.not.objectContaining({ city: 'Lisboa', segment: 'Saúde' }),
+        expect.anything(),
+      );
+      act(() => vi.advanceTimersByTime(300));
+      expect(mocks.useLeads).toHaveBeenLastCalledWith(
+        expect.objectContaining({ city: 'Lisboa', segment: 'Saúde' }),
+        expect.anything(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

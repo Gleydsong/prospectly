@@ -66,5 +66,8 @@ describe('Clients board', () => {
       page: 1,
       pageSize: 20,
     });
+    expect(
+      within(screen.getByRole('listitem', { name: 'Novo' })).getByText('—'),
+    ).toBeInTheDocument();
   });
 });

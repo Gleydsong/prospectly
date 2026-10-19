@@ -14,6 +14,7 @@ const Finder = lazy(() =>
 const Imports = lazy(() => import('./imports-page').then((m) => ({ default: m.ImportsPage })));
 const Clients = lazy(() => import('./leads/leads-page').then((m) => ({ default: m.LeadsPage })));
 const Lists = lazy(() => import('./campaigns-page').then((m) => ({ default: m.CampaignsPage })));
+const Pipeline = lazy(() => import('./pipeline-page').then((m) => ({ default: m.PipelinePage })));
 
 function Destination({
   parameter,
@@ -91,10 +92,28 @@ export function ProspectDestination() {
 export function ClientsDestination() {
   const [params] = useSearchParams();
   if (params.get('vista') === 'listas') return <ListsDestination />;
+  if (params.get('vista') === 'etapas') return <PipelineDestination />;
   return (
     <Suspense fallback={<RouteFallback />}>
       <Clients />
     </Suspense>
+  );
+}
+
+export function PipelineDestination() {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-5">
+      <Link
+        to="/clientes?vista=lista"
+        className="text-sm font-medium text-[color:var(--brand-hover)]"
+      >
+        {t('clientsViews.backToClients')}
+      </Link>
+      <Suspense fallback={<RouteFallback />}>
+        <Pipeline />
+      </Suspense>
+    </div>
   );
 }
 

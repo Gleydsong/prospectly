@@ -20,7 +20,7 @@ function ClientStatusColumn({ status, filters }: { status: LeadStatus; filters: 
     enabled: matchesStatus,
   });
   const clients = query.data?.pages.flatMap((page) => page.data) ?? [];
-  const total = matchesStatus ? query.data?.pages[0]?.meta.total : 0;
+  const total = matchesStatus ? query.data?.pages[0]?.meta.total : undefined;
   return (
     <section
       role="listitem"

@@ -1523,6 +1523,8 @@
   },
   "clientsViews": {
     "backToClients": "Back to clients",
+    "pipelineStages": "Pipeline stages",
+    "foreignAreaHint": "Prospecting in this area is available only for Brazil.",
     "loadingMap": "Loading map…",
     "filterStatus": "Filter by status",
     "allStatuses": "All statuses",

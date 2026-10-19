@@ -107,6 +107,31 @@ describe('MapLibre source lifecycle', () => {
     act(() => map.handlers.moveend?.());
     expect(props.onViewport).toHaveBeenCalledWith('-10,30,0,45');
   });
+  it('fits the camera when the first nonempty response follows an empty response', () => {
+    const props = {
+      dark: false,
+      label: 'Clients',
+      onViewport: vi.fn(),
+      onSelect: vi.fn(),
+      onError: vi.fn(),
+      onReady: vi.fn(),
+    };
+    const view = renderWithProviders(
+      <ClientMapCanvas
+        {...props}
+        data={{ pins: [], clusters: [], meta: { total: 0, grouped: false, limit: 500 } }}
+      />,
+    );
+    view.rerender(<ClientMapCanvas {...props} data={data} />);
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
+    expect(map.fitBounds).toHaveBeenCalledWith(
+      [
+        [0, 0],
+        [0, 0],
+      ],
+      expect.any(Object),
+    );
+  });
   it('normalizes wrapped viewports and preserves crossing antimeridian boxes', () => {
     expect(viewportBbox(-200, -100, 200, 100)).toBe('-180,-90,180,90');
     expect(viewportBbox(170, -20, 190, 20)).toBe('170,-20,-170,20');

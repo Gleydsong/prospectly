@@ -94,6 +94,7 @@ export default function ClientMapCanvas({
   const latest = useRef({ data, dark, onViewport, onSelect, onError, onReady });
   latest.current = { data, dark, onViewport, onSelect, onError, onReady };
   const fitted = useRef(false);
+  const receivedPortfolio = useRef(false);
   const previousDark = useRef(dark);
 
   useEffect(() => {
@@ -116,6 +117,7 @@ export default function ClientMapCanvas({
     }
     mapRef.current = map;
     fitted.current = false;
+    receivedPortfolio.current = false;
     map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
     map.addControl(
       new AttributionControl({ compact: false, customAttribution: '© OpenStreetMap' }),
@@ -125,7 +127,7 @@ export default function ClientMapCanvas({
     map.on('moveend', () => {
       // Initial MapLibre layout can move the camera before the portfolio response.
       // Keep that world query alive until its clients determine the initial bounds.
-      if (!fitted.current) return;
+      if (!receivedPortfolio.current) return;
       const bounds = map.getBounds();
       latest.current.onViewport(
         viewportBbox(bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()),
@@ -253,10 +255,11 @@ export default function ClientMapCanvas({
       data ? clientMapGeoJson(data) : EMPTY,
     );
     if (!data) return;
+    receivedPortfolio.current = true;
     // First response covers the organization worldwide, so the initial camera never hides its clients.
     if (!fitted.current) {
-      fitted.current = true;
       if (data.meta.total === 0) return;
+      fitted.current = true;
       const points = [...data.pins, ...data.clusters];
       const lngs = points.map((p) => p.longitude);
       const lats = points.map((p) => p.latitude);

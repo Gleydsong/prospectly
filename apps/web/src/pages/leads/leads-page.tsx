@@ -98,6 +98,8 @@ export function LeadsPage() {
   const [columns, setColumns] = useState<LeadViewColumnKey[]>([...DEFAULT_LEAD_VIEW_COLUMNS]);
   const [customFilters, setCustomFilters] = useState<CustomFieldListFilter[]>([]);
   const [extras, setExtras] = useState<LeadViewDefinition>({});
+  const [debouncedCity, setDebouncedCity] = useState('');
+  const [debouncedSegment, setDebouncedSegment] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [saveMode, setSaveMode] = useState<'create' | 'update'>('create');
@@ -125,6 +127,14 @@ export function LeadsPage() {
   const duplicateView = useDuplicateSavedView();
   const archiveView = useArchiveSavedView();
   const previewQuery = usePreviewSavedView(selectedView?.id);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedCity(extras.city ?? '');
+      setDebouncedSegment(extras.segment ?? '');
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [extras.city, extras.segment]);
 
   useEffect(() => {
     if (viewId) return;
@@ -189,7 +199,7 @@ export function LeadsPage() {
         layout,
         columns,
         customFilters,
-        extras,
+        extras: { ...extras, city: debouncedCity, segment: debouncedSegment },
       },
       page,
     ),
@@ -208,7 +218,8 @@ export function LeadsPage() {
     customFilters.length ||
     reportBucket ||
     Object.entries(extras).some(
-      ([key, value]) => !['city', 'segment'].includes(key) && value !== undefined,
+      ([key, value]) =>
+        !['city', 'segment', 'sortBy', 'sortOrder'].includes(key) && value !== undefined,
     ),
   );
   const leads = query.data?.data ?? [];
@@ -402,6 +413,10 @@ export function LeadsPage() {
         }
       />
 
+      <Link to="/clientes/etapas" className="text-sm font-medium text-[color:var(--brand-hover)]">
+        {t('clientsViews.pipelineStages')}
+      </Link>
+
       {reportBucket ? (
         <Card
           className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
@@ -518,8 +533,8 @@ export function LeadsPage() {
             <ClientsMap
               filters={{
                 status: status || undefined,
-                segment: extras.segment || undefined,
-                city: extras.city || undefined,
+                segment: debouncedSegment || undefined,
+                city: debouncedCity || undefined,
                 q: search || undefined,
               }}
             />
