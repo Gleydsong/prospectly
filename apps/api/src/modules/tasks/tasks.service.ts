@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 import { paginate } from '../../common/dto/pagination.dto';
@@ -12,7 +12,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    @Optional() private readonly outbox?: OutboxService,
+    private readonly outbox: OutboxService,
   ) {}
 
   async list(organizationId: string, query: QueryTasksDto) {
@@ -107,23 +107,21 @@ export class TasksService {
         data,
         include: this.taskInclude,
       });
-      const outboxEvent = this.outbox
-        ? await this.outbox.appendTaskCompleted(tx, {
-            organizationId,
-            taskId: task.id,
-            actorId: userId,
-            payload: {
-              taskId: task.id,
-              leadId: task.leadId,
-              campaignId: task.campaignId,
-              campaignStageId: task.campaignStageId,
-            },
-          })
-        : null;
+      const outboxEvent = await this.outbox.appendTaskCompleted(tx, {
+        organizationId,
+        taskId: task.id,
+        actorId: userId,
+        payload: {
+          taskId: task.id,
+          leadId: task.leadId,
+          campaignId: task.campaignId,
+          campaignStageId: task.campaignStageId,
+        },
+      });
       return [saved, outboxEvent] as const;
     });
 
-    if (event && this.outbox) {
+    if (event) {
       try {
         await this.outbox.dispatch(event);
       } catch {

@@ -3,6 +3,8 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { PrismaService } from '../../../common/prisma/prisma.service';
 import type { AuditService } from '../../audit/audit.service';
 import type { LeadsService } from '../../leads/leads.service';
+import type { OutboxService } from '../../outbox/outbox.service';
+import type { SuppressionService } from '../../privacy/suppression.service';
 import { CampaignsService } from './campaigns.service';
 import type { TemplatesService } from './templates.service';
 
@@ -97,6 +99,47 @@ const makeLeads = () =>
     listIds: jest.fn(),
   }) as unknown as LeadsService & { listIds: MockFn };
 
+const makeSuppression = () =>
+  ({
+    isSuppressed: jest.fn().mockResolvedValue(false),
+    suppressIdentifiers: jest.fn().mockResolvedValue(undefined),
+    suppressFromLead: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as SuppressionService & {
+    isSuppressed: MockFn;
+    suppressIdentifiers: MockFn;
+    suppressFromLead: MockFn;
+  };
+
+const makeOutbox = () =>
+  ({
+    appendLeadDoNotContactSet: jest.fn().mockResolvedValue({ id: 'evt-dnc' }),
+    appendLeadCreated: jest.fn().mockResolvedValue({ id: 'evt-lead' }),
+    appendTaskCompleted: jest.fn().mockResolvedValue({ id: 'evt-task' }),
+    dispatch: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as OutboxService & {
+    appendLeadDoNotContactSet: MockFn;
+    appendLeadCreated: MockFn;
+    appendTaskCompleted: MockFn;
+    dispatch: MockFn;
+  };
+
+const makeService = (
+  prisma: PrismaService,
+  templates = makeTemplates(),
+  audit = makeAudit(),
+  suppression = makeSuppression(),
+  outbox = makeOutbox(),
+  leads = makeLeads(),
+) =>
+  new CampaignsService(
+    prisma,
+    templates,
+    audit,
+    suppression,
+    outbox,
+    leads,
+  );
+
 function stubCampaignGet(prisma: ReturnType<typeof makePrisma>) {
   prisma.campaign.findFirst.mockResolvedValue({
     id: 'c1',
@@ -153,7 +196,7 @@ describe('CampaignsService', () => {
     const prisma = makePrisma();
     prisma.campaign.count.mockResolvedValue(0);
     prisma.campaign.findMany.mockResolvedValue([]);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await service.list('org-a', { page: 1, pageSize: 20 });
 
@@ -165,7 +208,7 @@ describe('CampaignsService', () => {
   it('get throws NotFound when campaign belongs to another org', async () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue(null);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(service.get('org-a', 'campaign-1')).rejects.toBeInstanceOf(NotFoundException);
   });
@@ -179,7 +222,7 @@ describe('CampaignsService', () => {
       status: 'DRAFT',
       _count: { leads: 0 },
     });
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     const result = await service.create('org-a', 'user-1', {
       name: 'Outbound SP',
@@ -204,7 +247,7 @@ describe('CampaignsService', () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1', doNotContact: false }]);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(
       service.addLeads('org-a', 'user-1', 'c1', { leadIds: ['lead-1', 'lead-2'] }),
@@ -216,7 +259,7 @@ describe('CampaignsService', () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1', doNotContact: true }]);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(
       service.addLeads('org-a', 'user-1', 'c1', { leadIds: ['lead-1'] }),
@@ -226,7 +269,7 @@ describe('CampaignsService', () => {
   it('addLeads rejects when both leadIds and viewId are sent', async () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(
       service.addLeads('org-a', 'user-1', 'c1', {
@@ -241,7 +284,7 @@ describe('CampaignsService', () => {
   it('addLeads rejects when neither leadIds nor viewId are sent', async () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(service.addLeads('org-a', 'user-1', 'c1', {})).rejects.toBeInstanceOf(
       BadRequestException,
@@ -268,7 +311,7 @@ describe('CampaignsService', () => {
       { id: 'lead-2', doNotContact: false },
     ]);
     prisma.campaignLead.createMany.mockResolvedValue({ count: 2 });
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       audit,
@@ -307,7 +350,7 @@ describe('CampaignsService', () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.savedView.findFirst.mockResolvedValue(null);
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
@@ -337,7 +380,7 @@ describe('CampaignsService', () => {
       ids: Array.from({ length: 201 }, (_, i) => `lead-${i}`),
       total: 201,
     });
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
@@ -364,7 +407,7 @@ describe('CampaignsService', () => {
     });
     const leads = makeLeads();
     leads.listIds.mockResolvedValue({ ids: [], total: 0 });
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
@@ -392,7 +435,7 @@ describe('CampaignsService', () => {
     const leads = makeLeads();
     leads.listIds.mockResolvedValue({ ids: ['lead-1'], total: 1 });
     prisma.lead.findMany.mockResolvedValue([{ id: 'lead-1', doNotContact: true }]);
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
@@ -411,7 +454,7 @@ describe('CampaignsService', () => {
     const prisma = makePrisma();
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.campaignLead.findFirst.mockResolvedValue(null);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(service.removeLead('org-a', 'user-1', 'c1', 'lead-1')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -424,7 +467,7 @@ describe('CampaignsService', () => {
     prisma.campaign.findFirst.mockResolvedValue({ id: 'c1', organizationId: 'org-a' });
     prisma.campaignLead.findFirst.mockResolvedValue({ campaignId: 'c1', leadId: 'lead-1' });
     prisma.campaignLead.delete.mockResolvedValue({});
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     await expect(service.removeLead('org-a', 'user-1', 'c1', 'lead-1')).resolves.toEqual({
       campaignId: 'c1',
@@ -444,7 +487,7 @@ describe('CampaignsService', () => {
       status: 'CANCELLED',
       startsAt: null,
     });
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(
       service.updateStatus('org-a', 'user-1', 'c1', { status: 'RUNNING' }),
@@ -465,7 +508,7 @@ describe('CampaignsService', () => {
       status: 'RUNNING',
       _count: { leads: 0 },
     });
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     const result = await service.updateStatus('org-a', 'user-1', 'c1', { status: 'RUNNING' });
     expect(result.autoSendEnabled).toBe(false);
@@ -506,7 +549,7 @@ describe('CampaignsService', () => {
     prisma.task.findMany.mockResolvedValue([{ id: 'task-existing', leadId: 'lead-1' }]);
     prisma.task.create.mockResolvedValue({ id: 'task-new', leadId: 'lead-2' });
     prisma.campaignLead.updateMany.mockResolvedValue({ count: 2 });
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     const result = await service.createStageTasks('org-a', 'user-1', 'c1', stageId, {});
 
@@ -534,7 +577,7 @@ describe('CampaignsService', () => {
         },
       },
     ]);
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
 
     await expect(
       service.createStageTasks('org-a', 'user-1', 'c1', stageId, {}),
@@ -563,7 +606,7 @@ describe('CampaignsService', () => {
     prisma.task.findMany.mockResolvedValue([]);
     prisma.task.create.mockResolvedValue({ id: 'task-call', leadId: 'lead-1' });
     prisma.campaignLead.updateMany.mockResolvedValue({ count: 1 });
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     const result = await service.createStageTasks('org-a', 'user-1', 'c1', stageIdCall, {});
 
@@ -607,7 +650,7 @@ describe('CampaignsService', () => {
     });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const service = new CampaignsService(prisma, makeTemplates(), audit);
+    const service = makeService(prisma, makeTemplates(), audit);
 
     const result = await service.recordResult('org-a', 'user-1', 'c1', 'lead-1', {
       result: 'OPT_OUT',
@@ -627,15 +670,11 @@ describe('CampaignsService', () => {
     );
   });
 
-  const makeOutbox = () => ({
-    appendLeadDoNotContactSet: jest.fn().mockResolvedValue({ id: 'evt-dnc' }),
-    dispatch: jest.fn().mockResolvedValue(undefined),
-  });
-
   it('persists lead.do_not_contact_set in the OPT_OUT transaction and dispatches after commit', async () => {
     const prisma = makePrisma();
     const audit = makeAudit();
     const outbox = makeOutbox();
+    const suppression = makeSuppression();
     prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
     prisma.campaignLead.findFirst.mockResolvedValue({
       campaignId: 'c1',
@@ -646,11 +685,11 @@ describe('CampaignsService', () => {
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       audit,
-      undefined,
+      suppression,
       outbox as never,
     );
 
@@ -659,6 +698,11 @@ describe('CampaignsService', () => {
       note: 'Pediu remoção',
     });
 
+    expect(suppression.suppressFromLead).toHaveBeenCalledWith(
+      'org-a',
+      'lead-1',
+      'campaign_opt_out',
+    );
     expect(outbox.appendLeadDoNotContactSet).toHaveBeenCalledTimes(1);
     const [tx, input] = outbox.appendLeadDoNotContactSet.mock.calls[0];
     expect(tx).toBe(prisma);
@@ -679,6 +723,7 @@ describe('CampaignsService', () => {
   it('does not emit lead.do_not_contact_set when the lead is already blocked or result is not OPT_OUT', async () => {
     const prisma = makePrisma();
     const alreadyBlocked = makeOutbox();
+    const blockedSuppression = makeSuppression();
     prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
     prisma.campaignLead.findFirst.mockResolvedValue({
       campaignId: 'c1',
@@ -689,18 +734,24 @@ describe('CampaignsService', () => {
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const blockedService = new CampaignsService(
+    const blockedService = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
-      undefined,
+      blockedSuppression,
       alreadyBlocked as never,
     );
     await blockedService.recordResult('org-a', 'user-1', 'c1', 'lead-1', { result: 'OPT_OUT' });
     expect(alreadyBlocked.appendLeadDoNotContactSet).not.toHaveBeenCalled();
     expect(alreadyBlocked.dispatch).not.toHaveBeenCalled();
+    expect(blockedSuppression.suppressFromLead).toHaveBeenCalledWith(
+      'org-a',
+      'lead-1',
+      'campaign_opt_out',
+    );
 
     const contactedOutbox = makeOutbox();
+    const contactedSuppression = makeSuppression();
     prisma.campaignLead.findFirst.mockResolvedValue({
       campaignId: 'c1',
       leadId: 'lead-2',
@@ -708,21 +759,23 @@ describe('CampaignsService', () => {
       lead: { id: 'lead-2', doNotContact: false },
     });
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-2', result: 'CONTACTED' });
-    const contactedService = new CampaignsService(
+    const contactedService = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
-      undefined,
+      contactedSuppression,
       contactedOutbox as never,
     );
     await contactedService.recordResult('org-a', 'user-1', 'c1', 'lead-2', { result: 'CONTACTED' });
     expect(contactedOutbox.appendLeadDoNotContactSet).not.toHaveBeenCalled();
     expect(contactedOutbox.dispatch).not.toHaveBeenCalled();
+    expect(contactedSuppression.suppressFromLead).not.toHaveBeenCalled();
   });
 
   it('does not dispatch lead.do_not_contact_set when the OPT_OUT transaction fails', async () => {
     const prisma = makePrisma();
     const outbox = makeOutbox();
+    const suppression = makeSuppression();
     outbox.appendLeadDoNotContactSet.mockRejectedValue(new Error('outbox fail'));
     prisma.campaign.findFirst.mockResolvedValue(campaignWithStage);
     prisma.campaignLead.findFirst.mockResolvedValue({
@@ -734,11 +787,11 @@ describe('CampaignsService', () => {
     prisma.campaignActivity.create.mockResolvedValue({ id: 'act-1', result: 'OPT_OUT' });
     prisma.campaignLead.update.mockResolvedValue({});
     prisma.lead.update.mockResolvedValue({});
-    const service = new CampaignsService(
+    const service = makeService(
       prisma,
       makeTemplates(),
       makeAudit(),
-      undefined,
+      suppression,
       outbox as never,
     );
 
@@ -746,6 +799,7 @@ describe('CampaignsService', () => {
       service.recordResult('org-a', 'user-1', 'c1', 'lead-1', { result: 'OPT_OUT' }),
     ).rejects.toThrow('outbox fail');
     expect(outbox.dispatch).not.toHaveBeenCalled();
+    expect(suppression.suppressFromLead).not.toHaveBeenCalled();
   });
 
   it('getMetrics aggregates persisted events instead of placeholders', async () => {
@@ -768,7 +822,7 @@ describe('CampaignsService', () => {
     });
     prisma.task.groupBy.mockResolvedValue([{ campaignStageId: stageId, _count: { _all: 3 } }]);
 
-    const service = new CampaignsService(prisma, makeTemplates(), makeAudit());
+    const service = makeService(prisma, makeTemplates(), makeAudit());
     const metrics = await service.getMetrics('org-a', 'c1');
 
     expect(metrics.instrumented).toBe(true);

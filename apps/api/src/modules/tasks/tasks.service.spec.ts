@@ -53,7 +53,7 @@ describe('TasksService.list', () => {
         findMany: jest.fn().mockResolvedValue([]),
       },
     };
-    const service = new TasksService(prisma as unknown as PrismaService);
+    const service = new TasksService(prisma as unknown as PrismaService, makeOutbox());
 
     await service.list('org-1', { page: 1, pageSize: 15 });
 
@@ -88,7 +88,7 @@ describe('TasksService.list', () => {
         ]),
       },
     };
-    const service = new TasksService(prisma as unknown as PrismaService);
+    const service = new TasksService(prisma as unknown as PrismaService, makeOutbox());
 
     const result = await service.list('org-1', { page: 1, pageSize: 15 });
 
