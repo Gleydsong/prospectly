@@ -195,7 +195,7 @@ describe('LeadDetailPage', () => {
       expect(mocks.moveLeadToStage).toHaveBeenCalledWith('lead-1', 'stage-new');
     });
     expect(
-      await screen.findByText('Cliente potencial movido para a etapa “Novos” do funil.'),
+      await screen.findByText('Cliente movido para a etapa “Novos” do funil.'),
     ).toBeVisible();
   });
 

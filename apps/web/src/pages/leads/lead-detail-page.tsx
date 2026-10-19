@@ -128,7 +128,7 @@ export function LeadDetailPage() {
     onSuccess: async (stage) => {
       setPipelineFeedback({
         tone: 'success',
-        message: `Cliente potencial movido para a etapa “${stage.name}” do funil.`,
+        message: `Cliente movido para a etapa “${stage.name}” do funil.`,
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['leads', id] }),
@@ -188,7 +188,7 @@ export function LeadDetailPage() {
           <ArrowLeft className="h-4 w-4" /> Voltar para clientes
         </Link>
         <p className="rounded-lg bg-red-500/10 p-4 text-sm text-red-300" role="alert">
-          Cliente potencial não encontrado ou sem permissão de acesso.
+          Cliente não encontrado ou sem permissão de acesso.
         </p>
       </div>
     );

@@ -33,7 +33,7 @@ const RECOMMENDED_ACTION_LABELS: Record<string, string> = {
   RUN_WEBSITE_ANALYSIS: 'Executar análise do site',
   PRIORITIZE_OUTREACH: 'Priorizar contato comercial',
   ADVANCE_PIPELINE: 'Avançar no funil',
-  ENRICH_PROFILE: 'Completar perfil do cliente potencial',
+  ENRICH_PROFILE: 'Completar perfil do cliente',
   NURTURE: 'Nutrir relacionamento',
 };
 
@@ -146,7 +146,7 @@ export function LeadContactChannels({ lead, className, onOpenWhatsAppModal }: Le
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
               channelClass(emailTone),
             )}
-            title={blocked ? 'Cliente potencial marcado como não contatar' : 'E-mail não cadastrado'}
+            title={blocked ? 'Cliente marcado como não contatar' : 'E-mail não cadastrado'}
           >
             <Mail className="h-3 w-3" aria-hidden />
             E-mail
@@ -217,7 +217,7 @@ export function LeadContactChannels({ lead, className, onOpenWhatsAppModal }: Le
             )}
             title={
               blocked
-                ? 'Cliente potencial marcado como não contatar'
+                ? 'Cliente marcado como não contatar'
                 : 'Telefone/WhatsApp não cadastrado'
             }
           >

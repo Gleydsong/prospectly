@@ -7,6 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ThemeProvider } from '@/features/theme/theme-provider';
 import { AppLayout } from './app-layout';
 
+vi.mock('./today-summary', () => ({ TodaySummary: () => <div>Resumo de hoje</div> }));
+
 vi.mock('@/features/billing/api', () => ({
   getBillingStatus: vi.fn(async () => ({
     plan: 'FREE',
@@ -71,12 +73,12 @@ describe('AppLayout shell', () => {
     mockMatchMedia(true);
     renderLayout();
     const nav = screen.getByRole('navigation', { name: /navegação principal|main navigation/i });
-    expect(within(nav).getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
-    expect(within(nav).getByRole('link', { name: /assistentes/i })).toHaveAttribute('href', '/agents');
-    expect(within(nav).getByRole('link', { name: /funil|pipeline/i })).toHaveAttribute(
-      'href',
-      '/pipeline',
-    );
+    expect(within(nav).getByRole('link', { name: /início|home/i })).toHaveAttribute('href', '/');
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/', '/prospectar', '/clientes', '/tasks', '/settings']);
     expect(screen.getByRole('button', { name: /esconder menu|hide menu/i })).toBeInTheDocument();
   });
 
@@ -119,7 +121,9 @@ describe('AppLayout shell', () => {
   it('skip link targets the main landmark', () => {
     mockMatchMedia(true);
     renderLayout();
-    const skip = screen.getByRole('link', { name: /pular para o conteúdo principal|skip to main content/i });
+    const skip = screen.getByRole('link', {
+      name: /pular para o conteúdo principal|skip to main content/i,
+    });
     expect(skip).toHaveAttribute('href', '#conteudo-principal');
     const main = document.getElementById('conteudo-principal');
     expect(main?.tagName).toBe('MAIN');

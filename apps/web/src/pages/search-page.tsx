@@ -100,7 +100,7 @@ export function SearchPage() {
 
   const removeSearch = async (searchId: string) => {
     const confirmed = window.confirm(
-      'Apagar esta pesquisa do histórico? Os resultados serão removidos. Clientes potenciais já importados permanecem.',
+      'Apagar esta pesquisa do histórico? Os resultados serão removidos. Clientes já importados permanecem.',
     );
     if (!confirmed) return;
     setServerError(null);

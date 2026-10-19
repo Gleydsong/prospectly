@@ -286,7 +286,7 @@ describe('SearchPage', () => {
     await user.click(screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }));
 
     expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Clientes potenciais já importados permanecem'),
+      expect.stringContaining('Clientes já importados permanecem'),
     );
     expect(mocks.deleteSearch).toHaveBeenCalledWith('search-1');
     confirmSpy.mockRestore();

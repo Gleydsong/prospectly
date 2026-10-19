@@ -125,7 +125,7 @@ export function DashboardPage() {
               <Button size="md" onClick={() => navigate('/search')}>
                 <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>
-                  {t('principal.prospectLeads', { defaultValue: 'Prospectar Novos Leads' })}
+                  {t('principal.prospectLeads', { defaultValue: 'Prospectar Novos Clientes' })}
                 </span>
               </Button>
             </div>

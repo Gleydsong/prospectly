@@ -62,6 +62,7 @@ export function useUpdateLead(id: string) {
     ) => updateLead(id, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

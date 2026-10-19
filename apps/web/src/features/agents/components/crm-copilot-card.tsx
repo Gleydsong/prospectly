@@ -101,7 +101,11 @@ export function CrmCopilotCard({ leadId, onOpenWhatsApp, className }: CrmCopilot
             <span>{actionLabel}</span>
             <span className="text-[10px] uppercase opacity-75">{data.severity}</span>
           </div>
-          <p className="mt-1 text-xs opacity-90 leading-relaxed">{data.rationale}</p>
+          <p className="mt-1 text-xs opacity-90 leading-relaxed">
+            {data.rationale.replace(/\bleads?\b/gi, (word) =>
+              t(`common.${word.toLowerCase() === 'leads' ? 'clients' : 'client'}`),
+            )}
+          </p>
         </div>
 
         {data.suggestedStage ? (
@@ -131,12 +135,9 @@ export function CrmCopilotCard({ leadId, onOpenWhatsApp, className }: CrmCopilot
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          {onOpenWhatsApp && (data.actionCode === 'PRIORITIZE_OUTREACH' || data.actionCode === 'FOLLOW_UP_OVERDUE') ? (
-            <Button
-              size="sm"
-              onClick={onOpenWhatsApp}
-              data-testid="copilot-open-whatsapp"
-            >
+          {onOpenWhatsApp &&
+          (data.actionCode === 'PRIORITIZE_OUTREACH' || data.actionCode === 'FOLLOW_UP_OVERDUE') ? (
+            <Button size="sm" onClick={onOpenWhatsApp} data-testid="copilot-open-whatsapp">
               <MessageCircle className="h-3.5 w-3.5" aria-hidden />
               {t('agents.crm.openWhatsAppModal')}
             </Button>

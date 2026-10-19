@@ -370,7 +370,10 @@ export function LeadsPage() {
             : idsQuery.isSuccess
               ? t('leads.reportBucketBanner', { count: idsQuery.data?.total ?? 0 })
               : t('leads.reportBucketLoading')}{' '}
-          <Link to="/reports" className="font-semibold text-[color:var(--accent)] hover:underline">
+          <Link
+            to="/?aba=relatorios"
+            className="font-semibold text-[color:var(--accent)] hover:underline"
+          >
             {t('leads.backToReports')}
           </Link>
         </Card>

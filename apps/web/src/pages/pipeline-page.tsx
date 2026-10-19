@@ -32,7 +32,9 @@ export function PipelinePage() {
   const [overStageId, setOverStageId] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [loadingMoreStageId, setLoadingMoreStageId] = useState<string | null>(null);
-  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(null);
+  const [whatsAppModalLead, setWhatsAppModalLead] = useState<WhatsAppOutreachModalLead | null>(
+    null,
+  );
   const moveSelectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -46,8 +48,15 @@ export function PipelinePage() {
   };
 
   const move = useMutation({
-    mutationFn: ({ leadId, stageId }: { leadId: string; stageId: string; leadName: string; stageName: string }) =>
-      moveLeadToStage(leadId, stageId),
+    mutationFn: ({
+      leadId,
+      stageId,
+    }: {
+      leadId: string;
+      stageId: string;
+      leadName: string;
+      stageName: string;
+    }) => moveLeadToStage(leadId, stageId),
     onSuccess: (_data, variables) => {
       setAnnouncement(
         t('pipeline.movedAnnouncement', {
@@ -62,6 +71,7 @@ export function PipelinePage() {
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ['pipeline'] });
       void queryClient.invalidateQueries({ queryKey: ['leads'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -106,7 +116,10 @@ export function PipelinePage() {
 
   if (board.isError || !board.data) {
     return (
-      <p className="rounded-control bg-[color:var(--status-danger-bg)] p-4 text-sm text-[color:var(--status-danger-ink)]" role="alert">
+      <p
+        className="rounded-control bg-[color:var(--status-danger-bg)] p-4 text-sm text-[color:var(--status-danger-ink)]"
+        role="alert"
+      >
         {t('pipeline.loadError')}
       </p>
     );
@@ -118,10 +131,18 @@ export function PipelinePage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{t('leads.pipeline')}</h1>
-          <p className="text-sm text-[color:var(--ink-secondary)]">{t('pipeline.subtitle', { name: board.data.pipeline.name })}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">
+            {t('leads.pipeline')}
+          </h1>
+          <p className="text-sm text-[color:var(--ink-secondary)]">
+            {t('pipeline.subtitle', { name: board.data.pipeline.name })}
+          </p>
         </div>
-        <div className="flex items-center gap-1.5" role="group" aria-label="Navegação horizontal do funil">
+        <div
+          className="flex items-center gap-1.5"
+          role="group"
+          aria-label="Navegação horizontal do funil"
+        >
           <Button
             type="button"
             variant="outline"
@@ -174,7 +195,9 @@ export function PipelinePage() {
             onDrop={(event) => {
               event.preventDefault();
               if (draggingLeadId) {
-                const lead = stages.flatMap((item) => item.leads).find((item) => item.id === draggingLeadId);
+                const lead = stages
+                  .flatMap((item) => item.leads)
+                  .find((item) => item.id === draggingLeadId);
                 move.mutate({
                   leadId: draggingLeadId,
                   stageId: stage.id,
@@ -197,7 +220,7 @@ export function PipelinePage() {
               </h2>
               <span
                 className="shrink-0 rounded-full bg-black/10 px-2.5 py-0.5 text-xs font-semibold"
-                title={`${stage.totalCount} leads nesta etapa`}
+                title={t('pipeline.stageTotal', { count: stage.totalCount })}
               >
                 {stage.totalCount}
               </span>
@@ -352,7 +375,9 @@ function LeadCard({
         <span className="text-xs text-[color:var(--ink-secondary)]">{lead.owner?.name ?? ''}</span>
       </div>
       <label className="block space-y-1">
-        <span className="text-xs font-medium text-[color:var(--ink-secondary)]">{t('pipeline.moveToStage')}</span>
+        <span className="text-xs font-medium text-[color:var(--ink-secondary)]">
+          {t('pipeline.moveToStage')}
+        </span>
         <select
           ref={selectRef}
           className="h-8 w-full rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] px-2 text-xs text-[color:var(--ink)] focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-[color:var(--ring)]"

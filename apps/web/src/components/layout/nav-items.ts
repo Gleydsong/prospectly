@@ -1,21 +1,4 @@
-import {
-  BarChart3,
-  Bot,
-  CheckSquare,
-  FileUp,
-  Headphones,
-  Home,
-  KanbanSquare,
-  LayoutDashboard,
-  Megaphone,
-  Search,
-  Settings,
-  Telescope,
-  Users,
-  Workflow,
-  Wrench,
-  type LucideIcon,
-} from 'lucide-react';
+import { CheckSquare, Home, Search, Settings, Users, type LucideIcon } from 'lucide-react';
 
 export interface NavItem {
   to: string;
@@ -23,61 +6,19 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
-export interface NavGroup {
-  labelKey: string;
-  items: NavItem[];
-}
-
-/** Navegação principal do shell autenticado. */
+/** The five destinations shared by desktop and mobile navigation. */
 export const TOP_NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav.principal', icon: Home },
-  { to: '/leads', labelKey: 'nav.clientes', icon: Users },
-  { to: '/agents', labelKey: 'nav.agents', icon: Bot },
-  { to: '/tools', labelKey: 'nav.ferramentas', icon: Wrench },
-  { to: '/support', labelKey: 'nav.suporte', icon: Headphones },
-];
-
-/**
- * Itens secundários (menu mobile / ferramentas) — fluxo completo do produto.
- */
-export const NAV_GROUPS: NavGroup[] = [
-  {
-    labelKey: 'nav.groupOverview',
-    items: [{ to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard }],
-  },
-  {
-    labelKey: 'nav.groupDiscover',
-    items: [
-      { to: '/search', labelKey: 'nav.search', icon: Search },
-      { to: '/imports', labelKey: 'nav.imports', icon: FileUp },
-    ],
-  },
-  {
-    labelKey: 'nav.groupQualify',
-    items: [
-      { to: '/leads', labelKey: 'nav.leads', icon: Users },
-      { to: '/pipeline', labelKey: 'nav.pipeline', icon: KanbanSquare },
-    ],
-  },
-  {
-    labelKey: 'nav.groupConvert',
-    items: [
-      { to: '/agents', labelKey: 'nav.agents', icon: Bot },
-      { to: '/campaigns', labelKey: 'nav.campaigns', icon: Megaphone },
-      { to: '/sdr', labelKey: 'nav.sdr', icon: Telescope },
-      { to: '/workflows', labelKey: 'nav.workflows', icon: Workflow },
-      { to: '/reports', labelKey: 'nav.reports', icon: BarChart3 },
-      { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
-    ],
-  },
-  {
-    labelKey: 'nav.groupAccount',
-    items: [{ to: '/settings', labelKey: 'nav.settings', icon: Settings }],
-  },
+  { to: '/prospectar', labelKey: 'nav.prospectar', icon: Search },
+  { to: '/clientes', labelKey: 'nav.clientes', icon: Users },
+  { to: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ];
 
 export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/$/, labelKey: 'nav.principal' },
+  { pattern: /^\/prospectar/, labelKey: 'nav.prospectar' },
+  { pattern: /^\/clientes/, labelKey: 'nav.clientes' },
   { pattern: /^\/search/, labelKey: 'nav.search' },
   { pattern: /^\/imports/, labelKey: 'nav.imports' },
   { pattern: /^\/leads/, labelKey: 'nav.clientes' },
@@ -104,13 +45,4 @@ export function routeTitleKey(pathname: string): string | undefined {
 export function isTopNavActive(pathname: string, to: string): boolean {
   if (to === '/') return pathname === '/';
   return pathname === to || pathname.startsWith(`${to}/`);
-}
-
-const PRIMARY_PATHS = new Set(TOP_NAV_ITEMS.map((item) => item.to));
-
-export function secondaryNavGroups(): NavGroup[] {
-  return NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !PRIMARY_PATHS.has(item.to)),
-  })).filter((group) => group.items.length > 0);
 }
