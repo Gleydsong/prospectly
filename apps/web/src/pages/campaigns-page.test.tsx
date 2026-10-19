@@ -73,7 +73,7 @@ describe('CampaignsPage', () => {
       refetch: vi.fn(),
     });
     renderWithProviders(<CampaignsPage />, { withGoogle: false });
-    expect(screen.getByText('Nenhuma campanha ainda')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma lista ainda')).toBeInTheDocument();
   });
 
   it('lists campaigns with keyboard-accessible links', async () => {
@@ -115,9 +115,9 @@ describe('CampaignsPage', () => {
     mocks.useCreateCampaign.mockReturnValue({ mutateAsync, isPending: false });
     renderWithProviders(<CampaignsPage />, { withGoogle: false });
 
-    await user.click(screen.getAllByRole('button', { name: 'Nova campanha' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Nova lista' })[0]!);
     await user.type(screen.getByLabelText('Nome'), 'Nova');
-    await user.click(screen.getByRole('button', { name: 'Criar campanha' }));
+    await user.click(screen.getByRole('button', { name: 'Criar lista' }));
 
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Nova', channel: 'ASSISTED' }),
@@ -297,7 +297,7 @@ describe('CampaignDetailPage', () => {
   it('blocks do-not-contact leads in the picker', async () => {
     const user = userEvent.setup();
     renderDetail();
-    await user.click(screen.getByRole('button', { name: 'Adicionar clientes potenciais' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar clientes' }));
     expect(screen.getByText('Blocked Co')).toBeInTheDocument();
     expect(screen.getByText(/Marcado para não contatar/i)).toBeInTheDocument();
     const dncCheckbox = screen.getByText('Blocked Co').closest('label')?.querySelector('input');
@@ -318,7 +318,7 @@ describe('CampaignDetailPage', () => {
     });
     renderDetail();
 
-    await user.click(screen.getByRole('button', { name: 'Adicionar clientes potenciais' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar clientes' }));
     await user.selectOptions(screen.getByLabelText('Vista salva'), 'view-1');
     expect(screen.getByText(/3 clientes nesta vista/i)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Adicionar da vista' }));

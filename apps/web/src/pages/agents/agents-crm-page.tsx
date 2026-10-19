@@ -252,7 +252,9 @@ export function AgentsCrmPage() {
                 >
                   <p className="text-sm font-medium text-[color:var(--ink)]">{actionLabel}</p>
                   <p className="mt-1 text-sm text-[color:var(--ink-muted)]">
-                    {suggest.data.rationale}
+                    {suggest.data.rationale.replace(/\bleads?\b/gi, (word) =>
+                      t(`common.${word.toLowerCase() === 'leads' ? 'clients' : 'client'}`),
+                    )}
                   </p>
                 </div>
 

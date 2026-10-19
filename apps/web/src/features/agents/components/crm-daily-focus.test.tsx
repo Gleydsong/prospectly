@@ -76,7 +76,7 @@ describe('CrmDailyFocus', () => {
     );
 
     // Switch to hot leads tab
-    const hotTab = screen.getByRole('button', { name: /Leads Quentes sem Contato/i });
+    const hotTab = screen.getByRole('button', { name: /Clientes Quentes sem Contato/i });
     await user.click(hotTab);
 
     expect(screen.getByText('Clínica Sorriso')).toBeInTheDocument();

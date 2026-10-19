@@ -4,13 +4,16 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const appSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'App.tsx'), 'utf8');
+const appSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), 'pages/navigation-pages.tsx'),
+  'utf8',
+);
 
 const CRM_CORE_PAGES = [
-  { exportName: 'SearchPage', specifier: '@/pages/search-page' },
-  { exportName: 'LeadsPage', specifier: '@/pages/leads/leads-page' },
-  { exportName: 'PipelinePage', specifier: '@/pages/pipeline-page' },
-  { exportName: 'CampaignsPage', specifier: '@/pages/campaigns-page' },
+  { exportName: 'SearchPage', specifier: './search-page' },
+  { exportName: 'LeadsPage', specifier: './leads/leads-page' },
+  { exportName: 'PipelinePage', specifier: './pipeline-page' },
+  { exportName: 'CampaignsPage', specifier: './campaigns-page' },
 ] as const;
 
 describe('CRM core routes', () => {
@@ -19,7 +22,7 @@ describe('CRM core routes', () => {
     ({ exportName, specifier }) => {
       expect(appSource).not.toMatch(new RegExp(`import \\{ ${exportName} \\} from '${specifier}'`));
       expect(appSource).toContain(`import('${specifier}')`);
-      expect(appSource).toMatch(new RegExp(`<LazyPage>\\s*<${exportName}`));
+      expect(appSource).toContain(`default: m.${exportName}`);
     },
   );
 });

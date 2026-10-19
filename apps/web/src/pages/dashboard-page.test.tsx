@@ -131,7 +131,7 @@ describe('DashboardPage', () => {
     renderDashboard();
 
     expect(screen.getByText(/aqui está o que precisa da sua atenção hoje/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /prospectar novos leads/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /prospectar novos clientes/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /ver acompanhamentos/i })).toBeInTheDocument();
   });
 
@@ -195,7 +195,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(screen.getByRole('button', { name: /prospectar novos leads/i }));
+    await user.click(screen.getByRole('button', { name: /prospectar novos clientes/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/search');
 
     await user.click(screen.getByRole('button', { name: /ver acompanhamentos/i }));

@@ -146,7 +146,7 @@ describe('AgentsCrmPage', () => {
 
     expect(await screen.findByText(/Foco do Dia/i)).toBeInTheDocument();
     expect(screen.getByText(/Ligar para retorno/i)).toBeInTheDocument();
-    expect(screen.getByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+    expect(screen.getByText(/Escolher cliente/i)).toBeInTheDocument();
   });
 
   it('renders suggestion and applies stage when leadId is present', async () => {
@@ -193,10 +193,8 @@ describe('AgentsCrmPage', () => {
     await user.click(await screen.findByRole('button', { name: /mover estágio/i }));
     await user.click(await screen.findByRole('menuitem', { name: 'Contato Feito' }));
 
-    expect(
-      await screen.findByText(/Cliente potencial não encontrado/i),
-    ).toBeInTheDocument();
-    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Cliente não encontrado/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente/i)).toBeInTheDocument();
   });
 
   it('shows a friendly message and returns to the picker when suggest returns 404', async () => {
@@ -214,10 +212,8 @@ describe('AgentsCrmPage', () => {
       </Wrapper>,
     );
 
-    expect(
-      await screen.findByText(/Cliente potencial não encontrado/i),
-    ).toBeInTheDocument();
-    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Cliente não encontrado/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente/i)).toBeInTheDocument();
     expect(screen.queryByText(/Não foi possível sugerir/i)).not.toBeInTheDocument();
   });
 
@@ -256,9 +252,7 @@ describe('AgentsCrmPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Próxima página' }));
 
     expect(await screen.findByRole('button', { name: 'Empresa 13' })).toBeInTheDocument();
-    expect(mocks.fetchLeads).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2 }),
-    );
+    expect(mocks.fetchLeads).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
   });
 
   it('filters the picker by city and CRM send date', async () => {
@@ -308,9 +302,7 @@ describe('AgentsCrmPage', () => {
       </Wrapper>,
     );
 
-    expect(
-      await screen.findByText(/Cliente potencial não encontrado/i),
-    ).toBeInTheDocument();
-    expect(await screen.findByText(/Escolher cliente potencial/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Cliente não encontrado/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Escolher cliente/i)).toBeInTheDocument();
   });
 });

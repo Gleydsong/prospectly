@@ -11,15 +11,10 @@ import { ResetPasswordPage } from '@/pages/auth/reset-password-page';
 import { VerifyEmailPage } from '@/pages/auth/verify-email-page';
 import { SupportPage } from '@/pages/support-page';
 import { TasksPage } from '@/pages/tasks-page';
-import { ReportsPage } from '@/pages/reports-page';
+import { LegacyRedirect } from '@/components/legacy-redirect';
+import { HomeDestination, ProspectDestination, ClientsDestination } from '@/pages/navigation-pages';
 import { WorkflowsPage } from '@/pages/workflows-page';
 
-const DashboardPage = lazy(() =>
-  import('@/pages/dashboard-page').then((m) => ({ default: m.DashboardPage })),
-);
-const ImportsPage = lazy(() =>
-  import('@/pages/imports-page').then((m) => ({ default: m.ImportsPage })),
-);
 const SettingsPage = lazy(() =>
   import('@/pages/settings-page').then((m) => ({ default: m.SettingsPage })),
 );
@@ -47,18 +42,8 @@ const AgentsCrmPage = lazy(() =>
 const AgentsWhatsappPage = lazy(() =>
   import('@/pages/agents/agents-whatsapp-page').then((m) => ({ default: m.AgentsWhatsappPage })),
 );
-const ToolsPage = lazy(() => import('@/pages/tools-page').then((m) => ({ default: m.ToolsPage })));
 const CustomFieldsPage = lazy(() =>
   import('@/pages/custom-fields-page').then((m) => ({ default: m.CustomFieldsPage })),
-);
-const OpportunityFinderPage = lazy(() =>
-  import('@/pages/opportunity-finder-page').then((m) => ({ default: m.OpportunityFinderPage })),
-);
-const SearchPage = lazy(() =>
-  import('@/pages/search-page').then((m) => ({ default: m.SearchPage })),
-);
-const LeadsPage = lazy(() =>
-  import('@/pages/leads/leads-page').then((m) => ({ default: m.LeadsPage })),
 );
 const LeadDetailPage = lazy(() =>
   import('@/pages/leads/lead-detail-page').then((m) => ({ default: m.LeadDetailPage })),
@@ -70,12 +55,6 @@ const PersonaOnboardingPage = lazy(() =>
 );
 const OauthConsentPage = lazy(() =>
   import('@/pages/oauth/oauth-consent-page').then((m) => ({ default: m.OauthConsentPage })),
-);
-const PipelinePage = lazy(() =>
-  import('@/pages/pipeline-page').then((m) => ({ default: m.PipelinePage })),
-);
-const CampaignsPage = lazy(() =>
-  import('@/pages/campaigns-page').then((m) => ({ default: m.CampaignsPage })),
 );
 const CampaignDetailPage = lazy(() =>
   import('@/pages/campaign-detail-page').then((m) => ({ default: m.CampaignDetailPage })),
@@ -144,25 +123,32 @@ export function App() {
             index
             element={
               <LazyPage>
-                <DashboardPage />
+                <HomeDestination />
+              </LazyPage>
+            }
+          />
+          <Route path="prospectar" element={<ProspectDestination />} />
+          <Route path="clientes" element={<ClientsDestination />} />
+          <Route
+            path="clientes/:id"
+            element={
+              <LazyPage>
+                <LeadDetailPage />
               </LazyPage>
             }
           />
           <Route
-            path="tools"
+            path="clientes/listas/:id"
             element={
               <LazyPage>
-                <ToolsPage />
+                <CampaignDetailPage />
               </LazyPage>
             }
           />
+          <Route path="tools" element={<LegacyRedirect to="/prospectar" />} />
           <Route
             path="tools/opportunity-finder"
-            element={
-              <LazyPage>
-                <OpportunityFinderPage />
-              </LazyPage>
-            }
+            element={<LegacyRedirect to="/prospectar?aba=servico" />}
           />
           <Route
             path="custom-fields"
@@ -172,47 +158,12 @@ export function App() {
               </LazyPage>
             }
           />
-          <Route
-            path="search"
-            element={
-              <LazyPage>
-                <SearchPage />
-              </LazyPage>
-            }
-          />
+          <Route path="search" element={<LegacyRedirect to="/prospectar?aba=categoria" />} />
           <Route path="support" element={<SupportPage />} />
-          <Route
-            path="imports"
-            element={
-              <LazyPage>
-                <ImportsPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="leads"
-            element={
-              <LazyPage>
-                <LeadsPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="leads/:id"
-            element={
-              <LazyPage>
-                <LeadDetailPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="pipeline"
-            element={
-              <LazyPage>
-                <PipelinePage />
-              </LazyPage>
-            }
-          />
+          <Route path="imports" element={<LegacyRedirect to="/prospectar?aba=importar" />} />
+          <Route path="leads" element={<LegacyRedirect to="/clientes" />} />
+          <Route path="leads/:id" element={<LegacyRedirect to="/clientes/:id" />} />
+          <Route path="pipeline" element={<LegacyRedirect to="/clientes?vista=quadro" />} />
           <Route
             path="agents"
             element={
@@ -238,22 +189,8 @@ export function App() {
             }
           />
           <Route path="tasks" element={<TasksPage />} />
-          <Route
-            path="campaigns"
-            element={
-              <LazyPage>
-                <CampaignsPage />
-              </LazyPage>
-            }
-          />
-          <Route
-            path="campaigns/:id"
-            element={
-              <LazyPage>
-                <CampaignDetailPage />
-              </LazyPage>
-            }
-          />
+          <Route path="campaigns" element={<LegacyRedirect to="/clientes?vista=listas" />} />
+          <Route path="campaigns/:id" element={<LegacyRedirect to="/clientes/listas/:id" />} />
           <Route
             path="sdr"
             element={
@@ -271,7 +208,7 @@ export function App() {
             }
           />
           <Route path="workflows" element={<WorkflowsPage />} />
-          <Route path="reports" element={<ReportsPage />} />
+          <Route path="reports" element={<LegacyRedirect to="/" />} />
           <Route
             path="credits"
             element={

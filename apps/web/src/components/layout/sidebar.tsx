@@ -3,12 +3,12 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import prospectlyMark from '@/assets/prospectly-mark.png';
-import { secondaryNavGroups, TOP_NAV_ITEMS } from './nav-items';
-import { UserAvatar } from './user-avatar';
+import { TOP_NAV_ITEMS } from './nav-items';
+import { AccountMenu } from './account-menu';
+import { TodaySummary } from './today-summary';
 
 export function Sidebar({
   open,
@@ -27,7 +27,6 @@ export function Sidebar({
   const user = useAuthStore((state) => state.user);
   const closeRef = useRef<HTMLButtonElement>(null);
   const expanded = isDesktop ? !collapsed : open;
-  const secondary = secondaryNavGroups();
 
   useEffect(() => {
     if (open && !isDesktop) {
@@ -88,6 +87,9 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
+          <p className="px-2.5 pb-2 text-xs uppercase tracking-wider text-[color:var(--ink-secondary)]">
+            {t('nav.workspace')}
+          </p>
           <div className="space-y-0.5">
             {TOP_NAV_ITEMS.map((item) => (
               <NavLink
@@ -120,56 +122,12 @@ export function Sidebar({
               </NavLink>
             ))}
           </div>
-
-          {secondary.map((group) => (
-            <div key={group.labelKey} className="space-y-0.5">
-              <p className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--ink-secondary)]">
-                {t(group.labelKey)}
-              </p>
-              {group.items.map((item) => (
-                <NavLink
-                  key={`${group.labelKey}-${item.to}`}
-                  to={item.to}
-                  end={item.to === '/'}
-                  onClick={onClose}
-                  tabIndex={expanded ? undefined : -1}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-[color:var(--bg-nav-active)] font-semibold text-[color:var(--brand-hover)]'
-                        : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]',
-                    )
-                  }
-                >
-                  <item.icon className="h-4 w-4 text-[color:var(--ink-muted)]" aria-hidden />
-                  {t(item.labelKey)}
-                </NavLink>
-              ))}
-            </div>
-          ))}
         </nav>
 
-        {user ? (
-          <div className="border-t border-[color:var(--border-default)] p-3">
-            <div className="flex items-center gap-2.5 rounded-control px-1.5 py-1">
-              <UserAvatar
-                name={user.name}
-                avatarUrl={user.avatarUrl}
-                label={t('nav.account', { name: user.name })}
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-[color:var(--ink)]">{user.name}</p>
-                <Badge tone="slate" className="mt-0.5 max-w-full truncate">
-                  {user.effectivePersona === 'outro'
-                    ? user.personaOtherLabel?.trim() || t('persona.outro')
-                    : t(`persona.${user.effectivePersona ?? 'vendedor'}`)}
-                </Badge>
-                <p className="truncate text-xs text-[color:var(--ink-secondary)]">{user.email}</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <div className="shrink-0 space-y-3 p-3">
+          <TodaySummary />
+          {user ? <AccountMenu onNavigate={onClose} /> : null}
+        </div>
       </aside>
     </>
   );

@@ -51,7 +51,12 @@ describe('CrmCopilotCard', () => {
     );
 
     expect(screen.getByTestId('crm-copilot-card')).toBeInTheDocument();
-    expect(screen.getByText(/Lead quente com score alto sem contato registrado/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/cliente quente com score alto sem contato registrado/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Lead quente com score alto sem contato registrado/i),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('Lead Novo')).toBeInTheDocument();
     expect(screen.getByText('Contatado')).toBeInTheDocument();
   });

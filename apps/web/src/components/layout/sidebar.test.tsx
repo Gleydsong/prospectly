@@ -1,11 +1,13 @@
 import { screen } from '@testing-library/react';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { renderWithProviders } from '@/test/render';
 import { useAuthStore } from '@/stores/auth.store';
 import { Role } from '@/types';
 import { Sidebar } from './sidebar';
+
+vi.mock('./today-summary', () => ({ TodaySummary: () => <div>Resumo de hoje</div> }));
 
 describe('Sidebar persona tag', () => {
   beforeAll(async () => {
@@ -75,7 +77,8 @@ describe('Sidebar persona tag', () => {
     );
 
     expect(screen.getByText('Vendedor')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'SDR' })).toHaveAttribute('href', '/sdr');
+    expect(screen.queryByRole('link', { name: 'SDR' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Prospectar' })).toHaveAttribute('href', '/prospectar');
     expect(screen.queryByText('Fotógrafo')).not.toBeInTheDocument();
   });
 });

@@ -44,24 +44,18 @@ describe('TopNav', () => {
     vi.clearAllMocks();
   });
 
-  it('shows user avatar photo when avatarUrl is present', () => {
+  it('keeps account and billing actions in the sidebar footer', () => {
     renderNav();
-    const avatar = screen.getByRole('link', { name: /conta de test user|test user's account/i });
-    expect(avatar).toHaveAttribute('href', '/settings');
-    expect(avatar.querySelector('img')).toHaveAttribute('src', 'https://example.com/avatar.jpg');
-  });
-
-  it('shows the current credit balance with the credit label', async () => {
-    renderNav();
-    expect(await screen.findByText(/2[,.]?500 créditos/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /account|conta/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /credits|créditos/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sair|logout/i })).not.toBeInTheDocument();
   });
 
   it('links the search clients control to the prospecting search page', () => {
     renderNav();
-    expect(screen.getAllByRole('link', { name: /buscar clientes|search clients/i })[0]).toHaveAttribute(
-      'href',
-      '/search',
-    );
+    expect(
+      screen.getAllByRole('link', { name: /buscar clientes|search clients/i })[0],
+    ).toHaveAttribute('href', '/prospectar');
   });
 
   it('renders global search with shortcut badge', () => {
@@ -76,24 +70,5 @@ describe('TopNav', () => {
       'aria-controls',
       'mobile-nav',
     );
-  });
-
-  it('shows loading indicator for credits while query is pending and has no cache', () => {
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false, enabled: false } },
-    });
-    render(
-      <QueryClientProvider client={client}>
-        <ThemeProvider>
-          <MemoryRouter>
-            <TopNav onOpenNav={vi.fn()} navOpen={false} />
-          </MemoryRouter>
-        </ThemeProvider>
-      </QueryClientProvider>,
-    );
-
-    const creditLink = screen.getByTitle(/créditos|credits/i);
-    expect(creditLink).toBeInTheDocument();
-    expect(screen.queryByText(/0 créditos/i)).toBeNull();
   });
 });

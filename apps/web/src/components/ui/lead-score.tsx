@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '@/lib/utils';
 
 export interface LeadScoreProps {
@@ -6,24 +8,25 @@ export interface LeadScoreProps {
 }
 
 export function LeadScore({ score, className }: LeadScoreProps) {
+  const { t } = useTranslation();
   if (score === null || score === undefined || Number.isNaN(score)) {
     return <span className="text-sm text-slate-400 dark:text-slate-500">—</span>;
   }
 
   const clampedScore = Math.max(0, Math.min(100, Math.round(score)));
 
-  let tempLabel = 'Frio';
+  let tempLabel = t('clientScore.cold');
   let badgeStyles =
     'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700';
   let progressFillStyles = 'bg-slate-400 dark:bg-slate-500';
 
   if (clampedScore >= 80) {
-    tempLabel = 'Alto';
+    tempLabel = t('clientScore.high');
     badgeStyles =
       'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800';
     progressFillStyles = 'bg-emerald-500';
   } else if (clampedScore >= 50) {
-    tempLabel = 'Médio';
+    tempLabel = t('clientScore.medium');
     badgeStyles =
       'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800';
     progressFillStyles = 'bg-amber-500';
@@ -40,10 +43,13 @@ export function LeadScore({ score, className }: LeadScoreProps) {
         aria-valuenow={clampedScore}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`Lead score ${clampedScore} de 100`}
+        aria-label={t('clientScore.label', { score: clampedScore })}
       >
         <div
-          className={cn('h-full rounded-full transition-all duration-300', progressFillStyles)}
+          className={cn(
+            'h-full rounded-full transition-all duration-300 motion-reduce:transition-none',
+            progressFillStyles,
+          )}
           style={{ width: `${clampedScore}%` }}
         />
       </div>

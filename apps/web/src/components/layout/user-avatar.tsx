@@ -19,11 +19,13 @@ export function UserAvatar({
   avatarUrl,
   label,
   className,
+  onClick,
 }: {
   name?: string;
   avatarUrl?: string | null;
   label: string;
   className?: string;
+  onClick?: () => void;
 }) {
   const [broken, setBroken] = useState(false);
   const safeAvatar = sanitizeAvatarSrc(avatarUrl);
@@ -32,6 +34,7 @@ export function UserAvatar({
   return (
     <Link
       to="/settings"
+      onClick={onClick}
       className={cn(
         'relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[color:var(--brand-well)] text-xs font-bold text-[color:var(--brand-hover)] ring-1 ring-[color:var(--border-default)]',
         className,

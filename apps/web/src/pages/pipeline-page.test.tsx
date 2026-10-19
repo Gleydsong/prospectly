@@ -147,7 +147,7 @@ describe('PipelinePage', () => {
       </Wrapper>,
     );
 
-    const column = await screen.findByLabelText(/Novo, 1 de 120 clientes potenciais/);
+    const column = await screen.findByLabelText(/Novo, 1 de 120 clientes/);
     expect(within(column).getByText('120')).toBeInTheDocument();
 
     await user.click(within(column).getByRole('button', { name: /Carregar mais \(119\)/i }));
@@ -202,17 +202,25 @@ describe('PipelinePage', () => {
       </Wrapper>,
     );
 
-    const scrollLeftBtn = await screen.findByRole('button', { name: 'Rolar colunas para a esquerda' });
-    const scrollRightBtn = await screen.findByRole('button', { name: 'Rolar colunas para a direita' });
+    const scrollLeftBtn = await screen.findByRole('button', {
+      name: 'Rolar colunas para a esquerda',
+    });
+    const scrollRightBtn = await screen.findByRole('button', {
+      name: 'Rolar colunas para a direita',
+    });
 
     expect(scrollLeftBtn).toBeInTheDocument();
     expect(scrollRightBtn).toBeInTheDocument();
 
     await user.click(scrollRightBtn);
-    expect(scrollByMock).toHaveBeenCalledWith(expect.objectContaining({ left: 320, behavior: 'smooth' }));
+    expect(scrollByMock).toHaveBeenCalledWith(
+      expect.objectContaining({ left: 320, behavior: 'smooth' }),
+    );
 
     await user.click(scrollLeftBtn);
-    expect(scrollByMock).toHaveBeenCalledWith(expect.objectContaining({ left: -320, behavior: 'smooth' }));
+    expect(scrollByMock).toHaveBeenCalledWith(
+      expect.objectContaining({ left: -320, behavior: 'smooth' }),
+    );
   });
 
   it('does not mount every lead in a long column at once', async () => {
