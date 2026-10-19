@@ -6,10 +6,14 @@ import { SearchForm } from './search-form';
 const geo = vi.hoisted(() => ({
   regions: [{ code: 'SP', name: 'São Paulo' }],
   cities: [{ name: 'São Paulo' }],
+  citiesLoading: false,
+  citiesError: false,
 }));
 beforeEach(() => {
   geo.regions = [{ code: 'SP', name: 'São Paulo' }];
   geo.cities = [{ name: 'São Paulo' }];
+  geo.citiesLoading = false;
+  geo.citiesError = false;
 });
 
 vi.mock('@/features/billing/hooks', () => ({ useBillingStatus: () => ({ data: undefined }) }));
@@ -17,13 +21,19 @@ vi.mock('@/features/prospecting/hooks', () => ({
   useCreateSearch: () => ({ mutateAsync: vi.fn() }),
   useProspectingCategories: () => ({ data: undefined }),
   useGeoRegions: () => ({ data: geo.regions, isLoading: false }),
-  useGeoCities: () => ({ data: geo.cities, isLoading: false }),
+  useGeoCities: () => ({
+    data: geo.citiesLoading || geo.citiesError ? undefined : geo.cities,
+    isLoading: geo.citiesLoading,
+    isError: geo.citiesError,
+    error: geo.citiesError ? new Error('City lookup failed') : undefined,
+  }),
 }));
 
 describe('Prospecting from client map', () => {
   it('keeps URL defaults selected when geographic options arrive asynchronously', () => {
     geo.regions = [];
     geo.cities = [];
+    geo.citiesLoading = true;
     const renderForm = () => (
       <SearchForm
         actionError={null}
@@ -37,6 +47,7 @@ describe('Prospecting from client map', () => {
     });
     geo.regions = [{ code: 'SP', name: 'São Paulo' }];
     geo.cities = [{ name: 'São Paulo' }];
+    geo.citiesLoading = false;
     view.rerender(
       <SearchForm
         actionError={null}
@@ -74,6 +85,7 @@ describe('Prospecting from client map', () => {
       { code: 'RJ', name: 'Rio de Janeiro' },
     ];
     geo.cities = [];
+    geo.citiesLoading = true;
     const renderForm = () => (
       <SearchForm
         actionError={null}
@@ -86,12 +98,39 @@ describe('Prospecting from client map', () => {
       initialEntries: ['/prospectar?city=S%C3%A3o+Paulo'],
     });
     fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'SP' } });
+    expect(screen.getByRole('button', { name: 'Pesquisar empresas' })).toBeDisabled();
     geo.cities = [{ name: 'São Paulo' }];
+    geo.citiesLoading = false;
     view.rerender(renderForm());
     expect(screen.getByLabelText('Cidade')).toHaveValue('São Paulo');
     fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'RJ' } });
     expect(screen.getByLabelText('Cidade')).toHaveValue('');
   });
+
+  it.each([false, true])(
+    'rejects an unvalidated initial city when cached options mismatch or fail (error=%s)',
+    async (citiesError) => {
+      geo.citiesError = citiesError;
+      geo.regions = [{ code: 'RJ', name: 'Rio de Janeiro' }];
+      geo.cities = [{ name: 'Rio de Janeiro' }];
+      const onBeforeSubmit = vi.fn();
+      renderWithProviders(
+        <SearchForm
+          actionError={null}
+          onBeforeSubmit={onBeforeSubmit}
+          onCreated={vi.fn()}
+          onError={vi.fn()}
+        />,
+        { initialEntries: ['/prospectar?city=S%C3%A3o+Paulo'] },
+      );
+      fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'RJ' } });
+      const niche = screen.getByLabelText('Nicho') as HTMLSelectElement;
+      fireEvent.change(niche, { target: { value: niche.options[1].value } });
+      fireEvent.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+      expect(await screen.findByText('Selecione uma cidade')).toBeInTheDocument();
+      expect(onBeforeSubmit).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not hydrate foreign region and city values when country falls back to Brazil', () => {
     renderWithProviders(

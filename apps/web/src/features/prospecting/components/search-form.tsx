@@ -134,19 +134,44 @@ export function SearchForm({
   useEffect(() => {
     if (previousCountry.current === selectedCountry) return;
     previousCountry.current = selectedCountry;
+    preserveInitialCity.current = false;
     setValue('state', '');
     setValue('city', '');
   }, [selectedCountry, setValue]);
 
   useEffect(() => {
-    if (previousRegion.current === selectedRegion) return;
-    previousRegion.current = selectedRegion;
-    if (initialCity && selectedCity === initialCity && preserveInitialCity.current) {
+    if (previousRegion.current !== selectedRegion) {
+      previousRegion.current = selectedRegion;
+      if (!preserveInitialCity.current || selectedCity !== initialCity) {
+        preserveInitialCity.current = false;
+        setValue('city', '');
+        return;
+      }
+    }
+    if (preserveInitialCity.current && selectedRegion && citiesQuery.isError) {
       preserveInitialCity.current = false;
+      setValue('city', '');
       return;
     }
-    setValue('city', '');
-  }, [selectedRegion, selectedCity, initialCity, setValue]);
+    if (
+      !preserveInitialCity.current ||
+      !selectedRegion ||
+      citiesQuery.isLoading ||
+      !citiesQuery.data
+    ) {
+      return;
+    }
+    preserveInitialCity.current = false;
+    if (!citiesQuery.data.some((city) => city.name === initialCity)) setValue('city', '');
+  }, [
+    selectedRegion,
+    selectedCity,
+    initialCity,
+    citiesQuery.isLoading,
+    citiesQuery.isError,
+    citiesQuery.data,
+    setValue,
+  ]);
 
   const addCategory = (value: string) => {
     if (!value) return;
@@ -279,7 +304,12 @@ export function SearchForm({
               ))}
             </Select>
             <div className="flex items-end">
-              <Button type="submit" className="w-full" loading={createSearch.isPending}>
+              <Button
+                type="submit"
+                className="w-full"
+                loading={createSearch.isPending}
+                disabled={citiesQuery.isLoading}
+              >
                 <Search className="h-4 w-4" aria-hidden />
                 Pesquisar empresas
               </Button>
