@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ export function LeadTagManager({
   onAdd: (name: string) => void;
   onRemove: (tagId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState('');
 
   const submit = () => {
@@ -28,10 +30,12 @@ export function LeadTagManager({
 
   return (
     <div>
-      <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">Etiquetas</p>
+      <p className="mb-1 text-xs font-medium uppercase text-[color:var(--ink-muted)]">
+        {t('clientFile.tags')}
+      </p>
       <div className="flex flex-wrap gap-1">
         {tags.length === 0 ? (
-          <span className="text-sm text-[color:var(--ink-muted)]">Nenhuma etiqueta</span>
+          <span className="text-sm text-[color:var(--ink-muted)]">{t('clientFile.noTags')}</span>
         ) : (
           tags.map((tag) => (
             <Badge key={tag.id} className="pr-1">
@@ -39,7 +43,7 @@ export function LeadTagManager({
               <button
                 type="button"
                 className="ml-0.5 rounded-full p-0.5 hover:bg-[color:var(--surface-hover)]"
-                aria-label={`Remover etiqueta ${tag.name}`}
+                aria-label={t('clientFile.removeTag', { name: tag.name })}
                 disabled={pending}
                 onClick={() => onRemove(tag.id)}
               >
@@ -59,12 +63,12 @@ export function LeadTagManager({
         <Input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Nova etiqueta"
-          aria-label="Nova etiqueta"
+          placeholder={t('clientFile.newTag')}
+          aria-label={t('clientFile.newTag')}
           className="h-8"
         />
         <Button type="submit" size="sm" variant="outline" disabled={pending || !draft.trim()}>
-          Adicionar
+          {t('clientFile.add')}
         </Button>
       </form>
     </div>

@@ -7,12 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { createLeadWebsite, deleteLeadWebsite, fetchLeadWebsites } from '@/features/leads/api';
 import {
-  createLeadWebsite,
-  deleteLeadWebsite,
-  fetchLeadWebsites,
-} from '@/features/leads/api';
-import { LEAD_WEBSITE_KINDS, type LeadWebsiteKind } from '@/features/organizations/professional-persona';
+  LEAD_WEBSITE_KINDS,
+  type LeadWebsiteKind,
+} from '@/features/organizations/professional-persona';
 import { getApiErrorMessage } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import type { LeadWebsite } from '@/types';
@@ -165,7 +164,7 @@ export function LeadWebsitesCard({
               onChange={(event) => setNotes(event.target.value)}
               maxLength={2000}
             />
-            <Button type="submit" size="sm" loading={createMutation.isPending}>
+            <Button type="submit" variant="outline" size="sm" loading={createMutation.isPending}>
               {t('leadWebsites.add')}
             </Button>
           </form>

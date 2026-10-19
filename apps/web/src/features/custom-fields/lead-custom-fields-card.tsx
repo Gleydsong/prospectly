@@ -32,7 +32,8 @@ export function LeadCustomFieldsCard({
   const archivedWithValue = useMemo(
     () =>
       (fields ?? []).filter(
-        (field) => field.archivedAt && values?.[field.id] !== undefined && values[field.id] !== null,
+        (field) =>
+          field.archivedAt && values?.[field.id] !== undefined && values[field.id] !== null,
       ),
     [fields, values],
   );
@@ -67,7 +68,9 @@ export function LeadCustomFieldsCard({
           }
           if (field.type === 'select') {
             const stale =
-              current && !liveOptions.some((option) => option.id === current) ? currentOption : null;
+              current && !liveOptions.some((option) => option.id === current)
+                ? currentOption
+                : null;
             return (
               <Select
                 key={field.id}
@@ -113,6 +116,7 @@ export function LeadCustomFieldsCard({
         ))}
         {canEdit && active.length ? (
           <Button
+            variant="outline"
             onClick={async () => {
               setError(null);
               const patch: Record<string, string | number | null> = {};

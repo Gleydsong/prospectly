@@ -9,6 +9,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,6 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { formatActivityType, TASK_STATUS_LABELS } from '@/lib/presentation-labels';
 import { cn, formatDateTime } from '@/lib/utils';
 import type { Activity, Task } from '@/types';
 
@@ -77,6 +77,7 @@ export function LeadActivityHub({
   onCreateTask: (input: { title: string; dueAt?: string }) => Promise<unknown> | unknown;
   onCompleteTask: (task: Task) => Promise<unknown> | unknown;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<ComposerTab>('WHATSAPP');
   const [description, setDescription] = useState('');
   const [taskTitle, setTaskTitle] = useState('');
@@ -91,10 +92,7 @@ export function LeadActivityHub({
 
   return (
     <Card>
-      <CardHeader
-        title="Atividades e tarefas"
-        description="Registre o próximo passo sem abrir modal."
-      />
+      <CardHeader title={t('clientFile.history')} description={t('clientFile.historyHelp')} />
       <CardContent className="space-y-5">
         <div>
           <div className="flex flex-wrap gap-1 rounded-control border border-[color:var(--border)] bg-[color:var(--surface-subtle)] p-1">
@@ -110,7 +108,7 @@ export function LeadActivityHub({
                     : 'text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]',
                 )}
               >
-                {item.label}
+                {t(`clientFile.activityTabs.${item.id}`)}
               </button>
             ))}
           </div>
@@ -128,61 +126,70 @@ export function LeadActivityHub({
               }}
             >
               <Input
-                label="Título"
+                label={t('clientFile.taskTitle')}
                 value={taskTitle}
                 onChange={(event) => setTaskTitle(event.target.value)}
-                placeholder="Ex.: Retornar ligação"
+                placeholder={t('clientFile.taskExample')}
               />
               <Input
-                label="Vencimento"
+                label={t('clientFile.taskDue')}
                 type="date"
                 value={taskDue}
                 onChange={(event) => setTaskDue(event.target.value)}
               />
-              <Button type="submit" size="sm" loading={taskPending} disabled={!taskTitle.trim()}>
-                Criar tarefa
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                loading={taskPending}
+                disabled={!taskTitle.trim()}
+              >
+                {t('clientFile.createTask')}
               </Button>
             </form>
           ) : (
             <div className="mt-3 space-y-3">
               <div className="flex flex-wrap gap-1.5">
-                {QUICK_PHRASES[tab].map((phrase) => (
+                {QUICK_PHRASES[tab].map((phrase, index) => (
                   <button
                     key={phrase}
                     type="button"
                     className="rounded-full border border-[color:var(--border)] px-2.5 py-1 text-xs font-medium text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]"
-                    onClick={() => void submitActivity(phrase)}
+                    onClick={() =>
+                      void submitActivity(t(`clientFile.quickPhrases.${tab}.${index}`))
+                    }
                     disabled={activityPending}
                   >
-                    {phrase}
+                    {t(`clientFile.quickPhrases.${tab}.${index}`)}
                   </button>
                 ))}
               </div>
               <Textarea
-                label="Registro"
+                label={t('clientFile.activityRecord')}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="O que aconteceu nesta abordagem?"
+                placeholder={t('clientFile.activityPlaceholder')}
               />
               <Button
                 type="button"
+                variant="outline"
                 size="sm"
                 loading={activityPending}
                 disabled={!description.trim()}
                 onClick={() => void submitActivity(description)}
               >
-                Registrar
+                {t('clientFile.record')}
               </Button>
             </div>
           )}
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-[color:var(--ink)]">Tarefas</h4>
+          <h4 className="text-sm font-semibold text-[color:var(--ink)]">{t('clientFile.tasks')}</h4>
           {tasksLoading ? (
             <Skeleton className="mt-2 h-16" />
           ) : tasks.length === 0 ? (
-            <p className="mt-2 text-sm text-[color:var(--ink-muted)]">Nenhuma tarefa.</p>
+            <p className="mt-2 text-sm text-[color:var(--ink-muted)]">{t('clientFile.noTasks')}</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {tasks.map((task) => {
@@ -197,7 +204,7 @@ export function LeadActivityHub({
                       className="mt-1 h-4 w-4"
                       checked={done}
                       disabled={done || taskPending}
-                      aria-label={`Concluir tarefa ${task.title}`}
+                      aria-label={t('clientFile.completeTask', { title: task.title })}
                       onChange={() => {
                         if (!done) void onCompleteTask(task);
                       }}
@@ -212,11 +219,12 @@ export function LeadActivityHub({
                         {task.title}
                       </p>
                       <p className="text-xs text-[color:var(--ink-muted)]">
-                        {task.assignee?.name ?? 'Sem responsável'} · {formatDateTime(task.dueAt)}
+                        {task.assignee?.name ?? t('clientFile.unassigned')} ·{' '}
+                        {formatDateTime(task.dueAt)}
                       </p>
                     </div>
                     <Badge tone={done ? 'green' : task.priority === 'HIGH' ? 'red' : 'slate'}>
-                      {TASK_STATUS_LABELS[task.status]}
+                      {t(`clientFile.taskStatuses.${task.status}`)}
                     </Badge>
                   </li>
                 );
@@ -226,12 +234,14 @@ export function LeadActivityHub({
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold text-[color:var(--ink)]">Linha do tempo</h4>
+          <h4 className="text-sm font-semibold text-[color:var(--ink)]">
+            {t('clientFile.timeline')}
+          </h4>
           {activitiesLoading ? (
             <Skeleton className="mt-2 h-24" />
           ) : activities.length === 0 ? (
             <p className="mt-2 text-sm text-[color:var(--ink-muted)]">
-              Nenhuma atividade registrada.
+              {t('clientFile.noActivity')}
             </p>
           ) : (
             <ol className="relative mt-3 space-y-4 border-l border-[color:var(--border)] pl-5">
@@ -243,7 +253,9 @@ export function LeadActivityHub({
                       <Icon className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     <p className="text-sm font-medium text-[color:var(--ink)]">
-                      {formatActivityType(activity.type)}
+                      {t(`clientFile.activityTypes.${activity.type}`, {
+                        defaultValue: t('clientFile.activity'),
+                      })}
                     </p>
                     {activity.description ? (
                       <p className="text-sm text-[color:var(--ink)]">{activity.description}</p>
