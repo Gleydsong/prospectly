@@ -1,17 +1,53 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/test/render';
 import { SearchForm } from './search-form';
+
+const geo = vi.hoisted(() => ({
+  regions: [{ code: 'SP', name: 'São Paulo' }],
+  cities: [{ name: 'São Paulo' }],
+}));
+beforeEach(() => {
+  geo.regions = [{ code: 'SP', name: 'São Paulo' }];
+  geo.cities = [{ name: 'São Paulo' }];
+});
 
 vi.mock('@/features/billing/hooks', () => ({ useBillingStatus: () => ({ data: undefined }) }));
 vi.mock('@/features/prospecting/hooks', () => ({
   useCreateSearch: () => ({ mutateAsync: vi.fn() }),
   useProspectingCategories: () => ({ data: undefined }),
-  useGeoRegions: () => ({ data: [{ code: 'SP', name: 'São Paulo' }], isLoading: false }),
-  useGeoCities: () => ({ data: [{ name: 'São Paulo' }], isLoading: false }),
+  useGeoRegions: () => ({ data: geo.regions, isLoading: false }),
+  useGeoCities: () => ({ data: geo.cities, isLoading: false }),
 }));
 
 describe('Prospecting from client map', () => {
+  it('keeps URL defaults selected when geographic options arrive asynchronously', () => {
+    geo.regions = [];
+    geo.cities = [];
+    const form = (
+      <SearchForm
+        actionError={null}
+        onBeforeSubmit={vi.fn()}
+        onCreated={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+    const view = renderWithProviders(form, {
+      initialEntries: ['/prospectar?city=S%C3%A3o+Paulo&state=SP&country=BR'],
+    });
+    geo.regions = [{ code: 'SP', name: 'São Paulo' }];
+    geo.cities = [{ name: 'São Paulo' }];
+    view.rerender(
+      <SearchForm
+        actionError={null}
+        onBeforeSubmit={vi.fn()}
+        onCreated={vi.fn()}
+        onError={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Região')).toHaveValue('SP');
+    expect(screen.getByLabelText('Cidade')).toHaveValue('São Paulo');
+  });
   it('prefills the selected client region and clears dependent values after a country change', () => {
     renderWithProviders(
       <SearchForm

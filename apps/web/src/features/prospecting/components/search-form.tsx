@@ -116,6 +116,7 @@ export function SearchForm({
   const selectedCountry = watch('country');
   const selectedCategories = watch('categories');
   const selectedRegion = watch('state');
+  const selectedCity = watch('city');
   const regionsQuery = useGeoRegions(selectedCountry);
   const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
   const regions = regionsQuery.data ?? [];
@@ -210,6 +211,7 @@ export function SearchForm({
               }
               disabled={!selectedCountry || regionsQuery.isLoading}
               {...register('state')}
+              value={selectedRegion}
             >
               <option key="default-region" value="">
                 {regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}
@@ -228,6 +230,7 @@ export function SearchForm({
               }
               disabled={!selectedRegion || citiesQuery.isLoading}
               {...register('city')}
+              value={selectedCity}
             >
               <option key="default-city" value="">
                 {!selectedRegion
