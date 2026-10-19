@@ -7,17 +7,17 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#f4f5fd',
-          100: '#ecf0fe',
-          200: '#d5dbf8',
-          300: '#b0b6ec',
-          400: '#8a90e0',
-          500: '#676fd6',
-          600: '#5b63c9',
-          700: '#4a52b0',
-          800: '#3a4190',
-          900: '#2c326e',
-          950: '#1c2048',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93bfff',
+          400: '#60a5fa',
+          500: '#2563eb',
+          600: '#1d4ed8',
+          700: '#1e40af',
+          800: '#1e3a8a',
+          900: '#172554',
+          950: '#0f172a',
         },
         zinc: {
           50: 'rgb(var(--zinc-50) / <alpha-value>)',
@@ -34,12 +34,12 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         control: '10px',
-        card: '12px',
+        card: '16px',
         panel: '16px',
         bento: '16px',
       },

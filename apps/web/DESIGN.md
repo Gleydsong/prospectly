@@ -1,38 +1,25 @@
 # Design da web Prospectly
 
-## Theme
-- Light (principal): cinza-gelo `#F1F2F4`, superfícies brancas, acento índigo-violeta
-- Dark: mesmos tokens semânticos com valores escuros coerentes
+Identidade aprovada em ID-01, ID-02 e ID-03 (issues #356, #359 e #361).
 
-## Color
-- Accent / primary: **índigo** (`--brand: #676FD6` → `--brand-hover: #5B63C9`)
-- Texto: `--ink` `#1A1D26`, `--ink-secondary` `#5B6472` (WCAG), `--ink-muted` `#8B93A0` (ícones / placeholders)
-- Superfícies: `--bg-app`, `--bg-sidebar`, `--bg-surface`, `--bg-subtle`, `--bg-nav-active`
-- Semânticos: success mint, warning ouro, teal fechado, slate neutro
-- Evitar: glass, gradientes decorativos, noise, halos, CTA grafite, azul cobalto como primária
+## Theme e cores
 
-## Typography
-- Família única: **Inter** (400–700)
-- H1 páginas: ~24–28px semibold / tight tracking
-- Body: 14px regular, `ink-secondary`
-- Labels: 13–14px medium
+- Ações primárias: cobalto `#2563EB`, hover `#1D4ED8`, texto branco.
+- Dia: fundo `#F4F6FB`, superfície `#FFFFFF`, raised `#EEF2F8`, borda `#DCE3EE`, texto `#0F172A`, secundário `#475569`, soft `#E6EFFF`, acento de texto `#1D4ED8`.
+- Noite: fundo `#0F172A`, superfície `#172237`, raised `#213149`, borda `#31435D`, texto `#F8FAFC`, secundário `#B6C4D9`, soft `#1E3A67`, acento de texto `#93BFFF`.
+- `src/lib/lead-status-colors.ts` centraliza as 12 paletas de pills/pins; pills noturnas usam 16% de opacidade e texto claro da família correspondente. `applyThemeClass` instala as variáveis por tema.
+- Símbolo oficial: cópia intacta de `apps/landing/public/brand/prospectly-mark.png`, inclusive no favicon.
 
-## Components
-- Controles: radius 10px, altura mínima 44px no chrome
-- Cards: radius 12px, hairline, sombra `0 1px 2px rgb(16 24 40 / 0.06)`
-- Painéis: radius 16px
-- Pills: 999px
-- Inputs: `.field-control` — borda `--border-default`, fundo `--bg-surface`
-- Buttons: `primary` = índigo sólido; `outline`/`secondary` = flat
-- Nav ativa: `--bg-nav-active`
-- Kanban: header sólido + well pastel por estágio
+## Tipografia e forma
 
-## Shell
-- Sidebar ~220px + topbar 56–64px
-- Workspace ocupa a largura restante (sem `max-width: 1200px`)
-- Mobile: sidebar vira drawer (botão, backdrop, Escape)
-- Desktop: ícone no aside esconde a barra; a topbar reabre
+- Outfit 400–700 para títulos e interface, JetBrains Mono 400–600 para dados.
+- Fontes locais via Fontsource, sem requisições Google Fonts.
+- Cards e painéis: raio 16 px; controles: 10 px; pills: 999 px.
+- Sombras leves no tema Dia, hairlines em ambos os temas.
 
-## Motion
-- Theme toggle: View Transition máscara radial ~720ms
-- Reduced motion: troca instantânea
+## Tema e movimento
+
+- Chave sol/lua no cabeçalho, 84 × 40 px, estado exposto como switch acessível.
+- A feature `theme` mantém persistência, classes HTML e View Transition radial de 720 ms.
+- `prefers-reduced-motion` troca o tema instantaneamente e desativa animações.
+- Navegação e composição das páginas pertencem a outras issues.

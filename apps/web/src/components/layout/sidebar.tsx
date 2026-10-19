@@ -6,7 +6,7 @@ import { NavLink } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
-import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
+import prospectlyMark from '@/assets/prospectly-mark.png';
 import { secondaryNavGroups, TOP_NAV_ITEMS } from './nav-items';
 import { UserAvatar } from './user-avatar';
 
@@ -62,7 +62,7 @@ export function Sidebar({
             onClick={onClose}
           >
             <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-            <span className="-ml-0.5 truncate leading-none">rospectly</span>
+            <span className="-ml-0.5 truncate leading-none">Prospectly</span>
           </NavLink>
           {isDesktop ? (
             <button

@@ -1,28 +1,12 @@
 import { LeadStatus } from '@/types';
+import { LEAD_STATUS_COLORS } from './lead-status-colors';
 import i18n from '@/i18n';
-
-export type StatusTone = 'slate' | 'green' | 'amber' | 'red' | 'blue' | 'brand' | 'purple';
-
-const STATUS_TONES: Record<LeadStatus, StatusTone> = {
-  NEW: 'brand',
-  TO_REVIEW: 'blue',
-  QUALIFIED: 'green',
-  DISQUALIFIED: 'slate',
-  CONTACTED: 'amber',
-  RESPONDED: 'amber',
-  MEETING_SCHEDULED: 'purple',
-  PROPOSAL_SENT: 'purple',
-  NEGOTIATION: 'purple',
-  WON: 'green',
-  LOST: 'red',
-  ARCHIVED: 'slate',
-};
 
 export function getLeadStatusMeta(status: LeadStatus) {
   return {
+    colors: LEAD_STATUS_COLORS[status],
     label: i18n.t(`status.${status}`, { defaultValue: String(status) }),
     shortLabel: i18n.t(`statusShort.${status}`, { defaultValue: String(status) }),
-    tone: STATUS_TONES[status] ?? ('slate' as const),
   };
 }
 

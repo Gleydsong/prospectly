@@ -1,7 +1,7 @@
-@import '@fontsource/inter/latin-400.css';
-@import '@fontsource/inter/latin-500.css';
-@import '@fontsource/inter/latin-600.css';
-@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/outfit/latin-400.css';
+@import '@fontsource/outfit/latin-500.css';
+@import '@fontsource/outfit/latin-600.css';
+@import '@fontsource/outfit/latin-700.css';
 @import '@fontsource/jetbrains-mono/latin-400.css';
 @import '@fontsource/jetbrains-mono/latin-500.css';
 @import '@fontsource/jetbrains-mono/latin-600.css';
@@ -13,43 +13,43 @@
 :root,
 html.dark {
   color-scheme: dark;
-  /* Zinc grafite (dark) — RGB channels for Tailwind alpha support */
-  --zinc-50: 241 242 244;
-  --zinc-100: 231 234 238;
-  --zinc-200: 211 216 223;
-  --zinc-300: 182 188 198;
-  --zinc-400: 150 157 168;
-  --zinc-500: 124 133 147;
-  --zinc-600: 74 81 92;
-  --zinc-700: 42 47 56;
-  --zinc-800: 32 36 43;
-  --zinc-900: 21 24 29;
-  --zinc-950: 9 10 12;
+  /* Azul-noite (dark) — RGB channels for Tailwind alpha support */
+  --zinc-50: 248 250 252;
+  --zinc-100: 241 245 249;
+  --zinc-200: 226 232 240;
+  --zinc-300: 203 213 225;
+  --zinc-400: 182 196 217;
+  --zinc-500: 182 196 217;
+  --zinc-600: 71 85 105;
+  --zinc-700: 49 67 93;
+  --zinc-800: 33 49 73;
+  --zinc-900: 23 34 55;
+  --zinc-950: 15 23 42;
 
-  --bg-app: #12141a;
-  --bg-sidebar: #181b22;
-  --bg-surface: #1c2028;
-  --bg-subtle: #16191f;
-  --bg-nav-active: #252a3a;
-  --ink: #f1f2f4;
-  --ink-secondary: #b4bbc6;
-  --ink-muted: #8b93a0;
-  --brand: #7b83e0;
-  --brand-hover: #8a91e6;
-  --brand-soft: #2a2f4a;
-  --brand-well: #24283a;
+  --bg-app: #0f172a;
+  --bg-sidebar: #172237;
+  --bg-surface: #172237;
+  --bg-subtle: #213149;
+  --bg-nav-active: #1e3a67;
+  --ink: #f8fafc;
+  --ink-secondary: #b6c4d9;
+  --ink-muted: #b6c4d9;
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-soft: #1e3a67;
+  --brand-well: #213149;
   --brand-on: #ffffff;
-  --border-default: #2a303a;
-  --border-strong: #3a4150;
+  --border-default: #31435d;
+  --border-strong: #475569;
   --shadow-rest: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-fab: 0 8px 20px -8px rgb(123 131 224 / 0.45);
+  --shadow-fab: 0 8px 20px -8px rgb(37 99 235 / 0.45);
 
-  --kanban-prospecting-header: #5b63c9;
-  --kanban-prospecting-well: #23263a;
+  --kanban-prospecting-header: #1d4ed8;
+  --kanban-prospecting-well: #213149;
   --kanban-prospecting-ink: #ffffff;
   --kanban-contact-header: #c4922e;
   --kanban-contact-well: #2a261c;
-  --kanban-contact-ink: #1a1d26;
+  --kanban-contact-ink: #0f172a;
   --kanban-closed-header: #3d8f7d;
   --kanban-closed-well: #1c2626;
   --kanban-closed-ink: #ffffff;
@@ -60,9 +60,9 @@ html.dark {
   --bg: var(--bg-app);
   --bg-raised: var(--bg-surface);
   --bg-sunken: var(--bg-subtle);
-  --accent: var(--brand);
-  --accent-hover: var(--brand-hover);
-  --ring: rgb(123 131 224 / 0.45);
+  --accent: #93bfff;
+  --accent-hover: #bfdbfe;
+  --ring: rgb(37 99 235 / 0.45);
   --border: var(--border-default);
   --cta-secondary-bg: rgb(255 255 255 / 0.04);
   --cta-secondary-border: var(--border-default);
@@ -90,7 +90,7 @@ html.dark {
   --chrome-sidebar: var(--bg-sidebar);
   --chrome-overlay: rgb(9 10 12 / 0.64);
   --surface-card: var(--bg-surface);
-  --surface-hover: #242a34;
+  --surface-hover: #213149;
   --surface-subtle: var(--bg-subtle);
   --surface-muted: var(--bg-subtle);
   --status-neutral-bg: #2a3038;
@@ -102,16 +102,16 @@ html.dark {
   --status-danger-bg: rgb(239 68 68 / 0.14);
   --status-danger-ink: #fca5a5;
   --status-info-bg: var(--brand-soft);
-  --status-info-ink: #c5caf5;
+  --status-info-ink: #93bfff;
   --status-purple-bg: var(--brand-soft);
-  --status-purple-ink: #c5caf5;
+  --status-purple-ink: #93bfff;
   --status-mint-bg: #1c2c2c;
   --status-mint-ink: #7dcebb;
   --status-teal-bg: #1c2626;
   --status-teal-ink: #7dcebb;
 }
 
-/* Light operacional — cinza-gelo, índigo-violeta, flat. */
+/* Dia — superfícies claras e ações cobalto. */
 html.light {
   color-scheme: light;
   --zinc-50: 26 29 38;
@@ -126,43 +126,43 @@ html.light {
   --zinc-900: 252 252 252;
   --zinc-950: 253 253 253;
 
-  --bg-app: #f1f2f4;
-  --bg-sidebar: #fcfcfc;
-  --bg-surface: #fdfdfd;
-  --bg-subtle: #f3f5f4;
-  --bg-nav-active: #f1f2fb;
-  --ink: #1a1d26;
-  --ink-secondary: #5b6472;
-  --ink-muted: #8b93a0;
-  --brand: #676fd6;
-  --brand-hover: #5b63c9;
-  --brand-soft: #ecf0fe;
-  --brand-well: #eaeef7;
+  --bg-app: #f4f6fb;
+  --bg-sidebar: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-subtle: #eef2f8;
+  --bg-nav-active: #e6efff;
+  --ink: #0f172a;
+  --ink-secondary: #475569;
+  --ink-muted: #475569;
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-soft: #e6efff;
+  --brand-well: #e6efff;
   --brand-on: #ffffff;
-  --border-default: #e8eaed;
-  --border-strong: #d5d7dc;
+  --border-default: #dce3ee;
+  --border-strong: #b6c4d9;
   --shadow-rest: 0 1px 2px rgb(16 24 40 / 0.06);
-  --shadow-fab: 0 8px 20px -8px rgb(103 111 214 / 0.4);
+  --shadow-fab: 0 8px 20px -8px rgb(37 99 235 / 0.4);
 
-  --kanban-prospecting-header: #5b63c9;
-  --kanban-prospecting-well: #eaeef7;
+  --kanban-prospecting-header: #1d4ed8;
+  --kanban-prospecting-well: #e6efff;
   --kanban-prospecting-ink: #ffffff;
   --kanban-contact-header: #f0b452;
   --kanban-contact-well: #f7f2ea;
-  --kanban-contact-ink: #1a1d26;
+  --kanban-contact-ink: #0f172a;
   --kanban-closed-header: #3d8f7d;
   --kanban-closed-well: #edf2f5;
   --kanban-closed-ink: #ffffff;
   --kanban-neutral-header: #6b7580;
-  --kanban-neutral-well: #f1f2f4;
+  --kanban-neutral-well: #f4f6fb;
   --kanban-neutral-ink: #ffffff;
 
   --bg: var(--bg-app);
   --bg-raised: var(--bg-surface);
   --bg-sunken: var(--bg-subtle);
-  --accent: var(--brand);
+  --accent: #1d4ed8;
   --accent-hover: var(--brand-hover);
-  --ring: rgb(103 111 214 / 0.35);
+  --ring: rgb(37 99 235 / 0.35);
   --border: var(--border-default);
   --cta-secondary-bg: var(--bg-surface);
   --cta-secondary-border: var(--border-default);
@@ -185,11 +185,11 @@ html.light {
   --chrome-sidebar: var(--bg-sidebar);
   --chrome-overlay: rgb(16 24 40 / 0.28);
   --surface-card: var(--bg-surface);
-  --surface-hover: #f6f7f8;
+  --surface-hover: #eef2f8;
   --surface-subtle: var(--bg-subtle);
   --surface-muted: var(--bg-subtle);
   --status-neutral-bg: var(--kanban-neutral-well);
-  --status-neutral-ink: #5b6472;
+  --status-neutral-ink: #475569;
   --status-success-bg: #d8f0e0;
   --status-success-ink: #1f7a4a;
   --status-warning-bg: var(--kanban-contact-well);
@@ -226,11 +226,13 @@ html.light {
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--ring);
+    box-shadow:
+      0 0 0 2px var(--bg-app),
+      0 0 0 4px var(--ring);
   }
 
   ::selection {
-    background: rgb(103 111 214 / 0.28);
+    background: rgb(37 99 235 / 0.28);
   }
 
   ::-webkit-scrollbar {
@@ -285,6 +287,37 @@ html.light {
       background-color 180ms ease,
       border-color 180ms ease,
       color 180ms ease;
+  }
+
+  .theme-toggle__thumb {
+    position: absolute;
+    inset: 3px auto 3px 3px;
+    width: 34px;
+    border-radius: 999px;
+    background: var(--bg-surface);
+    transition:
+      transform 180ms ease,
+      background-color 180ms ease;
+  }
+
+  html.dark .theme-toggle__thumb {
+    transform: translateX(40px);
+    background: var(--brand);
+  }
+
+  .theme-toggle__icon {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: 40px;
+    justify-content: center;
+  }
+
+  html.light .theme-toggle__sun {
+    color: #1d4ed8;
+  }
+  html.dark .theme-toggle__moon {
+    color: #ffffff;
   }
 
   .theme-toggle-ios:hover {
@@ -348,7 +381,7 @@ html.light {
     flex-shrink: 0;
     overflow: hidden;
     border: 1px solid var(--border-default);
-    border-radius: 12px;
+    border-radius: 16px;
     max-height: calc(100vh - 10rem);
   }
 
@@ -380,11 +413,11 @@ html.light {
   }
 
   .link-brand {
-    color: var(--brand);
+    color: var(--accent);
   }
 
   .link-brand:hover {
-    color: var(--brand-hover);
+    color: var(--accent-hover);
   }
 }
 
@@ -589,49 +622,85 @@ html.dark .auth-confirm {
 }
 
 /* Compatibility layer for existing page markup while screens migrate to tokens. */
-html.light .text-zinc-50 { color: var(--ink) !important; }
+html.light .text-zinc-50 {
+  color: var(--ink) !important;
+}
 html.light .text-zinc-100,
 html.light .text-zinc-200,
-html.light .text-zinc-300 { color: var(--ink) !important; }
-html.light .text-zinc-400 { color: var(--ink-secondary) !important; }
+html.light .text-zinc-300 {
+  color: var(--ink) !important;
+}
+html.light .text-zinc-400 {
+  color: var(--ink-secondary) !important;
+}
 html.light .text-zinc-500,
-html.light .text-zinc-600 { color: var(--ink-secondary) !important; }
-html.light .bg-zinc-950 { background-color: var(--bg) !important; }
+html.light .text-zinc-600 {
+  color: var(--ink-secondary) !important;
+}
+html.light .bg-zinc-950 {
+  background-color: var(--bg) !important;
+}
 html.light .bg-zinc-900,
-html.light .bg-zinc-800 { background-color: var(--surface-card) !important; }
-html.light .bg-zinc-700 { background-color: var(--surface-hover) !important; }
+html.light .bg-zinc-800 {
+  background-color: var(--surface-card) !important;
+}
+html.light .bg-zinc-700 {
+  background-color: var(--surface-hover) !important;
+}
 html.light .border-zinc-800,
 html.light .border-zinc-700,
 html.light .border-white\/\[0\.08\],
 html.light .border-white\/\[0\.1\],
-html.light .border-white\/10 { border-color: var(--border) !important; }
-html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) { border-color: var(--border); }
-html.light .placeholder\:text-zinc-500::placeholder { color: var(--ink-muted); }
+html.light .border-white\/10 {
+  border-color: var(--border) !important;
+}
+html.light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+html.light .placeholder\:text-zinc-500::placeholder {
+  color: var(--ink-muted);
+}
 html.light .hover\:bg-white\/\[0\.03\]:hover,
 html.light .hover\:bg-white\/\[0\.05\]:hover,
 html.light .hover\:bg-white\/\[0\.06\]:hover,
 html.light .hover\:bg-zinc-950:hover,
 html.light .hover\:bg-zinc-950\/80:hover,
-html.light .hover\:bg-zinc-800:hover { background-color: var(--surface-hover) !important; }
+html.light .hover\:bg-zinc-800:hover {
+  background-color: var(--surface-hover) !important;
+}
 html.light .border-white\/\[0\.06\],
 html.light .border-white\/\[0\.12\],
-html.light .border-white\/20 { border-color: var(--border) !important; }
+html.light .border-white\/20 {
+  border-color: var(--border) !important;
+}
 html.light .bg-zinc-900\/60,
 html.light .bg-zinc-950\/40,
-html.light .bg-zinc-950\/60 { background-color: var(--surface-subtle) !important; }
+html.light .bg-zinc-950\/60 {
+  background-color: var(--surface-subtle) !important;
+}
 html.light .bg-white\/\[0\.03\],
 html.light .bg-white\/\[0\.04\],
-html.light .bg-white\/\[0\.06\] { background-color: var(--surface-subtle) !important; }
+html.light .bg-white\/\[0\.06\] {
+  background-color: var(--surface-subtle) !important;
+}
 html.light .text-brand-100,
 html.light .text-brand-200,
 html.light .text-brand-300,
-html.light .text-brand-400 { color: var(--accent) !important; }
+html.light .text-brand-400 {
+  color: var(--accent) !important;
+}
 html.light .text-amber-100\/90,
-html.light .text-amber-100 { color: #92400e !important; }
-html.light .bg-brand-500 { background-color: var(--accent) !important; }
+html.light .text-amber-100 {
+  color: #92400e !important;
+}
+html.light .bg-brand-500 {
+  background-color: var(--accent) !important;
+}
 html.light .shadow-panel,
 html.light .shadow-elevated,
-html.light .shadow-soft { box-shadow: var(--shadow-rest) !important; }
+html.light .shadow-soft {
+  box-shadow: var(--shadow-rest) !important;
+}
 
 html.light .surface-bento,
 html.light .surface-bento-accent {
@@ -821,4 +890,15 @@ html.light .surface-bento-accent {
         2.75rem;
     }
   }
+}
+
+/* Existing text utilities use the readable accent; action fills remain cobalt. */
+[class~='text-[color:var(--brand)]'],
+[class~='text-[color:var(--brand-hover)]'] {
+  color: var(--accent);
+}
+[class~='hover:text-[color:var(--brand)]']:hover,
+[class~='hover:text-[color:var(--brand-hover)]']:hover,
+.group:hover [class~='group-hover:text-[color:var(--brand-hover)]'] {
+  color: var(--accent-hover);
 }

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ThemeToggle } from '@/features/theme/theme-toggle';
-import prospectlyMark from '@/assets/prospectly-mark-v2.svg';
+import prospectlyMark from '@/assets/prospectly-mark.png';
 
 interface AuthShellProps {
   title: string;
@@ -51,7 +51,7 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
             <span className="flex h-11 w-11 items-center justify-center rounded-control border border-[color:var(--border-default)] bg-[color:var(--brand-soft)] p-1.5">
               <img src={prospectlyMark} alt="" aria-hidden className="h-full w-full object-contain" />
             </span>
-            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">rospectly</p>
+            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">Prospectly</p>
           </div>
 
           <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
