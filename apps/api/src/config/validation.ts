@@ -202,6 +202,100 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
+  const rawAiProvider = config.AI_PROVIDER;
+  const normalizedAiProvider =
+    typeof rawAiProvider === 'string' ? rawAiProvider.trim().toLowerCase() : undefined;
+
+  if (normalizedAiProvider !== undefined && normalizedAiProvider !== '') {
+    if (!['cloudflare', 'groq', 'disabled'].includes(normalizedAiProvider)) {
+      throw new Error('AI_PROVIDER must be cloudflare, groq, or disabled');
+    }
+  }
+
+  const rawFallback = config.AI_FALLBACK_PROVIDER;
+  const normalizedFallback =
+    typeof rawFallback === 'string' ? rawFallback.trim().toLowerCase() : undefined;
+  if (normalizedFallback !== undefined && normalizedFallback !== '') {
+    if (!['groq', 'none', 'disabled'].includes(normalizedFallback)) {
+      throw new Error('AI_FALLBACK_PROVIDER must be groq, none, or disabled');
+    }
+  }
+
+  for (const key of ['AI_TIMEOUT_MS', 'AI_DAILY_BUDGET_TOKENS'] as const) {
+    const value = config[key];
+    if (value === undefined) continue;
+    const parsed = typeof value === 'number' ? value : Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error(`${key} must be a positive integer`);
+    }
+  }
+
+  const aiMaxRetries = config.AI_MAX_RETRIES;
+  if (aiMaxRetries !== undefined) {
+    const parsed = typeof aiMaxRetries === 'number' ? aiMaxRetries : Number(aiMaxRetries);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new Error('AI_MAX_RETRIES must be a non-negative integer');
+    }
+  }
+
+  for (const key of [
+    'AI_MODEL',
+    'AI_FALLBACK_MODEL',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CLOUDFLARE_AI_TOKEN',
+    'CLOUDFLARE_API_TOKEN',
+    'GROQ_API_KEY',
+  ] as const) {
+    const value = config[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'string') {
+      throw new Error(`${key} must be a string`);
+    }
+  }
+
+  for (const key of ['CLOUDFLARE_AI_BASE_URL', 'GROQ_BASE_URL'] as const) {
+    const value = config[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'string') {
+      throw new Error(`${key} must be a valid URL`);
+    }
+    try {
+      const url = new URL(value);
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported protocol');
+    } catch {
+      throw new Error(`${key} must be a valid URL`);
+    }
+  }
+
+  if (isProdLike && normalizedAiProvider && normalizedAiProvider !== 'disabled') {
+    if (normalizedAiProvider === 'cloudflare') {
+      const accountId = config.CLOUDFLARE_ACCOUNT_ID;
+      const token = config.CLOUDFLARE_AI_TOKEN ?? config.CLOUDFLARE_API_TOKEN;
+      if (typeof accountId !== 'string' || accountId.trim().length === 0) {
+        throw new Error(
+          'CLOUDFLARE_ACCOUNT_ID is required in production when AI_PROVIDER is cloudflare',
+        );
+      }
+      if (typeof token !== 'string' || token.trim().length === 0) {
+        throw new Error(
+          'CLOUDFLARE_AI_TOKEN is required in production when AI_PROVIDER is cloudflare',
+        );
+      }
+    } else if (normalizedAiProvider === 'groq') {
+      const apiKey = config.GROQ_API_KEY;
+      if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        throw new Error('GROQ_API_KEY is required in production when AI_PROVIDER is groq');
+      }
+    }
+
+    if (normalizedFallback === 'groq') {
+      const apiKey = config.GROQ_API_KEY;
+      if (typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        throw new Error('GROQ_API_KEY is required in production when AI_FALLBACK_PROVIDER is groq');
+      }
+    }
+  }
+
   return config;
 }
 
