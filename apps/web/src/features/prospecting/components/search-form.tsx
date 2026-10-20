@@ -123,6 +123,8 @@ export function SearchForm({
   const selectedCategories = watch('categories');
   const selectedRegion = watch('state');
   const selectedCity = watch('city');
+  const selectedNeighborhood = watch('neighborhood');
+  const onlyWithoutWebsite = watch('onlyWithoutWebsite');
   const regionsQuery = useGeoRegions(selectedCountry);
   const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
   const regions = regionsQuery.data ?? [];
@@ -311,13 +313,20 @@ export function SearchForm({
                 disabled={citiesQuery.isLoading}
               >
                 <Search className="h-4 w-4" aria-hidden />
-                Pesquisar empresas
+                {t('prospectWorkspace.searchAction', 'Buscar empresas')}
               </Button>
             </div>
           </div>
 
-          {selectedCategories.length > 0 ? (
-            <ul className="flex flex-wrap gap-2" aria-label="Nichos selecionados">
+          {selectedCategories.length > 0 ||
+          selectedCity ||
+          selectedRegion ||
+          selectedNeighborhood.trim() ||
+          onlyWithoutWebsite ? (
+            <ul
+              className="flex flex-wrap gap-2"
+              aria-label={t('prospectWorkspace.activeFilters', 'Filtros ativos')}
+            >
               {selectedCategories.map((category) => (
                 <li key={category}>
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/15 py-1 pl-3 pr-1 text-xs font-medium text-[color:var(--accent)]">
@@ -333,6 +342,34 @@ export function SearchForm({
                   </span>
                 </li>
               ))}
+              {selectedCity ? (
+                <li>
+                  <span className="inline-flex rounded-full bg-[color:var(--brand-soft)] px-3 py-1 text-xs font-medium text-[color:var(--brand-hover)]">
+                    {selectedCity}
+                  </span>
+                </li>
+              ) : null}
+              {selectedRegion ? (
+                <li>
+                  <span className="inline-flex rounded-full bg-[color:var(--brand-soft)] px-3 py-1 text-xs font-medium text-[color:var(--brand-hover)]">
+                    {selectedRegion}
+                  </span>
+                </li>
+              ) : null}
+              {selectedNeighborhood.trim() ? (
+                <li>
+                  <span className="inline-flex rounded-full bg-[color:var(--brand-soft)] px-3 py-1 text-xs font-medium text-[color:var(--brand-hover)]">
+                    {selectedNeighborhood.trim()}
+                  </span>
+                </li>
+              ) : null}
+              {onlyWithoutWebsite ? (
+                <li>
+                  <span className="inline-flex rounded-full bg-[color:var(--brand-soft)] px-3 py-1 text-xs font-medium text-[color:var(--brand-hover)]">
+                    {t('prospectWorkspace.withoutWebsiteFilter', 'Sem site')}
+                  </span>
+                </li>
+              ) : null}
             </ul>
           ) : null}
           {errors.categories?.message ? (

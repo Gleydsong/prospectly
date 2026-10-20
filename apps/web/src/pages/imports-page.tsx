@@ -98,7 +98,7 @@ function importStatusDescription(status: keyof typeof IMPORT_STATUS_LABEL): stri
     : 'Processamento concluído.';
 }
 
-export function ImportsPage() {
+export function ImportsPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<CsvPreview | null>(null);
@@ -170,14 +170,16 @@ export function ImportsPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">
-          {t('leads.imports')}
-        </h1>
-        <p className="text-sm text-[color:var(--ink-muted)]">
-          Pré-visualize o arquivo, confirme o mapeamento e acompanhe o processamento.
-        </p>
-      </div>
+      {!embedded ? (
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">
+            {t('leads.imports')}
+          </h1>
+          <p className="text-sm text-[color:var(--ink-muted)]">
+            Pré-visualize o arquivo, confirme o mapeamento e acompanhe o processamento.
+          </p>
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader
@@ -225,6 +227,7 @@ export function ImportsPage() {
           <Button
             type="button"
             className="mt-4"
+            variant={preview ? 'outline' : 'primary'}
             disabled={!file}
             loading={previewCsv.isPending}
             onClick={previewFile}
