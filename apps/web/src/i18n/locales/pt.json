@@ -1559,5 +1559,31 @@
     "doNotContact": "Não contatar este cliente.",
     "noWhatsapp": "WhatsApp indisponível",
     "open": "Abrir ficha"
+  },
+  "home": {
+    "clients": "Clientes",
+    "contacted": "Contatados",
+    "qualified": "Qualificados",
+    "won": "Ganhos",
+    "newClient": "Novo cliente",
+    "last30Days": "Visão dos últimos 30 dias · UTC",
+    "map": "Mapa de clientes",
+    "viewMap": "Ver no mapa",
+    "distribution": "Distribuição por etapa",
+    "evolution": "Evolução de clientes",
+    "nextActions": "Próximas ações",
+    "viewAll": "Ver todas",
+    "recentActivity": "Atividade recente",
+    "noBaseline": "Sem base no período anterior",
+    "change": "{{value}}% vs. período anterior",
+    "metricDefinition": "Clientes salvos nos últimos 30 dias UTC; etapas atuais dessa carteira. Comparação com os 30 dias anteriores.",
+    "emptyClients": "Nenhum cliente neste período.",
+    "emptyActions": "Nenhuma tarefa agendada.",
+    "emptyActivity": "Nenhuma atividade recente.",
+    "unavailable": "Dados indisponíveis.",
+    "scheduledTask": "Tarefa agendada",
+    "activity": "Atividade registrada",
+    "viewDailyData": "Ver dados diários",
+    "date": "Data"
   }
 }

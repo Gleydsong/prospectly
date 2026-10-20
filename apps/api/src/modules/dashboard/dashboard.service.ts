@@ -6,16 +6,20 @@ import { FREE_SEARCH_LIMIT } from '../billing/billing.constants';
 import type { DashboardPeriod, QueryDashboardDto } from './dto/query-dashboard.dto';
 
 export type DashboardRecommendationCode =
-  | 'HIGH_POTENTIAL_IDLE'
-  | 'STALE_LEADS'
-  | 'OVERDUE_FOLLOW_UPS'
-  | 'FREE_SEARCH_QUOTA';
+  'HIGH_POTENTIAL_IDLE' | 'STALE_LEADS' | 'OVERDUE_FOLLOW_UPS' | 'FREE_SEARCH_QUOTA';
 
 export interface DashboardRecommendation {
   code: DashboardRecommendationCode;
   count: number;
   href: string;
   severity: 'info' | 'warning' | 'action';
+}
+
+export interface DashboardOverviewKpi {
+  value: number;
+  previousValue: number;
+  /** Percentage change from the previous 30-day cohort; null when its baseline is zero. */
+  changePercent: number | null;
 }
 
 @Injectable()
@@ -149,7 +153,10 @@ export class DashboardService {
     const followUpRate =
       totalLeads > 0 ? Math.round((overdueFollowUps.length / totalLeads) * 1000) / 10 : 0;
 
-    const bySource = new Map<string, { source: string; total: number; won: number; lost: number }>();
+    const bySource = new Map<
+      string,
+      { source: string; total: number; won: number; lost: number }
+    >();
     for (const row of conversionBySourceRaw) {
       const count = aggregateCount(row._count);
       const entry = bySource.get(row.source) ?? {
@@ -184,6 +191,11 @@ export class DashboardService {
       planStatus: org?.planStatus ?? 'INACTIVE',
     });
 
+    const overview =
+      (query.period ?? '30d') === '30d'
+        ? await this.buildOverview(organizationId, query, now)
+        : undefined;
+
     return {
       totalLeads,
       newLeads,
@@ -217,12 +229,163 @@ export class DashboardService {
       topOpportunities,
       conversionBySource,
       recommendations,
+      ...(overview ? { overview } : {}),
       filters: {
         period: query.period ?? '30d',
         source: query.source ?? null,
         ownerId: query.ownerId ?? null,
         segment: query.segment ?? null,
       },
+    };
+  }
+
+  private async buildOverview(organizationId: string, query: QueryDashboardDto, now: Date) {
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrow = new Date(today.getTime() + 86_400_000);
+    const currentStart = new Date(today.getTime() - 29 * 86_400_000);
+    const previousStart = new Date(currentStart.getTime() - 30 * 86_400_000);
+    const currentWhere = this.buildLeadWhere(organizationId, { ...query, period: 'all' });
+    const previousWhere = currentWhere;
+    const currentWindow = { gte: currentStart, lt: tomorrow };
+    const previousWindow = { gte: previousStart, lt: currentStart };
+    const currentFor = (status?: 'CONTACTED' | 'QUALIFIED' | 'WON') => ({
+      ...currentWhere,
+      createdAt: currentWindow,
+      ...(status ? { status } : {}),
+    });
+    const previousFor = (status?: 'CONTACTED' | 'QUALIFIED' | 'WON') => ({
+      ...previousWhere,
+      createdAt: previousWindow,
+      ...(status ? { status } : {}),
+    });
+
+    const [
+      clients,
+      contacted,
+      qualified,
+      won,
+      previousClients,
+      previousContacted,
+      previousQualified,
+      previousWon,
+      dailyRows,
+      byStatus,
+      nextActions,
+      recentActivity,
+    ] = await Promise.all([
+      this.prisma.lead.count({ where: currentFor() }),
+      this.prisma.lead.count({ where: currentFor('CONTACTED') }),
+      this.prisma.lead.count({ where: currentFor('QUALIFIED') }),
+      this.prisma.lead.count({ where: currentFor('WON') }),
+      this.prisma.lead.count({ where: previousFor() }),
+      this.prisma.lead.count({ where: previousFor('CONTACTED') }),
+      this.prisma.lead.count({ where: previousFor('QUALIFIED') }),
+      this.prisma.lead.count({ where: previousFor('WON') }),
+      this.prisma.$queryRaw<Array<{ date: Date; count: bigint }>>`
+        WITH days AS (
+          SELECT generate_series(
+            ${currentStart.toISOString().slice(0, 10)}::date,
+            ${today.toISOString().slice(0, 10)}::date,
+            interval '1 day'
+          )::date AS day
+        )
+        SELECT days.day AS date, COUNT(lead."id")::bigint AS count
+        FROM days
+        LEFT JOIN "Lead" lead
+          ON lead."organizationId" = ${organizationId}
+          AND lead."deletedAt" IS NULL
+          AND lead."createdAt" >= ${currentStart}
+          AND lead."createdAt" < ${tomorrow}
+          AND lead."createdAt"::date = days.day
+          ${query.source ? Prisma.sql`AND lead."source" = ${query.source}::"LeadSource"` : Prisma.empty}
+          ${query.ownerId ? Prisma.sql`AND lead."ownerId" = ${query.ownerId}` : Prisma.empty}
+          ${query.segment ? Prisma.sql`AND LOWER(lead."segment") = LOWER(${query.segment})` : Prisma.empty}
+        GROUP BY days.day
+        ORDER BY days.day
+      `,
+      this.prisma.lead.groupBy({
+        by: ['status'],
+        where: { ...currentWhere, createdAt: currentWindow },
+        _count: true,
+      }),
+      this.prisma.task.findMany({
+        where: {
+          organizationId,
+          status: { in: ['OPEN', 'IN_PROGRESS'] },
+          dueAt: { not: null },
+          ...(query.ownerId ? { assigneeId: query.ownerId } : {}),
+          AND: [
+            {
+              OR: [
+                ...(query.source || query.segment ? [] : [{ leadId: null }]),
+                {
+                  lead: {
+                    is: {
+                      ...this.buildLeadWhere(organizationId, {
+                        ...query,
+                        ownerId: undefined,
+                        period: 'all',
+                      }),
+                      deletedAt: null,
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          title: true,
+          dueAt: true,
+          lead: { select: { id: true, companyName: true } },
+        },
+        orderBy: { dueAt: 'asc' },
+        take: 5,
+      }),
+      this.prisma.leadActivity.findMany({
+        where: {
+          organizationId,
+          lead: {
+            ...currentWhere,
+            deletedAt: null,
+          },
+        },
+        select: {
+          id: true,
+          type: true,
+          description: true,
+          outcome: true,
+          createdAt: true,
+          lead: { select: { id: true, companyName: true } },
+          user: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+    ]);
+
+    return {
+      // The current cohort spans 30 UTC calendar days through tomorrow's exclusive boundary.
+      periodDays: 30,
+      currentPeriod: { start: currentStart.toISOString(), end: tomorrow.toISOString() },
+      previousPeriod: { start: previousStart.toISOString(), end: currentStart.toISOString() },
+      // Status metrics count the current status of leads created in the corresponding cohort.
+      kpis: {
+        clients: kpi(clients, previousClients),
+        contacted: kpi(contacted, previousContacted),
+        qualified: kpi(qualified, previousQualified),
+        won: kpi(won, previousWon),
+      },
+      dailyCreated: dailyRows.map((row) => ({
+        date: row.date.toISOString().slice(0, 10),
+        count: Number(row.count),
+      })),
+      // Same creation cohort as KPIs; charts do not depend on the status distribution endpoint's period.
+      byStatus: byStatus.map((row) => ({ status: row.status, count: row._count })),
+      // Pending scheduled tasks and latest activity may belong to leads created before the current cohort.
+      nextActions,
+      recentActivity,
     };
   }
 
@@ -382,4 +545,15 @@ function aggregateCount(count: number | { _all?: number } | true | undefined): n
   if (typeof count === 'number') return count;
   if (count === true) return 1;
   return count?._all ?? 0;
+}
+
+function kpi(value: number, previousValue: number): DashboardOverviewKpi {
+  return {
+    value,
+    previousValue,
+    changePercent:
+      previousValue === 0
+        ? null
+        : Math.round(((value - previousValue) / previousValue) * 1000) / 10,
+  };
 }

@@ -89,6 +89,7 @@ export function useCreateActivity(leadId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['leads', leadId, 'activities'] });
       void queryClient.invalidateQueries({ queryKey: ['leads', leadId] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

@@ -1559,5 +1559,31 @@
     "doNotContact": "Do not contact this client.",
     "noWhatsapp": "WhatsApp unavailable",
     "open": "Open client"
+  },
+  "home": {
+    "clients": "Clients",
+    "contacted": "Contacted",
+    "qualified": "Qualified",
+    "won": "Won",
+    "newClient": "New client",
+    "last30Days": "Last 30 days · UTC",
+    "map": "Client map",
+    "viewMap": "View on map",
+    "distribution": "Stage distribution",
+    "evolution": "Client growth",
+    "nextActions": "Next actions",
+    "viewAll": "View all",
+    "recentActivity": "Recent activity",
+    "noBaseline": "No previous-period baseline",
+    "change": "{{value}}% vs. previous period",
+    "metricDefinition": "Clients saved in the last 30 UTC days; current stages of that portfolio. Compared with the previous 30 days.",
+    "emptyClients": "No clients in this period.",
+    "emptyActions": "No scheduled tasks.",
+    "emptyActivity": "No recent activity.",
+    "unavailable": "Data unavailable.",
+    "scheduledTask": "Scheduled task",
+    "activity": "Activity recorded",
+    "viewDailyData": "View daily data",
+    "date": "Date"
   }
 }
