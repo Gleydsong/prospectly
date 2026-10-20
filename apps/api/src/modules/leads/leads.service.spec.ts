@@ -690,6 +690,47 @@ describe('LeadsService', () => {
         ]),
       }),
     );
-    expect((result as { missingFields: string[] }).missingFields).not.toContain('city');
+    expect((result as unknown as { missingFields: string[] }).missingFields).not.toContain('city');
+  });
+
+  it('getById returns suppressed boolean when SuppressionService is present', async () => {
+    const prisma = makePrisma();
+    prisma.lead.findFirst.mockResolvedValue({
+      id: 'lead-1',
+      organizationId: 'org1',
+      companyName: 'Café',
+      phone: '+5511999999999',
+      email: 'optout@example.com',
+      website: 'https://cafe.example.com',
+      whatsapp: null,
+      address: null,
+      city: 'SP',
+      category: null,
+      source: 'OPENSTREETMAP',
+      websitePresence: 'WEBSITE_FOUND',
+      tags: [],
+      contacts: [],
+      scores: [],
+      websiteRecord: null,
+    });
+    const suppression = {
+      isSuppressed: jest.fn().mockResolvedValue(true),
+    };
+    const service = new LeadsService(
+      prisma,
+      makeIngestion(),
+      makeEntitlements() as never,
+      undefined,
+      undefined,
+      suppression as never,
+    );
+
+    const result = await service.getById('org1', 'lead-1');
+    expect((result as Record<string, unknown>).suppressed).toBe(true);
+    expect(suppression.isSuppressed).toHaveBeenCalledWith('org1', {
+      email: 'optout@example.com',
+      phone: '+5511999999999',
+      domain: 'cafe.example.com',
+    });
   });
 });

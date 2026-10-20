@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import { OllamaChatClient } from '../../agents/whatsapp-ai/ollama-chat.client';
+import { SuppressionService } from '../../privacy/suppression.service';
+import { SuppressedContactException } from '../../agents/agents.exceptions';
+import { normalizeLeadDomain } from '../../leads/domain/lead-domain';
+import { WhatsappAiService } from '../../agents/whatsapp-ai/whatsapp-ai.service';
 import { judgeProspect, SdrDecisionLog } from '../domain/sdr-decisions';
 import { SdrJevClient } from './sdr-jev.client';
 import { EMPTY_SDR_RUNTIME, type SdrRuntimeView } from './sdr-runtime.scenario';
@@ -27,8 +30,9 @@ type QueueLead = {
 export class SdrRuntimeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly ollama: OllamaChatClient,
+    private readonly whatsappAi: WhatsappAiService,
     private readonly jev: SdrJevClient,
+    private readonly suppression: SuppressionService,
   ) {}
 
   async get(organizationId: string): Promise<SdrRuntimeView> {
@@ -48,6 +52,16 @@ export class SdrRuntimeService {
       return { ...EMPTY_SDR_RUNTIME, seenLeadIds: seen };
     }
 
+    if (
+      await this.suppression.isSuppressed(organizationId, {
+        email: lead.email,
+        phone: lead.phone ?? lead.whatsapp,
+        domain: normalizeLeadDomain(lead.website),
+      })
+    ) {
+      throw new SuppressedContactException();
+    }
+
     const name = lead.tradeName?.trim() || lead.companyName;
     const industry = lead.category ?? lead.segment ?? undefined;
     const decision = await judgeProspect({
@@ -61,7 +75,7 @@ export class SdrRuntimeService {
       untrustedText: lead.website ?? '',
     });
     const worthIt = decision.qualification === 'QUALIFIED' && decision.opportunityScore != null;
-    const body = worthIt ? await this.draft(lead) : null;
+    const body = worthIt ? await this.draft(lead, organizationId) : null;
     const view: SdrRuntimeView = {
       campaign: { name: 'Fila de leads', status: 'ACTIVE', channel: 'EMAIL' },
       autonomy: {
@@ -133,8 +147,8 @@ export class SdrRuntimeService {
     });
   }
 
-  private async draft(lead: QueueLead): Promise<string> {
-    const generated = await this.ollama.generateVariants(
+  private async draft(lead: QueueLead, organizationId: string): Promise<string> {
+    const generated = await this.whatsappAi.generateVariants(
       {
         companyName: lead.companyName,
         tradeName: lead.tradeName,
@@ -147,6 +161,7 @@ export class SdrRuntimeService {
       },
       1,
       0,
+      organizationId,
     );
     const fromModel = generated?.[0]?.body?.trim();
     if (fromModel) return fromModel;
@@ -194,5 +209,8 @@ function isRuntimeView(value: Prisma.JsonValue | undefined): value is SdrRuntime
 }
 
 function isLocalFixture(view: SdrRuntimeView): boolean {
-  return view.decision?.traceId === 'trace-local' || view.prospects.some((item) => item.id === 'prospect-1');
+  return (
+    view.decision?.traceId === 'trace-local' ||
+    view.prospects.some((item) => item.id === 'prospect-1')
+  );
 }

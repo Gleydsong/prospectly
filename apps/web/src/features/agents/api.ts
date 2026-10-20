@@ -55,18 +55,10 @@ export type WhatsappFirstMessageResult = {
   messageSent: false;
 };
 
-export type WhatsappSequenceStage =
-  | 'FIRST_MESSAGE'
-  | 'FOLLOW_UP_1'
-  | 'FOLLOW_UP_2'
-  | 'BREAKUP';
+export type WhatsappSequenceStage = 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
 
 export type WhatsappVariantAngle =
-  | 'direto'
-  | 'curiosidade'
-  | 'prova_social'
-  | 'dor_site'
-  | 'oferta_leve';
+  'direto' | 'curiosidade' | 'prova_social' | 'dor_site' | 'oferta_leve';
 
 export type WhatsappVariant = {
   id: string;
@@ -80,7 +72,7 @@ export type WhatsappVariantsResult = {
   companyName: string;
   phone: string | null;
   digits: string | null;
-  source: 'ollama' | 'fallback';
+  source: 'ai' | 'fallback';
   seed?: number;
   sequenceStage?: WhatsappSequenceStage;
   variants: WhatsappVariant[];
@@ -166,10 +158,7 @@ export async function fetchWhatsappVariants(input: {
 export async function recordWhatsappOutreach(
   input: RecordOutreachInput,
 ): Promise<RecordOutreachResult> {
-  const { data } = await api.post<RecordOutreachResult>(
-    '/agents/whatsapp/record-outreach',
-    input,
-  );
+  const { data } = await api.post<RecordOutreachResult>('/agents/whatsapp/record-outreach', input);
   return data;
 }
 
@@ -177,4 +166,3 @@ export async function fetchCrmDailyFocus(): Promise<DailyFocusResult> {
   const { data } = await api.get<DailyFocusResult>('/agents/crm/daily-focus');
   return data;
 }
-

@@ -277,8 +277,8 @@ function WhatsappOutreachComposer({
                 )}
                 data-testid="whatsapp-modal-source-badge"
               >
-                {variants.data.source === 'ollama'
-                  ? t('agents.whatsapp.sourceOllama')
+                {variants.data.source === 'ai'
+                  ? t('agents.whatsapp.sourceAi')
                   : t('agents.whatsapp.sourceFallback')}
               </span>
             ) : null}

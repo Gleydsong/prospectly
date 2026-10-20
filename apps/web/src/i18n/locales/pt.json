@@ -1018,7 +1018,7 @@
       },
       "whatsapp-first-message": {
         "name": "Assistente de WhatsApp",
-        "description": "Gera variantes de 1ª mensagem (IA ou modelo local) e monta wa.me — sem envio automático."
+        "description": "Gera variantes de 1ª mensagem (IA ou fallback determinístico) e monta wa.me — sem envio automático."
       }
     },
     "crm": {
@@ -1075,7 +1075,7 @@
       "noPhone": "Sem telefone",
       "buildError": "Não foi possível montar a mensagem.",
       "generateAgain": "Gerar de novo",
-      "sourceOllama": "IA",
+      "sourceAi": "IA",
       "sourceFallback": "Modelo local",
       "variantsError": "Não foi possível gerar variantes.",
       "useSavedTemplate": "Usar modelo salvo",

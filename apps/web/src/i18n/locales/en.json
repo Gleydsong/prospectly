@@ -1018,7 +1018,7 @@
       },
       "whatsapp-first-message": {
         "name": "WhatsApp Agent",
-        "description": "Generates first-message variants (AI or local model) and builds wa.me — no auto-send."
+        "description": "Generates first-message variants (AI or deterministic fallback) and builds wa.me — no auto-send."
       }
     },
     "crm": {
@@ -1075,7 +1075,7 @@
       "noPhone": "No phone",
       "buildError": "Could not build the message.",
       "generateAgain": "Generate again",
-      "sourceOllama": "AI",
+      "sourceAi": "AI",
       "sourceFallback": "Local model",
       "variantsError": "Could not generate variants.",
       "useSavedTemplate": "Use saved template",
