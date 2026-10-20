@@ -167,3 +167,26 @@ describe('MapLibre source lifecycle', () => {
     expect(map.remove).toHaveBeenCalledTimes(1);
   });
 });
+
+it('renders search results as circles rather than saved-client symbol pins', () => {
+  renderWithProviders(
+    <ClientMapCanvas
+      data={data}
+      presentation="results"
+      dark={false}
+      label="Results"
+      onViewport={vi.fn()}
+      onSelect={vi.fn()}
+      onError={vi.fn()}
+      onReady={vi.fn()}
+    />,
+  );
+  act(() => map.handlers['style.load']?.());
+  expect(map.addLayer).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: 'client-pins',
+      type: 'circle',
+      paint: expect.objectContaining({ 'circle-radius': 8 }),
+    }),
+  );
+});

@@ -1559,5 +1559,35 @@
     "doNotContact": "Do not contact this client.",
     "noWhatsapp": "WhatsApp unavailable",
     "open": "Open client"
+  },
+  "prospectResults": {
+    "mapTitle": "Search results map",
+    "mapHint": "Circles: results on this page not yet saved as clients. Moving the map does not run another search.",
+    "mapError": "Map unavailable. Results remain accessible in cards and the selector.",
+    "selectMapResult": "Select a map result",
+    "noCoordinates": "No unsaved result on this page has valid coordinates.",
+    "select": "Select",
+    "hasWebsite": "Has a website",
+    "noWebsite": "Website not reported",
+    "openWebsite": "Open website",
+    "saved": "Client added",
+    "addClient": "Add client",
+    "addSelected": "Add selected ({{count}})",
+    "addAllPage": "Add all",
+    "grid": "Results grid",
+    "addToList": "Add to a List",
+    "addToListTitle": "Add clients to a List",
+    "selectedCount": "{{count}} selected result(s)",
+    "listUnresolved": "{{count}} result(s) could not be imported as clients. Try again.",
+    "noLists": "No Lists available.",
+    "chooseList": "List",
+    "chooseListPlaceholder": "Select a List",
+    "addedToList": "Clients added to the List.",
+    "addSelectedToList": "Add selected"
+  },
+  "prospectWorkspace": {
+    "searchAction": "Search businesses",
+    "activeFilters": "Active filters",
+    "withoutWebsiteFilter": "No website"
   }
 }

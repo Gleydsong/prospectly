@@ -1,5 +1,6 @@
 import { Download, Send } from 'lucide-react';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -7,17 +8,14 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
 import { TableSkeleton } from '@/components/ui/skeleton';
-import { VirtualizedList } from '@/components/ui/virtualized-list';
+import { SearchResultsMap } from './search-results-map';
+import { SearchResultsListAction } from './search-results-list-action';
 import { downloadCsvFile } from '@/features/leads/api';
 import { SearchQueryError } from '@/features/prospecting/components/search-query-error';
 import { SearchResultCard } from '@/features/prospecting/components/search-result-card';
 import { STATUS_LABEL } from '@/features/prospecting/search-presentation';
 import { formatSearchImportStatus } from '@/lib/presentation-labels';
-import type {
-  ProspectingSearch,
-  ProspectingSearchResult,
-  SearchImportSummary,
-} from '@/types';
+import type { ProspectingSearch, ProspectingSearchResult, SearchImportSummary } from '@/types';
 
 const CSV_COLUMNS = [
   'empresa',
@@ -61,7 +59,10 @@ function buildResultsCsv(results: ProspectingSearchResult[]): string {
 
 function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
   return (
-    <div className="space-y-2 rounded-control bg-[color:var(--surface-subtle)] p-3 text-sm text-[color:var(--ink)]" role="status">
+    <div
+      className="space-y-2 rounded-control bg-[color:var(--surface-subtle)] p-3 text-sm text-[color:var(--ink)]"
+      role="status"
+    >
       <p>
         Importação concluída: {summary.imported} importado(s), {summary.skipped} ignorado(s),{' '}
         {summary.invalid} inválido(s) e {summary.conflicts} possível(is) duplicado(s).
@@ -75,7 +76,10 @@ function ImportSummaryNotice({ summary }: { summary: SearchImportSummary }) {
                 <>
                   {' '}
                   —{' '}
-                  <Link className="underline hover:text-[color:var(--accent)]" to={`/leads/${item.leadId}`}>
+                  <Link
+                    className="underline hover:text-[color:var(--accent)]"
+                    to={`/leads/${item.leadId}`}
+                  >
                     ver cliente
                   </Link>
                 </>
@@ -98,6 +102,7 @@ export function SearchResults({
   onRetry,
   importSummary,
   selectedResultIds,
+  selectedResults,
   selectableResultIds,
   allCurrentResultsSelected,
   withoutWebsiteCount,
@@ -109,6 +114,7 @@ export function SearchResults({
   onPageChange,
   onImportSelected,
   onImportOne,
+  onImportAll,
 }: {
   currentSearch: ProspectingSearch | undefined;
   results: ProspectingSearchResult[];
@@ -119,6 +125,7 @@ export function SearchResults({
   onRetry: () => void;
   importSummary: SearchImportSummary | null;
   selectedResultIds: string[];
+  selectedResults?: ProspectingSearchResult[];
   selectableResultIds: string[];
   allCurrentResultsSelected: boolean;
   withoutWebsiteCount: number;
@@ -130,7 +137,9 @@ export function SearchResults({
   onPageChange: (page: number) => void;
   onImportSelected: () => void;
   onImportOne: (resultId: string) => void;
+  onImportAll?: () => void;
 }) {
+  const { t } = useTranslation();
   const searchIdRef = useRef(currentSearch?.id);
   const lastResultsMetaRef = useRef(resultsMeta);
   if (searchIdRef.current !== currentSearch?.id) {
@@ -142,7 +151,7 @@ export function SearchResults({
 
   const exportResultsCsv = () => {
     const exportable = selectedResultIds.length
-      ? results.filter((result) => selectedResultIds.includes(result.id))
+      ? (selectedResults ?? results.filter((result) => selectedResultIds.includes(result.id)))
       : results;
     if (exportable.length === 0) return;
     downloadCsvFile(`prospectly-resultados-${Date.now()}.csv`, buildResultsCsv(exportable));
@@ -167,7 +176,7 @@ export function SearchResults({
               type="button"
               size="sm"
               variant="secondary"
-              disabled={results.length === 0}
+              disabled={results.length === 0 && !selectedResults?.length}
               onClick={exportResultsCsv}
             >
               <Download className="h-4 w-4" aria-hidden />
@@ -175,13 +184,37 @@ export function SearchResults({
             </Button>
             <Button
               size="sm"
-              disabled={!canImport || selectedResultIds.length === 0}
+              variant="secondary"
+              disabled={!canImport || importPending || selectedResultIds.length === 0}
               loading={importPending && importingResultId === null}
               onClick={onImportSelected}
             >
               <Send className="h-4 w-4" aria-hidden />
-              Enviar para CRM ({selectedResultIds.length})
+              {t('prospectResults.addSelected', { count: selectedResultIds.length })}
             </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={
+                !onImportAll ||
+                !canImport ||
+                (!results.length && !resultsMeta?.total) ||
+                importPending
+              }
+              onClick={onImportAll}
+            >
+              {t('prospectResults.addAllPage')}
+            </Button>
+            {currentSearch ? (
+              <SearchResultsListAction
+                searchId={currentSearch.id}
+                results={
+                  selectedResults ??
+                  results.filter((result) => selectedResultIds.includes(result.id))
+                }
+                disabled={!canImport || importPending}
+              />
+            ) : null}
           </div>
         }
       />
@@ -218,7 +251,7 @@ export function SearchResults({
                   aria-label="Selecionar todos os resultados desta página"
                   checked={allCurrentResultsSelected}
                   onChange={onToggleCurrentPage}
-                  disabled={selectableResultIds.length === 0}
+                  disabled={importPending || selectableResultIds.length === 0}
                   className="h-4 w-4 rounded border-[color:var(--border)] bg-[color:var(--surface-card)] text-brand-500 focus:ring-[color:var(--ring)]"
                 />
                 Selecionar todos
@@ -233,35 +266,30 @@ export function SearchResults({
               </p>
             </div>
 
-            <div className="rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
-              <VirtualizedList
-                count={results.length}
-                estimateSize={104}
-                className="max-h-[min(70vh,40rem)]"
-                ariaLabel="Resultados da pesquisa"
-                getItemKey={(index) => results[index]?.id ?? index}
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)]">
+              <div
+                className="grid min-w-0 gap-4 sm:grid-cols-2"
+                aria-label={t('prospectResults.grid')}
               >
-                {(index) => {
-                  const result = results[index];
-                  if (!result) return null;
-                  return (
-                    <div
-                      className={
-                        index === 0 ? undefined : 'border-t border-[color:var(--border-default)]'
-                      }
-                    >
-                      <SearchResultCard
-                        result={result}
-                        selected={selectedResultIds.includes(result.id)}
-                        selectable={canImport && !result.importedLeadId}
-                        importing={importingResultId === result.id}
-                        onToggle={onToggleResult}
-                        onSendToCrm={onImportOne}
-                      />
-                    </div>
-                  );
+                {results.map((result) => (
+                  <SearchResultCard
+                    key={result.id}
+                    result={result}
+                    selected={selectedResultIds.includes(result.id)}
+                    selectable={canImport && !result.importedLeadId && !importPending}
+                    importing={importingResultId === result.id}
+                    onToggle={onToggleResult}
+                    onSendToCrm={onImportOne}
+                  />
+                ))}
+              </div>
+              <SearchResultsMap
+                key={`${currentSearch?.id}-${resultsMeta?.page}`}
+                results={results}
+                onSelect={(id) => {
+                  document.getElementById(`search-result-${id}`)?.focus({ preventScroll: false });
                 }}
-              </VirtualizedList>
+              />
             </div>
 
             <p className="text-xs text-[color:var(--ink-muted)]">
@@ -273,8 +301,8 @@ export function SearchResults({
                 className="underline hover:text-[color:var(--ink)]"
               >
                 colaboradores do OpenStreetMap
-              </a>
-              {' '}(ODbL) e Google, conforme a fonte de cada resultado.
+              </a>{' '}
+              (ODbL) e Google, conforme a fonte de cada resultado.
             </p>
           </>
         )}

@@ -42,7 +42,7 @@ const statusLabels: Record<string, string> = {
   CANCELLED: 'Análise cancelada',
 };
 
-export function OpportunityFinderPage() {
+export function OpportunityFinderPage({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation();
   const [service, setService] = useState('');
   const [niche, setNiche] = useState('');
@@ -126,17 +126,21 @@ export function OpportunityFinderPage() {
 
   return (
     <div className="space-y-6">
-      <Link
-        to="/prospectar"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]"
-      >
-        <ArrowLeft className="h-4 w-4" /> {t('nav.backToProspect')}
-      </Link>
-      <PageHeader
-        eyebrow="Inteligência comercial"
-        title="Localizador de Oportunidades com IA"
-        description="Informe sua oferta e o nicho desejado. A Prospectly busca empresas brasileiras desse segmento, verifica sinais públicos e prioriza oportunidades com evidências."
-      />
+      {!embedded ? (
+        <Link
+          to="/prospectar"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--ink-muted)] hover:text-[color:var(--ink)]"
+        >
+          <ArrowLeft className="h-4 w-4" /> {t('nav.backToProspect')}
+        </Link>
+      ) : null}
+      {!embedded ? (
+        <PageHeader
+          eyebrow="Inteligência comercial"
+          title="Localizador de Oportunidades com IA"
+          description="Informe sua oferta e o nicho desejado. A Prospectly busca empresas brasileiras desse segmento, verifica sinais públicos e prioriza oportunidades com evidências."
+        />
+      ) : null}
 
       <Card>
         <CardContent className="space-y-5 p-6">
@@ -215,7 +219,7 @@ export function OpportunityFinderPage() {
             </p>
             <Button loading={createRun.isPending} disabled={isRunning} onClick={() => void start()}>
               <Search className="h-4 w-4" />
-              Encontrar oportunidades
+              {t('prospectWorkspace.searchAction', 'Buscar empresas')}
             </Button>
           </div>
         </CardContent>
@@ -294,7 +298,13 @@ export function OpportunityFinderPage() {
               <Button
                 key={category}
                 size="sm"
-                variant={rankingFilter === category ? 'primary' : 'secondary'}
+                variant="secondary"
+                aria-pressed={rankingFilter === category}
+                className={
+                  rankingFilter === category
+                    ? 'border-[color:var(--brand-soft)] bg-[color:var(--brand-soft)] text-[color:var(--brand-hover)] hover:bg-[color:var(--brand-soft)]'
+                    : undefined
+                }
                 onClick={() => setRankingFilter(category)}
               >
                 {category === 'ALL'
