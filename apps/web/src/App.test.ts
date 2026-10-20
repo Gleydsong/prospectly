@@ -12,7 +12,6 @@ const appSource = readFileSync(
 const CRM_CORE_PAGES = [
   { exportName: 'SearchPage', specifier: './search-page' },
   { exportName: 'LeadsPage', specifier: './leads/leads-page' },
-  { exportName: 'PipelinePage', specifier: './pipeline-page' },
   { exportName: 'CampaignsPage', specifier: './campaigns-page' },
 ] as const;
 

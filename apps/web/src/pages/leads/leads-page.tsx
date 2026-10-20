@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Download, Plus } from 'lucide-react';
@@ -49,11 +49,14 @@ import { useFunnelConversionLeads } from '@/features/reports/hooks';
 import { useAuthStore } from '@/stores/auth.store';
 import { LeadSource, LeadStatus, Role } from '@/types';
 
+const ClientsMap = lazy(() => import('@/features/leads/components/clients-map'));
+
 export function LeadsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const vista = searchParams.get('vista');
   const initialQ = (searchParams.get('q') ?? '').trim();
   const viewId = (searchParams.get('view') ?? '').trim();
   const reportBucketParam = searchParams.get('reportBucket');
@@ -79,10 +82,24 @@ export function LeadsPage() {
   const [hasWebsite, setHasWebsite] = useState<'' | 'yes' | 'no'>('');
   const [lastContactOp, setLastContactOp] = useState<LastContactOp>('');
   const [lastContactDays, setLastContactDays] = useState(DEFAULT_LAST_CONTACT_DAYS);
-  const [layout, setLayout] = useState<LeadViewLayout>('table');
+  const [savedLayout, setLayout] = useState<LeadViewLayout>('table');
+  const layout: LeadViewLayout =
+    vista === 'quadro' ? 'kanban' : vista === 'lista' ? 'table' : savedLayout;
+  const isMap = vista === 'mapa';
+  const changeLayout = (value: LeadViewLayout) => {
+    setLayout(value);
+    setPage(1);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.set('vista', value === 'kanban' ? 'quadro' : 'lista');
+      return next;
+    });
+  };
   const [columns, setColumns] = useState<LeadViewColumnKey[]>([...DEFAULT_LEAD_VIEW_COLUMNS]);
   const [customFilters, setCustomFilters] = useState<CustomFieldListFilter[]>([]);
   const [extras, setExtras] = useState<LeadViewDefinition>({});
+  const [debouncedCity, setDebouncedCity] = useState('');
+  const [debouncedSegment, setDebouncedSegment] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [saveViewOpen, setSaveViewOpen] = useState(false);
   const [saveMode, setSaveMode] = useState<'create' | 'update'>('create');
@@ -112,12 +129,19 @@ export function LeadsPage() {
   const previewQuery = usePreviewSavedView(selectedView?.id);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedCity(extras.city ?? '');
+      setDebouncedSegment(extras.segment ?? '');
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [extras.city, extras.segment]);
+
+  useEffect(() => {
     if (viewId) return;
-    const urlQ = (searchParams.get('q') ?? '').trim();
-    setQ(urlQ);
-    setSearch(urlQ);
+    setQ(initialQ);
+    setSearch(initialQ);
     setPage(1);
-  }, [searchParams, viewId]);
+  }, [initialQ, viewId]);
 
   useEffect(() => {
     if (viewId) return;
@@ -175,7 +199,7 @@ export function LeadsPage() {
         layout,
         columns,
         customFilters,
-        extras,
+        extras: { ...extras, city: debouncedCity, segment: debouncedSegment },
       },
       page,
     ),
@@ -183,8 +207,21 @@ export function LeadsPage() {
   };
   const waitingForReportIds = Boolean(reportBucket) && !idsQuery.isSuccess && !idsQuery.isError;
   const reportIdsFailed = Boolean(reportBucket) && idsQuery.isError;
-  const query = useLeads(listQuery, { enabled: !waitingForReportIds && !reportIdsFailed });
+  const query = useLeads(listQuery, {
+    enabled: !isMap && layout !== 'kanban' && !waitingForReportIds && !reportIdsFailed,
+  });
 
+  const mapUnsupportedFilters = Boolean(
+    statusOr ||
+    hasWebsite ||
+    lastContactOp ||
+    customFilters.length ||
+    reportBucket ||
+    Object.entries(extras).some(
+      ([key, value]) =>
+        !['city', 'segment', 'sortBy', 'sortOrder'].includes(key) && value !== undefined,
+    ),
+  );
   const leads = query.data?.data ?? [];
   const meta = query.data?.meta;
 
@@ -193,12 +230,28 @@ export function LeadsPage() {
     setPage(1);
     setSearch(term);
     if (viewId) return;
-    navigate(term ? `/leads?q=${encodeURIComponent(term)}` : '/leads', { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (term) next.set('q', term);
+        else next.delete('q');
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const selectView = (id: string) => {
     setPage(1);
-    navigate(id ? `/leads?view=${encodeURIComponent(id)}` : '/leads', { replace: true });
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (id) next.set('view', id);
+        else next.delete('view');
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const openCreateView = () => {
@@ -276,7 +329,7 @@ export function LeadsPage() {
     try {
       await archiveView.mutateAsync(selectedView.id);
       setExportMessage(t('leads.viewArchived'));
-      navigate('/leads', { replace: true });
+      navigate('/clientes', { replace: true });
     } catch (error) {
       setActionError(getApiErrorMessage(error) || t('common.errorGeneric'));
     }
@@ -360,6 +413,10 @@ export function LeadsPage() {
         }
       />
 
+      <Link to="/clientes/etapas" className="text-sm font-medium text-[color:var(--brand-hover)]">
+        {t('clientsViews.pipelineStages')}
+      </Link>
+
       {reportBucket ? (
         <Card
           className="border-amber-500/30 bg-amber-500/10 p-4 text-sm text-[color:var(--ink)]"
@@ -416,9 +473,24 @@ export function LeadsPage() {
             setCustomFilters(value);
           }}
           layout={layout}
-          onLayoutChange={(value) => {
+          isMap={isMap}
+          onLayoutChange={changeLayout}
+          onMap={() =>
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current);
+              next.set('vista', 'mapa');
+              return next;
+            })
+          }
+          city={extras.city ?? ''}
+          segment={extras.segment ?? ''}
+          onCityChange={(city) => {
             setPage(1);
-            setLayout(value);
+            setExtras((value) => ({ ...value, city }));
+          }}
+          onSegmentChange={(segment) => {
+            setPage(1);
+            setExtras((value) => ({ ...value, segment }));
           }}
           columns={columns}
           onColumnsChange={(value) => {
@@ -446,24 +518,48 @@ export function LeadsPage() {
           </div>
         ) : null}
 
-        <LeadsListResults
-          layout={layout}
-          leads={leads}
-          columns={columns}
-          customFields={customFields}
-          meta={meta}
-          isLoading={query.isLoading}
-          isError={query.isError}
-          waitingForReportIds={waitingForReportIds}
-          reportIdsFailed={reportIdsFailed}
-          kanbanLabel={t('leads.kanbanLabel')}
-          deletePendingId={deleteLead.isPending ? deleteLead.variables : undefined}
-          onPageChange={setPage}
-          onCreate={() => setModalOpen(true)}
-          onDelete={(leadId, companyName) => void removeLead(leadId, companyName)}
-          newClientLabel={t('principal.newClient')}
-          t={t}
-        />
+        {isMap && mapUnsupportedFilters ? (
+          <div className="p-5">
+            <Alert>{t('clientsViews.unsupportedMapFilters')}</Alert>
+          </div>
+        ) : isMap ? (
+          <Suspense
+            fallback={
+              <p className="p-5" role="status">
+                {t('clientsViews.loadingMap')}
+              </p>
+            }
+          >
+            <ClientsMap
+              filters={{
+                status: status || undefined,
+                segment: debouncedSegment || undefined,
+                city: debouncedCity || undefined,
+                q: search || undefined,
+              }}
+            />
+          </Suspense>
+        ) : (
+          <LeadsListResults
+            layout={layout}
+            filters={listQuery}
+            leads={leads}
+            columns={columns}
+            customFields={customFields}
+            meta={meta}
+            isLoading={query.isLoading}
+            isError={query.isError}
+            waitingForReportIds={waitingForReportIds}
+            reportIdsFailed={reportIdsFailed}
+            kanbanLabel={t('leads.kanbanLabel')}
+            deletePendingId={deleteLead.isPending ? deleteLead.variables : undefined}
+            onPageChange={setPage}
+            onCreate={() => setModalOpen(true)}
+            onDelete={(leadId, companyName) => void removeLead(leadId, companyName)}
+            newClientLabel={t('principal.newClient')}
+            t={t}
+          />
+        )}
       </Card>
 
       <LeadFormModal open={modalOpen} onClose={() => setModalOpen(false)} />

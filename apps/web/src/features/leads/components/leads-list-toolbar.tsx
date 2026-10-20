@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,12 @@ export function LeadsListToolbar({
   onCustomFiltersChange,
   layout,
   onLayoutChange,
+  isMap = false,
+  onMap,
+  city = '',
+  segment = '',
+  onCityChange,
+  onSegmentChange,
   columns,
   onColumnsChange,
   viewId,
@@ -71,6 +78,12 @@ export function LeadsListToolbar({
   customFields: CustomFieldDefinition[];
   customFilters: CustomFieldListFilter[];
   onCustomFiltersChange: (value: CustomFieldListFilter[]) => void;
+  isMap?: boolean;
+  onMap?: () => void;
+  city?: string;
+  segment?: string;
+  onCityChange?: (value: string) => void;
+  onSegmentChange?: (value: string) => void;
   layout: LeadViewLayout;
   onLayoutChange: (value: LeadViewLayout) => void;
   columns: LeadViewColumnKey[];
@@ -92,7 +105,7 @@ export function LeadsListToolbar({
 
   return (
     <div className="space-y-4 border-b border-[color:var(--border)] p-4 sm:p-5">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_200px_170px_auto]">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_180px_170px_170px_auto]">
         <div className="flex gap-2">
           <Input
             placeholder={t('principal.clientsSearch')}
@@ -107,227 +120,267 @@ export function LeadsListToolbar({
         <Select
           value={status}
           onChange={(event) => onStatusChange(event.target.value as LeadStatus | '')}
-          aria-label="Filtrar por status"
+          aria-label={t('clientsViews.filterStatus')}
         >
-          <option value="">Todos os status</option>
+          <option value="">{t('clientsViews.allStatuses')}</option>
           {Object.values(LeadStatus).map((value) => (
             <option key={value} value={value}>
               {getLeadStatusLabel(value)}
             </option>
           ))}
         </Select>
-        <Select
-          value={statusOr}
-          onChange={(event) => onStatusOrChange(event.target.value as LeadStatus | '')}
-          aria-label={t('leads.statusOr')}
-        >
-          <option value="">{t('leads.statusOrNone')}</option>
-          {Object.values(LeadStatus).map((value) => (
-            <option key={value} value={value}>
-              {getLeadStatusLabel(value)}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={hasWebsite}
-          onChange={(event) => onHasWebsiteChange(event.target.value as '' | 'yes' | 'no')}
-          aria-label="Filtrar por website"
-        >
-          <option value="">Com/sem site</option>
-          <option value="yes">Com site</option>
-          <option value="no">Sem site</option>
-        </Select>
+        <Input
+          aria-label={t('clientsViews.filterSegment')}
+          placeholder={t('clientsViews.segment')}
+          value={segment}
+          onChange={(event) => onSegmentChange?.(event.target.value)}
+        />
+        <Input
+          aria-label={t('clientsViews.filterCity')}
+          placeholder={t('clientsViews.city')}
+          value={city}
+          onChange={(event) => onCityChange?.(event.target.value)}
+        />
         <Button variant="outline" onClick={onSearch}>
-          Buscar
+          {t('clientsViews.search')}
         </Button>
       </div>
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-full sm:w-56">
-          <Select
-            value={lastContactOp}
-            onChange={(event) => onLastContactOpChange(event.target.value as LastContactOp)}
-            aria-label={t('leads.lastContact')}
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('leads.layout')}>
+        <Button
+          type="button"
+          variant={!isMap && layout === 'table' ? 'primary' : 'outline'}
+          aria-pressed={!isMap && layout === 'table'}
+          onClick={() => onLayoutChange('table')}
+        >
+          {t('nav.list')}
+        </Button>
+        <Button
+          type="button"
+          variant={!isMap && layout === 'kanban' ? 'primary' : 'outline'}
+          aria-pressed={!isMap && layout === 'kanban'}
+          onClick={() => onLayoutChange('kanban')}
+        >
+          {t('nav.board')}
+        </Button>
+        {onMap ? (
+          <Button
+            type="button"
+            variant={isMap ? 'primary' : 'outline'}
+            aria-pressed={isMap}
+            onClick={onMap}
           >
-            <option value="">{t('leads.lastContactAny')}</option>
-            <option value="older_than">{t('leads.lastContactOlder')}</option>
-            <option value="within">{t('leads.lastContactWithin')}</option>
-          </Select>
-        </div>
-        {lastContactOp ? (
-          <div className="w-full sm:w-28">
-            <Input
-              type="number"
-              min={1}
-              max={365}
-              value={lastContactDays}
-              onChange={(event) => {
-                const next = Number(event.target.value);
-                onLastContactDaysChange(
-                  Number.isInteger(next)
-                    ? Math.min(365, Math.max(1, next))
-                    : DEFAULT_LAST_CONTACT_DAYS,
-                );
-              }}
-              aria-label={t('leads.lastContactDays')}
-            />
+            {t('nav.map')}
+          </Button>
+        ) : null}
+        <Link
+          to="/clientes/listas"
+          className="inline-flex items-center rounded-control border border-[color:var(--border-default)] px-4 py-2 text-sm font-medium"
+        >
+          {t('nav.campaigns')}
+        </Link>
+      </div>
+      <details className="group">
+        <summary className="cursor-pointer text-sm font-medium text-[color:var(--ink-secondary)]">
+          {t('clientsViews.advancedFilters')}
+        </summary>
+        <div className="mt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              value={statusOr}
+              onChange={(event) => onStatusOrChange(event.target.value as LeadStatus | '')}
+              aria-label={t('leads.statusOr')}
+            >
+              <option value="">{t('leads.statusOrNone')}</option>
+              {Object.values(LeadStatus).map((value) => (
+                <option key={value} value={value}>
+                  {getLeadStatusLabel(value)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              value={hasWebsite}
+              onChange={(event) => onHasWebsiteChange(event.target.value as '' | 'yes' | 'no')}
+              aria-label="Filtrar por website"
+            >
+              <option value="">Com/sem site</option>
+              <option value="yes">Com site</option>
+              <option value="no">Sem site</option>
+            </Select>
           </div>
-        ) : null}
-        <div className="w-full sm:w-56">
-          <Select
-            value={customFilters[0]?.fieldId ?? ''}
-            onChange={(event) => {
-              const fieldId = event.target.value;
-              if (!fieldId) {
-                onCustomFiltersChange([]);
-                return;
-              }
-              const field = customFields.find((item) => item.id === fieldId);
-              const op: CustomFieldFilterOp = field ? opsForType(field.type)[0] : 'eq';
-              onCustomFiltersChange([
-                {
-                  fieldId,
-                  op,
-                  value: '',
-                  days: DEFAULT_LAST_CONTACT_DAYS,
-                },
-              ]);
-            }}
-            aria-label={t('leads.customFieldFilter')}
-          >
-            <option value="">{t('leads.customFieldFilterNone')}</option>
-            {pickerCustomFields(
-              customFields,
-              customFilters.map((item) => item.fieldId),
-            ).map((field) => (
-              <option key={field.id} value={field.id}>
-                {field.name}
-                {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
-              </option>
-            ))}
-          </Select>
-        </div>
-        {customFilters[0] ? (
-          <CustomFieldFilterValue
-            fields={customFields}
-            filter={customFilters[0]}
-            onChange={(next) => onCustomFiltersChange([next])}
-          />
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2" role="group" aria-label={t('leads.layout')}>
-          <Button
-            type="button"
-            variant={layout === 'table' ? 'primary' : 'outline'}
-            aria-pressed={layout === 'table'}
-            onClick={() => onLayoutChange('table')}
-          >
-            {t('leads.layoutTable')}
-          </Button>
-          <Button
-            type="button"
-            variant={layout === 'kanban' ? 'primary' : 'outline'}
-            aria-pressed={layout === 'kanban'}
-            onClick={() => onLayoutChange('kanban')}
-          >
-            {t('leads.layoutKanban')}
-          </Button>
-        </div>
-        {layout === 'table' ? (
-          <fieldset className="flex flex-wrap gap-3 rounded-lg border border-[color:var(--border)] px-3 py-2">
-            <legend className="px-1 text-xs font-semibold text-[color:var(--ink-muted)]">
-              {t('leads.columns')}
-            </legend>
-            {LEAD_VIEW_COLUMN_KEYS.map((column) => (
-              <label
-                key={column}
-                className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-full sm:w-56">
+              <Select
+                value={lastContactOp}
+                onChange={(event) => onLastContactOpChange(event.target.value as LastContactOp)}
+                aria-label={t('leads.lastContact')}
               >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-[color:var(--border)]"
-                  checked={columns.includes(column)}
-                  disabled={column === 'companyName'}
-                  onChange={() => {
-                    if (column === 'companyName') return;
-                    onColumnsChange(toggleLeadViewColumn(columns, column));
+                <option value="">{t('leads.lastContactAny')}</option>
+                <option value="older_than">{t('leads.lastContactOlder')}</option>
+                <option value="within">{t('leads.lastContactWithin')}</option>
+              </Select>
+            </div>
+            {lastContactOp ? (
+              <div className="w-full sm:w-28">
+                <Input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={lastContactDays}
+                  onChange={(event) => {
+                    const next = Number(event.target.value);
+                    onLastContactDaysChange(
+                      Number.isInteger(next)
+                        ? Math.min(365, Math.max(1, next))
+                        : DEFAULT_LAST_CONTACT_DAYS,
+                    );
                   }}
+                  aria-label={t('leads.lastContactDays')}
                 />
-                {t(`leads.column.${column}`)}
-              </label>
-            ))}
-            {pickerCustomFields(customFields, columns).map((field) => (
-              <label
-                key={field.id}
-                className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+              </div>
+            ) : null}
+            <div className="w-full sm:w-56">
+              <Select
+                value={customFilters[0]?.fieldId ?? ''}
+                onChange={(event) => {
+                  const fieldId = event.target.value;
+                  if (!fieldId) {
+                    onCustomFiltersChange([]);
+                    return;
+                  }
+                  const field = customFields.find((item) => item.id === fieldId);
+                  const op: CustomFieldFilterOp = field ? opsForType(field.type)[0] : 'eq';
+                  onCustomFiltersChange([
+                    {
+                      fieldId,
+                      op,
+                      value: '',
+                      days: DEFAULT_LAST_CONTACT_DAYS,
+                    },
+                  ]);
+                }}
+                aria-label={t('leads.customFieldFilter')}
               >
-                <input
-                  type="checkbox"
-                  aria-label={field.name}
-                  className="h-4 w-4 rounded border-[color:var(--border)]"
-                  checked={columns.includes(field.id)}
-                  onChange={() => onColumnsChange(toggleLeadViewColumn(columns, field.id))}
-                />
-                <span className="max-w-[180px] truncate" title={field.name}>
-                  {field.name}
-                </span>
-                <span className="rounded bg-[color:var(--surface-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--ink-muted)] border border-[color:var(--border)]">
-                  {t('leads.customFieldBadge')}
-                </span>
-                {field.archivedAt ? (
-                  <span className="text-xs text-[color:var(--ink-muted)]">
-                    ({t('leads.customFieldArchivedSuffix')})
+                <option value="">{t('leads.customFieldFilterNone')}</option>
+                {pickerCustomFields(
+                  customFields,
+                  customFilters.map((item) => item.fieldId),
+                ).map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {field.name}
+                    {field.archivedAt ? ` (${t('leads.customFieldArchivedSuffix')})` : ''}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            {customFilters[0] ? (
+              <CustomFieldFilterValue
+                fields={customFields}
+                filter={customFilters[0]}
+                onChange={(next) => onCustomFiltersChange([next])}
+              />
+            ) : null}
+          </div>
+          {!isMap && layout === 'table' ? (
+            <fieldset className="flex flex-wrap gap-3 rounded-lg border border-[color:var(--border)] px-3 py-2">
+              <legend className="px-1 text-xs font-semibold text-[color:var(--ink-muted)]">
+                {t('leads.columns')}
+              </legend>
+              {LEAD_VIEW_COLUMN_KEYS.map((column) => (
+                <label
+                  key={column}
+                  className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-[color:var(--border)]"
+                    checked={columns.includes(column)}
+                    disabled={column === 'companyName'}
+                    onChange={() => {
+                      if (column === 'companyName') return;
+                      onColumnsChange(toggleLeadViewColumn(columns, column));
+                    }}
+                  />
+                  {t(`leads.column.${column}`)}
+                </label>
+              ))}
+              {pickerCustomFields(customFields, columns).map((field) => (
+                <label
+                  key={field.id}
+                  className="flex items-center gap-1.5 text-sm text-[color:var(--ink)]"
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={field.name}
+                    className="h-4 w-4 rounded border-[color:var(--border)]"
+                    checked={columns.includes(field.id)}
+                    onChange={() => onColumnsChange(toggleLeadViewColumn(columns, field.id))}
+                  />
+                  <span className="max-w-[180px] truncate" title={field.name}>
+                    {field.name}
                   </span>
-                ) : null}
-              </label>
-            ))}
-          </fieldset>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="sm:max-w-xs sm:flex-1">
-          <Select
-            id="leads-saved-view"
-            label={t('leads.viewsLabel')}
-            value={viewId}
-            onChange={(event) => onSelectView(event.target.value)}
-          >
-            <option value="">{t('leads.viewsNone')}</option>
-            {views.map((view) => (
-              <option key={view.id} value={view.id}>
-                {view.name}
-              </option>
-            ))}
-          </Select>
+                  <span className="rounded bg-[color:var(--surface-muted)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--ink-muted)] border border-[color:var(--border)]">
+                    {t('leads.customFieldBadge')}
+                  </span>
+                  {field.archivedAt ? (
+                    <span className="text-xs text-[color:var(--ink-muted)]">
+                      ({t('leads.customFieldArchivedSuffix')})
+                    </span>
+                  ) : null}
+                </label>
+              ))}
+            </fieldset>
+          ) : null}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="sm:max-w-xs sm:flex-1">
+              <Select
+                id="leads-saved-view"
+                label={t('leads.viewsLabel')}
+                value={viewId}
+                onChange={(event) => onSelectView(event.target.value)}
+              >
+                <option value="">{t('leads.viewsNone')}</option>
+                {views.map((view) => (
+                  <option key={view.id} value={view.id}>
+                    {view.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canSaveView ? (
+                <Button type="button" variant="outline" onClick={onCreateView}>
+                  {t('leads.saveView')}
+                </Button>
+              ) : null}
+              {canSaveView && selectedView ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  loading={duplicating}
+                  onClick={onDuplicateView}
+                >
+                  {t('leads.duplicateView')}
+                </Button>
+              ) : null}
+              {canSaveView && selectedView?.canEdit ? (
+                <Button type="button" variant="outline" onClick={onUpdateView}>
+                  {t('leads.updateView')}
+                </Button>
+              ) : null}
+              {canSaveView && selectedView?.canEdit ? (
+                <Button type="button" variant="ghost" loading={archiving} onClick={onArchiveView}>
+                  {t('leads.archiveView')}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+          {previewCount != null && selectedView ? (
+            <p className="text-sm text-[color:var(--ink-muted)]">
+              {t('leads.viewCount', { count: previewCount })}
+            </p>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {canSaveView ? (
-            <Button type="button" variant="outline" onClick={onCreateView}>
-              {t('leads.saveView')}
-            </Button>
-          ) : null}
-          {canSaveView && selectedView ? (
-            <Button type="button" variant="outline" loading={duplicating} onClick={onDuplicateView}>
-              {t('leads.duplicateView')}
-            </Button>
-          ) : null}
-          {canSaveView && selectedView?.canEdit ? (
-            <Button type="button" variant="outline" onClick={onUpdateView}>
-              {t('leads.updateView')}
-            </Button>
-          ) : null}
-          {canSaveView && selectedView?.canEdit ? (
-            <Button type="button" variant="ghost" loading={archiving} onClick={onArchiveView}>
-              {t('leads.archiveView')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {previewCount != null && selectedView ? (
-        <p className="text-sm text-[color:var(--ink-muted)]">
-          {t('leads.viewCount', { count: previewCount })}
-        </p>
-      ) : null}
+      </details>
     </div>
   );
 }

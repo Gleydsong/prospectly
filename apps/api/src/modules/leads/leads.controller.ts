@@ -16,11 +16,16 @@ import { Throttle } from '@nestjs/throttler';
 
 import { CorrelationId } from '../../common/decorators/correlation-id.decorator';
 import { CurrentOrg } from '../../common/decorators/current-org.decorator';
-import { CurrentUser, type AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { AssignOwnerDto, ManageTagsDto } from './dto/manage-tags.dto';
 import { ExportLeadsDto } from './dto/export-leads.dto';
+import { QueryLeadMapDto } from './dto/query-lead-map.dto';
+import { LeadMapService } from './lead-map.service';
 import { QueryLeadsDto } from './dto/query-leads.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { CreateLeadWebsiteDto, UpdateLeadWebsiteDto } from './dto/lead-website.dto';
@@ -34,11 +39,17 @@ export class LeadsController {
   constructor(
     private readonly leads: LeadsService,
     private readonly leadWebsites: LeadWebsitesService,
+    private readonly leadMap: LeadMapService,
   ) {}
 
   @Get()
   list(@CurrentOrg() organizationId: string, @Query() query: QueryLeadsDto) {
     return this.leads.list(organizationId, query);
+  }
+
+  @Get('map')
+  map(@CurrentOrg() organizationId: string, @Query() query: QueryLeadMapDto) {
+    return this.leadMap.list(organizationId, query);
   }
 
   @Get('tags')
@@ -83,10 +94,7 @@ export class LeadsController {
   }
 
   @Get(':id/websites')
-  listLeadWebsites(
-    @CurrentOrg() organizationId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
+  listLeadWebsites(@CurrentOrg() organizationId: string, @Param('id', ParseUUIDPipe) id: string) {
     return this.leadWebsites.list(organizationId, id);
   }
 

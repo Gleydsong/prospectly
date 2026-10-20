@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "i18next": "^26.3.6",
     "lucide-react": "^0.468.0",
+    "maplibre-gl": "^6.15.0",
     "motion": "^12.42.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

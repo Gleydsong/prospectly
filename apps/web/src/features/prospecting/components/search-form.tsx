@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock, Search, X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { useBillingStatus } from '@/features/billing/hooks';
-import { planLabel, SearchQuotaBanner } from '@/features/prospecting/components/search-quota-banner';
+import {
+  planLabel,
+  SearchQuotaBanner,
+} from '@/features/prospecting/components/search-quota-banner';
 import {
   useCreateSearch,
   useGeoCities,
@@ -75,6 +78,18 @@ export function SearchForm({
   onError: (message: string) => void;
 }) {
   const { t } = useTranslation();
+  const [params] = useSearchParams();
+  const initialCountry = (PROSPECTING_COUNTRY_CODES as readonly string[]).includes(
+    params.get('country') ?? '',
+  )
+    ? (params.get('country') as SearchFormValues['country'])
+    : 'BR';
+  const initialCountryParam = params.get('country');
+  const hasSupportedInitialCountry =
+    initialCountryParam === null ||
+    (PROSPECTING_COUNTRY_CODES as readonly string[]).includes(initialCountryParam);
+  const initialCity = hasSupportedInitialCountry ? (params.get('city') ?? '').slice(0, 120) : '';
+  const initialRegion = hasSupportedInitialCountry ? (params.get('state') ?? '').slice(0, 120) : '';
   const categoriesQuery = useProspectingCategories();
   const billingQuery = useBillingStatus();
   const createSearch = useCreateSearch();
@@ -96,10 +111,10 @@ export function SearchForm({
     resolver: zodResolver(searchSchema),
     defaultValues: {
       categories: [],
-      country: 'BR',
-      city: '',
+      country: initialCountry,
+      city: initialCity,
       neighborhood: '',
-      state: '',
+      state: initialRegion,
       onlyWithoutWebsite: false,
     },
   });
@@ -107,19 +122,56 @@ export function SearchForm({
   const selectedCountry = watch('country');
   const selectedCategories = watch('categories');
   const selectedRegion = watch('state');
+  const selectedCity = watch('city');
   const regionsQuery = useGeoRegions(selectedCountry);
   const citiesQuery = useGeoCities(selectedCountry, selectedRegion || undefined);
   const regions = regionsQuery.data ?? [];
   const cities = citiesQuery.data ?? [];
+  const previousCountry = useRef(selectedCountry);
+  const previousRegion = useRef(selectedRegion);
+  const preserveInitialCity = useRef(Boolean(initialCity && !initialRegion));
 
   useEffect(() => {
+    if (previousCountry.current === selectedCountry) return;
+    previousCountry.current = selectedCountry;
+    preserveInitialCity.current = false;
     setValue('state', '');
     setValue('city', '');
   }, [selectedCountry, setValue]);
 
   useEffect(() => {
-    setValue('city', '');
-  }, [selectedRegion, setValue]);
+    if (previousRegion.current !== selectedRegion) {
+      previousRegion.current = selectedRegion;
+      if (!preserveInitialCity.current || selectedCity !== initialCity) {
+        preserveInitialCity.current = false;
+        setValue('city', '');
+        return;
+      }
+    }
+    if (preserveInitialCity.current && selectedRegion && citiesQuery.isError) {
+      preserveInitialCity.current = false;
+      setValue('city', '');
+      return;
+    }
+    if (
+      !preserveInitialCity.current ||
+      !selectedRegion ||
+      citiesQuery.isLoading ||
+      !citiesQuery.data
+    ) {
+      return;
+    }
+    preserveInitialCity.current = false;
+    if (!citiesQuery.data.some((city) => city.name === initialCity)) setValue('city', '');
+  }, [
+    selectedRegion,
+    selectedCity,
+    initialCity,
+    citiesQuery.isLoading,
+    citiesQuery.isError,
+    citiesQuery.data,
+    setValue,
+  ]);
 
   const addCategory = (value: string) => {
     if (!value) return;
@@ -195,6 +247,7 @@ export function SearchForm({
               }
               disabled={!selectedCountry || regionsQuery.isLoading}
               {...register('state')}
+              value={selectedRegion}
             >
               <option key="default-region" value="">
                 {regionsQuery.isLoading ? 'Carregando…' : 'Selecione o estado'}
@@ -213,6 +266,7 @@ export function SearchForm({
               }
               disabled={!selectedRegion || citiesQuery.isLoading}
               {...register('city')}
+              value={selectedCity}
             >
               <option key="default-city" value="">
                 {!selectedRegion
@@ -250,7 +304,12 @@ export function SearchForm({
               ))}
             </Select>
             <div className="flex items-end">
-              <Button type="submit" className="w-full" loading={createSearch.isPending}>
+              <Button
+                type="submit"
+                className="w-full"
+                loading={createSearch.isPending}
+                disabled={citiesQuery.isLoading}
+              >
                 <Search className="h-4 w-4" aria-hidden />
                 Pesquisar empresas
               </Button>

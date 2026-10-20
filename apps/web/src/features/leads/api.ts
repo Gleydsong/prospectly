@@ -33,6 +33,29 @@ export interface LeadsQuery {
   ids?: string[];
 }
 
+export type ClientMapFilters = Pick<LeadsQuery, 'status' | 'segment' | 'city' | 'q'>;
+export interface ClientMapPin {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  status: LeadStatus;
+}
+export interface ClientMapResult {
+  pins: ClientMapPin[];
+  clusters: Array<{ latitude: number; longitude: number; count: number }>;
+  meta: { total: number; grouped: boolean; limit: number };
+}
+
+/** Only persisted clients; prospecting search results are never a map source. */
+export async function fetchClientMap(
+  query: ClientMapFilters & { bbox: string },
+  signal?: AbortSignal,
+): Promise<ClientMapResult> {
+  const { data } = await api.get<ClientMapResult>('/leads/map', { params: query, signal });
+  return data;
+}
+
 export async function fetchLeads(query: LeadsQuery): Promise<PaginatedResult<LeadListItem>> {
   const { filter, ids, ...rest } = query;
   const { data } = await api.get<PaginatedResult<LeadListItem>>('/leads', {

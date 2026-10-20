@@ -20,6 +20,8 @@ vi.mock('@/pages/navigation-pages', () => ({
   HomeDestination: () => <Destination />,
   ProspectDestination: () => <Destination />,
   ClientsDestination: () => <Destination />,
+  ListsDestination: () => <Destination />,
+  PipelineDestination: () => <Destination />,
 }));
 vi.mock('@/pages/leads/lead-detail-page', () => ({ LeadDetailPage: () => <Destination /> }));
 vi.mock('@/pages/campaign-detail-page', () => ({ CampaignDetailPage: () => <Destination /> }));
@@ -32,7 +34,7 @@ describe('Legacy routes in the authenticated app', () => {
     ['/imports', '/prospectar?aba=importar'],
     ['/leads', '/clientes'],
     ['/leads/client-123', '/clientes/client-123'],
-    ['/pipeline', '/clientes?vista=quadro'],
+    ['/pipeline', '/clientes/etapas'],
     ['/campaigns', '/clientes?vista=listas'],
     ['/campaigns/list-123', '/clientes/listas/list-123'],
     ['/reports', '/'],
@@ -40,7 +42,7 @@ describe('Legacy routes in the authenticated app', () => {
       '/leads?reportBucket=wins&period=30d#results',
       '/clientes?reportBucket=wins&period=30d#results',
     ],
-    ['/pipeline?vista=lista&q=Acme', '/clientes?vista=quadro&q=Acme'],
+    ['/pipeline?vista=lista&q=Acme', '/clientes/etapas?vista=lista&q=Acme'],
   ])('redirects %s to %s', async (from, to) => {
     renderWithProviders(<App />, { initialEntries: [from], withGoogle: false });
     expect(await screen.findByText(to)).toBeInTheDocument();

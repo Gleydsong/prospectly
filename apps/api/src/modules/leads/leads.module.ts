@@ -5,6 +5,7 @@ import { BillingCoreModule } from '../billing/billing-core.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { SuppressionModule } from '../privacy/suppression.module';
 import { WebsiteAnalysisModule } from '../website-analysis/website-analysis.module';
+import { LeadMapService } from './lead-map.service';
 import { LeadsController } from './leads.controller';
 import { LeadIngestionService } from './lead-ingestion.service';
 import { LeadWebsitesService } from './lead-websites.service';
@@ -20,7 +21,7 @@ import { LeadsService } from './leads.service';
   ],
 
   controllers: [LeadsController],
-  providers: [LeadsService, LeadIngestionService, LeadWebsitesService],
+  providers: [LeadMapService, LeadsService, LeadIngestionService, LeadWebsitesService],
   exports: [LeadsService, LeadIngestionService],
 })
 export class LeadsModule {}

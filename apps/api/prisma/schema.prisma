@@ -618,6 +618,7 @@ model Lead {
   @@index([organizationId, ownerId])
   @@index([organizationId, stageId])
   @@index([organizationId, city])
+  @@index([organizationId, latitude, longitude])
   @@index([organizationId, deletedAt])
 }
 

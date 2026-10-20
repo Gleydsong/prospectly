@@ -13,6 +13,7 @@ import {
 import { EmptyState } from '@/components/ui/empty-state';
 import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
 import { Pagination } from '@/components/ui/pagination';
+import { ScoreBadge } from '@/components/ui/score-badge';
 import { TableSkeleton } from '@/components/ui/skeleton';
 import type { CustomFieldDefinition } from '@/features/custom-fields/api';
 import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
@@ -30,6 +31,7 @@ import type { LeadListItem } from '@/types';
 
 import { LeadColumnValue, leadDetailPath } from './lead-column-value';
 import { LeadsKanban } from './leads-kanban';
+import type { LeadsQuery } from '../api';
 
 function LeadListDenseRow({
   lead,
@@ -54,9 +56,7 @@ function LeadListDenseRow({
     email: lead.email,
     whatsapp: lead.whatsapp,
   });
-  const whatsappHref = likelyWhatsApp
-    ? buildWhatsAppLink(lead.whatsapp || lead.phone)
-    : null;
+  const whatsappHref = likelyWhatsApp ? buildWhatsAppLink(lead.whatsapp || lead.phone) : null;
   const subtitle = [
     lead.segment ?? (lead.category ? formatCategoryTag(lead.category) : null),
     lead.city,
@@ -101,6 +101,7 @@ function LeadListDenseRow({
       status={<LeadStatusBadge status={lead.status} />}
       extraBadges={
         <>
+          {columns.includes('score') ? <ScoreBadge score={lead.score} /> : null}
           {!lead.website ? (
             <Badge tone="mint" title="Sem website">
               <Globe className="h-3 w-3" aria-hidden /> sem site
@@ -125,6 +126,7 @@ function LeadListDenseRow({
 
 export function LeadsListResults({
   layout,
+  filters,
   leads,
   columns,
   customFields,
@@ -141,6 +143,7 @@ export function LeadsListResults({
   newClientLabel,
 }: {
   layout: LeadViewLayout;
+  filters: LeadsQuery;
   leads: LeadListItem[];
   columns: LeadViewColumnKey[];
   customFields: CustomFieldDefinition[];
@@ -159,6 +162,10 @@ export function LeadsListResults({
 }) {
   const navigate = useNavigate();
 
+  if (layout === 'kanban' && !waitingForReportIds && !reportIdsFailed) {
+    return <LeadsKanban filters={filters} label={kanbanLabel} />;
+  }
+
   if (isLoading || waitingForReportIds) {
     return (
       <div className="p-5">
@@ -171,22 +178,6 @@ export function LeadsListResults({
     return (
       <div className="p-5">
         <Alert tone="error">Erro ao carregar clientes. Tente novamente.</Alert>
-      </div>
-    );
-  }
-
-  if (layout === 'kanban') {
-    return (
-      <div className="space-y-3 p-4 sm:p-5">
-        <LeadsKanban leads={leads} label={kanbanLabel} />
-        {meta ? (
-          <Pagination
-            page={meta.page}
-            totalPages={meta.totalPages}
-            total={meta.total}
-            onPageChange={onPageChange}
-          />
-        ) : null}
       </div>
     );
   }
@@ -210,7 +201,7 @@ export function LeadsListResults({
 
   return (
     <>
-      <ClientDenseList>
+      <ClientDenseList className="lg:[&_.client-dense-row]:h-16 lg:[&_.client-dense-row]:py-2 lg:[&_.client-dense-row__status]:flex-nowrap lg:[&_.client-dense-row__identity_.mt-1]:hidden">
         {leads.map((lead) => (
           <li key={lead.id}>
             <LeadListDenseRow
