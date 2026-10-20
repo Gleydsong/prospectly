@@ -20,7 +20,20 @@ export function LeadsMapCard() {
   const [mapError, setMapError] = useState(false);
   const query = useQuery({
     queryKey: ['leads', 'map', {}, bbox],
-    queryFn: ({ signal }) => fetchClientMap({ bbox }, signal),
+    queryFn: async ({ signal }) => {
+      const data = await fetchClientMap({ bbox }, signal);
+      // A partial response must stay inside the card's error state, not reach MapLibre.
+      if (
+        !data?.meta ||
+        !Number.isFinite(data.meta.total) ||
+        data.meta.total < 0 ||
+        !Array.isArray(data.pins) ||
+        !Array.isArray(data.clusters)
+      ) {
+        throw new Error('Invalid client map response');
+      }
+      return data;
+    },
   });
 
   return (

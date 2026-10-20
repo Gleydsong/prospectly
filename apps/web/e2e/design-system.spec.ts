@@ -65,33 +65,26 @@ test.describe('authenticated design system shell', () => {
     await expect(footer.getByRole('link', { name: /configurações|settings/i })).toHaveCount(0);
   });
 
-  test('primary sidebar lists Principal, Clientes, Assistentes, Ferramentas and Suporte', async ({
-    page,
-    isMobile,
-  }) => {
+  test('primary navigation lists its five current destinations', async ({ page, isMobile }) => {
     await page.goto('/');
     const nav = await openPrimaryNav(page, isMobile);
 
-    await expect(nav.getByRole('link', { name: /principal|home/i })).toHaveAttribute('href', '/');
-    await expect(nav.getByRole('link', { name: /clientes|clients/i }).first()).toHaveAttribute(
+    await expect(nav.getByRole('link', { name: /início|home/i })).toHaveAttribute('href', '/');
+    await expect(nav.getByRole('link', { name: /prospectar|prospecting/i })).toHaveAttribute(
       'href',
-      '/leads',
+      '/prospectar',
     );
-    await expect(nav.getByRole('link', { name: /assistentes|agents/i })).toHaveAttribute(
+    await expect(nav.getByRole('link', { name: /clientes|clients/i })).toHaveAttribute(
       'href',
-      '/agents',
+      '/clientes',
     );
-    await expect(nav.getByRole('link', { name: /ferramentas|tools/i })).toHaveAttribute(
+    await expect(nav.getByRole('link', { name: /tarefas|tasks/i })).toHaveAttribute(
       'href',
-      '/tools',
+      '/tasks',
     );
-    await expect(nav.getByRole('link', { name: /suporte|support/i })).toHaveAttribute(
+    await expect(nav.getByRole('link', { name: /configurações|settings/i })).toHaveAttribute(
       'href',
-      '/support',
-    );
-    await expect(nav.getByRole('link', { name: /funil|pipeline/i })).toHaveAttribute(
-      'href',
-      '/pipeline',
+      '/settings',
     );
   });
 
@@ -101,7 +94,6 @@ test.describe('authenticated design system shell', () => {
     await expect(page.getByRole('button', { name: /abrir menu|open menu/i })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /mostrar menu|show menu/i })).toHaveCount(0);
     await expect(page.getByLabel(/navegação principal|main navigation/i)).toBeVisible();
-    await expect(page.getByText('15 créditos')).toBeVisible();
   });
 
   test('desktop hides the sidebar from the aside and restores it from the topbar', async ({
@@ -142,11 +134,17 @@ test.describe('authenticated design system shell', () => {
     await expect(sidebar).toHaveAttribute('aria-hidden', 'true');
 
     await page.getByRole('button', { name: /abrir menu|open menu/i }).click();
-    await page.getByRole('button', { name: /fechar menu|close menu/i }).first().click();
+    await page
+      .getByRole('button', { name: /fechar menu|close menu/i })
+      .first()
+      .click();
     await expect(sidebar).toHaveAttribute('aria-hidden', 'true');
   });
 
-  test('theme toggle switches html class without breaking the shell', async ({ page, isMobile }) => {
+  test('theme toggle switches html class without breaking the shell', async ({
+    page,
+    isMobile,
+  }) => {
     await page.goto('/');
     const html = page.locator('html');
     await expect(html).toHaveClass(/light/);
@@ -173,7 +171,7 @@ test.describe('authenticated design system shell', () => {
         await search.last().click();
       }
     }
-    await expect(page).toHaveURL(/\/search/);
+    await expect(page).toHaveURL(/\/prospectar/);
   });
 });
 
@@ -182,18 +180,29 @@ test.describe('target pages', () => {
     await mockAuthenticatedSession(page);
   });
 
-  test('principal renders greeting, KPIs and client table', async ({ page }) => {
+  test('Início renders API KPIs, map, charts and next actions', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(page.getByText('Clínica Odonto Vida')).toBeVisible();
-    await expect(page.getByText('Pizzaria Bella Napoli')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Início', level: 1 })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Clientes' })).toContainText('42');
+    await expect(page.getByRole('group', { name: 'Contatados' })).toContainText('3');
+    await expect(page.getByRole('heading', { name: 'Mapa de clientes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Distribuição por etapa' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Evolução de clientes' })).toBeVisible();
+    await expect(page.getByText('Ligar para cliente')).toBeVisible();
   });
 
   test('clientes list shows mint gap badge and status pills', async ({ page }) => {
     await page.goto('/leads');
     await expect(page.getByRole('heading', { name: /clientes|clients/i })).toBeVisible();
-    await expect(page.getByTitle(/sem site|sem website/i).filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByText('Clínica Odonto Vida').filter({ visible: true }).first()).toBeVisible();
+    await expect(
+      page
+        .getByTitle(/sem site|sem website/i)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText('Clínica Odonto Vida').filter({ visible: true }).first(),
+    ).toBeVisible();
     await expect(page.getByRole('button', { name: /tabela|table/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /kanban/i })).toBeVisible();
   });
@@ -215,7 +224,9 @@ test.describe('target pages', () => {
     await page.goto('/tools');
     const main = page.getByRole('main');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await expect(main.getByRole('link', { name: /localizador de oportunidades|opportunity/i })).toBeVisible();
+    await expect(
+      main.getByRole('link', { name: /localizador de oportunidades|opportunity/i }),
+    ).toBeVisible();
     await expect(main.getByRole('link', { name: /whatsapp/i })).toBeVisible();
     const cards = main.locator('a.group');
     const count = await cards.count();

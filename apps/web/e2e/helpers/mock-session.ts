@@ -42,9 +42,7 @@ export async function mockAuthenticatedSession(page: Page) {
         email: 'guia@prospectly.test',
         emailVerifiedAt: '2026-08-12T10:00:00.000Z',
         locale: 'pt',
-        memberships: [
-          { role: 'OWNER', organization: { id: 'org-1', name: 'Prospectly Test' } },
-        ],
+        memberships: [{ role: 'OWNER', organization: { id: 'org-1', name: 'Prospectly Test' } }],
       });
     }
     if (path.endsWith('/billing/current') || path.endsWith('/billing/status')) {
@@ -72,6 +70,38 @@ export async function mockAuthenticatedSession(page: Page) {
         upcomingFollowUps: [],
         topOpportunities: [],
         conversionBySource: [],
+        overview: {
+          periodDays: 30,
+          currentPeriod: { start: '2026-09-21T00:00:00.000Z', end: '2026-10-21T00:00:00.000Z' },
+          previousPeriod: { start: '2026-08-22T00:00:00.000Z', end: '2026-09-21T00:00:00.000Z' },
+          kpis: {
+            clients: { value: 42, previousValue: 36, changePercent: 16.7 },
+            contacted: { value: 3, previousValue: 2, changePercent: 50 },
+            qualified: { value: 5, previousValue: 4, changePercent: 25 },
+            won: { value: 3, previousValue: 2, changePercent: 50 },
+          },
+          dailyCreated: [{ date: '2026-10-20', count: 2 }],
+          byStatus: [
+            { status: 'QUALIFIED', count: 5 },
+            { status: 'NEW', count: 31 },
+          ],
+          nextActions: [
+            {
+              id: 'task-home',
+              title: 'Ligar para cliente',
+              dueAt: '2026-10-21T10:00:00.000Z',
+              lead: { id: 'lead-1', companyName: 'Clínica Odonto Vida' },
+            },
+          ],
+          recentActivity: [],
+        },
+      });
+    }
+    if (path.endsWith('/leads/map')) {
+      return json(route, {
+        pins: [],
+        clusters: [],
+        meta: { total: 0, grouped: false, limit: 500 },
       });
     }
     if (path.endsWith('/custom-fields')) return json(route, []);
@@ -153,7 +183,9 @@ export async function mockAuthenticatedSession(page: Page) {
             order: 0,
             totalCount: 1,
             hasMore: false,
-            leads: [{ id: 'lead-2', companyName: 'Pizzaria Bella Napoli', city: 'São Paulo', score: 92 }],
+            leads: [
+              { id: 'lead-2', companyName: 'Pizzaria Bella Napoli', city: 'São Paulo', score: 92 },
+            ],
           },
           {
             id: 'stage-contact',
@@ -276,7 +308,11 @@ export async function mockAuthenticatedSession(page: Page) {
         meta: { page: 1, pageSize: 20, total: 3, totalPages: 1 },
       });
     }
-    if (/\/searches\/[^/]+$/.test(path) && !path.endsWith('/providers') && !path.endsWith('/categories')) {
+    if (
+      /\/searches\/[^/]+$/.test(path) &&
+      !path.endsWith('/providers') &&
+      !path.endsWith('/categories')
+    ) {
       return json(route, {
         id: 'search-1',
         provider: 'OPENSTREETMAP',
@@ -317,7 +353,11 @@ export async function mockAuthenticatedSession(page: Page) {
           meta: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
         });
       }
-      return json(route, { data: [], total: 0, meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 } });
+      return json(route, {
+        data: [],
+        total: 0,
+        meta: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+      });
     }
     if (path.endsWith('/campaigns') || path.endsWith('/workflows') || path.endsWith('/reports')) {
       return json(route, { data: [] });
