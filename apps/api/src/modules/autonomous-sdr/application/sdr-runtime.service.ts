@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { SuppressionService } from '../../privacy/suppression.service';
-import { SuppressedContactException } from '../../agents/agents.exceptions';
 import { normalizeLeadDomain } from '../../leads/domain/lead-domain';
 import { WhatsappAiService } from '../../agents/whatsapp-ai/whatsapp-ai.service';
 import { judgeProspect, SdrDecisionLog } from '../domain/sdr-decisions';
@@ -46,20 +45,41 @@ export class SdrRuntimeService {
 
   async run(organizationId: string): Promise<SdrRuntimeView> {
     const current = await this.get(organizationId);
-    const seen = current.seenLeadIds ?? [];
-    const lead = await this.nextLead(organizationId, seen);
-    if (!lead) {
-      return { ...EMPTY_SDR_RUNTIME, seenLeadIds: seen };
-    }
+    let seen = current.seenLeadIds ?? [];
+    let lead: QueueLead | null = null;
+    let searching = true;
 
-    if (
-      await this.suppression.isSuppressed(organizationId, {
+    while (searching) {
+      lead = await this.nextLead(organizationId, seen);
+      if (!lead) {
+        searching = false;
+        break;
+      }
+
+      const suppressed = await this.suppression.isSuppressed(organizationId, {
         email: lead.email,
         phone: lead.phone ?? lead.whatsapp,
         domain: normalizeLeadDomain(lead.website),
-      })
-    ) {
-      throw new SuppressedContactException();
+      });
+
+      if (suppressed) {
+        seen = [...seen, lead.id];
+        continue;
+      }
+
+      searching = false;
+    }
+
+    if (!lead) {
+      const view: SdrRuntimeView = { ...EMPTY_SDR_RUNTIME, seenLeadIds: seen };
+      if (seen.length !== (current.seenLeadIds?.length ?? 0)) {
+        await this.prisma.sdrRuntime.upsert({
+          where: { organizationId },
+          create: { organizationId, view },
+          update: { view },
+        });
+      }
+      return view;
     }
 
     const name = lead.tradeName?.trim() || lead.companyName;
