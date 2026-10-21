@@ -1309,8 +1309,8 @@
     },
     "reasons": {
       "feature_flag": "Envio autônomo desligado",
-      "jev_rejected": "O Jev julgou que este cliente não vale a pena",
-      "jev_unavailable": "O Jev não respondeu. Nenhuma mensagem foi pedida",
+      "laya_rejected": "A Laya julgou que este cliente não vale a pena",
+      "laya_unavailable": "A Laya não respondeu. Nenhuma mensagem foi pedida",
       "suppression": "Contato suprimido",
       "outside_working_hours": "Fora do horário",
       "daily_limit": "Limite diário",

@@ -5,8 +5,8 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import { SuppressionService } from '../../privacy/suppression.service';
 import { normalizeLeadDomain } from '../../leads/domain/lead-domain';
 import { WhatsappAiService } from '../../agents/whatsapp-ai/whatsapp-ai.service';
-import { judgeProspect, SdrDecisionLog } from '../domain/sdr-decisions';
-import { SdrJevClient } from './sdr-jev.client';
+import { judgeProspect, SdrDecisionLog, type ProspectJudgeFacts } from '../domain/sdr-decisions';
+import { SdrLayaClient } from './sdr-laya.client';
 import { EMPTY_SDR_RUNTIME, type SdrRuntimeView } from './sdr-runtime.scenario';
 
 type QueueLead = {
@@ -16,6 +16,7 @@ type QueueLead = {
   category: string | null;
   segment: string | null;
   city: string | null;
+  state: string | null;
   website: string | null;
   phone: string | null;
   email: string | null;
@@ -23,6 +24,7 @@ type QueueLead = {
   score: number;
   websitePresence: 'NO_WEBSITE_REPORTED' | 'WEBSITE_FOUND' | 'NEEDS_REVIEW';
   rating: number | null;
+  reviewCount: number | null;
 };
 
 @Injectable()
@@ -30,7 +32,7 @@ export class SdrRuntimeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly whatsappAi: WhatsappAiService,
-    private readonly jev: SdrJevClient,
+    private readonly laya: SdrLayaClient,
     private readonly suppression: SuppressionService,
   ) {}
 
@@ -84,20 +86,36 @@ export class SdrRuntimeService {
 
     const name = lead.tradeName?.trim() || lead.companyName;
     const industry = lead.category ?? lead.segment ?? undefined;
+    const facts: ProspectJudgeFacts = {
+      name,
+      companyName: lead.companyName,
+      tradeName: lead.tradeName,
+      category: lead.category,
+      segment: lead.segment,
+      city: lead.city,
+      state: lead.state,
+      website: lead.website,
+      rating: lead.rating,
+      reviewCount: lead.reviewCount,
+      hasPhone: Boolean(lead.phone),
+      hasEmail: Boolean(lead.email),
+      hasWhatsapp: Boolean(lead.whatsapp),
+    };
     const decision = await judgeProspect({
       log: new SdrDecisionLog(),
-      provider: this.jev,
+      provider: this.laya,
       organizationId,
       campaignId: 'lead-queue',
       prospectId: lead.id,
       traceId: lead.id,
       recordedAt: new Date().toISOString(),
       untrustedText: lead.website ?? '',
+      facts,
     });
     const worthIt = decision.qualification === 'QUALIFIED' && decision.opportunityScore != null;
     const body = worthIt ? await this.draft(lead, organizationId) : null;
     const view: SdrRuntimeView = {
-      campaign: { name: 'Fila de leads', status: 'ACTIVE', channel: 'EMAIL' },
+      campaign: { name: 'Fila de clientes', status: 'ACTIVE', channel: 'EMAIL' },
       autonomy: {
         autonomousSending: false,
         autonomousFollowup: false,
@@ -126,7 +144,7 @@ export class SdrRuntimeService {
       review: [
         {
           prospectId: lead.id,
-          reason: worthIt ? 'feature_flag' : decision.failure ? 'jev_unavailable' : 'jev_rejected',
+          reason: worthIt ? 'feature_flag' : decision.failure ? 'laya_unavailable' : 'laya_rejected',
         },
       ],
       metrics: { blocked: 1 },
@@ -138,6 +156,49 @@ export class SdrRuntimeService {
       update: { view },
     });
     return view;
+  }
+
+  async loadProspectFacts(
+    organizationId: string,
+    prospectId: string,
+  ): Promise<ProspectJudgeFacts | null> {
+    const lead = await this.prisma.lead.findFirst({
+      where: {
+        id: prospectId,
+        organizationId,
+        deletedAt: null,
+      },
+      select: {
+        companyName: true,
+        tradeName: true,
+        category: true,
+        segment: true,
+        city: true,
+        state: true,
+        website: true,
+        rating: true,
+        reviewCount: true,
+        phone: true,
+        email: true,
+        whatsapp: true,
+      },
+    });
+    if (!lead) return null;
+    return {
+      name: lead.tradeName?.trim() || lead.companyName,
+      companyName: lead.companyName,
+      tradeName: lead.tradeName,
+      category: lead.category,
+      segment: lead.segment,
+      city: lead.city,
+      state: lead.state,
+      website: lead.website,
+      rating: lead.rating,
+      reviewCount: lead.reviewCount,
+      hasPhone: Boolean(lead.phone),
+      hasEmail: Boolean(lead.email),
+      hasWhatsapp: Boolean(lead.whatsapp),
+    };
   }
 
   private async nextLead(organizationId: string, seen: string[]): Promise<QueueLead | null> {
@@ -156,6 +217,7 @@ export class SdrRuntimeService {
         category: true,
         segment: true,
         city: true,
+        state: true,
         website: true,
         phone: true,
         email: true,
@@ -163,6 +225,7 @@ export class SdrRuntimeService {
         score: true,
         websitePresence: true,
         rating: true,
+        reviewCount: true,
       },
     });
   }

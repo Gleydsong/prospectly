@@ -81,11 +81,10 @@ export const configuration = () => ({
     metricsToken: process.env.OPS_METRICS_TOKEN ?? '',
   },
   sentryDsn: process.env.SENTRY_DSN,
-  jev: {
-    apiUrl: process.env.TYPESAFE_API_URL ?? 'https://api.typesafe.ai/v1/systemone',
-    apiKey: process.env.TYPESAFE_API_KEY ?? '',
-    model: process.env.TYPESAFE_MODEL ?? 'jev-latest',
-    timeoutMs: parseInt(process.env.JEV_TIMEOUT_MS ?? '20000', 10),
+  laya: {
+    url: process.env.LAYA_URL ?? 'http://localhost:8000/v1/systemone',
+    model: process.env.LAYA_MODEL ?? 'multilingual',
+    timeoutMs: parseInt(process.env.LAYA_TIMEOUT_MS ?? '20000', 10),
   },
   opportunityAi: {
     enabled: process.env.OPPORTUNITY_AI_ENABLED !== 'false',

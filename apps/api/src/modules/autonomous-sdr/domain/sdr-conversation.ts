@@ -1,5 +1,5 @@
 import { assertProspectTransition, type ProspectState } from './prospect-state';
-import { parseJevAnswer } from './sdr-decisions';
+import { parseLayaAnswer } from './sdr-decisions';
 import type { SuppressionReason } from './sdr-policy';
 import { webhookSecretMatches } from './sdr-security';
 
@@ -97,7 +97,7 @@ export class ConversationInbox {
     let intent = 'UNKNOWN';
     if (!forcedOptOut) {
       try {
-        const parsed = parseJevAnswer(input.intent);
+        const parsed = parseLayaAnswer(input.intent);
         if (parsed.type !== 'choice' || !INTENTS.has(parsed.choice)) {
           return { status: 'REJECTED', reason: 'invalid_intent' };
         }
