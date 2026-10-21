@@ -586,8 +586,8 @@ export interface OpportunityScoreBreakdown {
 export interface OpportunityExplanation {
   summary: string;
   whyOpportunity: string;
-  recommendedOffer: string;
-  commercialAngle: string;
+  recommendedOffer?: string;
+  commercialAngle?: string;
   warnings: string[];
   source: 'AI' | 'DETERMINISTIC_FALLBACK';
 }

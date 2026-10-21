@@ -59,9 +59,11 @@ export interface LlmChatRequest {
   provider?: AiProviderType;
   stream?: boolean;
   signal?: AbortSignal;
+  deferTelemetry?: boolean;
 }
 
 export interface LlmChatResponse {
+  runId?: string | null;
   content: string | null;
   toolCalls?: LlmToolCall[];
   usage: LlmUsage;

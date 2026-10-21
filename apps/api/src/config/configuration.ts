@@ -97,13 +97,7 @@ export const configuration = () => ({
   },
   opportunityAi: {
     enabled: process.env.OPPORTUNITY_AI_ENABLED !== 'false',
-    baseUrl:
-      process.env.OPPORTUNITY_AI_BASE_URL ??
-      process.env.WHATSAPP_AI_BASE_URL ??
-      'http://127.0.0.1:11434',
-    model: process.env.OPPORTUNITY_AI_MODEL ?? process.env.WHATSAPP_AI_MODEL ?? 'qwen3:8b',
-    timeoutMs: parseInt(process.env.OPPORTUNITY_AI_TIMEOUT_MS ?? '25000', 10),
-    apiKey: process.env.OPPORTUNITY_AI_API_KEY ?? process.env.WHATSAPP_AI_API_KEY ?? '',
+    model: process.env.OPPORTUNITY_AI_MODEL,
   },
   ai: {
     provider: (process.env.AI_PROVIDER ?? 'disabled').toLowerCase().trim(),

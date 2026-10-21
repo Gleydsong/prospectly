@@ -387,6 +387,63 @@ describe('LlmProviderService', () => {
           mockFetch as unknown as typeof fetch,
         ),
       ).rejects.toThrow(AiInvalidStructuredOutputException);
+
+      expect(prismaMock.aiRun.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AiRunStatus.FAILED,
+            errorCode: 'AI_INVALID_STRUCTURED_OUTPUT',
+          }),
+        }),
+      );
+      expect(prismaMock.aiRun.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AiRunStatus.COMPLETED,
+          }),
+        }),
+      );
+    });
+
+    it('throws AiInvalidStructuredOutputException and records FAILED status when response is valid JSON but incompatible with Zod schema', async () => {
+      const mockFetch = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ unexpected: 123 }) } }],
+          usage: { prompt_tokens: 25, completion_tokens: 15, total_tokens: 40 },
+        }),
+      });
+
+      service = createService({}, mockFetch as unknown as typeof fetch);
+
+      await expect(
+        service.generateStructured(
+          {
+            context: defaultContext,
+            schema: sampleSchema,
+            system: 'Gere resposta JSON.',
+            input: { query: 'test' },
+          },
+          mockFetch as unknown as typeof fetch,
+        ),
+      ).rejects.toThrow(AiInvalidStructuredOutputException);
+
+      expect(prismaMock.aiRun.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AiRunStatus.FAILED,
+            errorCode: 'AI_INVALID_STRUCTURED_OUTPUT',
+          }),
+        }),
+      );
+      expect(prismaMock.aiRun.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            status: AiRunStatus.COMPLETED,
+          }),
+        }),
+      );
     });
   });
 
