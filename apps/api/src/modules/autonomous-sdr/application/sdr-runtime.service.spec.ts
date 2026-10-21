@@ -45,7 +45,7 @@ function qualifiedAnswers() {
 }
 
 describe('SdrRuntimeService', () => {
-  function harness(judge: jest.Mock) {
+  function harness(judge: jest.Mock, initialLeads: Array<typeof lead> = [lead]) {
     let stored: SdrRuntimeView | null = null;
     const prisma = {
       sdrRuntime: {
@@ -63,29 +63,35 @@ describe('SdrRuntimeService', () => {
         ),
       },
       lead: {
-        findFirst: jest.fn(async ({ where }: { where: { id?: { notIn: string[] } } }) => {
+        findFirst: jest.fn(async ({ where }: { where: { id?: { notIn?: string[] } } }) => {
           const skip = where.id?.notIn ?? [];
-          return skip.includes(lead.id) ? null : lead;
+          return initialLeads.find((item) => !skip.includes(item.id)) ?? null;
         }),
       },
     };
-    const ollama = { generateVariants: jest.fn(async () => [{ body: 'Olá, vi a padaria.' }]) };
-    const service = new SdrRuntimeService(prisma as never, ollama as never, { judge } as never);
-    return { service, ollama };
+    const whatsappAi = { generateVariants: jest.fn(async () => [{ body: 'Olá, vi a padaria.' }]) };
+    const suppression = { isSuppressed: jest.fn().mockResolvedValue(false) };
+    const service = new SdrRuntimeService(
+      prisma as never,
+      whatsappAi as never,
+      { judge } as never,
+      suppression as never,
+    );
+    return { service, whatsappAi, suppression, prisma };
   }
 
   it('asks the model to write only after Jev qualifies the lead', async () => {
-    const { service, ollama } = harness(jest.fn(async () => ({ answers: qualifiedAnswers() })));
+    const { service, whatsappAi } = harness(jest.fn(async () => ({ answers: qualifiedAnswers() })));
     const first = await service.run('org-1');
     expect(first.decision?.qualification).toBe('QUALIFIED');
     expect(first.message.body).toBe('Olá, vi a padaria.');
-    expect(ollama.generateVariants).toHaveBeenCalledTimes(1);
+    expect(whatsappAi.generateVariants).toHaveBeenCalledTimes(1);
     expect(first.autonomy.autonomousSending).toBe(false);
     expect(JSON.stringify(first)).not.toContain('Oficina Alfa');
   });
 
   it('does not call the writer when Jev rejects the lead', async () => {
-    const { service, ollama } = harness(
+    const { service, whatsappAi } = harness(
       jest.fn(async () => {
         throw new Error('jev unavailable');
       }),
@@ -94,7 +100,69 @@ describe('SdrRuntimeService', () => {
     expect(first.decision?.qualification).toBe('REJECTED');
     expect(first.message.body).toBeNull();
     expect(first.review[0]?.reason).toBe('jev_unavailable');
-    expect(ollama.generateVariants).not.toHaveBeenCalled();
+    expect(whatsappAi.generateVariants).not.toHaveBeenCalled();
+  });
+
+  it('skips suppressed contacts and advances to the next lead without calling judge or writer for them', async () => {
+    const lead1 = { ...lead, id: 'lead-1', companyName: 'Padaria Suprimida', phone: '+5581999990001' };
+    const lead2 = { ...lead, id: 'lead-2', companyName: 'Oficina Ativa', phone: '+5581999990002' };
+    const judge = jest.fn(async () => ({ answers: qualifiedAnswers() }));
+    const { service, whatsappAi, suppression, prisma } = harness(judge, [lead1, lead2]);
+
+    suppression.isSuppressed.mockImplementation(async (_orgId, contact) => {
+      return contact.phone === lead1.phone;
+    });
+
+    const result = await service.run('org-1');
+
+    expect(result.prospects[0]?.id).toBe('lead-2');
+    expect(result.seenLeadIds).toEqual(['lead-1', 'lead-2']);
+    expect(suppression.isSuppressed).toHaveBeenCalledWith('org-1', {
+      email: null,
+      phone: '+5581999990001',
+      domain: 'padaria.example',
+    });
+    expect(judge).toHaveBeenCalledTimes(1);
+    expect(judge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prospectId: 'lead-2',
+      }),
+    );
+    expect(whatsappAi.generateVariants).toHaveBeenCalledTimes(1);
+    expect(prisma.sdrRuntime.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org-1' },
+        create: expect.objectContaining({
+          view: expect.objectContaining({
+            seenLeadIds: ['lead-1', 'lead-2'],
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('skips and persists seenLeadIds when all remaining leads are suppressed', async () => {
+    const lead1 = { ...lead, id: 'lead-1', companyName: 'Padaria Suprimida' };
+    const judge = jest.fn(async () => ({ answers: qualifiedAnswers() }));
+    const { service, whatsappAi, suppression, prisma } = harness(judge, [lead1]);
+    suppression.isSuppressed.mockResolvedValue(true);
+
+    const result = await service.run('org-1');
+
+    expect(result.seenLeadIds).toEqual(['lead-1']);
+    expect(result.prospects).toEqual([]);
+    expect(judge).not.toHaveBeenCalled();
+    expect(whatsappAi.generateVariants).not.toHaveBeenCalled();
+    expect(prisma.sdrRuntime.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { organizationId: 'org-1' },
+        create: expect.objectContaining({
+          view: expect.objectContaining({
+            seenLeadIds: ['lead-1'],
+          }),
+        }),
+      }),
+    );
   });
 
   it('drops a saved local fixture', async () => {
@@ -119,9 +187,14 @@ describe('SdrRuntimeService', () => {
       },
       lead: { findFirst: jest.fn() },
     };
-    const service = new SdrRuntimeService(prisma as never, { generateVariants: jest.fn() } as never, {
-      judge: jest.fn(),
-    } as never);
+    const service = new SdrRuntimeService(
+      prisma as never,
+      { generateVariants: jest.fn() } as never,
+      {
+        judge: jest.fn(),
+      } as never,
+      { isSuppressed: jest.fn() } as never,
+    );
     const view = await service.get('org-1');
     expect(view.prospects).toEqual([]);
   });

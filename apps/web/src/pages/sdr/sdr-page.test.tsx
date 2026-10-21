@@ -1,11 +1,13 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { renderWithProviders } from '@/test/render';
 import { SdrWorkspace } from '@/features/sdr/sdr-workspace';
 import { EMPTY_SDR_WORKSPACE, type SdrWorkspaceView } from '@/features/sdr/types';
+import { SdrPage } from './sdr-page';
+import * as sdrApi from '@/features/sdr/api';
 
 const populated: SdrWorkspaceView = {
   campaign: {
@@ -82,5 +84,58 @@ describe('SdrWorkspace', () => {
     await user.click(screen.getByRole('button', { name: 'Aprovar' }));
     expect(screen.getByText('Aprovado')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Aprovar' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SdrPage', () => {
+  it('displays the execution error when running the next customer fails in pt', async () => {
+    await i18n.changeLanguage('pt');
+    vi.spyOn(sdrApi, 'fetchSdrRuntime').mockResolvedValue(EMPTY_SDR_WORKSPACE);
+    vi.spyOn(sdrApi, 'runSdrRuntime').mockRejectedValueOnce(new Error('Network error'));
+    const user = userEvent.setup();
+
+    renderWithProviders(<SdrPage />, { withGoogle: false });
+
+    const button = await screen.findByRole('button', { name: 'Próximo cliente' });
+    await user.click(button);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/cliente/i);
+    expect(alert).toHaveTextContent('Não foi possível processar o próximo cliente.');
+  });
+
+  it('displays the execution error when running the next customer fails in en', async () => {
+    await i18n.changeLanguage('en');
+    vi.spyOn(sdrApi, 'fetchSdrRuntime').mockResolvedValue(EMPTY_SDR_WORKSPACE);
+    vi.spyOn(sdrApi, 'runSdrRuntime').mockRejectedValueOnce(new Error('Network error'));
+    const user = userEvent.setup();
+
+    renderWithProviders(<SdrPage />, { withGoogle: false });
+
+    const button = await screen.findByRole('button', { name: 'Next customer' });
+    await user.click(button);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/client/i);
+    expect(alert).toHaveTextContent('Could not process the next client.');
+  });
+
+  it('displays specific api message if it mentions client', async () => {
+    await i18n.changeLanguage('pt');
+    vi.spyOn(sdrApi, 'fetchSdrRuntime').mockResolvedValue(EMPTY_SDR_WORKSPACE);
+    const axiosError = {
+      isAxiosError: true,
+      response: { data: { message: 'Cliente bloqueado por regras de negócio.' } },
+    };
+    vi.spyOn(sdrApi, 'runSdrRuntime').mockRejectedValueOnce(axiosError);
+    const user = userEvent.setup();
+
+    renderWithProviders(<SdrPage />, { withGoogle: false });
+
+    const button = await screen.findByRole('button', { name: 'Próximo cliente' });
+    await user.click(button);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Cliente bloqueado por regras de negócio.');
   });
 });

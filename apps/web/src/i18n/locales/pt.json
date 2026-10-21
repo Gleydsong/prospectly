@@ -44,6 +44,7 @@
     "campaigns": "Listas",
     "sdr": "SDR",
     "sdrRun": "Próximo cliente",
+    "sdrRunError": "Não foi possível processar o próximo cliente.",
     "sdrBlocked": "Research só começa com um prospect qualificado e evidência viva.",
     "sdrAngle": "Ângulo",
     "sdrObservations": "Observações",
@@ -1018,7 +1019,7 @@
       },
       "whatsapp-first-message": {
         "name": "Assistente de WhatsApp",
-        "description": "Gera variantes de 1ª mensagem (IA ou modelo local) e monta wa.me — sem envio automático."
+        "description": "Gera variantes de 1ª mensagem (IA ou fallback determinístico) e monta wa.me — sem envio automático."
       }
     },
     "crm": {
@@ -1075,7 +1076,7 @@
       "noPhone": "Sem telefone",
       "buildError": "Não foi possível montar a mensagem.",
       "generateAgain": "Gerar de novo",
-      "sourceOllama": "IA",
+      "sourceAi": "IA",
       "sourceFallback": "Modelo local",
       "variantsError": "Não foi possível gerar variantes.",
       "useSavedTemplate": "Usar modelo salvo",
@@ -1216,6 +1217,7 @@
     "tabsLabel": "Seções do prospect",
     "summary": "Resumo da análise",
     "summaryEmpty": "Não há mais clientes nesta fila.",
+    "runError": "Não foi possível processar o próximo cliente.",
     "recommendation": "Recomendação",
     "sendEmail": "Enviar email agora",
     "icp": "ICP",

@@ -52,7 +52,7 @@ describe('WhatsAppOutreachModal', () => {
           companyName: 'Padaria Central',
           phone: '+5511999998888',
           digits: '5511999998888',
-          source: 'ollama' as const,
+          source: 'ai' as const,
           seed: 0,
           variants: [
             {
@@ -247,5 +247,39 @@ describe('WhatsAppOutreachModal', () => {
       'noopener,noreferrer',
     );
     open.mockRestore();
+  });
+
+  it('exibe badge Modelo local quando a fonte for fallback', async () => {
+    mocks.useWhatsappVariants.mockReturnValue({
+      data: {
+        leadId: 'lead-test-1',
+        companyName: 'Padaria Central',
+        phone: '+5511999998888',
+        digits: '5511999998888',
+        source: 'fallback' as const,
+        seed: 0,
+        variants: [
+          {
+            id: 'variant-fallback-1',
+            angle: 'direto',
+            label: 'Direto',
+            body: 'Mensagem fallback',
+          },
+        ],
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <Wrapper>
+        <WhatsAppOutreachModal isOpen onClose={vi.fn()} lead={sampleLead} />
+      </Wrapper>,
+    );
+
+    expect(screen.getByTestId('whatsapp-modal-source-badge')).toHaveTextContent(/modelo local/i);
   });
 });

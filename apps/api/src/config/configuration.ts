@@ -87,23 +87,12 @@ export const configuration = () => ({
     model: process.env.TYPESAFE_MODEL ?? 'jev-latest',
     timeoutMs: parseInt(process.env.JEV_TIMEOUT_MS ?? '20000', 10),
   },
-  whatsappAi: {
-    enabled: process.env.WHATSAPP_AI_ENABLED !== 'false',
-    baseUrl: process.env.WHATSAPP_AI_BASE_URL ?? 'http://127.0.0.1:11434',
-    // Qwen3 is stronger for PT-BR prospecting copy than llama3.2; override via WHATSAPP_AI_MODEL.
-    model: process.env.WHATSAPP_AI_MODEL ?? 'qwen3:8b',
-    timeoutMs: parseInt(process.env.WHATSAPP_AI_TIMEOUT_MS ?? '30000', 10),
-    apiKey: process.env.WHATSAPP_AI_API_KEY ?? '',
-  },
   opportunityAi: {
     enabled: process.env.OPPORTUNITY_AI_ENABLED !== 'false',
-    baseUrl:
-      process.env.OPPORTUNITY_AI_BASE_URL ??
-      process.env.WHATSAPP_AI_BASE_URL ??
-      'http://127.0.0.1:11434',
-    model: process.env.OPPORTUNITY_AI_MODEL ?? process.env.WHATSAPP_AI_MODEL ?? 'qwen3:8b',
+    baseUrl: process.env.OPPORTUNITY_AI_BASE_URL ?? 'http://127.0.0.1:11434',
+    model: process.env.OPPORTUNITY_AI_MODEL ?? 'qwen3:8b',
     timeoutMs: parseInt(process.env.OPPORTUNITY_AI_TIMEOUT_MS ?? '25000', 10),
-    apiKey: process.env.OPPORTUNITY_AI_API_KEY ?? process.env.WHATSAPP_AI_API_KEY ?? '',
+    apiKey: process.env.OPPORTUNITY_AI_API_KEY ?? '',
   },
   ai: {
     provider: (process.env.AI_PROVIDER ?? 'disabled').toLowerCase().trim(),

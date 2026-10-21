@@ -44,6 +44,7 @@
     "campaigns": "Lists",
     "sdr": "SDR",
     "sdrRun": "Next customer",
+    "sdrRunError": "Could not process the next client.",
     "sdrBlocked": "Research starts only for a qualified prospect with live evidence.",
     "sdrAngle": "Angle",
     "sdrObservations": "Observations",
@@ -1018,7 +1019,7 @@
       },
       "whatsapp-first-message": {
         "name": "WhatsApp Agent",
-        "description": "Generates first-message variants (AI or local model) and builds wa.me — no auto-send."
+        "description": "Generates first-message variants (AI or deterministic fallback) and builds wa.me — no auto-send."
       }
     },
     "crm": {
@@ -1075,7 +1076,7 @@
       "noPhone": "No phone",
       "buildError": "Could not build the message.",
       "generateAgain": "Generate again",
-      "sourceOllama": "AI",
+      "sourceAi": "AI",
       "sourceFallback": "Local model",
       "variantsError": "Could not generate variants.",
       "useSavedTemplate": "Use saved template",
@@ -1216,6 +1217,7 @@
     "tabsLabel": "Prospect sections",
     "summary": "Analysis summary",
     "summaryEmpty": "There are no more customers in this queue.",
+    "runError": "Could not process the next client.",
     "recommendation": "Recommendation",
     "sendEmail": "Send email now",
     "icp": "ICP",

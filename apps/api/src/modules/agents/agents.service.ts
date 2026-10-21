@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { LeadStatus } from '@prisma/client';
 
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -11,9 +7,12 @@ import {
   type TemplateVariableValues,
 } from '../campaigns/domain/template-variables';
 import { TemplatesService } from '../campaigns/application/templates.service';
+import { normalizeLeadDomain } from '../leads/domain/lead-domain';
 import { PipelinesService } from '../pipelines/pipelines.service';
+import { SuppressionService } from '../privacy/suppression.service';
+import { SuppressedContactException } from './agents.exceptions';
 import { buildDeterministicWhatsappVariants } from './whatsapp-ai/deterministic-variants';
-import { OllamaChatClient } from './whatsapp-ai/ollama-chat.client';
+import { WhatsappAiService } from './whatsapp-ai/whatsapp-ai.service';
 import {
   clampVariantCount,
   normalizeSeed,
@@ -38,11 +37,7 @@ export type CrmActionCode =
   | 'ENRICH_PROFILE'
   | 'NURTURE';
 
-const EARLY_STATUS: ReadonlySet<LeadStatus> = new Set([
-  'NEW',
-  'TO_REVIEW',
-  'QUALIFIED',
-]);
+const EARLY_STATUS: ReadonlySet<LeadStatus> = new Set(['NEW', 'TO_REVIEW', 'QUALIFIED']);
 
 const AGENT_CATALOG: AgentCatalogItem[] = [
   {
@@ -55,7 +50,7 @@ const AGENT_CATALOG: AgentCatalogItem[] = [
     id: 'whatsapp-first-message',
     name: 'Agent WhatsApp',
     description:
-      'Gera 3–5 variantes de 1ª mensagem (Ollama ou fallback) e monta wa.me — sem envio automático.',
+      'Gera 3–5 variantes de 1ª mensagem (IA ou fallback) e monta wa.me — sem envio automático.',
     path: '/agents/whatsapp',
   },
 ];
@@ -66,7 +61,8 @@ export class AgentsService {
     private readonly prisma: PrismaService,
     private readonly pipelines: PipelinesService,
     private readonly templates: TemplatesService,
-    private readonly ollama: OllamaChatClient,
+    private readonly whatsappAi: WhatsappAiService,
+    private readonly suppression: SuppressionService,
   ) {}
 
   catalog() {
@@ -93,8 +89,15 @@ export class AgentsService {
     const score = lead.score ?? 0;
     const staleDays = daysSince(lead.updatedAt);
 
+    const isSuppressed = await this.suppression.isSuppressed(organizationId, {
+      email: lead.email,
+      phone,
+      domain: lead.domain ?? normalizeLeadDomain(lead.website),
+    });
+
     const suggestion = this.pickCrmAction({
       doNotContact: lead.doNotContact,
+      isSuppressed,
       hasPhone: Boolean(phone),
       hasEmail: Boolean(email),
       hasContact,
@@ -130,12 +133,7 @@ export class AgentsService {
     };
   }
 
-  async applyCrm(
-    organizationId: string,
-    actorId: string,
-    leadId: string,
-    stageId?: string,
-  ) {
+  async applyCrm(organizationId: string, actorId: string, leadId: string, stageId?: string) {
     const targetStageId =
       stageId ?? (await this.suggestCrm(organizationId, leadId)).suggestedStage?.id;
 
@@ -155,9 +153,7 @@ export class AgentsService {
     return {
       leadId: updated.id,
       stageId: updated.stageId,
-      stage: updated.stage
-        ? { id: updated.stage.id, name: updated.stage.name }
-        : null,
+      stage: updated.stage ? { id: updated.stage.id, name: updated.stage.name } : null,
       applied: true,
     };
   }
@@ -173,7 +169,16 @@ export class AgentsService {
     const digits = phoneRaw ? phoneRaw.replace(/\D/g, '') : '';
 
     if (lead.doNotContact) {
-      throw new BadRequestException('Lead is marked do-not-contact.');
+      throw new SuppressedContactException('Cliente marcado como não contatar.');
+    }
+
+    const isSuppressed = await this.suppression.isSuppressed(organizationId, {
+      email: lead.email,
+      phone: phoneRaw,
+      domain: lead.domain ?? normalizeLeadDomain(lead.website),
+    });
+    if (isSuppressed) {
+      throw new SuppressedContactException();
     }
 
     const template = templateId
@@ -223,7 +228,16 @@ export class AgentsService {
     const digits = phoneRaw ? phoneRaw.replace(/\D/g, '') : '';
 
     if (lead.doNotContact) {
-      throw new BadRequestException('Lead is marked do-not-contact.');
+      throw new SuppressedContactException('Cliente marcado como não contatar.');
+    }
+
+    const isSuppressed = await this.suppression.isSuppressed(organizationId, {
+      email: lead.email,
+      phone: phoneRaw,
+      domain: lead.domain ?? normalizeLeadDomain(lead.website),
+    });
+    if (isSuppressed) {
+      throw new SuppressedContactException();
     }
 
     const actor = await this.prisma.user.findUnique({
@@ -257,15 +271,16 @@ export class AgentsService {
       auditSignals,
     };
 
-    const fromOllama = await this.ollama.generateVariants(
+    const fromAi = await this.whatsappAi.generateVariants(
       leadContext,
       variantCount,
       generationSeed,
+      organizationId,
+      actorUserId,
     );
-    const source: WhatsappVariantSource = fromOllama ? 'ollama' : 'fallback';
+    const source: WhatsappVariantSource = fromAi ? 'ai' : 'fallback';
     const variants =
-      fromOllama ??
-      buildDeterministicWhatsappVariants(leadContext, variantCount, generationSeed);
+      fromAi ?? buildDeterministicWhatsappVariants(leadContext, variantCount, generationSeed);
 
     return {
       leadId: lead.id,
@@ -294,8 +309,18 @@ export class AgentsService {
     },
   ) {
     const lead = await this.loadLead(organizationId, dto.leadId);
+    const phoneRaw = (lead.phone ?? lead.whatsapp)?.trim() || null;
     if (lead.doNotContact) {
-      throw new BadRequestException('Lead is marked do-not-contact.');
+      throw new SuppressedContactException('Cliente marcado como não contatar.');
+    }
+
+    const isSuppressed = await this.suppression.isSuppressed(organizationId, {
+      email: lead.email,
+      phone: phoneRaw,
+      domain: lead.domain ?? normalizeLeadDomain(lead.website),
+    });
+    if (isSuppressed) {
+      throw new SuppressedContactException();
     }
 
     const snippet =
@@ -549,9 +574,7 @@ export class AgentsService {
       orderBy: { updatedAt: 'desc' },
     });
     if (!any) {
-      throw new NotFoundException(
-        'No message template found. Create a WHATSAPP template first.',
-      );
+      throw new NotFoundException('No message template found. Create a WHATSAPP template first.');
     }
     return any;
   }
@@ -583,6 +606,7 @@ export class AgentsService {
 
   private pickCrmAction(input: {
     doNotContact: boolean;
+    isSuppressed?: boolean;
     hasPhone: boolean;
     hasEmail: boolean;
     hasContact: boolean;
@@ -599,10 +623,19 @@ export class AgentsService {
     severity: 'info' | 'warn' | 'critical';
     href: (leadId: string) => string;
   } {
+    if (input.isSuppressed) {
+      return {
+        actionCode: 'RESPECT_DNC',
+        rationale: 'Cliente na lista de supressão.',
+        severity: 'critical',
+        href: (id) => `/leads/${id}`,
+      };
+    }
+
     if (input.doNotContact) {
       return {
         actionCode: 'RESPECT_DNC',
-        rationale: 'Lead marcado como não contatar.',
+        rationale: 'Cliente marcado como não contatar.',
         severity: 'critical',
         href: (id) => `/leads/${id}`,
       };

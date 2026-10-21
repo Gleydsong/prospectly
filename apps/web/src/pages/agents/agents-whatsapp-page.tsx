@@ -12,7 +12,11 @@ import { Select } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import type { WhatsappSequenceStage } from '@/features/agents/api';
-import { useWhatsappFirstMessage, useWhatsappRecordOutreach, useWhatsappVariants } from '@/features/agents/hooks';
+import {
+  useWhatsappFirstMessage,
+  useWhatsappRecordOutreach,
+  useWhatsappVariants,
+} from '@/features/agents/hooks';
 import { resolveTemplateId, resolveWhatsappCompose } from '@/features/agents/whatsapp-compose';
 import { useMessageTemplates } from '@/features/campaigns/hooks';
 import { formatMessageTemplateCategory } from '@/lib/presentation-labels';
@@ -112,7 +116,11 @@ export function AgentsWhatsappPage() {
           </CardContent>
         </Card>
       ) : (
-        <WhatsappLeadSession key={leadId} leadId={leadId} onChangeLead={() => setSearchParams({})} />
+        <WhatsappLeadSession
+          key={leadId}
+          leadId={leadId}
+          onChangeLead={() => setSearchParams({})}
+        />
       )}
     </div>
   );
@@ -217,7 +225,8 @@ function WhatsappLeadSession({
         messageBody: compose.previewBody,
         variantId: compose.selectedVariant?.id,
         sequenceStage,
-        advanceStageId: compose.advancePipeline && compose.newStageId ? compose.newStageId : undefined,
+        advanceStageId:
+          compose.advancePipeline && compose.newStageId ? compose.newStageId : undefined,
         scheduleFollowUpDays: compose.scheduleFollowUp ? 2 : undefined,
       });
 
@@ -234,6 +243,17 @@ function WhatsappLeadSession({
     } catch (err) {
       setRecordError(getApiErrorMessage(err) ?? t('agents.whatsapp.recordError'));
     }
+  }
+
+  if (preselected.data?.doNotContact || preselected.data?.suppressed === true) {
+    return (
+      <div className="space-y-4">
+        <p role="alert">{t('agents.whatsapp.doNotContactWarn')}</p>
+        <Button variant="ghost" onClick={onChangeLead}>
+          {t('agents.changeLead')}
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -295,14 +315,14 @@ function WhatsappLeadSession({
               <span
                 className={cn(
                   'rounded-control border px-2 py-0.5 text-[10px] uppercase tracking-wide',
-                  variants.data.source === 'ollama'
+                  variants.data.source === 'ai'
                     ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
                     : 'border-[color:var(--border)] bg-[color:var(--surface-card)] text-[color:var(--ink-muted)]',
                 )}
                 data-testid="whatsapp-source-badge"
               >
-                {variants.data.source === 'ollama'
-                  ? t('agents.whatsapp.sourceOllama')
+                {variants.data.source === 'ai'
+                  ? t('agents.whatsapp.sourceAi')
                   : t('agents.whatsapp.sourceFallback')}
               </span>
             ) : null}
@@ -355,7 +375,9 @@ function WhatsappLeadSession({
                           defaultValue: item.label,
                         })}
                       </span>
-                      <span className="line-clamp-3 text-sm text-[color:var(--ink)]">{item.body}</span>
+                      <span className="line-clamp-3 text-sm text-[color:var(--ink)]">
+                        {item.body}
+                      </span>
                     </button>
                   </li>
                 );
@@ -407,7 +429,9 @@ function WhatsappLeadSession({
             data-testid="whatsapp-preview"
           />
 
-          <p className="text-xs text-[color:var(--ink-muted)]">{t('agents.whatsapp.assistedNote')}</p>
+          <p className="text-xs text-[color:var(--ink-muted)]">
+            {t('agents.whatsapp.assistedNote')}
+          </p>
 
           {message.isError && showSavedTemplates ? (
             <p className="text-sm text-red-300" role="alert">
@@ -432,7 +456,12 @@ function WhatsappLeadSession({
               {t('agents.whatsapp.copy')}
             </Button>
             {waLink ? (
-              <a href={waLink} target="_blank" rel="noreferrer noopener" onClick={() => setShowConfirmation(true)}>
+              <a
+                href={waLink}
+                target="_blank"
+                rel="noreferrer noopener"
+                onClick={() => setShowConfirmation(true)}
+              >
                 <Button size="sm" data-testid="whatsapp-open">
                   <ExternalLink className="h-4 w-4" aria-hidden />
                   {t('agents.whatsapp.open')}

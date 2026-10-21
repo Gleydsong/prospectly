@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import '@/i18n';
+import { fetchLead } from '@/features/leads/api';
 import { AgentsWhatsappPage } from './agents-whatsapp-page';
 
 const mocks = vi.hoisted(() => ({
@@ -132,7 +133,9 @@ describe('AgentsWhatsappPage', () => {
     );
 
     expect(await screen.findByTestId('whatsapp-variants-list')).toBeInTheDocument();
-    expect(screen.getByTestId('whatsapp-source-badge')).toHaveTextContent(/modelo local|local model/i);
+    expect(screen.getByTestId('whatsapp-source-badge')).toHaveTextContent(
+      /modelo local|local model/i,
+    );
 
     await user.click(screen.getByTestId('whatsapp-variant-curiosidade'));
     await waitFor(() => {
@@ -281,5 +284,47 @@ describe('AgentsWhatsappPage', () => {
         'Olá {{contactName}}, vi a {{companyName}}.',
       );
     });
+  });
+
+  it.each([{ doNotContact: true }, { suppressed: true }])(
+    'hides cached drafts and wa.me for blocked contacts: %j',
+    async (blocked) => {
+      vi.mocked(fetchLead).mockResolvedValueOnce({
+        id: 'lead-1',
+        companyName: 'Cliente',
+        ...blocked,
+      } as Awaited<ReturnType<typeof fetchLead>>);
+      render(
+        <Wrapper>
+          <AgentsWhatsappPage />
+        </Wrapper>,
+      );
+      expect(await screen.findByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByTestId('whatsapp-preview')).not.toBeInTheDocument();
+      expect(document.querySelector('a[href*="wa.me"]')).toBeNull();
+      expect(mocks.recordOutreachMutateAsync).not.toHaveBeenCalled();
+    },
+  );
+
+  it('exibe badge IA quando a fonte for ai', async () => {
+    mocks.useWhatsappVariants.mockImplementation(() => ({
+      data: {
+        ...variantPack(0),
+        source: 'ai' as const,
+      },
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    }));
+
+    render(
+      <Wrapper>
+        <AgentsWhatsappPage />
+      </Wrapper>,
+    );
+
+    expect(await screen.findByTestId('whatsapp-source-badge')).toHaveTextContent(/ia|ai/i);
   });
 });

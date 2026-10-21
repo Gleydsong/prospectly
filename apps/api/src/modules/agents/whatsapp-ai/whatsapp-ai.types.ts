@@ -8,7 +8,7 @@ export const WHATSAPP_VARIANT_ANGLES = [
 
 export type WhatsappVariantAngle = (typeof WHATSAPP_VARIANT_ANGLES)[number];
 
-export type WhatsappVariantSource = 'ollama' | 'fallback';
+export type WhatsappVariantSource = 'ai' | 'fallback';
 
 export type WhatsappVariant = {
   id: string;
@@ -17,11 +17,7 @@ export type WhatsappVariant = {
   body: string;
 };
 
-export type WhatsappSequenceStage =
-  | 'FIRST_MESSAGE'
-  | 'FOLLOW_UP_1'
-  | 'FOLLOW_UP_2'
-  | 'BREAKUP';
+export type WhatsappSequenceStage = 'FIRST_MESSAGE' | 'FOLLOW_UP_1' | 'FOLLOW_UP_2' | 'BREAKUP';
 
 export type LeadAuditSignals = {
   hasWhatsappOnSite?: boolean | null;
