@@ -116,6 +116,7 @@ describe('OpportunityFinderService with simulated Cloudflare provider (#371)', (
         }),
         findFirst: jest.fn(),
         findMany: jest.fn().mockImplementation(async () => Array.from(candidateStore.values())),
+        count: jest.fn().mockImplementation(async () => candidateStore.size),
         update: jest.fn().mockImplementation(async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
           const existing = candidateStore.get(where.id) ?? {
             id: where.id,
@@ -860,6 +861,178 @@ describe('OpportunityFinderService with simulated Cloudflare provider (#371)', (
       expect(candidateView.explanation?.commercialAngle).toBe(sampleExplanationPayload.commercialAngle);
       expect(candidateView.explanation?.recommendedOffer).toBe(sampleExplanationPayload.recommendedOffer);
       expect(candidateView.explanation?.source).toBe('AI');
+    });
+  });
+
+  describe('7. Correção do verificador (V371-01 e V371-02)', () => {
+    it('V371-01: listCandidates omits recommendedOffer and commercialAngle for DNC or suppressed candidate', async () => {
+      const mockFetch = jest.fn();
+      const harness = createSimulatedHarness({ mockFetchImpl: mockFetch });
+
+      harness.prisma.opportunityRun.findFirst.mockResolvedValue({
+        id: 'run-list-dnc',
+        organizationId: 'org-sim-1',
+        userId: 'user-sim-1',
+        service: 'Criação de sites',
+      });
+
+      harness.prisma.opportunityCandidate.findMany.mockResolvedValue([
+        {
+          id: 'cand-list-dnc',
+          runId: 'run-list-dnc',
+          status: OpportunityCandidateStatus.SCORED,
+          company: { companyName: 'Restaurante DNC Listado' },
+          signals: [],
+          scoreBreakdown: {},
+          overallScore: 88,
+          confidenceScore: 82,
+          dataCompleteness: 75,
+          rankingCategory: 'restaurant',
+          explanation: {
+            summary: 'Resumo antigo persistido',
+            whyOpportunity: 'Oportunidade antiga',
+            recommendedOffer: 'Oferta comercial antiga que deve ser omitida',
+            commercialAngle: 'Abordagem comercial antiga que deve ser omitida',
+            warnings: [],
+            source: 'AI',
+          },
+          importedLeadId: 'lead-dnc-list',
+          analyzedAt: now,
+        },
+      ]);
+      harness.prisma.opportunityCandidate.count.mockResolvedValue(1);
+
+      Object.assign(harness.prisma, {
+        lead: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'lead-dnc-list',
+            organizationId: 'org-sim-1',
+            doNotContact: true,
+          }),
+        },
+      });
+
+      const result = await harness.service.listCandidates('org-sim-1', 'run-list-dnc', { pageSize: 20 });
+
+      expect(result.data).toHaveLength(1);
+      const candidateView = result.data[0]!;
+      expect(candidateView.explanation?.recommendedOffer).toBeUndefined();
+      expect(candidateView.explanation?.commercialAngle).toBeUndefined();
+      expect(candidateView.explanation?.source).toBe('DETERMINISTIC_FALLBACK');
+      expect(candidateView.explanation?.warnings).toEqual(
+        expect.arrayContaining([expect.stringContaining('do-not-contact')]),
+      );
+    });
+
+    it('V371-02: fail-closed on lead query error: blocks AI call, prevents credit consumption, returns restricted explanation', async () => {
+      const mockFetch = jest.fn();
+      const harness = createSimulatedHarness({ mockFetchImpl: mockFetch });
+
+      harness.prisma.opportunityRun.findFirst.mockResolvedValue({
+        id: 'run-lead-err',
+        organizationId: 'org-sim-1',
+        userId: 'user-sim-1',
+        service: 'Criação de sites',
+      });
+
+      harness.prisma.opportunityCandidate.findFirst.mockResolvedValue({
+        id: 'cand-lead-err',
+        runId: 'run-lead-err',
+        status: OpportunityCandidateStatus.SCORED,
+        company: {
+          companyName: 'Restaurante Falha Query',
+          email: 'query-error@example.com',
+          websitePresence: 'NO_WEBSITE_REPORTED',
+        },
+        signals: [],
+        scoreBreakdown: {},
+        overallScore: 80,
+        confidenceScore: 75,
+        dataCompleteness: 60,
+        rankingCategory: 'restaurant',
+        explanation: null,
+        importedLeadId: 'lead-err-1',
+        analyzedAt: now,
+      });
+
+      Object.assign(harness.prisma, {
+        lead: {
+          findFirst: jest.fn().mockRejectedValue(new Error('Connection pool timeout in lead query')),
+        },
+        suppressionEntry: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+      });
+
+      const candidateView = await harness.service.explainCandidate(
+        'org-sim-1',
+        'user-sim-1',
+        'run-lead-err',
+        'cand-lead-err',
+      );
+
+      // Must fail closed: NO AI calls and NO credit consumption
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(harness.billing.consumeCreditForExplain).not.toHaveBeenCalled();
+
+      // Must return restricted explanation without commercial angles
+      expect(candidateView.explanation?.commercialAngle).toBeUndefined();
+      expect(candidateView.explanation?.recommendedOffer).toBeUndefined();
+      expect(candidateView.explanation?.source).toBe('DETERMINISTIC_FALLBACK');
+    });
+
+    it('V371-02: fail-closed when organization DNC lead matching query throws an error', async () => {
+      const mockFetch = jest.fn();
+      const harness = createSimulatedHarness({ mockFetchImpl: mockFetch });
+
+      harness.prisma.opportunityRun.findFirst.mockResolvedValue({
+        id: 'run-match-err',
+        organizationId: 'org-sim-1',
+        userId: 'user-sim-1',
+        service: 'Criação de sites',
+      });
+
+      harness.prisma.opportunityCandidate.findFirst.mockResolvedValue({
+        id: 'cand-match-err',
+        runId: 'run-match-err',
+        status: OpportunityCandidateStatus.SCORED,
+        company: {
+          companyName: 'Restaurante Matching Query Error',
+          email: 'matching-error@example.com',
+          websitePresence: 'NO_WEBSITE_REPORTED',
+        },
+        signals: [],
+        scoreBreakdown: {},
+        overallScore: 80,
+        confidenceScore: 75,
+        dataCompleteness: 60,
+        rankingCategory: 'restaurant',
+        explanation: null,
+        importedLeadId: null,
+        analyzedAt: now,
+      });
+
+      Object.assign(harness.prisma, {
+        lead: {
+          findFirst: jest.fn().mockRejectedValue(new Error('Transient statement timeout on matching lead query')),
+        },
+        suppressionEntry: {
+          findFirst: jest.fn().mockResolvedValue(null),
+        },
+      });
+
+      const candidateView = await harness.service.explainCandidate(
+        'org-sim-1',
+        'user-sim-1',
+        'run-match-err',
+        'cand-match-err',
+      );
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(harness.billing.consumeCreditForExplain).not.toHaveBeenCalled();
+      expect(candidateView.explanation?.commercialAngle).toBeUndefined();
+      expect(candidateView.explanation?.recommendedOffer).toBeUndefined();
+      expect(candidateView.explanation?.source).toBe('DETERMINISTIC_FALLBACK');
     });
   });
 });

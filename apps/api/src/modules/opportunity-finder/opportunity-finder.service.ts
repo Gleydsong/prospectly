@@ -247,7 +247,16 @@ export class OpportunityFinderService {
       }),
       this.prisma.opportunityCandidate.count({ where }),
     ]);
-    return { data: candidates.map((candidate) => this.toCandidateView(candidate)), total };
+    const data = await Promise.all(
+      candidates.map(async (candidate) => {
+        if (candidate.explanation && (await this.isCandidateRestricted(organizationId, candidate))) {
+          const restricted = this.buildRestrictedExplanation(candidate);
+          return this.toCandidateView({ ...candidate, explanation: restricted as unknown as Prisma.JsonValue });
+        }
+        return this.toCandidateView(candidate);
+      }),
+    );
+    return { data, total };
   }
 
   async getCandidate(organizationId: string, runId: string, candidateId: string) {
@@ -273,7 +282,7 @@ export class OpportunityFinderService {
         where: { id: candidate.id },
         data: {
           explanation: restrictedExplanation as unknown as Prisma.InputJsonValue,
-          explanationPromptVersion: OPPORTUNITY_EXPLANATION_PROMPT_VERSION,
+          explanationPromptVersion: null,
         },
       });
       return this.toCandidateView(updated);
@@ -584,7 +593,7 @@ export class OpportunityFinderService {
     const suppressionService = this.getSuppressionService();
 
     // 1. Linked imported lead checks
-    if (candidate.importedLeadId && this.prisma.lead?.findFirst) {
+    if (candidate.importedLeadId) {
       try {
         const lead = await this.prisma.lead.findFirst({
           where: { id: candidate.importedLeadId, organizationId, deletedAt: null },
@@ -603,25 +612,41 @@ export class OpportunityFinderService {
             return true;
           }
         }
-      } catch {
-        // If lead model is unavailable or throws in mock harness, continue
+      } catch (error) {
+        this.logger.warn({
+          message: 'Lead contact restriction check failed; failing closed',
+          code: 'DNC_CHECK_FAILED',
+          candidateId: candidate.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
+        return true;
       }
     }
 
     // 2. Company suppression check
     const rawCompany = (candidate.company as unknown as OpportunityCompany) ?? {};
     const websiteDomain = rawCompany.website ? normalizeLeadDomain(rawCompany.website) : undefined;
-    const isCompanySuppressed = await suppressionService.isSuppressed(organizationId, {
-      email: rawCompany.email,
-      phone: rawCompany.phone,
-      domain: websiteDomain ?? undefined,
-    });
-    if (isCompanySuppressed) {
+    try {
+      const isCompanySuppressed = await suppressionService.isSuppressed(organizationId, {
+        email: rawCompany.email,
+        phone: rawCompany.phone,
+        domain: websiteDomain ?? undefined,
+      });
+      if (isCompanySuppressed) {
+        return true;
+      }
+    } catch (error) {
+      this.logger.warn({
+        message: 'Company suppression check failed; failing closed',
+        code: 'SUPPRESSION_CHECK_FAILED',
+        candidateId: candidate.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
       return true;
     }
 
     // 3. Organization lead matching doNotContact check
-    if (this.prisma.lead?.findFirst && (rawCompany.email || rawCompany.phone)) {
+    if (rawCompany.email || rawCompany.phone) {
       try {
         const matchingDncLead = await this.prisma.lead.findFirst({
           where: {
@@ -638,8 +663,14 @@ export class OpportunityFinderService {
         if (matchingDncLead) {
           return true;
         }
-      } catch {
-        // If query fails, continue
+      } catch (error) {
+        this.logger.warn({
+          message: 'Matching DNC lead check failed; failing closed',
+          code: 'DNC_CHECK_FAILED',
+          candidateId: candidate.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
+        return true;
       }
     }
 
