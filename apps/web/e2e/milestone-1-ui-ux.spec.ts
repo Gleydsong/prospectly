@@ -26,6 +26,7 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
               role: 'OWNER',
               locale: 'pt',
               emailVerifiedAt: '2026-08-12T10:00:00.000Z',
+              personaOnboardedAt: '2026-01-01T00:00:00.000Z',
             },
             accessToken: 'e2e-token',
           },
@@ -48,7 +49,13 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
 
       if (path.endsWith('/auth/refresh')) return json({ accessToken: 'e2e-token' });
       if (path.endsWith('/users/me'))
-        return json({ name: 'Guia Teste', emailVerifiedAt: '2026-08-12T10:00:00.000Z' });
+        return json({
+          name: 'Guia Teste',
+          email: 'guia@prospectly.test',
+          emailVerifiedAt: '2026-08-12T10:00:00.000Z',
+          locale: 'pt',
+          memberships: [{ role: 'OWNER', organization: { id: 'org-1', name: 'Prospectly Test' } }],
+        });
       if (path.endsWith('/billing/current') || path.endsWith('/billing/status'))
         return json({
           creditBalance: 15,
@@ -94,7 +101,36 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
           upcomingFollowUps: [],
           topOpportunities: [],
           conversionBySource: [],
+          overview: {
+            periodDays: 30,
+            currentPeriod: { start: '2026-09-21T00:00:00.000Z', end: '2026-10-21T00:00:00.000Z' },
+            previousPeriod: { start: '2026-08-22T00:00:00.000Z', end: '2026-09-21T00:00:00.000Z' },
+            kpis: {
+              clients: { value: 42, previousValue: 36, changePercent: 16.7 },
+              contacted: { value: 3, previousValue: 2, changePercent: 50 },
+              qualified: { value: 5, previousValue: 4, changePercent: 25 },
+              won: { value: 3, previousValue: 2, changePercent: 50 },
+            },
+            dailyCreated: [{ date: '2026-10-20', count: 2 }],
+            byStatus: [
+              { status: 'QUALIFIED', count: 5 },
+              { status: 'NEW', count: 31 },
+            ],
+            nextActions: [
+              {
+                id: 'task-home',
+                title: 'Ligar para cliente',
+                dueAt: '2026-10-21T10:00:00.000Z',
+                lead: { id: 'lead-1', companyName: 'Clínica Odonto Vida' },
+              },
+            ],
+            recentActivity: [],
+          },
         });
+      }
+
+      if (path.endsWith('/leads/map')) {
+        return json({ pins: [], clusters: [], meta: { total: 0, grouped: false, limit: 500 } });
       }
 
       if (path.endsWith('/custom-fields')) {
@@ -254,7 +290,6 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
               city: 'São Paulo',
               state: 'SP',
               category: 'clothes',
-              segment: 'clothes',
               status: 'NEW',
               score: 92,
               phone: '+5511988888888',
@@ -265,6 +300,7 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
           total: 2,
           page: 1,
           pageSize: 20,
+          meta: { page: 1, pageSize: 20, total: 2, totalPages: 1 },
         });
       }
 
@@ -331,10 +367,17 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
     if (isMobile) {
       // On mobile, open drawer or check footer
       await page.getByRole('button', { name: /Abrir menu|Abrir navegação/i }).click();
-      await expect(page.locator('#mobile-nav').getByRole('link', { name: /Assistentes/i }).first()).toBeVisible();
+      await expect(
+        page
+          .locator('#mobile-nav')
+          .getByRole('link', { name: /Assistentes/i })
+          .first(),
+      ).toBeVisible();
     } else {
       // On desktop, TopNav has 'Assistentes' navigation link
-      const agentsNav = page.getByLabel('Navegação principal').getByRole('link', { name: /Assistentes/i });
+      const agentsNav = page
+        .getByLabel('Navegação principal')
+        .getByRole('link', { name: /Assistentes/i });
       await expect(agentsNav).toBeVisible();
       await expect(agentsNav).toHaveAttribute('href', '/agents');
     }
@@ -345,13 +388,19 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
     }
   });
 
-  test('#185: Dashboard translates raw category keys in recent leads table', async ({
+  test('#185: Início renders dashboard and client list translates raw category keys', async ({
     page,
   }) => {
     await page.goto('/');
 
+    await expect(page.getByRole('heading', { name: 'Início', level: 1 })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Clientes' })).toContainText('42');
+    await expect(page.getByRole('heading', { name: 'Distribuição por etapa' })).toBeVisible();
+
+    await page.goto('/leads');
+
     await expect(page.getByText('Pizzaria Bella Napoli')).toBeVisible();
-    // 'clothes' raw technical key is formatted via formatCategoryTag to 'Loja de roupas'
+    // 'clothes' remains translated at the client-facing list surface.
     await expect(page.getByText('Loja de roupas')).toBeVisible();
   });
 
@@ -368,9 +417,7 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
     await expect(
       page.getByText(/Seus 15 créditos podem ser usados nos nichos liberados/i),
     ).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'Desbloquear todos os nichos →' }),
-    ).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Desbloquear todos os nichos →' })).toBeVisible();
   });
 
   test('#188 & #189: Leads page compact filter layout and "Personalizado" badge in column selector', async ({
@@ -399,7 +446,9 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
 
     // #184: Dynamic website gap pitch mentions appointment scheduling for dentists
     await expect(
-      page.getByText(/Sem site cadastrado — argumento comercial para ofertar agendamento online ou catálogo de serviços em São Paulo\./i),
+      page.getByText(
+        /Sem site cadastrado — argumento comercial para ofertar agendamento online ou catálogo de serviços em São Paulo\./i,
+      ),
     ).toBeVisible();
 
     // 2. Restaurant lead: status is NEW
@@ -412,7 +461,9 @@ test.describe('Milestone 1 UI/UX Refinements (#183-#194)', () => {
 
     // #184: Dynamic website gap pitch mentions digital menu / online orders for restaurants
     await expect(
-      page.getByText(/Sem site cadastrado — argumento comercial para ofertar cardápio digital ou pedidos online em São Paulo\./i),
+      page.getByText(
+        /Sem site cadastrado — argumento comercial para ofertar cardápio digital ou pedidos online em São Paulo\./i,
+      ),
     ).toBeVisible();
   });
 

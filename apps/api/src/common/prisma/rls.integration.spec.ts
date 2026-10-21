@@ -15,6 +15,7 @@ import { runWithBypass, runWithTenant } from './tenant-context';
 import { assertTenantOperation } from './tenant-guard';
 import { extendPrismaClient } from './tenant-prisma';
 import { JwtStrategy } from '../../modules/auth/strategies/jwt.strategy';
+import { DashboardService } from '../../modules/dashboard/dashboard.service';
 
 const shouldRun = process.env.RUN_RLS_TEST === 'true';
 const describeWithDatabase = shouldRun ? describe : describe.skip;
@@ -29,6 +30,10 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
   const orgB = randomUUID();
   const leadA = randomUUID();
   const leadB = randomUUID();
+  const taskA = randomUUID();
+  const taskB = randomUUID();
+  const activityA = randomUUID();
+  const activityB = randomUUID();
   const userA = randomUUID();
   const userB = randomUUID();
   const memberAOrgA = randomUUID();
@@ -98,6 +103,20 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       if (memberInserts !== 2) {
         throw new Error(`Expected 2 organization members, inserted ${memberInserts}`);
       }
+      await tx.$executeRaw`
+        INSERT INTO "Task"
+          (id, "organizationId", "leadId", "createdById", title, "dueAt", status, "createdAt", "updatedAt")
+        VALUES
+          (${taskA}, ${orgA}, ${leadA}, ${userA}, 'Task A', NOW() + INTERVAL '1 day', 'OPEN'::"TaskStatus", NOW(), NOW()),
+          (${taskB}, ${orgB}, ${leadB}, ${userB}, 'Task B', NOW() + INTERVAL '1 day', 'OPEN'::"TaskStatus", NOW(), NOW())
+      `;
+      await tx.$executeRaw`
+        INSERT INTO "LeadActivity"
+          (id, "organizationId", "leadId", "userId", type, description, "createdAt")
+        VALUES
+          (${activityA}, ${orgA}, ${leadA}, ${userA}, 'CALL'::"ActivityType", 'Activity A', NOW()),
+          (${activityB}, ${orgB}, ${leadB}, ${userB}, 'CALL'::"ActivityType", 'Activity B', NOW())
+      `;
       await tx.$executeRaw`
         INSERT INTO "MonthlyCheckoutAttempt"
           (id, "organizationId", provider, "paymentMethod", status, "externalId", "createdAt", "updatedAt")
@@ -240,6 +259,12 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
         memberAOrgA,
         memberBOrgB,
       );
+      await tx.$executeRawUnsafe(
+        `DELETE FROM "LeadActivity" WHERE id IN ($1, $2)`,
+        activityA,
+        activityB,
+      );
+      await tx.$executeRawUnsafe(`DELETE FROM "Task" WHERE id IN ($1, $2)`, taskA, taskB);
       await tx.$executeRawUnsafe(
         `DELETE FROM "Lead" WHERE "organizationId" IN ($1, $2)`,
         orgA,
@@ -684,6 +709,8 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
       new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }),
     );
     await app.init();
+    // Keep one listener for the entire HTTP fixture instead of rebinding per request.
+    await app.listen(0, '127.0.0.1');
     try {
       await prisma!.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT set_config('app.rls_bypass', 'on', true)`;
@@ -946,6 +973,47 @@ describeWithDatabase('Postgres RLS (tenant isolation)', () => {
     } finally {
       await runtimePrisma.$disconnect();
       await prisma!.$executeRawUnsafe('ALTER ROLE prospectly_app NOLOGIN PASSWORD NULL');
+    }
+  });
+
+  it('keeps dashboard overview counts, UTC series, status and activity tenant-scoped', async () => {
+    const password = `rls-${randomUUID()}`;
+    await prisma!.$executeRawUnsafe(`ALTER ROLE prospectly_app LOGIN PASSWORD '${password}'`);
+    const runtimeUrl = new URL(databaseUrl!);
+    runtimeUrl.username = 'prospectly_app';
+    runtimeUrl.password = password;
+    const runtimePrisma = extendPrismaClient(
+      new PrismaClient({ datasources: { db: { url: runtimeUrl.toString() } } }),
+    );
+    const dashboard = new DashboardService(runtimePrisma as unknown as PrismaService);
+
+    try {
+      const fixtureOrganizations = await prisma!.$queryRaw<Array<{ organizationId: string }>>`
+        SELECT "organizationId" FROM "Lead" WHERE id IN (${leadA}, ${leadB}) ORDER BY "organizationId"
+      `;
+      expect(fixtureOrganizations).toEqual(
+        expect.arrayContaining([{ organizationId: orgA }, { organizationId: orgB }]),
+      );
+
+      const result = await runWithTenant(orgA, () => dashboard.summary(orgA, { period: '30d' }));
+
+      expect(result.overview!.kpis.clients.value).toBe(1);
+      expect(result.overview!.byStatus).toEqual([{ status: 'NEW', count: 1 }]);
+      expect(result.overview!.dailyCreated).toHaveLength(30);
+      expect(result.overview!.dailyCreated.reduce((total, day) => total + day.count, 0)).toBe(1);
+      expect(result.overview!.recentActivity).toEqual([
+        expect.objectContaining({ id: activityA, lead: { id: leadA, companyName: 'Lead A' } }),
+      ]);
+      expect(result.overview!.nextActions).toEqual([
+        expect.objectContaining({
+          id: taskA,
+          title: 'Task A',
+          lead: { id: leadA, companyName: 'Lead A' },
+        }),
+      ]);
+    } finally {
+      await runtimePrisma.$disconnect();
+      await prisma!.$executeRawUnsafe('ALTER ROLE prospectly_app NOLOGIN');
     }
   });
 });

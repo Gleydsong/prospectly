@@ -13,6 +13,7 @@ import { paginate, type PaginatedResult } from '../../common/dto/pagination.dto'
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { EntitlementService } from '../billing/entitlement.service';
 import { CustomFieldsService } from '../custom-fields/custom-fields.service';
+import { SuppressionService } from '../privacy/suppression.service';
 import { WebsiteAnalysisService } from '../website-analysis/website-analysis.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
@@ -53,6 +54,7 @@ export class LeadsService {
     private readonly entitlements: EntitlementService,
     @Optional() private readonly websiteAnalysis?: WebsiteAnalysisService,
     @Optional() private readonly customFields?: CustomFieldsService,
+    @Optional() private readonly suppression?: SuppressionService,
   ) {}
 
   async list(organizationId: string, query: QueryLeadsDto): Promise<PaginatedResult<unknown>> {
@@ -130,7 +132,17 @@ export class LeadsService {
     if (!lead) {
       throw new NotFoundException('Lead not found');
     }
-    return this.serialize(lead, true);
+    const suppressed = this.suppression
+      ? await this.suppression.isSuppressed(organizationId, {
+          email: lead.email,
+          phone: (lead.phone ?? lead.whatsapp)?.trim() || null,
+          domain: lead.domain ?? (lead.website ? normalizeLeadDomain(lead.website) : null),
+        })
+      : false;
+    return {
+      ...this.serialize(lead, true),
+      suppressed,
+    };
   }
 
   async create(organizationId: string, dto: CreateLeadDto, actorId: string) {

@@ -49,7 +49,7 @@ export class AgentsWhatsappVariantsDto {
 
   @ApiPropertyOptional({
     description:
-      'Generation seed so "Gerar de novo" rotates fallback packs / Ollama wording. Default 0.',
+      'Generation seed so "Gerar de novo" rotates fallback packs / AI wording. Default 0.',
     default: 0,
   })
   @IsOptional()
@@ -92,7 +92,11 @@ export class AgentsWhatsappRecordOutreachDto {
   @IsUUID('4')
   advanceStageId?: string;
 
-  @ApiPropertyOptional({ description: 'Schedule follow-up task in N days (1-30)', minimum: 1, maximum: 30 })
+  @ApiPropertyOptional({
+    description: 'Schedule follow-up task in N days (1-30)',
+    minimum: 1,
+    maximum: 30,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -100,4 +104,3 @@ export class AgentsWhatsappRecordOutreachDto {
   @Max(30)
   scheduleFollowUpDays?: number;
 }
-
