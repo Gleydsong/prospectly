@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AiRunStatus } from '@prisma/client';
 import type {
   OpportunityExplanation,
   OpportunityFinderSignal,
@@ -11,7 +10,6 @@ import type {
 } from '@prospectly/shared-types';
 import { z } from 'zod';
 
-import { PrismaService } from '../../common/prisma/prisma.service';
 import { sanitizeLlmPayload } from '../privacy/llm-privacy.sanitizer';
 import {
   OPPORTUNITY_EXPLANATION_PROMPT_VERSION,
@@ -22,8 +20,10 @@ import {
   OpportunityProfileSchema,
   OpportunitySearchStrategySchema,
 } from '../opportunity-finder/domain/opportunity-profile';
+import { LlmProviderService } from './llm-provider/llm-provider.service';
+import { AiException } from './llm-provider/llm-provider.types';
 
-const OpportunityExplanationSchema = z.object({
+export const OpportunityExplanationSchema = z.object({
   summary: z.string().trim().min(1).max(500),
   whyOpportunity: z.string().trim().min(1).max(900),
   recommendedOffer: z.string().trim().min(1).max(300),
@@ -31,17 +31,11 @@ const OpportunityExplanationSchema = z.object({
   warnings: z.array(z.string().trim().min(1).max(240)).max(5),
 });
 
-type AiContext = {
+export type AiContext = {
   organizationId: string;
   userId: string;
   opportunityRunId: string;
   candidateId?: string;
-};
-
-type OllamaResponse = {
-  message?: { content?: string };
-  prompt_eval_count?: number;
-  eval_count?: number;
 };
 
 @Injectable()
@@ -50,17 +44,21 @@ export class StructuredAiService {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly llmProvider: LlmProviderService,
   ) {}
 
   isOpportunityAiEnabled(): boolean {
     const enabled = this.config.get<string | boolean>('opportunityAi.enabled');
-    return enabled !== false && enabled !== 'false' && enabled !== '0';
+    if (enabled === false || enabled === 'false' || enabled === '0') {
+      return false;
+    }
+    return this.llmProvider.isAiEnabled();
   }
 
   async buildOpportunityProfile(
     context: AiContext,
     input: { service: string; niche: string; categories: ProspectingCategory[] },
+    customFetch?: typeof fetch,
   ): Promise<OpportunityProfile | null> {
     return this.runStructured({
       context,
@@ -74,12 +72,14 @@ export class StructuredAiService {
         'O país é sempre Brasil. Responda somente JSON válido conforme o schema.',
       ].join(' '),
       input,
+      customFetch,
     });
   }
 
   async buildSearchStrategy(
     context: AiContext,
     profile: OpportunityProfile,
+    customFetch?: typeof fetch,
   ): Promise<OpportunitySearchStrategy | null> {
     return this.runStructured({
       context,
@@ -92,6 +92,7 @@ export class StructuredAiService {
         'Responda somente JSON válido conforme o schema.',
       ].join(' '),
       input: profile,
+      customFetch,
     });
   }
 
@@ -103,6 +104,7 @@ export class StructuredAiService {
       signals: OpportunityFinderSignal[];
       scoreBreakdown: OpportunityScoreBreakdown;
     },
+    customFetch?: typeof fetch,
   ): Promise<OpportunityExplanation | null> {
     const result = await this.runStructured({
       context,
@@ -116,6 +118,7 @@ export class StructuredAiService {
         'Não sugira spam nem envio automático. Responda somente JSON válido conforme o schema.',
       ].join(' '),
       input,
+      customFetch,
     });
     return result ? { ...result, source: 'AI' } : null;
   }
@@ -127,80 +130,44 @@ export class StructuredAiService {
     schema: z.ZodType<T>;
     system: string;
     input: unknown;
+    customFetch?: typeof fetch;
   }): Promise<T | null> {
     if (!this.isOpportunityAiEnabled()) return null;
 
-    const provider = 'OLLAMA';
-    const model = this.config.get<string>('opportunityAi.model') ?? 'qwen3:8b';
-    const baseUrl = (this.config.get<string>('opportunityAi.baseUrl') ?? 'http://127.0.0.1:11434').replace(/\/$/, '');
-    const timeoutMs = this.config.get<number>('opportunityAi.timeoutMs') ?? 25_000;
-    const apiKey = this.config.get<string>('opportunityAi.apiKey') ?? '';
-    const started = Date.now();
-    const aiRun = await this.prisma.aiRun.create({
-      data: {
-        organizationId: input.context.organizationId,
-        userId: input.context.userId,
-        opportunityRunId: input.context.opportunityRunId,
-        candidateId: input.context.candidateId,
-        task: input.task,
-        provider,
-        model,
-        promptVersion: input.promptVersion,
-      },
-    });
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const model = this.config.get<string>('opportunityAi.model') || undefined;
 
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
-      const response = await fetch(`${baseUrl}/api/chat`, {
-        method: 'POST',
-        headers,
-        signal: controller.signal,
-        body: JSON.stringify({
+      const response = await this.llmProvider.generateStructured(
+        {
+          context: {
+            organizationId: input.context.organizationId,
+            userId: input.context.userId,
+            opportunityRunId: input.context.opportunityRunId,
+            candidateId: input.context.candidateId,
+            task: input.task,
+            promptVersion: input.promptVersion,
+          },
+          task: input.task,
+          promptVersion: input.promptVersion,
+          schema: input.schema,
+          system: input.system,
+          input: sanitizeLlmPayload(input.input),
           model,
-          stream: false,
-          format: 'json',
-          options: { temperature: 0.2, num_predict: 900 },
-          messages: [
-            { role: 'system', content: input.system },
-            { role: 'user', content: JSON.stringify(sanitizeLlmPayload(input.input)) },
-          ],
-        }),
-      });
-      if (!response.ok) throw new Error(`AI_HTTP_${response.status}`);
-      const payload = (await response.json()) as OllamaResponse;
-      const raw = payload.message?.content;
-      if (!raw) throw new Error('AI_EMPTY_OUTPUT');
-      const parsed = input.schema.safeParse(JSON.parse(raw));
-      if (!parsed.success) throw new Error('AI_INVALID_STRUCTURED_OUTPUT');
-      await this.prisma.aiRun.update({
-        where: { id: aiRun.id },
-        data: {
-          status: AiRunStatus.COMPLETED,
-          inputTokens: payload.prompt_eval_count,
-          outputTokens: payload.eval_count,
-          durationMs: Date.now() - started,
-          completedAt: new Date(),
+          temperature: 0.2,
+          maxTokens: 900,
         },
-      });
-      return parsed.data;
+        input.customFetch,
+      );
+      return response.data;
     } catch (error) {
-      const code = error instanceof Error ? error.message.slice(0, 80) : 'AI_FAILED';
-      await this.prisma.aiRun.update({
-        where: { id: aiRun.id },
-        data: {
-          status: AiRunStatus.FAILED,
-          errorCode: code,
-          durationMs: Date.now() - started,
-          completedAt: new Date(),
-        },
+      const code = error instanceof AiException ? error.code : 'AI_FAILED';
+      this.logger.warn({
+        message: 'Structured AI task failed; deterministic fallback will be used',
+        task: input.task,
+        runId: input.context.opportunityRunId,
+        code,
       });
-      this.logger.warn({ message: 'Structured AI task failed; deterministic fallback will be used', task: input.task, runId: input.context.opportunityRunId, code });
       return null;
-    } finally {
-      clearTimeout(timer);
     }
   }
 }

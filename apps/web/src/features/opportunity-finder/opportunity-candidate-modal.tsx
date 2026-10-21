@@ -53,7 +53,7 @@ export function OpportunityCandidateModal({
     >
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-5">
-          {Object.entries(candidate.scoreBreakdown.dna).map(([dimension, score]) => (
+          {Object.entries(candidate.scoreBreakdown?.dna ?? {}).map(([dimension, score]) => (
             <div
               key={dimension}
               className="rounded-control bg-[color:var(--surface-hover)] p-3 text-center"
@@ -118,12 +118,16 @@ export function OpportunityCandidateModal({
             <p className="mt-2">
               <strong>Por que pode ser oportunidade:</strong> {explanation.whyOpportunity}
             </p>
-            <p className="mt-2">
-              <strong>Oferta sugerida:</strong> {explanation.recommendedOffer}
-            </p>
-            <p className="mt-2">
-              <strong>Abordagem:</strong> {explanation.commercialAngle}
-            </p>
+            {explanation.recommendedOffer ? (
+              <p className="mt-2">
+                <strong>Oferta sugerida:</strong> {explanation.recommendedOffer}
+              </p>
+            ) : null}
+            {explanation.commercialAngle ? (
+              <p className="mt-2">
+                <strong>Abordagem:</strong> {explanation.commercialAngle}
+              </p>
+            ) : null}
           </Alert>
         ) : null}
 

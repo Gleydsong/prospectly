@@ -198,17 +198,20 @@ export class LlmProviderService {
         );
 
         const durationMs = Date.now() - started;
-        await this.telemetry.completeRun({
-          runId,
-          provider: primaryProvider,
-          model: primaryModel,
-          usage: raw.usage,
-          durationMs,
-          fallbackUsed: false,
-          task: req.context.task,
-        });
+        if (!req.deferTelemetry) {
+          await this.telemetry.completeRun({
+            runId,
+            provider: primaryProvider,
+            model: primaryModel,
+            usage: raw.usage,
+            durationMs,
+            fallbackUsed: false,
+            task: req.context.task,
+          });
+        }
 
         return {
+          runId,
           content: raw.content,
           toolCalls: raw.toolCalls,
           usage: raw.usage,
@@ -269,17 +272,20 @@ export class LlmProviderService {
           );
 
           const durationMs = Date.now() - started;
-          await this.telemetry.completeRun({
-            runId,
-            provider: 'groq',
-            model: groqModel,
-            usage: rawFallback.usage,
-            durationMs,
-            fallbackUsed: true,
-            task: req.context.task,
-          });
+          if (!req.deferTelemetry) {
+            await this.telemetry.completeRun({
+              runId,
+              provider: 'groq',
+              model: groqModel,
+              usage: rawFallback.usage,
+              durationMs,
+              fallbackUsed: true,
+              task: req.context.task,
+            });
+          }
 
           return {
+            runId,
             content: rawFallback.content,
             toolCalls: rawFallback.toolCalls,
             usage: rawFallback.usage,
@@ -346,12 +352,23 @@ export class LlmProviderService {
         temperature: req.temperature ?? 0.2,
         maxTokens: req.maxTokens,
         responseFormat: { type: 'json_object' },
+        deferTelemetry: true,
       },
       customFetch,
     );
 
     const parseResult1 = this.tryParseAndValidate(firstResponse.content, req.schema);
     if (parseResult1.success) {
+      await this.telemetry.completeRun({
+        runId: firstResponse.runId ?? null,
+        provider: firstResponse.provider,
+        model: firstResponse.model,
+        usage: firstResponse.usage,
+        durationMs: firstResponse.durationMs,
+        fallbackUsed: firstResponse.fallbackUsed,
+        task: context.task,
+      });
+
       return {
         data: parseResult1.data,
         usage: firstResponse.usage,
@@ -362,6 +379,17 @@ export class LlmProviderService {
         retriesCount: 0,
       };
     }
+
+    await this.telemetry.failRun({
+      runId: firstResponse.runId ?? null,
+      provider: firstResponse.provider,
+      model: firstResponse.model,
+      errorCode: 'AI_INVALID_STRUCTURED_OUTPUT',
+      durationMs: firstResponse.durationMs,
+      fallbackUsed: firstResponse.fallbackUsed,
+      task: context.task,
+      usage: firstResponse.usage,
+    });
 
     // Single limited correction retry on invalid JSON / schema
     this.logger.warn({
@@ -387,12 +415,23 @@ export class LlmProviderService {
         temperature: 0.1,
         maxTokens: req.maxTokens,
         responseFormat: { type: 'json_object' },
+        deferTelemetry: true,
       },
       customFetch,
     );
 
     const parseResult2 = this.tryParseAndValidate(retryResponse.content, req.schema);
     if (parseResult2.success) {
+      await this.telemetry.completeRun({
+        runId: retryResponse.runId ?? null,
+        provider: retryResponse.provider,
+        model: retryResponse.model,
+        usage: retryResponse.usage,
+        durationMs: retryResponse.durationMs,
+        fallbackUsed: retryResponse.fallbackUsed,
+        task: context.task,
+      });
+
       return {
         data: parseResult2.data,
         usage: {
@@ -408,6 +447,17 @@ export class LlmProviderService {
         retriesCount: 1,
       };
     }
+
+    await this.telemetry.failRun({
+      runId: retryResponse.runId ?? null,
+      provider: retryResponse.provider,
+      model: retryResponse.model,
+      errorCode: 'AI_INVALID_STRUCTURED_OUTPUT',
+      durationMs: retryResponse.durationMs,
+      fallbackUsed: retryResponse.fallbackUsed,
+      task: context.task,
+      usage: retryResponse.usage,
+    });
 
     throw new AiInvalidStructuredOutputException(
       'AI output failed structured schema validation after retry',

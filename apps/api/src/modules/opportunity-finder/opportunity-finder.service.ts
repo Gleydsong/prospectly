@@ -33,6 +33,8 @@ import { shouldRefundAiConsume } from '../billing/ai-credit-compensation';
 import { BillingService } from '../billing/billing.service';
 import { CREDIT_COSTS } from '../billing/billing.constants';
 import { LeadIngestionService } from '../leads/lead-ingestion.service';
+import { normalizeLeadDomain } from '../leads/domain/lead-domain';
+import { SuppressionService } from '../privacy/suppression.service';
 import { MetricsService } from '../ops/metrics.service';
 import type { NormalizedBusiness } from '../prospecting/domain/normalized-business';
 import { mergeProviderResults } from '../prospecting/domain/merge-search-results';
@@ -90,6 +92,7 @@ export class OpportunityFinderService {
     private readonly leadIngestion: LeadIngestionService,
     private readonly audit: AuditService,
     @Optional() private readonly metrics?: MetricsService,
+    @Optional() private readonly suppression?: SuppressionService,
   ) {}
 
   async create(
@@ -244,13 +247,26 @@ export class OpportunityFinderService {
       }),
       this.prisma.opportunityCandidate.count({ where }),
     ]);
-    return { data: candidates.map((candidate) => this.toCandidateView(candidate)), total };
+    const data = await Promise.all(
+      candidates.map(async (candidate) => {
+        if (candidate.explanation && (await this.isCandidateRestricted(organizationId, candidate))) {
+          const restricted = this.buildRestrictedExplanation(candidate);
+          return this.toCandidateView({ ...candidate, explanation: restricted as unknown as Prisma.JsonValue });
+        }
+        return this.toCandidateView(candidate);
+      }),
+    );
+    return { data, total };
   }
 
   async getCandidate(organizationId: string, runId: string, candidateId: string) {
     await this.requireRun(organizationId, runId);
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
+    if (candidate.explanation && (await this.isCandidateRestricted(organizationId, candidate))) {
+      const restricted = this.buildRestrictedExplanation(candidate);
+      return this.toCandidateView({ ...candidate, explanation: restricted as unknown as Prisma.JsonValue });
+    }
     return this.toCandidateView(candidate);
   }
 
@@ -258,6 +274,20 @@ export class OpportunityFinderService {
     const run = await this.requireRun(organizationId, runId);
     const candidate = await this.prisma.opportunityCandidate.findFirst({ where: { id: candidateId, runId } });
     if (!candidate) throw new NotFoundException('Opportunity candidate not found');
+
+    const isRestricted = await this.isCandidateRestricted(organizationId, candidate);
+    if (isRestricted) {
+      const restrictedExplanation = this.buildRestrictedExplanation(candidate);
+      const updated = await this.prisma.opportunityCandidate.update({
+        where: { id: candidate.id },
+        data: {
+          explanation: restrictedExplanation as unknown as Prisma.InputJsonValue,
+          explanationPromptVersion: null,
+        },
+      });
+      return this.toCandidateView(updated);
+    }
+
     if (candidate.explanation) return this.toCandidateView(candidate);
     await this.billing.consumeCreditForExplain(organizationId, candidate.id, run.id);
     try {
@@ -552,12 +582,126 @@ export class OpportunityFinderService {
     await this.billing.refundOpportunityRunCredit(run.organizationId, runId, publicCode);
   }
 
+  private getSuppressionService(): SuppressionService {
+    return this.suppression ?? new SuppressionService(this.prisma);
+  }
+
+  private async isCandidateRestricted(
+    organizationId: string,
+    candidate: { id: string; importedLeadId?: string | null; company: Prisma.JsonValue },
+  ): Promise<boolean> {
+    const suppressionService = this.getSuppressionService();
+
+    // 1. Linked imported lead checks
+    if (candidate.importedLeadId) {
+      try {
+        const lead = await this.prisma.lead.findFirst({
+          where: { id: candidate.importedLeadId, organizationId, deletedAt: null },
+          select: { id: true, doNotContact: true, email: true, phone: true, whatsapp: true, domain: true },
+        });
+        if (lead) {
+          if (lead.doNotContact) {
+            return true;
+          }
+          const isLeadSuppressed = await suppressionService.isSuppressed(organizationId, {
+            email: lead.email,
+            phone: lead.phone ?? lead.whatsapp,
+            domain: lead.domain,
+          });
+          if (isLeadSuppressed) {
+            return true;
+          }
+        }
+      } catch (error) {
+        this.logger.warn({
+          message: 'Lead contact restriction check failed; failing closed',
+          code: 'DNC_CHECK_FAILED',
+          candidateId: candidate.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
+        return true;
+      }
+    }
+
+    // 2. Company suppression check
+    const rawCompany = (candidate.company as unknown as OpportunityCompany) ?? {};
+    const websiteDomain = rawCompany.website ? normalizeLeadDomain(rawCompany.website) : undefined;
+    try {
+      const isCompanySuppressed = await suppressionService.isSuppressed(organizationId, {
+        email: rawCompany.email,
+        phone: rawCompany.phone,
+        domain: websiteDomain ?? undefined,
+      });
+      if (isCompanySuppressed) {
+        return true;
+      }
+    } catch (error) {
+      this.logger.warn({
+        message: 'Company suppression check failed; failing closed',
+        code: 'SUPPRESSION_CHECK_FAILED',
+        candidateId: candidate.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+      return true;
+    }
+
+    // 3. Organization lead matching doNotContact check
+    if (rawCompany.email || rawCompany.phone) {
+      try {
+        const matchingDncLead = await this.prisma.lead.findFirst({
+          where: {
+            organizationId,
+            deletedAt: null,
+            doNotContact: true,
+            OR: [
+              ...(rawCompany.email ? [{ email: rawCompany.email }] : []),
+              ...(rawCompany.phone ? [{ phone: rawCompany.phone }] : []),
+            ],
+          },
+          select: { id: true },
+        });
+        if (matchingDncLead) {
+          return true;
+        }
+      } catch (error) {
+        this.logger.warn({
+          message: 'Matching DNC lead check failed; failing closed',
+          code: 'DNC_CHECK_FAILED',
+          candidateId: candidate.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        });
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private buildRestrictedExplanation(candidate: { company: Prisma.JsonValue }): OpportunityExplanation {
+    const rawCompany = (candidate.company as unknown as OpportunityCompany) ?? {};
+    const companyName =
+      typeof rawCompany.companyName === 'string' && rawCompany.companyName.trim()
+        ? rawCompany.companyName.trim()
+        : 'A empresa';
+
+    return {
+      summary: `${companyName} possui restrição de contato ativa.`,
+      whyOpportunity: 'Contato comercial bloqueado por política de não contatar ou supressão.',
+      warnings: ['Empresa ou contato marcado como do-not-contact ou presente na lista de supressão.'],
+      source: 'DETERMINISTIC_FALLBACK',
+    };
+  }
+
   private async generateExplanation(
     run: { id: string; organizationId: string; userId: string; service: string },
-    candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue },
+    candidate: { id: string; company: Prisma.JsonValue; signals: Prisma.JsonValue; scoreBreakdown: Prisma.JsonValue; importedLeadId?: string | null },
     userId: string,
     options?: { paid?: boolean },
   ): Promise<OpportunityExplanation> {
+    if (await this.isCandidateRestricted(run.organizationId, candidate)) {
+      return this.buildRestrictedExplanation(candidate);
+    }
+
     const rawCompany = candidate.company as unknown as OpportunityCompany;
     const company = sanitizeCompanyForLlm(rawCompany as unknown as Record<string, unknown>);
     const signals = candidate.signals as unknown as OpportunityCandidateView['signals'];
