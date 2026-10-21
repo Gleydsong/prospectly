@@ -1,25 +1,17 @@
-import { Globe } from 'lucide-react';
+import { Globe, Mail, Phone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { ClientDenseRow, type ClientDenseRowMenuItem } from '@/components/ui/client-dense-row';
+import { Button } from '@/components/ui/button';
 import { formatCategoryTag } from '@/features/opportunity-finder/format-category-tag';
 import {
   buildWhatsAppLink,
   hasLikelyWhatsApp,
   preferredContactChannel,
 } from '@/lib/brazilian-phone';
-import { sanitizeExternalUrl } from '@/lib/safe-url';
-import { cn } from '@/lib/utils';
+import { sanitizeMailtoHref, sanitizeTelHref, sanitizeExternalUrl } from '@/lib/safe-url';
 import type { ProspectingSearchResult } from '@/types';
-
-import { computeResultOpportunitySignal } from '../opportunity-signal';
-
-const SCORE_TONE = {
-  HIGH: 'bg-brand-500/15 text-[color:var(--accent)]',
-  MEDIUM: 'bg-sky-500/15 text-[color:var(--ink)]',
-  LOW: 'bg-[color:var(--surface-subtle)] text-[color:var(--ink-muted)]',
-} as const;
+import { OpportunitySignalBadges, computeResultOpportunitySignal } from '../opportunity-signal';
 
 export interface SearchResultCardProps {
   result: ProspectingSearchResult;
@@ -42,73 +34,106 @@ export function SearchResultCard({
   const business = result.normalizedData ?? result.data;
   const imported = Boolean(result.importedLeadId);
   const signal = computeResultOpportunitySignal(result.websitePresence, business, imported);
-  const hasWebsite = result.websitePresence === 'WEBSITE_FOUND';
-  const location = [business.city, business.state].filter(Boolean).join(', ');
-  const category = business.category ? formatCategoryTag(business.category) : null;
-  const subtitle = [category, location].filter(Boolean).join(' · ') || null;
-  const likelyWhatsApp = hasLikelyWhatsApp({ phone: business.phone });
-  const channel = preferredContactChannel({ phone: business.phone, email: business.email });
-  const whatsappHref = likelyWhatsApp ? buildWhatsAppLink(business.phone) : null;
-  const safeWebsite = business.website ? sanitizeExternalUrl(business.website) : null;
-
-  const menuItems: ClientDenseRowMenuItem[] = [];
-  if (business.phone) {
-    menuItems.push({
-      id: 'copy-phone',
-      label: t('clientRow.copyPhone'),
-      onClick: () => {
-        void navigator.clipboard?.writeText(business.phone ?? '');
-      },
-    });
-  }
-  if (safeWebsite) {
-    menuItems.push({
-      id: 'site',
-      label: t('clientRow.openSite'),
-      href: safeWebsite,
-    });
-  }
-
+  const whatsapp = hasLikelyWhatsApp({ phone: business.phone })
+    ? buildWhatsAppLink(business.phone)
+    : null;
+  const phoneHref = whatsapp ?? sanitizeTelHref(business.phone);
+  const emailHref = sanitizeMailtoHref(business.email);
+  const channel = preferredContactChannel(business);
+  const channelKey = {
+    whatsapp: 'channelWhatsApp',
+    email: 'channelEmail',
+    phone: 'channelPhone',
+    none: 'channelNone',
+  }[channel];
+  const website = sanitizeExternalUrl(business.website ?? '');
   return (
-    <ClientDenseRow
-      name={business.companyName}
-      subtitle={subtitle}
-      email={business.email}
-      phone={business.phone}
-      whatsappHref={whatsappHref}
-      channel={channel}
-      selected={selected}
-      selectable={selectable && !imported}
-      onToggle={() => onToggle(result.id)}
-      status={
-        <>
-          <Badge tone={signal.level === 'HIGH' ? 'amber' : signal.level === 'MEDIUM' ? 'blue' : 'slate'}>
-            {signal.level === 'HIGH' ? 'Quente' : signal.level === 'MEDIUM' ? 'Morno' : 'Frio'}
-          </Badge>
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
-              SCORE_TONE[signal.level],
+    <article
+      id={`search-result-${result.id}`}
+      tabIndex={-1}
+      aria-label={business.companyName}
+      className="flex h-full min-w-0 flex-col gap-4 rounded-card border border-[color:var(--border)] bg-[color:var(--bg-surface)] p-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--ring)]"
+    >
+      <div className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          aria-label={`${t('prospectResults.select')} ${business.companyName}`}
+          checked={selected}
+          disabled={!selectable || imported}
+          onChange={() => onToggle(result.id)}
+          className="mt-1 h-4 w-4 accent-[#2563EB]"
+        />
+        <div className="min-w-0">
+          <h3 className="break-words font-semibold text-[color:var(--ink)]">
+            {business.companyName}
+          </h3>
+          <p className="text-sm text-[color:var(--ink-secondary)]">
+            {[
+              business.category && formatCategoryTag(business.category),
+              business.city,
+              business.state,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </div>
+      </div>
+      <OpportunitySignalBadges signal={signal} />
+      <Badge tone="slate">
+        {result.websitePresence === 'WEBSITE_FOUND'
+          ? t('prospectResults.hasWebsite')
+          : t('prospectResults.noWebsite')}
+      </Badge>
+      <div className="space-y-2 break-words text-sm text-[color:var(--ink-secondary)]">
+        {business.address ? <p>{business.address}</p> : null}
+        {business.phone ? (
+          <p className="flex gap-2">
+            <Phone className="h-4 w-4 shrink-0" aria-hidden />
+            {phoneHref ? (
+              <a
+                href={phoneHref}
+                target={whatsapp ? '_blank' : undefined}
+                rel={whatsapp ? 'noopener noreferrer' : undefined}
+                className="text-[color:var(--accent)] underline"
+              >
+                {business.phone}
+              </a>
+            ) : (
+              business.phone
             )}
-            title="Pontuação de oportunidade"
+          </p>
+        ) : null}
+        {business.email ? (
+          <p className="flex gap-2">
+            <Mail className="h-4 w-4 shrink-0" aria-hidden />
+            {emailHref ? <a href={emailHref}>{business.email}</a> : business.email}
+          </p>
+        ) : null}
+        <p>{t(`clientRow.${channelKey}`)}</p>
+        {website ? (
+          <a
+            className="flex gap-2 text-[color:var(--accent)] underline"
+            href={website}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            {signal.score}
-          </span>
-        </>
-      }
-      extraBadges={
-        <Badge tone={hasWebsite ? 'green' : 'mint'} title={hasWebsite ? 'Tem site' : 'Sem site'}>
-          <Globe className="h-3 w-3" aria-hidden />
-          {hasWebsite ? 'Tem site' : 'Sem site'}
-        </Badge>
-      }
-      primaryAction={{
-        label: imported ? 'No CRM' : 'Enviar para CRM',
-        disabled: imported || !selectable,
-        loading: importing,
-        onClick: () => onSendToCrm(result.id),
-      }}
-      menuItems={menuItems}
-    />
+            <Globe className="h-4 w-4 shrink-0" aria-hidden />
+            {t('prospectResults.openWebsite')}
+          </a>
+        ) : null}
+        <p className="text-xs">
+          {business.source === 'GOOGLE_PLACES' ? 'Google Places' : 'OpenStreetMap'}
+        </p>
+      </div>
+      <Button
+        variant="secondary"
+        className="mt-auto"
+        disabled={imported || !selectable}
+        loading={importing}
+        onClick={() => onSendToCrm(result.id)}
+      >
+        {imported ? t('prospectResults.saved') : t('prospectResults.addClient')}
+      </Button>
+    </article>
   );
 }

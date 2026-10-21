@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/test/render';
 import { SearchForm } from './search-form';
@@ -58,6 +58,32 @@ describe('Prospecting from client map', () => {
     );
     expect(screen.getByLabelText('Região')).toHaveValue('SP');
     expect(screen.getByLabelText('Cidade')).toHaveValue('São Paulo');
+    const activeFilters = within(screen.getByRole('list', { name: 'Filtros ativos' }));
+    expect(activeFilters.getByText('São Paulo')).toBeInTheDocument();
+    expect(activeFilters.getByText('SP')).toBeInTheDocument();
+  });
+
+  it('shows active category, neighborhood, and no-website filters as chips', () => {
+    renderWithProviders(
+      <SearchForm
+        actionError={null}
+        onBeforeSubmit={vi.fn()}
+        onCreated={vi.fn()}
+        onError={vi.fn()}
+      />,
+      { initialEntries: ['/prospectar?city=S%C3%A3o+Paulo&state=SP&country=BR'] },
+    );
+    fireEvent.change(screen.getByLabelText('Bairro (opcional)'), {
+      target: { value: 'Pinheiros' },
+    });
+    fireEvent.change(screen.getByLabelText('Nicho'), { target: { value: 'restaurant' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Somente empresas sem site informado' }));
+
+    const activeFilters = within(screen.getByRole('list', { name: 'Filtros ativos' }));
+    expect(activeFilters.getByText('Restaurante')).toBeInTheDocument();
+    expect(activeFilters.getByText('Pinheiros')).toBeInTheDocument();
+    expect(activeFilters.getByText('Sem site')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Buscar empresas' })).toBeInTheDocument();
   });
   it('prefills the selected client region and clears dependent values after a country change', () => {
     renderWithProviders(
@@ -98,7 +124,7 @@ describe('Prospecting from client map', () => {
       initialEntries: ['/prospectar?city=S%C3%A3o+Paulo'],
     });
     fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'SP' } });
-    expect(screen.getByRole('button', { name: 'Pesquisar empresas' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Buscar empresas' })).toBeDisabled();
     geo.cities = [{ name: 'São Paulo' }];
     geo.citiesLoading = false;
     view.rerender(renderForm());
@@ -126,7 +152,7 @@ describe('Prospecting from client map', () => {
       fireEvent.change(screen.getByLabelText('Região'), { target: { value: 'RJ' } });
       const niche = screen.getByLabelText('Nicho') as HTMLSelectElement;
       fireEvent.change(niche, { target: { value: niche.options[1].value } });
-      fireEvent.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Buscar empresas' }));
       expect(await screen.findByText('Selecione uma cidade')).toBeInTheDocument();
       expect(onBeforeSubmit).not.toHaveBeenCalled();
     },

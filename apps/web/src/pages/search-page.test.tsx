@@ -5,6 +5,7 @@ import type { PropsWithChildren } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as prospectingApi from '@/features/prospecting/api';
 import { SearchPage } from './search-page';
 
 const mocks = vi.hoisted(() => ({
@@ -113,7 +114,10 @@ describe('SearchPage', () => {
         country === 'PT'
           ? [{ code: '11', name: 'Lisbon' }]
           : country === 'BR'
-            ? [{ code: 'SP', name: 'São Paulo' }, { code: 'RJ', name: 'Rio de Janeiro' }]
+            ? [
+                { code: 'SP', name: 'São Paulo' },
+                { code: 'RJ', name: 'Rio de Janeiro' },
+              ]
             : [],
       isLoading: false,
       isError: false,
@@ -150,13 +154,13 @@ describe('SearchPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar empresas' }));
 
     expect(await screen.findByText('Selecione pelo menos um nicho')).toBeInTheDocument();
     expect(mocks.createSearch).not.toHaveBeenCalled();
 
     await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
-    await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar empresas' }));
 
     expect(await screen.findByText('Selecione uma região')).toBeInTheDocument();
     expect(screen.getByText('Selecione uma cidade')).toBeInTheDocument();
@@ -185,7 +189,7 @@ describe('SearchPage', () => {
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
     await user.type(screen.getByLabelText('Bairro (opcional)'), 'Pinheiros');
-    await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
       categories: ['restaurant', 'bakery'],
@@ -252,7 +256,7 @@ describe('SearchPage', () => {
     await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
-    await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar empresas' }));
 
     expect(mocks.createSearch).toHaveBeenCalledWith({
       categories: ['restaurant'],
@@ -271,7 +275,7 @@ describe('SearchPage', () => {
     await user.selectOptions(screen.getByLabelText('Nicho'), 'restaurant');
     await user.selectOptions(screen.getByLabelText('Região'), 'SP');
     await user.selectOptions(screen.getByLabelText('Cidade'), 'São Paulo');
-    await user.click(screen.getByRole('button', { name: 'Pesquisar empresas' }));
+    await user.click(screen.getByRole('button', { name: 'Buscar empresas' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Ocorreu um erro inesperado.');
   });
@@ -283,7 +287,9 @@ describe('SearchPage', () => {
     mocks.useSearches.mockReturnValue(processingSearch('FAILED'));
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Apagar pesquisa Restaurante / São Paulo' }),
+    );
 
     expect(confirmSpy).toHaveBeenCalledWith(
       expect.stringContaining('Clientes já importados permanecem'),
@@ -384,8 +390,8 @@ describe('SearchPage', () => {
     expect(
       screen.getByRole('checkbox', { name: 'Selecionar Empresa em processamento' }),
     ).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (0)' })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Enviar para CRM' })[0]).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (0)' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Adicionar cliente' })[0]).toBeDisabled();
   });
 
   it('sends a single result to the CRM from its card', async () => {
@@ -439,19 +445,77 @@ describe('SearchPage', () => {
     renderPage();
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
-    expect(screen.getByText('Sem site')).toBeInTheDocument();
+    expect(screen.getAllByText('Site não informado').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: /99863/ })).toHaveAttribute(
       'href',
       'https://wa.me/81998639994',
     );
     expect(screen.getByText('WhatsApp (celular)')).toBeInTheDocument();
 
-    await user.click(screen.getAllByRole('button', { name: 'Enviar para CRM' })[0]!);
+    await user.click(screen.getAllByRole('button', { name: 'Adicionar cliente' })[0]!);
 
     expect(mocks.importResults).toHaveBeenCalledWith({
       searchId: 'search-1',
       resultIds: ['result-1'],
     });
+  });
+
+  it('adds all unimported results from every stored page', async () => {
+    const user = userEvent.setup();
+    const fetchAllIds = vi
+      .spyOn(prospectingApi, 'fetchAllSearchResultIds')
+      .mockResolvedValue(['result-page-1', 'result-page-2']);
+    mocks.importResults.mockResolvedValue({
+      imported: 2,
+      skipped: 0,
+      invalid: 0,
+      conflicts: 0,
+      items: [],
+    });
+    mocks.useSearches.mockReturnValue(processingSearch('COMPLETED'));
+    mocks.useSearch.mockReturnValue({ data: undefined });
+    const result = {
+      id: 'result-current',
+      data: {
+        externalId: 'node/current',
+        companyName: 'Empresa atual',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: 'NO_WEBSITE_REPORTED',
+      },
+      normalizedData: {
+        externalId: 'node/current',
+        companyName: 'Empresa atual',
+        city: 'São Paulo',
+        state: 'SP',
+        country: 'BR',
+        source: 'OPENSTREETMAP',
+        websitePresence: 'NO_WEBSITE_REPORTED',
+      },
+      websitePresence: 'NO_WEBSITE_REPORTED',
+      importedLeadId: null,
+      createdAt: '2026-07-22T10:00:00.000Z',
+    };
+    mocks.useSearchResults.mockReturnValue({
+      data: { data: [result], meta: { page: 1, pageSize: 20, total: 41, totalPages: 3 } },
+      isLoading: false,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    });
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar todos' }));
+
+    expect(fetchAllIds).toHaveBeenCalledWith('search-1');
+    expect(mocks.importResults).toHaveBeenCalledWith({
+      searchId: 'search-1',
+      resultIds: ['result-page-1', 'result-page-2'],
+    });
+    fetchAllIds.mockRestore();
   });
 
   it('does not offer WhatsApp for a landline result', async () => {
@@ -528,9 +592,10 @@ describe('SearchPage', () => {
     expect(
       screen.getByText(/Seus 386 créditos podem ser usados nos nichos liberados/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /Desbloquear todos os nichos/i }),
-    ).toHaveAttribute('href', '/credits');
+    expect(screen.getByRole('link', { name: /Desbloquear todos os nichos/i })).toHaveAttribute(
+      'href',
+      '/credits',
+    );
   });
 
   it('keeps selected results across pages and sends every selected id to the CRM', async () => {
@@ -611,16 +676,16 @@ describe('SearchPage', () => {
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
     await user.click(screen.getByRole('checkbox', { name: 'Selecionar Barbearia Página Um' }));
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
 
     const resultsPagination = screen.getAllByRole('navigation', { name: 'Paginação' })[0];
     await user.click(within(resultsPagination!).getByRole('button', { name: 'Próxima página' }));
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
     await user.click(screen.getByRole('checkbox', { name: 'Selecionar Studio Página Dois' }));
 
-    await user.click(screen.getByRole('button', { name: 'Enviar para CRM (2)' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar selecionados (2)' }));
 
     expect(mocks.importResults).toHaveBeenCalledWith({
       searchId: 'search-1',
@@ -671,10 +736,10 @@ describe('SearchPage', () => {
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
     await user.click(screen.getByRole('checkbox', { name: 'Selecionar Barbearia Página Um' }));
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
   });
 
   it('merges select-all on the current page instead of replacing earlier selections', async () => {
@@ -731,11 +796,15 @@ describe('SearchPage', () => {
     renderPage();
 
     await user.click(screen.getByRole('button', { name: /^Restaurante \/ São Paulo/ }));
-    await user.click(screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }));
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }),
+    );
     const resultsPagination = screen.getAllByRole('navigation', { name: 'Paginação' })[0];
     await user.click(within(resultsPagination!).getByRole('button', { name: 'Próxima página' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }));
-    await user.click(screen.getByRole('button', { name: 'Enviar para CRM (2)' }));
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Selecionar todos os resultados desta página' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Adicionar selecionados (2)' }));
 
     expect(mocks.importResults).toHaveBeenCalledWith({
       searchId: 'search-1',
@@ -747,7 +816,10 @@ describe('SearchPage', () => {
     const { readFileSync } = await import('node:fs');
     const { dirname, join } = await import('node:path');
     const { fileURLToPath } = await import('node:url');
-    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'search-page.tsx'), 'utf8');
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'search-page.tsx'),
+      'utf8',
+    );
 
     expect(source).toContain("from '@/features/prospecting/components/search-form'");
     expect(source).toContain("from '@/features/prospecting/components/search-results'");

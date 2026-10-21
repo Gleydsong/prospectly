@@ -72,6 +72,7 @@ function pinImage(color: string) {
 
 interface Props {
   data?: ClientMapResult;
+  presentation?: 'clients' | 'results';
   dark: boolean;
   label: string;
   onViewport: (bbox: string) => void;
@@ -82,6 +83,7 @@ interface Props {
 
 export default function ClientMapCanvas({
   data,
+  presentation = 'clients',
   dark,
   label,
   onViewport,
@@ -185,17 +187,32 @@ export default function ClientMapCanvas({
           paint: { 'text-color': '#fff' },
         });
       if (!map.getLayer('client-pins'))
-        map.addLayer({
-          id: 'client-pins',
-          type: 'symbol',
-          source: 'clients',
-          filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'grouped'], false]],
-          layout: {
-            'icon-image': ['concat', 'client-', ['get', 'status']],
-            'icon-anchor': 'bottom',
-            'icon-allow-overlap': true,
-          },
-        });
+        map.addLayer(
+          presentation === 'results'
+            ? {
+                id: 'client-pins',
+                type: 'circle',
+                source: 'clients',
+                filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'grouped'], false]],
+                paint: {
+                  'circle-radius': 8,
+                  'circle-color': '#2563EB',
+                  'circle-stroke-color': '#FFFFFF',
+                  'circle-stroke-width': 3,
+                },
+              }
+            : {
+                id: 'client-pins',
+                type: 'symbol',
+                source: 'clients',
+                filter: ['all', ['!', ['has', 'point_count']], ['==', ['get', 'grouped'], false]],
+                layout: {
+                  'icon-image': ['concat', 'client-', ['get', 'status']],
+                  'icon-anchor': 'bottom',
+                  'icon-allow-overlap': true,
+                },
+              },
+        );
     });
     map.on('click', 'client-pins', (event) => {
       const id = event.features?.[0]?.properties.id;

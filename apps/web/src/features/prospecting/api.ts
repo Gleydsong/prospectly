@@ -31,8 +31,12 @@ export async function fetchProspectingCategories(): Promise<ProspectingCategoryC
   return data;
 }
 
-export async function fetchSearches(query: SearchesQuery = {}): Promise<PaginatedResult<ProspectingSearch>> {
-  const { data } = await api.get<PaginatedResult<ProspectingSearch>>('/searches', { params: query });
+export async function fetchSearches(
+  query: SearchesQuery = {},
+): Promise<PaginatedResult<ProspectingSearch>> {
+  const { data } = await api.get<PaginatedResult<ProspectingSearch>>('/searches', {
+    params: query,
+  });
   return data;
 }
 
@@ -45,10 +49,29 @@ export async function fetchSearchResults(
   id: string,
   query: SearchResultsQuery = {},
 ): Promise<PaginatedResult<ProspectingSearchResult>> {
-  const { data } = await api.get<PaginatedResult<ProspectingSearchResult>>(`/searches/${id}/results`, {
-    params: query,
-  });
+  const { data } = await api.get<PaginatedResult<ProspectingSearchResult>>(
+    `/searches/${id}/results`,
+    {
+      params: query,
+    },
+  );
   return data;
+}
+
+/** Read stored results only; this never executes another provider search. */
+export async function fetchAllSearchResultIds(id: string): Promise<string[]> {
+  const ids = new Set<string>();
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const result = await fetchSearchResults(id, { page, pageSize: 100 });
+    for (const item of result.data) {
+      if (!item.importedLeadId) ids.add(item.id);
+    }
+    totalPages = result.meta.totalPages;
+    page += 1;
+  } while (page <= totalPages);
+  return [...ids];
 }
 
 export async function createSearch(input: SearchInput): Promise<ProspectingSearch> {
@@ -56,7 +79,10 @@ export async function createSearch(input: SearchInput): Promise<ProspectingSearc
   return data;
 }
 
-export async function importSearchResults(id: string, resultIds: string[]): Promise<SearchImportSummary> {
+export async function importSearchResults(
+  id: string,
+  resultIds: string[],
+): Promise<SearchImportSummary> {
   const { data } = await api.post<SearchImportSummary>(`/searches/${id}/import`, { resultIds });
   return data;
 }

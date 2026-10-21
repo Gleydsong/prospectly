@@ -1561,5 +1561,35 @@
     "doNotContact": "Não contatar este cliente.",
     "noWhatsapp": "WhatsApp indisponível",
     "open": "Abrir ficha"
+  },
+  "prospectResults": {
+    "mapTitle": "Mapa dos resultados",
+    "mapHint": "Círculos: resultados desta página ainda não salvos como clientes. Mover o mapa não executa uma nova busca.",
+    "mapError": "Mapa indisponível. Os resultados continuam acessíveis nos cards e no seletor.",
+    "selectMapResult": "Selecionar resultado no mapa",
+    "noCoordinates": "Nenhum resultado ainda não salvo nesta página possui coordenadas válidas.",
+    "select": "Selecionar",
+    "hasWebsite": "Tem site",
+    "noWebsite": "Site não informado",
+    "openWebsite": "Abrir site",
+    "saved": "Cliente adicionado",
+    "addClient": "Adicionar cliente",
+    "addSelected": "Adicionar selecionados ({{count}})",
+    "addAllPage": "Adicionar todos",
+    "grid": "Grade de resultados",
+    "addToList": "Adicionar a uma Lista",
+    "addToListTitle": "Adicionar clientes a uma Lista",
+    "selectedCount": "{{count}} resultado(s) selecionado(s)",
+    "listUnresolved": "{{count}} resultado(s) não foram importados para clientes. Tente novamente.",
+    "noLists": "Nenhuma Lista disponível.",
+    "chooseList": "Lista",
+    "chooseListPlaceholder": "Selecione uma Lista",
+    "addedToList": "Clientes adicionados à Lista.",
+    "addSelectedToList": "Adicionar selecionados"
+  },
+  "prospectWorkspace": {
+    "searchAction": "Buscar empresas",
+    "activeFilters": "Filtros ativos",
+    "withoutWebsiteFilter": "Sem site"
   }
 }

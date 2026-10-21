@@ -84,7 +84,13 @@ export function ProspectDestination() {
         { value: 'importar', label: 'nav.imports' },
       ]}
     >
-      {tab === 'servico' ? <Finder /> : tab === 'importar' ? <Imports /> : <Search />}
+      {tab === 'servico' ? (
+        <Finder embedded />
+      ) : tab === 'importar' ? (
+        <Imports embedded />
+      ) : (
+        <Search />
+      )}
     </Destination>
   );
 }
