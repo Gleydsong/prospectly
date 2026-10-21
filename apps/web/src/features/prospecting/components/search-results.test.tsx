@@ -1,9 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import userEvent from '@testing-library/user-event';
 import '@/i18n';
+import { downloadCsvFile } from '@/features/leads/api';
 import { SearchResults } from './search-results';
 import type { ProspectingSearchResult } from '@/types';
+
+vi.mock('@/features/leads/api', () => ({ downloadCsvFile: vi.fn() }));
 
 function resultAt(index: number): ProspectingSearchResult {
   const business = {
@@ -24,8 +28,8 @@ function resultAt(index: number): ProspectingSearchResult {
   };
 }
 
-describe('SearchResults virtualization', () => {
-  it('does not mount every result row at once', () => {
+describe('SearchResults grid', () => {
+  it('renders the current result page as accessible cards', () => {
     const results = Array.from({ length: 40 }, (_, index) => resultAt(index));
     render(
       <SearchResults
@@ -66,8 +70,8 @@ describe('SearchResults virtualization', () => {
     );
 
     expect(screen.getByText('Resultado 0')).toBeInTheDocument();
-    expect(screen.getAllByText(/Resultado \d+/).length).toBeLessThan(40);
-    expect(screen.queryByText('Resultado 39')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(40);
+    expect(screen.getByText('Resultado 39')).toBeInTheDocument();
   });
 
   it('keeps pagination mounted while the next page is loading', () => {
@@ -151,6 +155,93 @@ describe('SearchResults virtualization', () => {
     );
 
     expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enviar para CRM (1)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Adicionar selecionados (1)' })).toBeEnabled();
   });
+});
+
+it('keeps every result action secondary and dispatches one add-all action', async () => {
+  const onImportAll = vi.fn();
+  const onImportSelected = vi.fn();
+  const onImportOne = vi.fn();
+  const result = resultAt(1);
+  const { container } = render(
+    <SearchResults
+      currentSearch={{
+        id: 'search',
+        provider: 'OPENSTREETMAP',
+        input: {
+          categories: ['restaurant'],
+          city: 'São Paulo',
+          state: 'SP',
+          country: 'BR',
+          onlyWithoutWebsite: false,
+        },
+        status: 'COMPLETED',
+        createdAt: '2026-10-20',
+      }}
+      results={[result]}
+      resultsMeta={{ page: 1, pageSize: 20, total: 21, totalPages: 2 }}
+      isLoading={false}
+      isError={false}
+      error={null}
+      onRetry={vi.fn()}
+      importSummary={null}
+      selectedResultIds={[result.id]}
+      selectableResultIds={[result.id]}
+      allCurrentResultsSelected
+      withoutWebsiteCount={1}
+      canImport
+      importingResultId={null}
+      importPending={false}
+      onToggleResult={vi.fn()}
+      onToggleCurrentPage={vi.fn()}
+      onPageChange={vi.fn()}
+      onImportSelected={onImportSelected}
+      onImportOne={onImportOne}
+      onImportAll={onImportAll}
+    />,
+  );
+  expect(container.querySelectorAll('.cta-primary')).toHaveLength(0);
+  await userEvent.click(screen.getByRole('button', { name: 'Adicionar todos' }));
+  expect(onImportAll).toHaveBeenCalledTimes(1);
+  expect(onImportOne).not.toHaveBeenCalled();
+  expect(onImportSelected).not.toHaveBeenCalled();
+});
+
+it('exports selected results from earlier pages as well as the current page', async () => {
+  const first = resultAt(1);
+  const second = resultAt(2);
+  render(
+    <SearchResults
+      currentSearch={undefined}
+      results={[second]}
+      isLoading={false}
+      isError={false}
+      error={null}
+      onRetry={vi.fn()}
+      importSummary={null}
+      selectedResultIds={[first.id, second.id]}
+      selectedResults={[first, second]}
+      selectableResultIds={[second.id]}
+      allCurrentResultsSelected
+      withoutWebsiteCount={1}
+      canImport
+      importingResultId={null}
+      importPending={false}
+      onToggleResult={vi.fn()}
+      onToggleCurrentPage={vi.fn()}
+      onPageChange={vi.fn()}
+      onImportSelected={vi.fn()}
+      onImportOne={vi.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Exportar CSV' }));
+  expect(downloadCsvFile).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.stringContaining('Resultado 1'),
+  );
+  expect(downloadCsvFile).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.stringContaining('Resultado 2'),
+  );
 });
