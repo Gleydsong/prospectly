@@ -1,212 +1,266 @@
-import { render, screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ThemeProvider } from '@/features/theme/theme-provider';
-import { LeadStatus } from '@/types';
+import i18n from '@/i18n';
+import { fetchDashboardSummary } from '@/features/dashboard/api';
+import { createActivity, fetchClientMap } from '@/features/leads/api';
+import { renderWithProviders } from '@/test/render';
+import { LeadStatus, type DashboardSummary } from '@/types';
+import { useCreateActivity } from '@/features/leads/hooks';
 import { DashboardPage } from './dashboard-page';
 
-const mockNavigate = vi.fn();
-
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
-vi.mock('@/stores/auth.store', () => ({
-  useAuthStore: (selector: (s: { user: { name: string } }) => unknown) =>
-    selector({ user: { name: 'Mariana Silva' } }),
-}));
-
 vi.mock('@/features/dashboard/api', () => ({
-  fetchDashboardSummary: vi.fn(async () => ({
-    totalLeads: 42,
-    newLeads: 31,
-    qualified: 5,
-    contacted: 3,
-    meetings: 2,
-    proposals: 1,
-    won: 3,
-    lost: 0,
-    conversionRate: 0.1,
-    overdueTasks: 0,
-    overdueFollowUps: [],
-    upcomingFollowUps: [],
-    topOpportunities: [],
-    conversionBySource: [],
-  })),
+  fetchDashboardSummary: vi.fn(),
+  fetchDashboardCharts: vi.fn(),
+}));
+vi.mock('@/features/leads/api', () => ({ fetchClientMap: vi.fn(), createActivity: vi.fn() }));
+vi.mock('@/features/leads/components/client-map-canvas', () => ({
+  default: ({
+    data,
+    compact,
+    dark,
+    onError,
+    onViewport,
+    onSelect,
+  }: {
+    data?: { pins: Array<{ id: string; name: string }> };
+    compact?: boolean;
+    dark: boolean;
+    onError: () => void;
+    onViewport: (bbox: string) => void;
+    onSelect: (id: string) => void;
+  }) => (
+    <div data-testid="map" data-compact={compact} data-dark={dark}>
+      {data?.pins.map((pin) => (
+        <button key={pin.id} onClick={() => onSelect(pin.id)}>
+          {pin.name}
+        </button>
+      ))}
+      <button onClick={onError}>Tile failure</button>
+      <button onClick={() => onViewport('-10,20,10,40')}>Move map</button>
+    </div>
+  ),
+}));
+vi.mock('@/features/leads/components/lead-form-modal', () => ({
+  LeadFormModal: () => <div role="dialog">Create client form</div>,
 }));
 
-vi.mock('@/features/leads/hooks', () => ({
-  useLeads: vi.fn(() => ({
-    isLoading: false,
-    data: {
-      data: [
+function summary(): DashboardSummary {
+  return {
+    totalLeads: 23,
+    newLeads: 23,
+    contacted: 7,
+    qualified: 4,
+    won: 2,
+    overview: {
+      nextActions: [
         {
-          id: 'lead-1',
-          companyName: 'Padaria Estrela Solar',
-          segment: 'Panificação e Confeitaria',
-          city: 'Campinas - SP',
-          email: 'contato@padariaestrela.com.br',
-          phone: '+551999887766',
-          status: LeadStatus.NEW,
-          score: 84,
-          source: 'GOOGLE_PLACES',
-          doNotContact: false,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'lead-2',
-          companyName: 'Boutique Flor de Lis',
-          segment: 'Moda Feminina',
-          city: 'São Paulo - SP',
-          email: 'vendas@flordelis.com.br',
-          phone: null,
-          status: LeadStatus.WON,
-          score: 95,
-          source: 'MANUAL',
-          doNotContact: false,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'lead-3',
-          companyName: 'Salão Requinte',
-          segment: null,
-          category: 'hairdresser',
-          city: 'Recife - PE',
-          email: null,
-          phone: null,
-          status: LeadStatus.NEW,
-          score: 75,
-          source: 'GOOGLE_PLACES',
-          doNotContact: false,
-          tags: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          id: 'task1',
+          title: 'Realizar acompanhamento',
+          dueAt: '2026-10-20T09:00:00Z',
+          lead: { id: 'c1', companyName: 'Café Ativo' },
         },
       ],
-      meta: {
-        total: 42,
-        page: 1,
-        pageSize: 10,
-        pageCount: 5,
+      byStatus: [
+        { status: LeadStatus.NEW, count: 19 },
+        { status: LeadStatus.QUALIFIED, count: 4 },
+      ],
+      periodDays: 30,
+      currentPeriod: { start: '2026-09-21', end: '2026-10-21' },
+      previousPeriod: { start: '2026-08-22', end: '2026-09-21' },
+      kpis: {
+        clients: { value: 23, previousValue: 20, changePercent: 15 },
+        contacted: { value: 7, previousValue: 10, changePercent: -30 },
+        qualified: { value: 4, previousValue: 0, changePercent: null },
+        won: { value: 2, previousValue: 2, changePercent: 0 },
       },
+      dailyCreated: [
+        { date: '2026-10-19', count: 9 },
+        { date: '2026-10-20', count: 14 },
+      ],
+      recentActivity: [
+        {
+          id: 'a1',
+          type: 'CALL',
+          description: null,
+          outcome: null,
+          createdAt: '2026-10-20T10:00:00Z',
+          lead: { id: 'c1', companyName: 'Café Ativo' },
+          user: { id: 'u1', name: 'Ana' },
+        },
+      ],
     },
-  })),
-}));
-
-function renderDashboard() {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
-  });
-
-  return render(
-    <QueryClientProvider client={client}>
-      <ThemeProvider>
-        <MemoryRouter>
-          <DashboardPage />
-        </MemoryRouter>
-      </ThemeProvider>
-    </QueryClientProvider>,
-  );
+    overdueFollowUps: [
+      { id: 'c1', companyName: 'Café Ativo', nextContactAt: '2026-10-20T09:00:00Z' },
+    ],
+    upcomingFollowUps: [],
+  } as DashboardSummary;
 }
 
-describe('DashboardPage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+beforeEach(async () => {
+  vi.resetAllMocks();
+  await i18n.changeLanguage('pt');
+  vi.mocked(fetchDashboardSummary).mockResolvedValue(summary());
+  vi.mocked(fetchClientMap).mockResolvedValue({
+    pins: [
+      { id: 'saved1', name: 'Cliente salvo', latitude: 0, longitude: 0, status: LeadStatus.NEW },
+    ],
+    clusters: [],
+    meta: { total: 1, grouped: false, limit: 500 },
+  });
+});
+afterEach(() => {
+  document.documentElement.classList.remove('dark');
+});
+
+describe('Início #363', () => {
+  it('renders all four API KPIs and variations, with no fabricated baseline or daily target', async () => {
+    const { container } = renderWithProviders(<DashboardPage />);
+    const clients = screen.getByLabelText('Clientes');
+    expect(await within(clients).findByText('23')).toBeInTheDocument();
+    expect(within(clients).getByText('+15% vs. período anterior')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Contatados')).getByText('7')).toBeInTheDocument();
+    expect(screen.getByText('-30% vs. período anterior')).toBeInTheDocument();
+    expect(screen.getByText('Sem base no período anterior')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Ganhos')).getByText('2')).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\bleads?\b|10\/dia/i);
+    expect(fetchDashboardSummary).toHaveBeenCalledWith({ period: '30d' });
   });
 
-  it('renders greeting, headline and commercial action CTAs', async () => {
-    renderDashboard();
-
-    expect(screen.getByText(/aqui está o que precisa da sua atenção hoje/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /prospectar novos clientes/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /ver acompanhamentos/i })).toBeInTheDocument();
+  it('shares the saved-client map without period filtering and links to Clientes > Mapa', async () => {
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByText('Cliente salvo')).toBeInTheDocument();
+    expect(fetchClientMap).toHaveBeenCalledWith(
+      { bbox: '-180,-90,180,90' },
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByTestId('map')).toHaveAttribute('data-compact', 'true');
+    expect(screen.getByRole('link', { name: /ver no mapa/i })).toHaveAttribute(
+      'href',
+      '/clientes?vista=mapa',
+    );
+    await userEvent.click(screen.getByText('Move map'));
+    await waitFor(() =>
+      expect(fetchClientMap).toHaveBeenLastCalledWith(
+        { bbox: '-10,20,10,40' },
+        expect.any(AbortSignal),
+      ),
+    );
   });
 
-  it('renders the 3 horizontal KPI cards with big metrics and badges', async () => {
-    renderDashboard();
-
-    expect((await screen.findAllByText('31')).length).toBeGreaterThan(0);
-    expect(screen.getByText(/prioridade alta/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /filtrar novos/i })).toBeInTheDocument();
-
-    expect(screen.getByText(/contatados hoje/i)).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: /meta diária/i })).toBeInTheDocument();
-
-    expect(screen.getByText(/em dia ✓/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /ver pendências/i })).toBeInTheDocument();
+  it('renders real distribution, daily evolution, next actions and recent activity', async () => {
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByRole('list', { name: 'Distribuição por etapa' })).toHaveTextContent(
+      '19',
+    );
+    expect(screen.getByRole('table', { name: 'Evolução de clientes' })).toHaveTextContent('9');
+    expect(screen.getByRole('table', { name: 'Evolução de clientes' })).toHaveTextContent('14');
+    expect(screen.getAllByRole('link', { name: /café ativo/i })).toHaveLength(2);
+    expect(screen.getByText('Ligação')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver todas/i })).toHaveAttribute('href', '/tasks');
   });
 
-  it('renders table toolbar with constrained search, action buttons, and status counts', () => {
-    renderDashboard();
-
-    expect(screen.getByRole('textbox', { name: /buscar por nome/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /filtros/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /importar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /exportar/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /novo cliente/i })).toBeInTheDocument();
-
-    expect(screen.getByRole('button', { name: /^todos/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^novos/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^contatados/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^qualificados/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^fechados/i })).toBeInTheDocument();
-
-    expect(screen.getByRole('button', { name: /lista/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /kanban/i })).toBeInTheDocument();
+  it('renders up to five API-scheduled tasks including tasks without an associated client', async () => {
+    const data = summary();
+    data.overview!.nextActions = Array.from({ length: 5 }, (_, i) => ({
+      id: `task${i}`,
+      title: `Tarefa ${i}`,
+      dueAt: `2026-10-${21 + i}T09:00:00Z`,
+      lead: i === 4 ? null : { id: `client${i}`, companyName: `Cliente ${i}` },
+    }));
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(data);
+    renderWithProviders(<DashboardPage />);
+    await screen.findByText('Cliente 3');
+    expect(screen.queryByText('Cliente 4')).not.toBeInTheDocument();
+    expect(screen.getByText('Tarefa 4')).toBeInTheDocument();
+    expect(screen.getByText('Tarefa agendada')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /cliente 0/i })).toHaveAttribute('href', '/tasks');
   });
 
-  it('renders company avatar initials, niche subtitle, city, status badge and contextual lead score in rows', () => {
-    renderDashboard();
-
-    expect(screen.getByText('PE')).toBeInTheDocument();
-    expect(screen.getByText('Padaria Estrela Solar')).toBeInTheDocument();
-    expect(screen.getByText('Panificação e Confeitaria')).toBeInTheDocument();
-    expect(screen.getByText('Campinas - SP')).toBeInTheDocument();
-
-    expect(screen.getByText('84/100')).toBeInTheDocument();
-    expect(screen.getAllByText('Alto')).toHaveLength(2);
-
-    const emailLinks = screen.getAllByRole('link', { name: /enviar e-mail/i });
-    expect(emailLinks.length).toBeGreaterThan(0);
-    expect(emailLinks[0]).toHaveAttribute('href', 'mailto:contato@padariaestrela.com.br');
-
-    const phoneLinks = screen.getAllByRole('link', { name: /ligar para/i });
-    expect(phoneLinks.length).toBeGreaterThan(0);
-    expect(phoneLinks[0]).toHaveAttribute('href', 'tel:+551999887766');
-
-    const openButtons = screen.getAllByRole('link', { name: /^abrir$/i });
-    expect(openButtons[0]).toHaveAttribute('href', '/leads/lead-1');
+  it('shows loading states while API data is unavailable, without presenting zeros', () => {
+    vi.mocked(fetchDashboardSummary).mockReturnValue(new Promise(() => {}));
+    vi.mocked(fetchClientMap).mockReturnValue(new Promise(() => {}));
+    renderWithProviders(<DashboardPage />);
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
+    expect(within(screen.getByLabelText('Clientes')).getByText('…')).toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
 
-  it('navigates when commercial CTAs and toolbar buttons are clicked', async () => {
-    const user = userEvent.setup();
-    renderDashboard();
-
-    await user.click(screen.getByRole('button', { name: /prospectar novos clientes/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/search');
-
-    await user.click(screen.getByRole('button', { name: /ver acompanhamentos/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/tasks');
-
-    await user.click(screen.getByRole('button', { name: /novo cliente/i }));
-    expect(mockNavigate).toHaveBeenCalledWith('/leads');
+  it('shows empty states and true API zeros without inventing actions', async () => {
+    const data = summary();
+    for (const metric of Object.values(data.overview!.kpis)) metric.value = 0;
+    data.overview!.dailyCreated = [{ date: '2026-10-20', count: 0 }];
+    data.overview!.recentActivity = [];
+    data.overdueFollowUps = [];
+    data.overview!.nextActions = [];
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(data);
+    data.overview!.byStatus = [];
+    vi.mocked(fetchClientMap).mockResolvedValue({
+      pins: [],
+      clusters: [],
+      meta: { total: 0, grouped: false, limit: 500 },
+    });
+    renderWithProviders(<DashboardPage />);
+    expect(await screen.findByText('Nenhuma tarefa agendada.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhuma atividade recente.')).toBeInTheDocument();
+    expect(screen.getAllByText('Nenhum cliente neste período.')).toHaveLength(2);
+    expect(within(screen.getByLabelText('Clientes')).getByText('0')).toBeInTheDocument();
+    expect(screen.getByText(/nenhum cliente com localização/i)).toBeInTheDocument();
   });
 
-  it('formats raw english category tags into localized Portuguese labels', () => {
-    renderDashboard();
-    expect(screen.getByText('Cabeleireiro')).toBeInTheDocument();
+  it('shows recoverable API errors and dashes instead of fabricated totals', async () => {
+    vi.mocked(fetchDashboardSummary).mockRejectedValue(new Error('offline'));
+    vi.mocked(fetchClientMap).mockRejectedValue(new Error('offline'));
+    renderWithProviders(<DashboardPage />);
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+    expect(within(screen.getByLabelText('Clientes')).getAllByText('—')).toHaveLength(2);
+    vi.mocked(fetchDashboardSummary).mockResolvedValue(summary());
+    await userEvent.click(screen.getAllByRole('button', { name: /tentar novamente/i })[0]!);
+    expect(await within(screen.getByLabelText('Clientes')).findByText('23')).toBeInTheDocument();
+  });
+
+  it('reports tile failure and retains navigation to the complete map', async () => {
+    renderWithProviders(<DashboardPage />);
+    await userEvent.click(await screen.findByText('Tile failure'));
+    expect(screen.getByRole('alert')).toHaveTextContent(/mapa/i);
+    expect(screen.getByRole('link', { name: /ver no mapa/i })).toBeInTheDocument();
+  });
+
+  it('uses the dark theme and translated English client vocabulary', async () => {
+    document.documentElement.classList.add('dark');
+    await i18n.changeLanguage('en');
+    const { container } = renderWithProviders(<DashboardPage />);
+    expect(await screen.findByText('Stage distribution')).toBeInTheDocument();
+    expect(screen.getByTestId('map')).toHaveAttribute('data-dark', 'true');
+    expect(container.textContent).not.toMatch(/\bleads?\b/i);
+    expect(screen.getByRole('link', { name: /view on map/i })).toBeInTheDocument();
+  });
+
+  it('refreshes recent activity after registering a client interaction', async () => {
+    const updated = summary();
+    updated.overview!.recentActivity[0]!.type = 'MEETING';
+    vi.mocked(fetchDashboardSummary).mockResolvedValueOnce(summary()).mockResolvedValue(updated);
+    vi.mocked(createActivity).mockResolvedValue({} as Awaited<ReturnType<typeof createActivity>>);
+    function Interaction() {
+      const mutation = useCreateActivity('c1');
+      return (
+        <>
+          <DashboardPage />
+          <button onClick={() => mutation.mutate({ type: 'MEETING' })}>Record meeting</button>
+        </>
+      );
+    }
+    renderWithProviders(<Interaction />);
+    expect(await screen.findByText('Ligação')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Record meeting' }));
+    expect(await screen.findByText('Reunião')).toBeInTheDocument();
+    expect(fetchDashboardSummary).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the existing client creation form', async () => {
+    renderWithProviders(<DashboardPage />);
+    await userEvent.click(screen.getByRole('button', { name: /novo cliente/i }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Create client form');
   });
 });

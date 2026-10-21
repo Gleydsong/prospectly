@@ -216,7 +216,39 @@ export interface Task {
   createdAt: string;
 }
 
+export interface DashboardOverview {
+  nextActions: Array<{
+    id: string;
+    title: string;
+    dueAt: string;
+    lead: { id: string; companyName: string } | null;
+  }>;
+  byStatus: DashboardCharts['byStatus'];
+  periodDays: number;
+  currentPeriod: { start: string; end: string };
+  previousPeriod: { start: string; end: string };
+  kpis: Record<
+    'clients' | 'contacted' | 'qualified' | 'won',
+    {
+      value: number;
+      previousValue: number;
+      changePercent: number | null;
+    }
+  >;
+  dailyCreated: Array<{ date: string; count: number }>;
+  recentActivity: Array<{
+    id: string;
+    type: string;
+    description: string | null;
+    outcome: string | null;
+    createdAt: string;
+    lead: { id: string; companyName: string };
+    user: { id: string; name: string };
+  }>;
+}
+
 export interface DashboardSummary {
+  overview?: DashboardOverview;
   totalLeads: number;
   newLeads: number;
   qualified: number;

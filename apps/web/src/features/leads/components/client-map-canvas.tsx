@@ -72,6 +72,7 @@ function pinImage(color: string) {
 
 interface Props {
   data?: ClientMapResult;
+  compact?: boolean;
   presentation?: 'clients' | 'results';
   dark: boolean;
   label: string;
@@ -83,6 +84,7 @@ interface Props {
 
 export default function ClientMapCanvas({
   data,
+  compact = false,
   presentation = 'clients',
   dark,
   label,
@@ -295,7 +297,7 @@ export default function ClientMapCanvas({
       ref={container}
       role="region"
       aria-label={label}
-      className="h-[520px] min-w-0 overflow-hidden rounded-panel border border-[color:var(--border)] bg-[color:var(--bg-subtle)] lg:h-[630px]"
+      className={`min-w-0 overflow-hidden rounded-panel border border-[color:var(--border)] bg-[color:var(--bg-subtle)] ${compact ? 'h-[300px] sm:h-[340px]' : 'h-[520px] lg:h-[630px]'}`}
     />
   );
 }
