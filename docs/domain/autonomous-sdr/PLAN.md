@@ -4,11 +4,11 @@ Plano vivo. Este documento descreve o alvo e o que o PR de fundação realmente 
 
 ## Arquitetura atual
 
-Monólito modular NestJS (`apps/api`), SPA React/Vite (`apps/web`), landing Next.js. PostgreSQL via Prisma é a fonte de verdade. Redis + BullMQ executam jobs. Tenant é `organizationId` da sessão JWT, com RLS. Campanha existente é CRM assistido (`Campaign`, `CampaignLead`). Agents proíbe disparo automático de WhatsApp e trata DNC como absoluto. Não há cliente Jev no repositório.
+Monólito modular NestJS (`apps/api`), SPA React/Vite (`apps/web`), landing Next.js. PostgreSQL via Prisma é a fonte de verdade. Redis + BullMQ executam jobs. Tenant é `organizationId` da sessão JWT, com RLS. Campanha existente é CRM assistido (`Campaign`, `CampaignLead`). Agents proíbe disparo automático de WhatsApp e trata DNC como absoluto. Não há cliente Laya no repositório.
 
 ## Arquitetura alvo
 
-O SDR entra como módulo de domínio no mesmo monólito, com workers e outbox já existentes. Jev julga. LLM redige. Código decide transições e score. Policy autoriza. PostgreSQL guarda o que aconteceu. Envio real não existe neste ciclo: provider falso, flags de autonomia desligadas.
+O SDR entra como módulo de domínio no mesmo monólito, com workers e outbox já existentes. Laya julga. LLM redige. Código decide transições e score. Policy autoriza. PostgreSQL guarda o que aconteceu. Envio real não existe neste ciclo: provider falso, flags de autonomia desligadas.
 
 ## Este PR (foundation)
 
@@ -55,13 +55,13 @@ Sinais fictícios de site viram evidência. Não há fetch HTTP.
 - Prospect sem `https` não chama o provider.
 - O texto da página fica em `value`. Não há campo de qualificação.
 
-## PR decisões Jev
+## PR decisões Laya
 
-O parser aceita só os formatos instalados em `memory_shared.jev.models`: `noul`, `choice` e `score`. Não chama o gateway.
+O parser aceita os formatos da Laya: `noul`, `choice` e `score`. Normaliza pontuações ordinais para intervalo unitário e não chama gateway externo.
 
 - `opportunity-score-v1` combina os sinais em código. A nota do exemplo qualificado é 56.
 - `QUALIFIED` exige nota >= 55, ICP >= 50 e contactability >= 50.
-- Provider indisponível, tipo desconhecido ou strategy fora da allowlist devolve `REJECTED` e nota nula.
+- Provider indisponível, tipo desconhecido ou strategy fora da allowlist devolve `REJECTED` e nota nula (fail-closed).
 - O texto do prospect fica no log como dado. Não altera a nota.
 - O log de outra organização não devolve a decisão.
 
@@ -113,7 +113,7 @@ O cenário local encadeia campanha, discovery falso, enrichment, decisão, resea
 
 ## Fora deste documento
 
-PostgreSQL como fonte da verdade do SDR, providers reais (Places, Jev ao vivo, LLM, Resend), HMAC de webhook e o merge da pilha em `main`.
+PostgreSQL como fonte da verdade do SDR, providers reais (Places, Laya ao vivo, LLM, Resend), HMAC de webhook e o merge da pilha em `main`.
 
 ## Branches
 

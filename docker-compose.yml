@@ -36,6 +36,33 @@ services:
     networks:
       - prospectly
 
+  laya:
+    image: python:3.12-slim
+    container_name: prospectly-laya
+    restart: unless-stopped
+    command: >
+      sh -c "pip install --no-cache-dir 'laya[serve]==0.3.24' && python -m laya.serve"
+    environment:
+      LAYA_HOST: "0.0.0.0"
+      LAYA_PORT: "8000"
+      LAYA_DEVICE: cpu
+      LAYA_PRELOAD: "1"
+      LAYA_MODELS: multilingual
+      LAYA_DEFAULT_MODEL: multilingual
+      LAYA_THREADS: "2"
+    mem_limit: 3g
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - laya-models:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prospectly
+
   api:
     build:
       context: .
@@ -47,6 +74,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
       REDIS_URL: redis://redis:6379
+      LAYA_URL: http://laya:8000/v1/systemone
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -71,6 +99,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-prospectly}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-prospectly}?schema=public
       REDIS_URL: redis://redis:6379
+      LAYA_URL: http://laya:8000/v1/systemone
       ROLE: worker
     depends_on:
       postgres:
@@ -102,6 +131,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  laya-models:
 
 networks:
   prospectly:
