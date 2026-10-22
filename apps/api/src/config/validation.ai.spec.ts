@@ -32,7 +32,7 @@ describe('AI provider environment validation', () => {
       expect(() =>
         validateEnv({
           ...baseValidConfig,
-          AI_PROVIDER: 'ollama',
+          AI_PROVIDER: 'unsupported-provider',
         }),
       ).toThrow('AI_PROVIDER must be cloudflare, groq, or disabled');
     });

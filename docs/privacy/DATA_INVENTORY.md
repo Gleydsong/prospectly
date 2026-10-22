@@ -1,6 +1,6 @@
 # Inventário de dados pessoais
 
-Última revisão técnica: 2026-09-14  
+Última revisão técnica: 2026-10-22  
 Classificações são técnicas. **Base legal = LEGAL_REVIEW_REQUIRED** quando o código não pode decidir.
 
 | Dado | Classificação | Origem | Finalidade | Armazenamento | Quem acessa | Terceiros | Retenção (técnica) | Exclusão | Base legal esperada | Risco |
@@ -24,7 +24,7 @@ Classificações são técnicas. **Base legal = LEGAL_REVIEW_REQUIRED** quando o
 | localStorage prospectly-auth | PERSONAL_DATA | Web | UX sessão | Browser | Titular | — | Até logout | Logout | Contrato | LOW |
 | Cookie refresh_token | AUTHENTICATION_DATA | API | Sessão | Browser HttpOnly | Browser/API | — | 7d | Logout | Contrato | HIGH |
 | Cookie consent JSON | TECHNICAL_IDENTIFIER | Landing | Preferência cookies | localStorage | Titular | — | Até limpar storage | Banner / limpar site | Consentimento (essencial = info) | LOW |
-| Prompts LLM | NON_PERSONAL após sanitizer | Opportunity / WhatsApp AI | Texto assistido | Não persistidos; `AiRun` só metadados | Sistema | Ollama local | N/A | N/A | LEGAL_REVIEW se PII vazar | HIGH se sanitizer falhar |
+| Prompts LLM | NON_PERSONAL após sanitizer | Opportunity / WhatsApp AI | Texto assistido | Não persistidos; `AiRun` só metadados | Sistema | Cloudflare Workers AI / Groq; Laya local | N/A | N/A | LEGAL_REVIEW se PII vazar | HIGH se sanitizer falhar |
 | SuppressionEntry.valueHash | TECHNICAL_IDENTIFIER | OPT_OUT | Impedir reimport | Postgres | Sistema | — | Enquanto org existir | Cascade org | Execução de direitos / LI | MEDIUM |
 
 ## Dados sensíveis (art. 5º, II)

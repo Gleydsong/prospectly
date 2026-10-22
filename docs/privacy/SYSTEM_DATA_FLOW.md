@@ -1,6 +1,6 @@
 # System data flow — Prospectly
 
-Última revisão técnica: 2026-09-07  
+Última revisão técnica: 2026-10-22  
 Este documento descreve o sistema **como implementado**, não uma declaração jurídica de conformidade.
 
 ## Aplicações
@@ -36,7 +36,7 @@ Access token **não** vai para `localStorage`. Refresh exige header CSRF `X-Requ
 4. Campanhas (OPT_OUT → `doNotContact` + suppression hash)
 5. Billing (AbacatePay PIX, Asaas cartão sob flag; `BillingProfile.cpfCnpj`)
 6. Waitlist da landing
-7. IA local Ollama (Opportunity Finder + variantes WhatsApp) — PII de contacto omitida no prompt
+7. IA (Cloudflare Workers AI com reserva Groq para Opportunity Finder e variantes WhatsApp; Laya local para classificação SDR) — PII de contacto omitida no prompt
 8. Logs Pino (redaction) e `AuditLog` (metadados sanitizados)
 9. Export/exclusão do titular (`/privacy/export`, `/privacy/account`)
 10. Conexão Google (OAuth Gmail/Calendar em leitura; refresh token cifrado; export do titular inclui e-mail Google e datas, nunca o token)
