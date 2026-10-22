@@ -1351,4 +1351,379 @@ describe('LlmProviderService', () => {
       }
     });
   });
+
+  describe('11. Follow-ups Issue #389 (L1, L2, L3, I1)', () => {
+    it('L3: chat() preserves tools[].function.parameters schemas containing blocked keys (phone, email)', async () => {
+      let capturedBody: {
+        tools?: Array<{
+          function: {
+            parameters: {
+              properties: Record<string, unknown>;
+              required?: string[];
+            };
+          };
+        }>;
+      } | null = null;
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        capturedBody = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'Ligue para o lead' }],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'call_lead',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    phone: { type: 'string' },
+                    email: { type: 'string' },
+                  },
+                  required: ['phone', 'email'],
+                },
+              },
+            },
+          ],
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(capturedBody).not.toBeNull();
+      const parameters = capturedBody!.tools![0]!.function.parameters;
+      expect(parameters.properties.phone).toBeDefined();
+      expect(parameters.properties.email).toBeDefined();
+      expect(parameters.required).toEqual(['phone', 'email']);
+    });
+
+    it('L3: chat() preserves tools schema while simultaneously sanitizing messages containing email/phone in payload', async () => {
+      let capturedBody: {
+        messages: Array<{ role: string; content: string }>;
+        tools?: Array<{
+          function: {
+            parameters: {
+              properties: Record<string, unknown>;
+              required?: string[];
+            };
+          };
+        }>;
+      } | null = null;
+
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        capturedBody = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      await service.chat(
+        {
+          context: defaultContext,
+          messages: [
+            {
+              role: 'user',
+              content: JSON.stringify({
+                action: 'contact',
+                email: 'lead@private.com',
+                phone: '+5511999999999',
+              }),
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'send_email',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string' },
+                    body: { type: 'string' },
+                  },
+                  required: ['email'],
+                },
+              },
+            },
+          ],
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(capturedBody).not.toBeNull();
+      // Tool schema parameters intact:
+      const toolParams = capturedBody!.tools![0]!.function.parameters;
+      expect(toolParams.properties.email).toBeDefined();
+      expect(toolParams.required).toEqual(['email']);
+
+      // Message payload sanitized (email and phone stripped from message json):
+      const parsedMessage = JSON.parse(capturedBody!.messages[0]!.content);
+      expect(parsedMessage.action).toBe('contact');
+      expect(parsedMessage.email).toBeUndefined();
+      expect(parsedMessage.phone).toBeUndefined();
+    });
+
+    it('LOW-2: prepareTools sanitizes description containing an email while keeping parameters with phone/email schemas intact', async () => {
+      let capturedBody: {
+        tools?: Array<{
+          function: {
+            name: string;
+            description?: string;
+            parameters: {
+              properties: Record<string, unknown>;
+              required?: string[];
+            };
+          };
+        }>;
+      } | null = null;
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        capturedBody = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'test tool sanitization' }],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'contact_support',
+                description: 'Enviar solicitacao para suporte@prospectly.com urgente',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    phone: { type: 'string' },
+                    email: { type: 'string' },
+                  },
+                  required: ['phone', 'email'],
+                },
+              },
+            },
+          ],
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(capturedBody).not.toBeNull();
+      const tool = capturedBody!.tools![0]!.function;
+      // Description has email removed
+      expect(tool.description).toBe('Enviar solicitacao para  urgente');
+      expect(tool.description).not.toContain('suporte@prospectly.com');
+      // Parameters remain intact
+      expect(tool.parameters.properties.phone).toBeDefined();
+      expect(tool.parameters.properties.email).toBeDefined();
+      expect(tool.parameters.required).toEqual(['phone', 'email']);
+    });
+
+    it('L3: req.provider override is ignored in favor of env configured provider', async () => {
+      let capturedUrl = '';
+      const mockFetch = jest.fn().mockImplementation((url, _opts) => {
+        capturedUrl = String(url);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+          'ai.groq.apiKey': 'groq-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      const response = await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'teste' }],
+          provider: 'groq' as const,
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(response.provider).toBe('cloudflare');
+      expect(capturedUrl).toContain('cloudflare');
+      expect(capturedUrl).not.toContain('groq');
+    });
+
+    it('L3: req.model override not in env allowlist is ignored in favor of env model', async () => {
+      let capturedModel = '';
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        const body = JSON.parse(opts.body);
+        capturedModel = body.model;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.model': '@cf/openai/gpt-oss-120b',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      const response = await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'teste' }],
+          model: 'unauthorized-expensive-model',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(capturedModel).toBe('@cf/openai/gpt-oss-120b');
+      expect(response.model).toBe('@cf/openai/gpt-oss-120b');
+    });
+
+    it('INFO-2: req.model override from another provider (e.g. Groq fallback) is ignored when primary provider is Cloudflare', async () => {
+      let capturedModel = '';
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        const body = JSON.parse(opts.body);
+        capturedModel = body.model;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.model': '@cf/openai/gpt-oss-120b',
+          'ai.fallbackProvider': 'groq',
+          'ai.fallbackModel': 'llama-3.3-70b-versatile',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      const response = await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'teste' }],
+          model: 'llama-3.3-70b-versatile',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      // Groq fallback model override is ignored because primary provider is Cloudflare
+      expect(capturedModel).toBe('@cf/openai/gpt-oss-120b');
+      expect(response.model).toBe('@cf/openai/gpt-oss-120b');
+    });
+
+    it('L2: chat() uses default retries when ai.maxRetries is NaN', async () => {
+      let attempts = 0;
+      const mockFetch = jest.fn().mockImplementation((_url, _opts) => {
+        attempts++;
+        if (attempts === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 429,
+            text: async () => 'Rate limit',
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'success on retry' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.maxRetries': NaN,
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      const response = await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'teste retry' }],
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(attempts).toBe(2);
+      expect(response.content).toBe('success on retry');
+    });
+  });
 });

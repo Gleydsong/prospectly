@@ -224,4 +224,171 @@ describe('OpenAiCompatibleClient', () => {
       expect(String(capturedError.cause)).not.toContain(rawMalformedBody);
     }
   });
+
+  it('L1: healthy long stream emitting chunks beyond timeoutMs completes successfully', async () => {
+    const chunks = [
+      'data: {"choices":[{"delta":{"content":"chunk1"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"chunk2"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"chunk3"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"chunk4"}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        for (const chunk of chunks) {
+          await new Promise((resolve) => setTimeout(resolve, 25));
+          controller.enqueue(encoder.encode(chunk));
+        }
+        controller.close();
+      },
+    });
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: stream,
+    });
+
+    const client = new OpenAiCompatibleClient(mockFetch as unknown as typeof fetch);
+    const collected: string[] = [];
+
+    for await (const chunk of client.stream({
+      baseUrl: 'https://api.cloudflare.com/client/v4/accounts/test/ai/v1',
+      apiKey: 'test-token',
+      model: '@cf/openai/gpt-oss-120b',
+      messages: [{ role: 'user', content: 'Hi' }],
+      timeoutMs: 50,
+      idleTimeoutMs: 100,
+    })) {
+      if (chunk.contentDelta) collected.push(chunk.contentDelta);
+    }
+
+    expect(collected).toEqual(['chunk1', 'chunk2', 'chunk3', 'chunk4']);
+  });
+
+  it('L1: stream that stalls without chunks aborts with AiTimeoutException', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        const encoder = new TextEncoder();
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"first"}}]}\n\n'));
+      },
+    });
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: stream,
+    });
+
+    const client = new OpenAiCompatibleClient(mockFetch as unknown as typeof fetch);
+    const collected: string[] = [];
+
+    await expect(async () => {
+      for await (const chunk of client.stream({
+        baseUrl: 'https://api.cloudflare.com/client/v4/accounts/test/ai/v1',
+        apiKey: 'test-token',
+        model: '@cf/openai/gpt-oss-120b',
+        messages: [{ role: 'user', content: 'Hi' }],
+        timeoutMs: 200,
+        idleTimeoutMs: 50,
+      })) {
+        if (chunk.contentDelta) collected.push(chunk.contentDelta);
+      }
+    }).rejects.toThrow(AiTimeoutException);
+
+    expect(collected).toEqual(['first']);
+  });
+
+  it('LOW-1: does not trigger false idle timeout when slow consumer processes multiple deltas from a single read', async () => {
+    // A single read() delivers 2 SSE deltas ('a' and 'b')
+    // Followed by a second read that delivers [DONE]
+    let readCount = 0;
+    let isCancelled = false;
+    const encoder = new TextEncoder();
+    const mockReader = {
+      read: jest.fn().mockImplementation(async () => {
+        if (isCancelled) {
+          throw new DOMException('The operation was aborted', 'AbortError');
+        }
+        readCount++;
+        if (readCount === 1) {
+          return {
+            value: encoder.encode(
+              'data: {"choices":[{"delta":{"content":"a"}}]}\n\n' +
+                'data: {"choices":[{"delta":{"content":"b"}}]}\n\n',
+            ),
+            done: false,
+          };
+        }
+        if (readCount === 2) {
+          return {
+            value: encoder.encode('data: [DONE]\n\n'),
+            done: false,
+          };
+        }
+        return { value: undefined, done: true };
+      }),
+      cancel: jest.fn().mockImplementation(async () => {
+        isCancelled = true;
+      }),
+      releaseLock: jest.fn(),
+    };
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => mockReader,
+      },
+    });
+
+    const client = new OpenAiCompatibleClient(mockFetch as unknown as typeof fetch);
+    const deltas: string[] = [];
+
+    for await (const chunk of client.stream({
+      baseUrl: 'https://api.cloudflare.com/client/v4/accounts/test/ai/v1',
+      apiKey: 'test-token',
+      model: '@cf/openai/gpt-oss-120b',
+      messages: [{ role: 'user', content: 'Hi' }],
+      idleTimeoutMs: 60,
+    })) {
+      if (chunk.contentDelta) {
+        deltas.push(chunk.contentDelta);
+        // Consumer takes 120ms per delta (longer than idleTimeoutMs of 60ms)
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+    }
+
+    expect(deltas).toEqual(['a', 'b']);
+  });
+
+  it('I1: does not embed baseUrl or accountId in exception messages', async () => {
+    const sensitiveAccountId = 'SECRET_ACCOUNT_ID_12345';
+    const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${sensitiveAccountId}/ai/v1`;
+
+    const mockFetch500 = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: async () => 'Internal Error',
+    });
+
+    const client = new OpenAiCompatibleClient(mockFetch500 as unknown as typeof fetch);
+
+    try {
+      await client.complete({
+        baseUrl,
+        apiKey: 'test-token',
+        model: '@cf/openai/gpt-oss-120b',
+        messages: [{ role: 'user', content: 'Hi' }],
+        provider: 'cloudflare',
+      });
+      fail('Expected complete to throw');
+    } catch (err) {
+      const error = err as AiProviderUnavailableException;
+      expect(error.message).not.toContain(sensitiveAccountId);
+      expect(error.message).toContain('cloudflare');
+    }
+  });
 });

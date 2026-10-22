@@ -25,7 +25,16 @@ export interface OpenAiClientRequest {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
+  idleTimeoutMs?: number;
+  provider?: string;
   signal?: AbortSignal;
+}
+
+function resolveProviderLabel(req: OpenAiClientRequest): string {
+  if (req.provider) return req.provider;
+  if (req.baseUrl.includes('cloudflare.com')) return 'cloudflare';
+  if (req.baseUrl.includes('groq.com')) return 'groq';
+  return 'ai-provider';
 }
 
 export interface OpenAiRawResponse {
@@ -54,6 +63,7 @@ export class OpenAiCompatibleClient {
     const fetchImpl = customFetch ?? this.fetchFn;
     const url = `${req.baseUrl.replace(/\/$/, '')}/chat/completions`;
     const timeoutMs = req.timeoutMs ?? 30_000;
+    const providerLabel = resolveProviderLabel(req);
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -95,11 +105,11 @@ export class OpenAiCompatibleClient {
 
       if (!response.ok) {
         if (response.status === 429) {
-          throw new AiRateLimitException(`HTTP 429 Too Many Requests from ${req.baseUrl}`);
+          throw new AiRateLimitException(`HTTP 429 Too Many Requests from ${providerLabel}`);
         }
         throw new AiProviderUnavailableException(
-          `HTTP ${response.status} from ${req.baseUrl}`,
-          req.baseUrl,
+          `HTTP ${response.status} from ${providerLabel}`,
+          providerLabel,
         );
       }
 
@@ -121,8 +131,8 @@ export class OpenAiCompatibleClient {
         payload = (await response.json()) as typeof payload;
       } catch {
         throw new AiProviderUnavailableException(
-          `Invalid JSON response from ${req.baseUrl}`,
-          req.baseUrl,
+          `Invalid JSON response from ${providerLabel}`,
+          providerLabel,
           new Error('Malformed JSON payload'),
         );
       }
@@ -148,7 +158,7 @@ export class OpenAiCompatibleClient {
       }
       if (controller.signal.aborted) {
         throw new AiTimeoutException(
-          `Request to ${req.baseUrl} timed out after ${timeoutMs}ms`,
+          `Request to ${providerLabel} timed out after ${timeoutMs}ms`,
           timeoutMs,
         );
       }
@@ -159,8 +169,8 @@ export class OpenAiCompatibleClient {
         throw error;
       }
       throw new AiProviderUnavailableException(
-        `Failed to reach ${req.baseUrl}: network or transport error`,
-        req.baseUrl,
+        `Failed to reach ${providerLabel}: network or transport error`,
+        providerLabel,
         error instanceof Error ? new Error(error.name) : undefined,
       );
     } finally {
@@ -177,10 +187,17 @@ export class OpenAiCompatibleClient {
   ): AsyncIterable<LlmStreamChunk> {
     const fetchImpl = customFetch ?? this.fetchFn;
     const url = `${req.baseUrl.replace(/\/$/, '')}/chat/completions`;
-    const timeoutMs = req.timeoutMs ?? 30_000;
+    const connectTimeoutMs = req.timeoutMs ?? 30_000;
+    const idleTimeoutMs = req.idleTimeoutMs ?? req.timeoutMs ?? 30_000;
+    const providerLabel = resolveProviderLabel(req);
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let timeoutReason: 'connect' | 'idle' | null = null;
+
+    let connectTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      timeoutReason = 'connect';
+      controller.abort();
+    }, connectTimeoutMs);
 
     const onExternalAbort = () => controller.abort();
     if (req.signal) {
@@ -218,7 +235,7 @@ export class OpenAiCompatibleClient {
         body: JSON.stringify(body),
       });
     } catch (error) {
-      clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
       if (req.signal) {
         req.signal.removeEventListener('abort', onExternalAbort);
       }
@@ -226,44 +243,82 @@ export class OpenAiCompatibleClient {
         throw new AiRequestAbortedException();
       }
       if (controller.signal.aborted) {
-        throw new AiTimeoutException(`Stream request to ${req.baseUrl} timed out`, timeoutMs);
+        throw new AiTimeoutException(
+          `Stream request to ${providerLabel} timed out`,
+          connectTimeoutMs,
+        );
       }
       throw new AiProviderUnavailableException(
-        `Failed to start stream with ${req.baseUrl}: ${error instanceof Error ? error.name : 'UnknownError'}`,
-        req.baseUrl,
+        `Failed to start stream with ${providerLabel}: ${error instanceof Error ? error.name : 'UnknownError'}`,
+        providerLabel,
         error instanceof Error ? new Error(error.name) : undefined,
       );
     }
 
+    if (connectTimer) {
+      clearTimeout(connectTimer);
+      connectTimer = null;
+    }
+
     if (!response.ok) {
-      clearTimeout(timer);
       if (req.signal) {
         req.signal.removeEventListener('abort', onExternalAbort);
       }
       if (response.status === 429) {
-        throw new AiRateLimitException(`HTTP 429 from ${req.baseUrl}`);
+        throw new AiRateLimitException(`HTTP 429 from ${providerLabel}`);
       }
       throw new AiProviderUnavailableException(
-        `HTTP ${response.status} from ${req.baseUrl}`,
-        req.baseUrl,
+        `HTTP ${response.status} from ${providerLabel}`,
+        providerLabel,
       );
     }
 
     if (!response.body) {
-      clearTimeout(timer);
       if (req.signal) {
         req.signal.removeEventListener('abort', onExternalAbort);
       }
-      throw new AiProviderUnavailableException('Empty response body in stream', req.baseUrl);
+      throw new AiProviderUnavailableException('Empty response body in stream', providerLabel);
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    const resetIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        timeoutReason = 'idle';
+        controller.abort();
+        try {
+          reader.cancel().catch(() => {});
+        } catch {
+          // ignore
+        }
+      }, idleTimeoutMs);
+    };
+
+    const clearIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
+    const onControllerAbort = () => {
+      try {
+        reader.cancel().catch(() => {});
+      } catch {
+        // ignore
+      }
+    };
+    controller.signal.addEventListener('abort', onControllerAbort, { once: true });
+
     try {
       while (true) {
+        resetIdleTimer();
         const { value, done } = await reader.read();
+        clearIdleTimer();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -274,6 +329,7 @@ export class OpenAiCompatibleClient {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith(':')) continue; // keep-alive or comment
           if (trimmed === 'data: [DONE]') {
+            clearIdleTimer();
             yield { isDone: true };
             return;
           }
@@ -323,21 +379,47 @@ export class OpenAiCompatibleClient {
         }
       }
 
+      clearIdleTimer();
+
+      if (req.signal?.aborted) {
+        throw new AiRequestAbortedException();
+      }
+      if (controller.signal.aborted && timeoutReason) {
+        throw new AiTimeoutException(
+          `Stream request to ${providerLabel} timed out`,
+          timeoutReason === 'idle' ? idleTimeoutMs : connectTimeoutMs,
+        );
+      }
+
       yield { isDone: true };
     } catch (error) {
+      clearIdleTimer();
       if (req.signal?.aborted) {
         throw new AiRequestAbortedException();
       }
       if (controller.signal.aborted) {
-        throw new AiTimeoutException(`Stream request to ${req.baseUrl} timed out`, timeoutMs);
+        throw new AiTimeoutException(
+          `Stream request to ${providerLabel} timed out`,
+          timeoutReason === 'idle' ? idleTimeoutMs : connectTimeoutMs,
+        );
+      }
+      if (
+        error instanceof AiRateLimitException ||
+        error instanceof AiProviderUnavailableException ||
+        error instanceof AiTimeoutException ||
+        error instanceof AiRequestAbortedException
+      ) {
+        throw error;
       }
       throw new AiProviderUnavailableException(
         'Failed to read provider stream',
-        req.baseUrl,
+        providerLabel,
         error instanceof Error ? new Error(error.name) : undefined,
       );
     } finally {
-      clearTimeout(timer);
+      if (connectTimer) clearTimeout(connectTimer);
+      clearIdleTimer();
+      controller.signal.removeEventListener('abort', onControllerAbort);
       if (req.signal) {
         req.signal.removeEventListener('abort', onExternalAbort);
       }

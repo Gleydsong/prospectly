@@ -221,9 +221,16 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
     }
   }
 
-  for (const key of ['AI_TIMEOUT_MS', 'AI_DAILY_BUDGET_TOKENS'] as const) {
+  for (const key of [
+    'AI_TIMEOUT_MS',
+    'AI_STREAM_IDLE_TIMEOUT_MS',
+    'AI_DAILY_BUDGET_TOKENS',
+  ] as const) {
     const value = config[key];
     if (value === undefined) continue;
+    if (typeof value === 'string' && value.trim() === '') {
+      throw new Error(`${key} must be a positive integer`);
+    }
     const parsed = typeof value === 'number' ? value : Number(value);
     if (!Number.isInteger(parsed) || parsed < 1) {
       throw new Error(`${key} must be a positive integer`);
@@ -232,6 +239,9 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
 
   const aiMaxRetries = config.AI_MAX_RETRIES;
   if (aiMaxRetries !== undefined) {
+    if (typeof aiMaxRetries === 'string' && aiMaxRetries.trim() === '') {
+      throw new Error('AI_MAX_RETRIES must be a non-negative integer');
+    }
     const parsed = typeof aiMaxRetries === 'number' ? aiMaxRetries : Number(aiMaxRetries);
     if (!Number.isInteger(parsed) || parsed < 0) {
       throw new Error('AI_MAX_RETRIES must be a non-negative integer');
