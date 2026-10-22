@@ -88,26 +88,23 @@ pnpm dev
 | `pnpm typecheck`                      | Verificação de tipos                                      |
 | `pnpm db:migrate`                     | Prisma migrate dev                                        |
 | `pnpm db:seed`                        | Seed do banco                                             |
-| `docker compose up -d`                | Sobe PostgreSQL + Redis                                   |
-| `docker compose --profile ai up -d`   | Sobe Postgres + Redis + Ollama (IA)                       |
-| `docker compose --profile full up -d` | Sobe stack completa (db, redis, ollama, api, web, worker) |
+| `docker compose up -d`                | Sobe PostgreSQL + Redis + Laya (classificador SDR)        |
+| `docker compose --profile full up -d` | Sobe stack completa (db, redis, laya, api, web, worker)   |
 
-### Conversion Studio — IA no site do lead
+### Provedor de IA e SDR autônomo
 
-A geração de landing usa Ollama/Llama **dentro** do fluxo da ferramenta: o usuário escolhe o lead e clica **Gerar site do lead**. Não há integração externa na UI.
+A inferência generativa roda fora da VPS (Cloudflare Workers AI com fallback Groq), configurada via variáveis de ambiente em `apps/api/.env`. O classificador leve de qualificação do SDR (Laya) roda localmente como sidecar via Docker Compose (`docker compose up -d`).
 
 ```bash
-# Dev local: infra + Ollama
-docker compose --profile ai up -d
-docker compose exec ollama ollama pull llama3.1
+# apps/api/.env (dev local com IA desabilitada por padrão)
+AI_PROVIDER=disabled
 
-# apps/api/.env
-LANDING_AI_PROVIDER=ollama
-LANDING_AI_BASE_URL=http://127.0.0.1:11434
-LANDING_AI_MODEL=llama3.1
-
-# API HTTP + worker BullMQ (mesmo comando)
-pnpm --filter @prospectly/api run dev
+# Para habilitar Cloudflare Workers AI:
+# AI_PROVIDER=cloudflare
+# CLOUDFLARE_ACCOUNT_ID=...
+# CLOUDFLARE_AI_TOKEN=...
+# AI_FALLBACK_PROVIDER=groq
+# GROQ_API_KEY=...
 ```
 
 ## Fase 3 — pesquisa OpenStreetMap e importação CSV

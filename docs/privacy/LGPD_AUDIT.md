@@ -12,7 +12,7 @@ Correções técnicas desta entrega reduzem a superfície de risco. A conformida
 
 ## Visão da arquitetura
 
-Ver `SYSTEM_DATA_FLOW.md`. NestJS + Prisma + Postgres RLS + Redis/BullMQ + React + landing Next.js. IA via Ollama. Billing Abacate/Asaas.
+Ver `SYSTEM_DATA_FLOW.md`. NestJS + Prisma + Postgres RLS + Redis/BullMQ + React + landing Next.js. IA via Cloudflare Workers AI (reserva Groq) e Laya (SDR). Billing Abacate/Asaas.
 
 ## Inventário de dados pessoais
 
@@ -28,7 +28,7 @@ Ver `THIRD_PARTY_PROCESSORS.md`.
 
 ## Análise de IA/LLM
 
-Ollama local (configurável). Opportunity explanation e WhatsApp **não** enviam e-mail/telefone/endereço/senha. Camada `sanitizeCompanyForLlm` / `sanitizeLlmPayload` + testes. `AiRun` persiste metadados, não o prompt. Sem RAG/embeddings. Se `*_AI_BASE_URL` apontar para cloud: `EXTERNAL_REVIEW_REQUIRED`.
+Cloudflare Workers AI (`@cf/openai/gpt-oss-120b`) com reserva Groq; Laya local auto-hospedada para SDR. Opportunity explanation e WhatsApp **não** enviam e-mail/telefone/endereço/senha. Camada `sanitizeCompanyForLlm` / `sanitizeLlmPayload` + testes. `AiRun` persiste metadados, não o prompt. Sem RAG/embeddings. Cloudflare não usa conteúdo de clientes para treino; Groq não treina com dados de API.
 
 ## Autenticação
 
@@ -188,7 +188,7 @@ Helmet + HSTS em produção, CORS allowlist, throttle Redis, secret-scan heurís
 7. Menores.
 8. Backups e direito ao esquecimento.
 9. DPA subprocessadores.
-10. Alinhamento contínuo política ↔ produto (Asaas, Ollama, Places).
+10. Alinhamento contínuo política ↔ produto (Asaas, Cloudflare, Groq, Places).
 
 ## Correções implementadas
 

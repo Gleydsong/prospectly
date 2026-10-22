@@ -1,6 +1,6 @@
 # Data flow mapping
 
-Última revisão técnica: 2026-08-28
+Última revisão técnica: 2026-10-22
 
 ## Conta do titular (SaaS user)
 
@@ -31,7 +31,7 @@ Membro da org
       → Lead (+ soft-delete)
  → Campaign OPT_OUT → doNotContact + SuppressionEntry
  → Opportunity Finder JSON company (contacto na BD)
-      → sanitizeCompanyForLlm → Ollama (sem e-mail/telefone/endereço)
+      → sanitizeCompanyForLlm → Cloudflare Workers AI / Groq (sem e-mail/telefone/endereço)
 ```
 
 Caminhos paralelos: CSV client-side na search page; export CSV de leads (OWNER, entitlement); logs de worker (IDs).
@@ -55,7 +55,8 @@ Webhook Abacate: secret em header **ou** query (risco de access log). Stripe leg
 | API ↔ Postgres | Tudo persistido | RLS + tenant guard |
 | API ↔ Redis | IDs de job, throttle | Sem e-mail como chave |
 | API ↔ OSM/Places | Queries geo + POIs | UA identificável; Places API key |
-| API ↔ Ollama | Nome empresa, cidade, sinais | Sanitizer |
+| API ↔ Cloudflare Workers AI / Groq | Nome empresa, cidade, sinais | Sanitizer |
+| API ↔ Laya (sidecar local) | Nome empresa, categoria, cidade/UF, sinais | State minimizado sem PII |
 | API ↔ e-mail | E-mail do usuário | Tokens hashed |
 | API ↔ gateways | Perfil pagador | Sem PAN |
 | API ↔ logs host | req metadata | Pino redact |

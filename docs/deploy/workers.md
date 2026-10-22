@@ -98,7 +98,7 @@ Custo de tabela do worker Starter / `0.5c-512mb`: **US$7/mês**. Workspace Hobby
 - start: `node apps/api/dist/worker.js`
 - `autoDeploy`: `no` até o worker estar live; depois `checksPass` se a API já estiver sem processors
 - env: `ROLE=worker`, `NODE_ENV=production`, `WORKER_SHUTDOWN_TIMEOUT_MS=30000`
-- copiar da API (valores via Dashboard/API, nunca no Git): `DATABASE_URL`, `DATABASE_APP_URL`, `REDIS_URL` (privados da mesma região), `OSM_USER_AGENT`, `GOOGLE_PLACES_API_KEY`, `OPPORTUNITY_AI_*` / `WHATSAPP_AI_*` se os jobs de opportunity usarem, `LOG_LEVEL`, `SENTRY_DSN`
+- copiar da API (valores via Dashboard/API, nunca no Git): `DATABASE_URL`, `DATABASE_APP_URL`, `REDIS_URL` (privados da mesma região), `OSM_USER_AGENT`, `GOOGLE_PLACES_API_KEY`, `AI_*`, `OPPORTUNITY_AI_*`, `CLOUDFLARE_*`, `GROQ_*`, `LOG_LEVEL`, `SENTRY_DSN`
 - **não** copiar JWT, Asaas, AbacatePay, SMTP, `GOOGLE_CLIENT_ID`, `OPS_METRICS_TOKEN`, CORS
 
 ## Rollout sem perda
