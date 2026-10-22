@@ -49,17 +49,17 @@ Webhook Abacate: secret em header **ou** query (risco de access log). Stripe leg
 
 ## Fronteiras do sistema
 
-| Fronteira | Dados | Controlo técnico |
-| --- | --- | --- |
-| Browser ↔ API | PII da sessão | CORS allowlist, JWT, HTTPS em prod |
-| API ↔ Postgres | Tudo persistido | RLS + tenant guard |
-| API ↔ Redis | IDs de job, throttle | Sem e-mail como chave |
-| API ↔ OSM/Places | Queries geo + POIs | UA identificável; Places API key |
-| API ↔ Cloudflare Workers AI / Groq | Nome empresa, cidade, sinais | Sanitizer |
-| API ↔ Laya (sidecar local) | Nome empresa, categoria, cidade/UF, sinais | State minimizado sem PII |
-| API ↔ e-mail | E-mail do usuário | Tokens hashed |
-| API ↔ gateways | Perfil pagador | Sem PAN |
-| API ↔ logs host | req metadata | Pino redact |
+| Fronteira                          | Dados                                                                                                | Controlo técnico                                                                                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Browser ↔ API                      | PII da sessão                                                                                        | CORS allowlist, JWT, HTTPS em prod                                                                                   |
+| API ↔ Postgres                     | Tudo persistido                                                                                      | RLS + tenant guard                                                                                                   |
+| API ↔ Redis                        | IDs de job, throttle                                                                                 | Sem e-mail como chave                                                                                                |
+| API ↔ OSM/Places                   | Queries geo + POIs                                                                                   | UA identificável; Places API key                                                                                     |
+| API ↔ Cloudflare Workers AI / Groq | Nome empresa, cidade, sinais                                                                         | Sanitizer                                                                                                            |
+| API ↔ Laya (sidecar local)         | Nome do negócio, categoria, cidade/UF, domínio do site, avaliação e nº de avaliações, canais sim/não | Minimização em `buildProspectJudgeState` (sem e-mail/telefone/endereço; nome e domínio podem ser pessoais em MEI/PF) |
+| API ↔ e-mail                       | E-mail do usuário                                                                                    | Tokens hashed                                                                                                        |
+| API ↔ gateways                     | Perfil pagador                                                                                       | Sem PAN                                                                                                              |
+| API ↔ logs host                    | req metadata                                                                                         | Pino redact                                                                                                          |
 
 ## Backups
 
