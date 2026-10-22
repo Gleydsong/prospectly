@@ -318,8 +318,8 @@ export class OpenAiCompatibleClient {
       while (true) {
         resetIdleTimer();
         const { value, done } = await reader.read();
+        clearIdleTimer();
         if (done) break;
-        resetIdleTimer();
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');

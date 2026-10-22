@@ -301,6 +301,69 @@ describe('OpenAiCompatibleClient', () => {
     expect(collected).toEqual(['first']);
   });
 
+  it('LOW-1: does not trigger false idle timeout when slow consumer processes multiple deltas from a single read', async () => {
+    // A single read() delivers 2 SSE deltas ('a' and 'b')
+    // Followed by a second read that delivers [DONE]
+    let readCount = 0;
+    let isCancelled = false;
+    const encoder = new TextEncoder();
+    const mockReader = {
+      read: jest.fn().mockImplementation(async () => {
+        if (isCancelled) {
+          throw new DOMException('The operation was aborted', 'AbortError');
+        }
+        readCount++;
+        if (readCount === 1) {
+          return {
+            value: encoder.encode(
+              'data: {"choices":[{"delta":{"content":"a"}}]}\n\n' +
+                'data: {"choices":[{"delta":{"content":"b"}}]}\n\n',
+            ),
+            done: false,
+          };
+        }
+        if (readCount === 2) {
+          return {
+            value: encoder.encode('data: [DONE]\n\n'),
+            done: false,
+          };
+        }
+        return { value: undefined, done: true };
+      }),
+      cancel: jest.fn().mockImplementation(async () => {
+        isCancelled = true;
+      }),
+      releaseLock: jest.fn(),
+    };
+
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        getReader: () => mockReader,
+      },
+    });
+
+    const client = new OpenAiCompatibleClient(mockFetch as unknown as typeof fetch);
+    const deltas: string[] = [];
+
+    for await (const chunk of client.stream({
+      baseUrl: 'https://api.cloudflare.com/client/v4/accounts/test/ai/v1',
+      apiKey: 'test-token',
+      model: '@cf/openai/gpt-oss-120b',
+      messages: [{ role: 'user', content: 'Hi' }],
+      idleTimeoutMs: 60,
+    })) {
+      if (chunk.contentDelta) {
+        deltas.push(chunk.contentDelta);
+        // Consumer takes 120ms per delta (longer than idleTimeoutMs of 60ms)
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+    }
+
+    expect(deltas).toEqual(['a', 'b']);
+  });
+
   it('I1: does not embed baseUrl or accountId in exception messages', async () => {
     const sensitiveAccountId = 'SECRET_ACCOUNT_ID_12345';
     const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${sensitiveAccountId}/ai/v1`;

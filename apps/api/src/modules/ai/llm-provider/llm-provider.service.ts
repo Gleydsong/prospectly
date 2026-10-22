@@ -150,23 +150,39 @@ export class LlmProviderService {
     return null;
   }
 
-  private getAllowedModels(primaryDefault: string): Set<string> {
-    const models = [
-      primaryDefault,
-      this.config.get<string>('ai.model'),
-      this.config.get<string>('ai.fallbackModel'),
-      this.config.get<string>('opportunityAi.model'),
-    ].filter((m): m is string => typeof m === 'string' && m.trim().length > 0);
-    return new Set(models);
+  private getAllowedModels(provider: AiProviderType, defaultModel: string): Set<string> {
+    const configuredPrimary = this.getProvider();
+    const primaryModel = this.config.get<string>('ai.model');
+    const fallbackModel = this.config.get<string>('ai.fallbackModel');
+    const oppModel = this.config.get<string>('opportunityAi.model');
+
+    const models: (string | undefined)[] = [defaultModel];
+    if (provider === 'cloudflare') {
+      if (configuredPrimary === 'cloudflare') {
+        models.push(primaryModel);
+      }
+      models.push(oppModel);
+    } else if (provider === 'groq') {
+      if (configuredPrimary === 'groq') {
+        models.push(primaryModel);
+      }
+      models.push(fallbackModel);
+      models.push(oppModel);
+    }
+
+    return new Set(
+      models.filter((m): m is string => typeof m === 'string' && m.trim().length > 0),
+    );
   }
 
   private resolveModel(
     requestedModel: string | undefined,
     defaultModel: string,
     task?: string,
+    provider: AiProviderType = 'cloudflare',
   ): string {
     if (!requestedModel) return defaultModel;
-    const allowed = this.getAllowedModels(defaultModel);
+    const allowed = this.getAllowedModels(provider, defaultModel);
     if (allowed.has(requestedModel)) {
       return requestedModel;
     }
@@ -177,16 +193,50 @@ export class LlmProviderService {
     return defaultModel;
   }
 
+  private sanitizeToolText(text?: string): string | undefined {
+    if (typeof text !== 'string') return text;
+    let content = text;
+    const trimmed = content.trim();
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed !== null && typeof parsed === 'object') {
+          const sanitizedParsed = sanitizeLlmPayload(parsed);
+          content = JSON.stringify(sanitizedParsed);
+        }
+      } catch {
+        // Keep original content if parsing fails
+      }
+    }
+    // Remove plaintext email addresses
+    content = content.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '').trim();
+    return content;
+  }
+
   private prepareTools(tools?: LlmTool[]): LlmTool[] | undefined {
     if (!tools || tools.length === 0) return undefined;
-    return tools.map((tool) => ({
-      type: tool.type,
-      function: {
+    return tools.map((tool) => {
+      const sanitizedMeta = sanitizeLlmPayload({
         name: tool.function.name,
         description: tool.function.description,
-        parameters: tool.function.parameters,
-      },
-    }));
+      }) as { name?: string; description?: string };
+
+      const name = this.sanitizeToolText(sanitizedMeta.name ?? tool.function.name) ?? '';
+      const rawDesc = sanitizedMeta.description ?? tool.function.description;
+      const description = rawDesc !== undefined ? this.sanitizeToolText(rawDesc) : undefined;
+
+      return {
+        type: tool.type,
+        function: {
+          name,
+          ...(description !== undefined ? { description } : {}),
+          parameters: tool.function.parameters,
+        },
+      };
+    });
   }
 
   async chat(req: LlmChatRequest, customFetch?: typeof fetch): Promise<LlmChatResponse> {
@@ -209,7 +259,12 @@ export class LlmProviderService {
       throw new AiProviderUnavailableException(`Unsupported primary provider: ${primaryProvider}`);
     }
 
-    const primaryModel = this.resolveModel(req.model, primaryConfig.defaultModel, req.context.task);
+    const primaryModel = this.resolveModel(
+      req.model,
+      primaryConfig.defaultModel,
+      req.context.task,
+      primaryProvider,
+    );
     const timeoutMs = this.config.get<number>('ai.timeoutMs') ?? 30_000;
     const configuredRetries = this.config.get<number>('ai.maxRetries');
     const maxRetries =
@@ -538,7 +593,12 @@ export class LlmProviderService {
       throw new AiProviderUnavailableException(`Unsupported primary provider: ${primaryProvider}`);
     }
 
-    const primaryModel = this.resolveModel(req.model, primaryConfig.defaultModel, req.context.task);
+    const primaryModel = this.resolveModel(
+      req.model,
+      primaryConfig.defaultModel,
+      req.context.task,
+      primaryProvider,
+    );
     const timeoutMs = this.config.get<number>('ai.timeoutMs') ?? 30_000;
     const streamIdleTimeoutMs = this.config.get<number>('ai.streamIdleTimeoutMs') ?? timeoutMs;
     const started = Date.now();

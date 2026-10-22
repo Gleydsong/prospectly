@@ -1496,6 +1496,76 @@ describe('LlmProviderService', () => {
       expect(parsedMessage.phone).toBeUndefined();
     });
 
+    it('LOW-2: prepareTools sanitizes description containing an email while keeping parameters with phone/email schemas intact', async () => {
+      let capturedBody: {
+        tools?: Array<{
+          function: {
+            name: string;
+            description?: string;
+            parameters: {
+              properties: Record<string, unknown>;
+              required?: string[];
+            };
+          };
+        }>;
+      } | null = null;
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        capturedBody = JSON.parse(opts.body);
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'test tool sanitization' }],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'contact_support',
+                description: 'Enviar solicitacao para suporte@prospectly.com urgente',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    phone: { type: 'string' },
+                    email: { type: 'string' },
+                  },
+                  required: ['phone', 'email'],
+                },
+              },
+            },
+          ],
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      expect(capturedBody).not.toBeNull();
+      const tool = capturedBody!.tools![0]!.function;
+      // Description has email removed
+      expect(tool.description).toBe('Enviar solicitacao para  urgente');
+      expect(tool.description).not.toContain('suporte@prospectly.com');
+      // Parameters remain intact
+      expect(tool.parameters.properties.phone).toBeDefined();
+      expect(tool.parameters.properties.email).toBeDefined();
+      expect(tool.parameters.required).toEqual(['phone', 'email']);
+    });
+
     it('L3: req.provider override is ignored in favor of env configured provider', async () => {
       let capturedUrl = '';
       const mockFetch = jest.fn().mockImplementation((url, _opts) => {
@@ -1568,6 +1638,47 @@ describe('LlmProviderService', () => {
         mockFetch as unknown as typeof fetch,
       );
 
+      expect(capturedModel).toBe('@cf/openai/gpt-oss-120b');
+      expect(response.model).toBe('@cf/openai/gpt-oss-120b');
+    });
+
+    it('INFO-2: req.model override from another provider (e.g. Groq fallback) is ignored when primary provider is Cloudflare', async () => {
+      let capturedModel = '';
+      const mockFetch = jest.fn().mockImplementation((_url, opts) => {
+        const body = JSON.parse(opts.body);
+        capturedModel = body.model;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [{ message: { content: 'ok' } }],
+            usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+          }),
+        });
+      });
+
+      service = createService(
+        {
+          'ai.provider': 'cloudflare',
+          'ai.model': '@cf/openai/gpt-oss-120b',
+          'ai.fallbackProvider': 'groq',
+          'ai.fallbackModel': 'llama-3.3-70b-versatile',
+          'ai.cloudflare.accountId': 'test-account',
+          'ai.cloudflare.apiToken': 'test-token',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      const response = await service.chat(
+        {
+          context: defaultContext,
+          messages: [{ role: 'user', content: 'teste' }],
+          model: 'llama-3.3-70b-versatile',
+        },
+        mockFetch as unknown as typeof fetch,
+      );
+
+      // Groq fallback model override is ignored because primary provider is Cloudflare
       expect(capturedModel).toBe('@cf/openai/gpt-oss-120b');
       expect(response.model).toBe('@cf/openai/gpt-oss-120b');
     });
