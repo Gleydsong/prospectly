@@ -150,13 +150,55 @@ export class LlmProviderService {
     return null;
   }
 
-  async chat(req: LlmChatRequest, customFetch?: typeof fetch): Promise<LlmChatResponse> {
-    if (this.getProvider() === 'disabled') {
-      throw new AiDisabledException('AI provider is currently disabled');
+  private getAllowedModels(primaryDefault: string): Set<string> {
+    const models = [
+      primaryDefault,
+      this.config.get<string>('ai.model'),
+      this.config.get<string>('ai.fallbackModel'),
+      this.config.get<string>('opportunityAi.model'),
+    ].filter((m): m is string => typeof m === 'string' && m.trim().length > 0);
+    return new Set(models);
+  }
+
+  private resolveModel(
+    requestedModel: string | undefined,
+    defaultModel: string,
+    task?: string,
+  ): string {
+    if (!requestedModel) return defaultModel;
+    const allowed = this.getAllowedModels(defaultModel);
+    if (allowed.has(requestedModel)) {
+      return requestedModel;
     }
-    const primaryProvider = req.provider ?? this.getProvider();
+    this.logger.warn({
+      message: `Requested model override '${requestedModel}' is not in the env-configured allowlist; falling back to default model '${defaultModel}'`,
+      task,
+    });
+    return defaultModel;
+  }
+
+  private prepareTools(tools?: LlmTool[]): LlmTool[] | undefined {
+    if (!tools || tools.length === 0) return undefined;
+    return tools.map((tool) => ({
+      type: tool.type,
+      function: {
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters,
+      },
+    }));
+  }
+
+  async chat(req: LlmChatRequest, customFetch?: typeof fetch): Promise<LlmChatResponse> {
+    const primaryProvider = this.getProvider();
     if (primaryProvider === 'disabled') {
       throw new AiDisabledException('AI provider is currently disabled');
+    }
+    if (req.provider && req.provider !== primaryProvider) {
+      this.logger.warn({
+        message: `Requested provider override '${req.provider}' is ignored; using env-configured provider '${primaryProvider}'`,
+        task: req.context.task,
+      });
     }
 
     await this.budgetService.checkBudget(req.context.organizationId);
@@ -167,13 +209,19 @@ export class LlmProviderService {
       throw new AiProviderUnavailableException(`Unsupported primary provider: ${primaryProvider}`);
     }
 
-    const primaryModel = req.model ?? primaryConfig.defaultModel;
+    const primaryModel = this.resolveModel(req.model, primaryConfig.defaultModel, req.context.task);
     const timeoutMs = this.config.get<number>('ai.timeoutMs') ?? 30_000;
-    const maxRetries = this.config.get<number>('ai.maxRetries') ?? 2;
+    const configuredRetries = this.config.get<number>('ai.maxRetries');
+    const maxRetries =
+      typeof configuredRetries === 'number' &&
+      Number.isFinite(configuredRetries) &&
+      configuredRetries >= 0
+        ? configuredRetries
+        : 2;
     const started = Date.now();
 
     const sanitizedMessages = this.sanitizeMessages(req.messages);
-    const sanitizedTools = req.tools ? (sanitizeLlmPayload(req.tools) as LlmTool[]) : undefined;
+    const tools = this.prepareTools(req.tools);
 
     const runId = await this.telemetry.startRun(req.context, primaryProvider, primaryModel);
 
@@ -187,11 +235,12 @@ export class LlmProviderService {
             apiKey: primaryConfig.apiKey,
             model: primaryModel,
             messages: sanitizedMessages,
-            tools: sanitizedTools,
+            tools,
             responseFormat: req.responseFormat,
             temperature: req.temperature,
             maxTokens: req.maxTokens,
             timeoutMs,
+            provider: primaryProvider,
             signal: req.signal,
           },
           customFetch,
@@ -261,11 +310,12 @@ export class LlmProviderService {
               apiKey: groqConfig.apiKey,
               model: groqModel,
               messages: sanitizedMessages,
-              tools: sanitizedTools,
+              tools,
               responseFormat: req.responseFormat,
               temperature: req.temperature,
               maxTokens: req.maxTokens,
               timeoutMs,
+              provider: 'groq',
               signal: req.signal,
             },
             customFetch,
@@ -469,12 +519,15 @@ export class LlmProviderService {
     req: LlmChatRequest,
     customFetch?: typeof fetch,
   ): AsyncIterable<LlmStreamChunk> {
-    if (this.getProvider() === 'disabled') {
-      throw new AiDisabledException('AI provider is currently disabled');
-    }
-    const primaryProvider = req.provider ?? this.getProvider();
+    const primaryProvider = this.getProvider();
     if (primaryProvider === 'disabled') {
       throw new AiDisabledException('AI provider is currently disabled');
+    }
+    if (req.provider && req.provider !== primaryProvider) {
+      this.logger.warn({
+        message: `Requested provider override '${req.provider}' is ignored; using env-configured provider '${primaryProvider}'`,
+        task: req.context.task,
+      });
     }
 
     await this.budgetService.checkBudget(req.context.organizationId);
@@ -485,12 +538,13 @@ export class LlmProviderService {
       throw new AiProviderUnavailableException(`Unsupported primary provider: ${primaryProvider}`);
     }
 
-    const primaryModel = req.model ?? primaryConfig.defaultModel;
+    const primaryModel = this.resolveModel(req.model, primaryConfig.defaultModel, req.context.task);
     const timeoutMs = this.config.get<number>('ai.timeoutMs') ?? 30_000;
+    const streamIdleTimeoutMs = this.config.get<number>('ai.streamIdleTimeoutMs') ?? timeoutMs;
     const started = Date.now();
 
     const sanitizedMessages = this.sanitizeMessages(req.messages);
-    const sanitizedTools = req.tools ? (sanitizeLlmPayload(req.tools) as LlmTool[]) : undefined;
+    const tools = this.prepareTools(req.tools);
 
     const runId = await this.telemetry.startRun(req.context, primaryProvider, primaryModel);
 
@@ -507,11 +561,13 @@ export class LlmProviderService {
         apiKey: primaryConfig.apiKey,
         model: primaryModel,
         messages: sanitizedMessages,
-        tools: sanitizedTools,
+        tools,
         responseFormat: req.responseFormat,
         temperature: req.temperature,
         maxTokens: req.maxTokens,
         timeoutMs,
+        idleTimeoutMs: streamIdleTimeoutMs,
+        provider: primaryProvider,
         signal: req.signal,
       },
       customFetch,
@@ -559,11 +615,13 @@ export class LlmProviderService {
               apiKey: groqConfig.apiKey,
               model: groqModel,
               messages: sanitizedMessages,
-              tools: sanitizedTools,
+              tools,
               responseFormat: req.responseFormat,
               temperature: req.temperature,
               maxTokens: req.maxTokens,
               timeoutMs,
+              idleTimeoutMs: streamIdleTimeoutMs,
+              provider: 'groq',
               signal: req.signal,
             },
             customFetch,

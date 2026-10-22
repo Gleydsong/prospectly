@@ -43,4 +43,27 @@ describe('LLM privacy sanitizer', () => {
     });
     expect(findBlockedLlmKeys(sanitized)).toEqual([]);
   });
+
+  it('regression: generic sanitizer strips blocked keys (email, phone) even inside objects shaped like functions/tools', () => {
+    const payload = {
+      type: 'function',
+      function: {
+        name: 'contact_customer',
+        parameters: {
+          properties: {
+            phone: '+5511999999999',
+            description: 'valid text',
+          },
+        },
+      },
+      email: 'a@b.com',
+    };
+
+    const sanitized = sanitizeLlmPayload(payload) as typeof payload;
+
+    expect(sanitized.email).toBeUndefined();
+    expect(sanitized.function.parameters.properties.phone).toBeUndefined();
+    expect(sanitized.function.parameters.properties.description).toBe('valid text');
+    expect(findBlockedLlmKeys(sanitized)).toEqual([]);
+  });
 });

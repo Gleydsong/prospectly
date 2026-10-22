@@ -89,6 +89,31 @@ describe('AI provider environment validation', () => {
       ).toThrow('AI_MAX_RETRIES must be a non-negative integer');
     });
 
+    it('rejects empty string AI_MAX_RETRIES', () => {
+      expect(() =>
+        validateEnv({
+          ...baseValidConfig,
+          AI_MAX_RETRIES: '',
+        }),
+      ).toThrow('AI_MAX_RETRIES must be a non-negative integer');
+    });
+
+    it('rejects empty string or invalid AI_STREAM_IDLE_TIMEOUT_MS', () => {
+      expect(() =>
+        validateEnv({
+          ...baseValidConfig,
+          AI_STREAM_IDLE_TIMEOUT_MS: '',
+        }),
+      ).toThrow('AI_STREAM_IDLE_TIMEOUT_MS must be a positive integer');
+
+      expect(() =>
+        validateEnv({
+          ...baseValidConfig,
+          AI_STREAM_IDLE_TIMEOUT_MS: '-10',
+        }),
+      ).toThrow('AI_STREAM_IDLE_TIMEOUT_MS must be a positive integer');
+    });
+
     it('rejects zero or negative AI_DAILY_BUDGET_TOKENS', () => {
       expect(() =>
         validateEnv({
@@ -203,6 +228,30 @@ describe('AI provider configuration normalization', () => {
       else process.env.AI_MODEL = previousModel;
       if (previousFallback === undefined) delete process.env.AI_FALLBACK_PROVIDER;
       else process.env.AI_FALLBACK_PROVIDER = previousFallback;
+    }
+  });
+
+  it('normalizes empty string AI_MAX_RETRIES to default 2 rather than NaN', () => {
+    const previousRetries = process.env.AI_MAX_RETRIES;
+    try {
+      process.env.AI_MAX_RETRIES = '';
+      expect(configuration().ai.maxRetries).toBe(2);
+    } finally {
+      if (previousRetries === undefined) delete process.env.AI_MAX_RETRIES;
+      else process.env.AI_MAX_RETRIES = previousRetries;
+    }
+  });
+
+  it('normalizes empty string or undefined AI_STREAM_IDLE_TIMEOUT_MS to default', () => {
+    const previousIdle = process.env.AI_STREAM_IDLE_TIMEOUT_MS;
+    try {
+      delete process.env.AI_STREAM_IDLE_TIMEOUT_MS;
+      expect(configuration().ai.streamIdleTimeoutMs).toBe(30000);
+      process.env.AI_STREAM_IDLE_TIMEOUT_MS = '';
+      expect(configuration().ai.streamIdleTimeoutMs).toBe(30000);
+    } finally {
+      if (previousIdle === undefined) delete process.env.AI_STREAM_IDLE_TIMEOUT_MS;
+      else process.env.AI_STREAM_IDLE_TIMEOUT_MS = previousIdle;
     }
   });
 });

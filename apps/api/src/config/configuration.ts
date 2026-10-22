@@ -1,5 +1,11 @@
 import { stripEnvString } from './env-string';
 
+const parseEnvInt = (value: string | undefined, defaultValue: number): number => {
+  if (value === undefined || value.trim() === '') return defaultValue;
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : defaultValue;
+};
+
 export const configuration = () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10),
@@ -111,8 +117,12 @@ export const configuration = () => ({
       apiKey: stripEnvString(process.env.GROQ_API_KEY),
       baseUrl: stripEnvString(process.env.GROQ_BASE_URL, 'https://api.groq.com/openai/v1'),
     },
-    timeoutMs: parseInt(process.env.AI_TIMEOUT_MS ?? '30000', 10),
-    maxRetries: parseInt(process.env.AI_MAX_RETRIES ?? '2', 10),
-    dailyBudgetTokens: parseInt(process.env.AI_DAILY_BUDGET_TOKENS ?? '100000', 10),
+    timeoutMs: parseEnvInt(process.env.AI_TIMEOUT_MS, 30000),
+    streamIdleTimeoutMs: parseEnvInt(
+      process.env.AI_STREAM_IDLE_TIMEOUT_MS,
+      parseEnvInt(process.env.AI_TIMEOUT_MS, 30000),
+    ),
+    maxRetries: parseEnvInt(process.env.AI_MAX_RETRIES, 2),
+    dailyBudgetTokens: parseEnvInt(process.env.AI_DAILY_BUDGET_TOKENS, 100000),
   },
 });
