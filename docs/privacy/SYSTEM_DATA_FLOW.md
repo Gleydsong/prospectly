@@ -5,11 +5,11 @@ Este documento descreve o sistema **como implementado**, não uma declaração j
 
 ## Aplicações
 
-| App | Stack | Papel |
-| --- | --- | --- |
-| `apps/web` | Vite + React | SPA autenticada (CRM, buscas, billing, privacidade) |
-| `apps/api` | NestJS + Prisma + BullMQ | REST `/api/v1`, workers inline |
-| `apps/landing` | Next.js | Marketing, waitlist, páginas legais, cookies |
+| App            | Stack                    | Papel                                               |
+| -------------- | ------------------------ | --------------------------------------------------- |
+| `apps/web`     | Vite + React             | SPA autenticada (CRM, buscas, billing, privacidade) |
+| `apps/api`     | NestJS + Prisma + BullMQ | REST `/api/v1`, workers inline                      |
+| `apps/landing` | Next.js                  | Marketing, waitlist, páginas legais, cookies        |
 
 ## Persistência e runtime
 

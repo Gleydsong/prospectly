@@ -79,17 +79,17 @@ pnpm dev
 
 ## Comandos
 
-| Comando                               | Descrição                                                 |
-| ------------------------------------- | --------------------------------------------------------- |
-| `pnpm dev`                            | Inicia web + api HTTP + worker BullMQ                     |
-| `pnpm build`                          | Build de todos os pacotes                                 |
-| `pnpm lint`                           | Lint em todos os pacotes                                  |
-| `pnpm test`                           | Testes em todos os pacotes                                |
-| `pnpm typecheck`                      | Verificação de tipos                                      |
-| `pnpm db:migrate`                     | Prisma migrate dev                                        |
-| `pnpm db:seed`                        | Seed do banco                                             |
-| `docker compose up -d`                | Sobe PostgreSQL + Redis + Laya (classificador SDR)        |
-| `docker compose --profile full up -d` | Sobe stack completa (db, redis, laya, api, web, worker)   |
+| Comando                               | Descrição                                               |
+| ------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                            | Inicia web + api HTTP + worker BullMQ                   |
+| `pnpm build`                          | Build de todos os pacotes                               |
+| `pnpm lint`                           | Lint em todos os pacotes                                |
+| `pnpm test`                           | Testes em todos os pacotes                              |
+| `pnpm typecheck`                      | Verificação de tipos                                    |
+| `pnpm db:migrate`                     | Prisma migrate dev                                      |
+| `pnpm db:seed`                        | Seed do banco                                           |
+| `docker compose up -d`                | Sobe PostgreSQL + Redis + Laya (classificador SDR)      |
+| `docker compose --profile full up -d` | Sobe stack completa (db, redis, laya, api, web, worker) |
 
 ### Provedor de IA e SDR autônomo
 
