@@ -65,6 +65,82 @@ export class AssistantSpikeService {
     }
   }
 
+  /**
+   * Helper to check suppression across email, phone, whatsapp, and domain
+   * strictly enclosed in runWithTenant (L1, H2)
+   */
+  private async checkCustomerSuppression(
+    organizationId: string,
+    customer: {
+      email?: string | null;
+      phone?: string | null;
+      whatsapp?: string | null;
+      domain?: string | null;
+    },
+  ): Promise<boolean> {
+    return runWithTenant(organizationId, async () => {
+      const email = customer.email?.trim() || null;
+      const domain = customer.domain?.trim() || null;
+      // E-mail e domínio entram em toda consulta; cada número (telefone e WhatsApp) é checado.
+      const phones = [
+        ...new Set([customer.phone?.trim(), customer.whatsapp?.trim()].filter(Boolean)),
+      ] as string[];
+      const lookups = phones.length > 0 ? phones : [null];
+
+      for (const phone of lookups) {
+        if (await this.suppression.isSuppressed(organizationId, { email, phone, domain })) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  /**
+   * Validates intent ownership, organization, role and status before stream starts (M2, H1)
+   */
+  validateDecisionIntent(params: {
+    organizationId: string;
+    userId: string;
+    userRole?: string;
+    intentId: string;
+    decision: 'approve' | 'reject';
+  }): ActionIntent {
+    const { organizationId, userId, userRole, intentId } = params;
+    this.sweepExpiredIntents();
+
+    const intent = this.intents.get(intentId);
+    if (!intent) {
+      throw new NotFoundException(`Ação pendente com id ${intentId} não encontrada ou já expirou`);
+    }
+
+    // Tenant isolation verification
+    if (intent.organizationId !== organizationId) {
+      throw new ForbiddenException('Ação não pertence à organização autenticada');
+    }
+
+    // H1: Only intent creator can decide
+    if (intent.userId !== userId) {
+      throw new ForbiddenException('Apenas o usuário criador da ação pode aprová-la ou rejeitá-la');
+    }
+
+    // H1: Read-only VIEWER role cannot approve or reject actions
+    if (userRole === 'VIEWER') {
+      throw new ForbiddenException('Usuários com papel VIEWER não possuem permissão para executar ações');
+    }
+
+    if (intent.status !== 'pending') {
+      throw new BadRequestException('Esta ação já foi processada anteriormente');
+    }
+
+    if (Date.now() > intent.expiresAt) {
+      this.intents.delete(intentId);
+      throw new BadRequestException('Esta ação expirou e não pode mais ser processada');
+    }
+
+    return intent;
+  }
+
   async *streamConversation(params: {
     organizationId: string;
     userId: string;
@@ -93,9 +169,9 @@ export class AssistantSpikeService {
         },
       };
 
-      // Execute read-only count under tenant context and RLS
+      // M1: Execute read-only count under tenant context and RLS filtering deletedAt: null
       const count = await runWithTenant(organizationId, async () => {
-        return this.prisma.lead.count({ where: { organizationId } });
+        return this.prisma.lead.count({ where: { organizationId, deletedAt: null } });
       });
 
       yield {
@@ -118,35 +194,22 @@ export class AssistantSpikeService {
         },
       ];
 
-      // Stream assistant explanation
-      try {
-        for await (const chunk of this.llmProvider.streamChat({
-          context: {
-            organizationId,
-            userId,
-            task: 'ASSISTANT_SPIKE_READ',
-          },
-          messages: updatedMessages,
-          signal,
-        })) {
-          if (chunk.contentDelta) {
-            yield {
-              type: 'chunk',
-              data: { text: chunk.contentDelta },
-            };
-          }
+      // Stream assistant explanation (L4: propagate AiExceptions to controller without swallowing)
+      for await (const chunk of this.llmProvider.streamChat({
+        context: {
+          organizationId,
+          userId,
+          task: 'ASSISTANT_SPIKE_READ',
+        },
+        messages: updatedMessages,
+        signal,
+      })) {
+        if (chunk.contentDelta) {
+          yield {
+            type: 'chunk',
+            data: { text: chunk.contentDelta },
+          };
         }
-      } catch (err: unknown) {
-        if (signal?.aborted || (err as Error)?.name === 'AiRequestAbortedException') {
-          throw err;
-        }
-        // Fallback friendly message if LLM provider offline during test/spike
-        yield {
-          type: 'chunk',
-          data: {
-            text: ` Você possui atualmente ${count} clientes cadastrados na sua organização.`,
-          },
-        };
       }
 
       yield {
@@ -158,20 +221,27 @@ export class AssistantSpikeService {
 
     // 2. Tool simulation branch: Write tool "propose_customer_action" (requires human approval)
     if (simulateTool === 'propose_customer_action') {
-      const customerQuery = simulateCustomerName?.trim() || 'Cliente';
+      const customerQuery = simulateCustomerName?.trim() || '';
 
-      // Find customer within organization
+      // Find customer within organization (H2, M1: search companyName or tradeName, filter deletedAt: null)
       const customer = await runWithTenant(organizationId, async () => {
         return this.prisma.lead.findFirst({
           where: {
             organizationId,
-            ...(simulateCustomerName
-              ? { companyName: { contains: simulateCustomerName, mode: 'insensitive' } }
+            deletedAt: null,
+            ...(customerQuery
+              ? {
+                  OR: [
+                    { companyName: { contains: customerQuery, mode: 'insensitive' } },
+                    { tradeName: { contains: customerQuery, mode: 'insensitive' } },
+                  ],
+                }
               : {}),
           },
           select: {
             id: true,
             companyName: true,
+            tradeName: true,
             email: true,
             phone: true,
             whatsapp: true,
@@ -181,8 +251,25 @@ export class AssistantSpikeService {
         });
       });
 
+      // H2: If customer not found, safely answer and do NOT create intent or approval_required
+      if (!customer) {
+        yield {
+          type: 'chunk',
+          data: {
+            text: customerQuery
+              ? `Cliente "${customerQuery}" não encontrado na organização. Nenhuma ação comercial foi proposta.`
+              : 'Nenhum cliente elegível foi encontrado na organização. Nenhuma ação comercial foi proposta.',
+          },
+        };
+        yield {
+          type: 'done',
+          data: { status: 'customer_not_found' },
+        };
+        return;
+      }
+
       // Verification A: Do Not Contact (DNC) flag
-      if (customer?.doNotContact) {
+      if (customer.doNotContact) {
         yield {
           type: 'chunk',
           data: {
@@ -196,20 +283,14 @@ export class AssistantSpikeService {
         return;
       }
 
-      // Verification B: Global / Tenant suppression list
-      const isSuppressed = customer
-        ? await this.suppression.isSuppressed(organizationId, {
-            email: customer.email,
-            phone: customer.phone ?? customer.whatsapp,
-            domain: customer.domain,
-          })
-        : false;
+      // Verification B: Global / Tenant suppression list (H2, L1: checking phone and whatsapp)
+      const isSuppressed = await this.checkCustomerSuppression(organizationId, customer);
 
       if (isSuppressed) {
         yield {
           type: 'chunk',
           data: {
-            text: `O cliente "${customer?.companyName ?? customerQuery}" consta na lista de clientes suprimidos da organização. Nenhuma sugestão de abordagem ou contato foi criada.`,
+            text: `O cliente "${customer.companyName}" consta na lista de clientes suprimidos da organização. Nenhuma sugestão de abordagem ou contato foi criada.`,
           },
         };
         yield {
@@ -221,8 +302,8 @@ export class AssistantSpikeService {
 
       // Customer is clean: create approval intent (in-memory with TTL)
       const intentId = `intent_${randomUUID().replace(/-/g, '')}`;
-      const customerId = customer?.id ?? 'cust_simulated';
-      const customerName = customer?.companyName ?? customerQuery;
+      const customerId = customer.id;
+      const customerName = customer.companyName || customer.tradeName || customerQuery;
       const action = 'schedule_followup';
       const summary = `Agendar follow-up comercial com ${customerName}`;
 
@@ -314,12 +395,12 @@ export class AssistantSpikeService {
   async *resumeDecision(params: {
     organizationId: string;
     userId: string;
+    userRole?: string;
     intentId: string;
     decision: 'approve' | 'reject';
     signal?: AbortSignal;
   }): AsyncGenerator<AssistantSpikeStreamEvent, void, unknown> {
     const { organizationId, intentId, decision, signal } = params;
-    this.sweepExpiredIntents();
 
     if (signal?.aborted) {
       const err = new Error('Request aborted');
@@ -327,24 +408,8 @@ export class AssistantSpikeService {
       throw err;
     }
 
-    const intent = this.intents.get(intentId);
-    if (!intent) {
-      throw new NotFoundException(`Ação pendente com id ${intentId} não encontrada ou já expirou`);
-    }
-
-    // Tenant isolation verification
-    if (intent.organizationId !== organizationId) {
-      throw new ForbiddenException('Ação não pertence à organização autenticada');
-    }
-
-    if (intent.status !== 'pending') {
-      throw new BadRequestException('Esta ação já foi processada anteriormente');
-    }
-
-    if (Date.now() > intent.expiresAt) {
-      this.intents.delete(intentId);
-      throw new BadRequestException('Esta ação expirou e não pode mais ser processada');
-    }
+    // Validate intent and permission
+    const intent = this.validateDecisionIntent(params);
 
     if (decision === 'reject') {
       intent.status = 'rejected';
@@ -362,13 +427,14 @@ export class AssistantSpikeService {
     }
 
     // decision === 'approve'
-    // Re-verify DNC and suppression before taking any action (defense-in-depth)
+    // Re-verify customer exists and is not soft-deleted (H2, M1: fail closed if missing)
     const customer = await runWithTenant(organizationId, async () => {
       return this.prisma.lead.findFirst({
-        where: { id: intent.customerId, organizationId },
+        where: { id: intent.customerId, organizationId, deletedAt: null },
         select: {
           id: true,
           companyName: true,
+          tradeName: true,
           email: true,
           phone: true,
           whatsapp: true,
@@ -378,7 +444,23 @@ export class AssistantSpikeService {
       });
     });
 
-    if (customer?.doNotContact) {
+    if (!customer) {
+      intent.status = 'rejected';
+      yield {
+        type: 'chunk',
+        data: {
+          text: `Ação cancelada: o cliente "${intent.customerName}" não foi encontrado ou foi excluído da organização.`,
+        },
+      };
+      yield {
+        type: 'done',
+        data: { status: 'customer_missing', intentId },
+      };
+      return;
+    }
+
+    // Re-verify DNC flag
+    if (customer.doNotContact) {
       intent.status = 'rejected';
       yield {
         type: 'chunk',
@@ -393,13 +475,8 @@ export class AssistantSpikeService {
       return;
     }
 
-    const isSuppressed = customer
-      ? await this.suppression.isSuppressed(organizationId, {
-          email: customer.email,
-          phone: customer.phone ?? customer.whatsapp,
-          domain: customer.domain,
-        })
-      : false;
+    // Re-verify Suppression list (H2, L1: checking phone and whatsapp)
+    const isSuppressed = await this.checkCustomerSuppression(organizationId, customer);
 
     if (isSuppressed) {
       intent.status = 'rejected';

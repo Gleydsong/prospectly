@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   HttpCode,
   HttpStatus,
   Logger,
+  NotFoundException,
   Param,
   Post,
   Res,
@@ -17,6 +20,7 @@ import {
   CurrentUser,
   type AuthenticatedUser,
 } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { AssistantSpikeGuard } from './assistant-spike.guard';
 import { AssistantSpikeService } from './assistant-spike.service';
 import {
@@ -34,6 +38,24 @@ export class AssistantSpikeController {
   constructor(private readonly service: AssistantSpikeService) {}
 
   private sanitizeErrorForClient(err: unknown): { code: string; message: string } {
+    if (err instanceof ForbiddenException) {
+      return {
+        code: 'FORBIDDEN',
+        message: err.message,
+      };
+    }
+    if (err instanceof NotFoundException) {
+      return {
+        code: 'NOT_FOUND',
+        message: err.message,
+      };
+    }
+    if (err instanceof BadRequestException) {
+      return {
+        code: 'BAD_REQUEST',
+        message: err.message,
+      };
+    }
     if (err instanceof Error) {
       if (err.name === 'AiTimeoutException') {
         return {
@@ -139,6 +161,7 @@ export class AssistantSpikeController {
   }
 
   @Post('actions/:intentId/decision')
+  @Roles('OWNER', 'ADMIN', 'SALES', 'MEMBER')
   @HttpCode(HttpStatus.OK)
   async decide(
     @Res() res: Response,
@@ -147,6 +170,15 @@ export class AssistantSpikeController {
     @Param('intentId') intentId: string,
     @Body() dto: AssistantDecisionDto,
   ): Promise<void> {
+    // M2: Validate intent existence, organization, ownership and role before opening SSE stream
+    this.service.validateDecisionIntent({
+      organizationId,
+      userId: user.id,
+      userRole: user.role,
+      intentId,
+      decision: dto.decision,
+    });
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -165,6 +197,7 @@ export class AssistantSpikeController {
       for await (const event of this.service.resumeDecision({
         organizationId,
         userId: user.id,
+        userRole: user.role,
         intentId,
         decision: dto.decision,
         signal: abortController.signal,

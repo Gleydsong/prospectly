@@ -1,19 +1,22 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
 export class AssistantChatMessageDto {
   @IsString()
-  @IsIn(['user', 'assistant', 'system', 'tool'])
-  role!: 'user' | 'assistant' | 'system' | 'tool';
+  @IsIn(['user', 'assistant'])
+  role!: 'user' | 'assistant';
 
   @IsString()
+  @MaxLength(4000)
   content!: string;
 
   @IsOptional()
@@ -27,6 +30,7 @@ export class AssistantChatMessageDto {
 
 export class AssistantStreamRequestDto {
   @IsArray()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => AssistantChatMessageDto)
   messages!: AssistantChatMessageDto[];
@@ -37,6 +41,7 @@ export class AssistantStreamRequestDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   simulateCustomerName?: string;
 }
 

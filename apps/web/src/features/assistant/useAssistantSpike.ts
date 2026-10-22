@@ -9,6 +9,16 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api/v1';
 
+/**
+ * Normalizes occurrences of "lead" / "leads" to "cliente" / "clientes",
+ * aligning with Prospectly's domain terminology (L5).
+ */
+export function normalizeLeadToCliente(text: string): string {
+  return text.replace(/\bleads?\b/gi, (word) =>
+    word.toLowerCase() === 'leads' ? 'clientes' : 'cliente',
+  );
+}
+
 export function useAssistantSpike() {
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [status, setStatus] = useState<AssistantStatus>('idle');
@@ -158,7 +168,7 @@ export function useAssistantSpike() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === assistantMessageId
-                  ? { ...msg, content: msg.content + delta }
+                  ? { ...msg, content: normalizeLeadToCliente(msg.content + delta) }
                   : msg,
               ),
             );
@@ -267,6 +277,15 @@ export function useAssistantSpike() {
         );
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Sessão expirada ou não autorizada');
+          }
+          if (response.status === 403) {
+            throw new Error('Ação não permitida para seu usuário ou perfil');
+          }
+          if (response.status === 404) {
+            throw new Error('Ação pendente não encontrada ou já expirou');
+          }
           throw new Error(`Erro ao enviar decisão: ${response.statusText}`);
         }
 
@@ -276,7 +295,7 @@ export function useAssistantSpike() {
             setMessages((prev) =>
               prev.map((msg) =>
                 msg.id === decisionMsgId
-                  ? { ...msg, content: msg.content + delta }
+                  ? { ...msg, content: normalizeLeadToCliente(msg.content + delta) }
                   : msg,
               ),
             );

@@ -163,4 +163,25 @@ describe('useAssistantSpike', () => {
     expect(result.current.pendingIntent).toBeNull();
     expect(result.current.status).toBe('idle');
   });
+
+  it('normalizes "lead" / "leads" into "cliente" / "clientes" on streamed text output (L5)', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      createMockSseResponse([
+        'event: chunk\ndata: {"text":"Encontrei 3 leads "}\n\n',
+        'event: chunk\ndata: {"text":"qualificados. Cada lead foi contatado."}\n\n',
+        'event: done\ndata: {"status":"completed"}\n\n',
+      ]),
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    const { result } = renderHook(() => useAssistantSpike());
+
+    await act(async () => {
+      await result.current.sendMessage('Verificar status');
+    });
+
+    expect(result.current.messages[1]?.content).toBe(
+      'Encontrei 3 clientes qualificados. Cada cliente foi contatado.',
+    );
+  });
 });

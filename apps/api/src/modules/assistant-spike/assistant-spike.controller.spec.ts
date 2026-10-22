@@ -9,6 +9,7 @@ describe('AssistantSpikeController', () => {
   let mockService: {
     streamConversation: jest.Mock;
     resumeDecision: jest.Mock;
+    validateDecisionIntent: jest.Mock;
   };
 
   const mockUser = {
@@ -23,6 +24,7 @@ describe('AssistantSpikeController', () => {
     mockService = {
       streamConversation: jest.fn(),
       resumeDecision: jest.fn(),
+      validateDecisionIntent: jest.fn(),
     };
     controller = new AssistantSpikeController(mockService as unknown as AssistantSpikeService);
   });
@@ -141,5 +143,22 @@ describe('AssistantSpikeController', () => {
     expect(written[0]).toBe('event: chunk\ndata: {"text":"Ação aprovada com sucesso"}\n\n');
     expect(written[1]).toBe('event: done\ndata: {"status":"approved"}\n\n');
     expect(res.end).toHaveBeenCalled();
+  });
+
+  it('validates intent before flushing headers and throws without opening SSE stream (M2)', async () => {
+    const { res } = createMockHttp();
+
+    mockService.validateDecisionIntent.mockImplementation(() => {
+      throw new Error('Ação não pertence à organização autenticada');
+    });
+
+    await expect(
+      controller.decide(res, mockUser, orgId, 'intent-other-org', {
+        decision: 'approve',
+      }),
+    ).rejects.toThrow('Ação não pertence à organização autenticada');
+
+    // Headers must NOT have been flushed
+    expect((res as unknown as { flushHeaders: jest.Mock }).flushHeaders).not.toHaveBeenCalled();
   });
 });

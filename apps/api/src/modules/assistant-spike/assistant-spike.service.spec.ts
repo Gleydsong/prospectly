@@ -6,6 +6,11 @@ import {
 import type { PrismaService } from '../../common/prisma/prisma.service';
 import type { SuppressionService } from '../privacy/suppression.service';
 import type { LlmProviderService } from '../ai/llm-provider/llm-provider.service';
+import {
+  AiDisabledException,
+  AiProviderUnavailableException,
+  AiTimeoutException,
+} from '../ai/llm-provider/llm-provider.types';
 import { AssistantSpikeService, type AssistantSpikeStreamEvent } from './assistant-spike.service';
 
 describe('AssistantSpikeService', () => {
@@ -66,7 +71,7 @@ describe('AssistantSpikeService', () => {
       }
 
       expect(mockPrisma.lead.count).toHaveBeenCalledWith({
-        where: { organizationId: orgId },
+        where: { organizationId: orgId, deletedAt: null },
       });
 
       const toolCall = events.find((e) => e.type === 'tool_call');
@@ -79,6 +84,65 @@ describe('AssistantSpikeService', () => {
 
       const done = events.find((e) => e.type === 'done');
       expect(done).toBeDefined();
+    });
+
+    it('propagates AiDisabledException, AiTimeoutException and AiProviderUnavailableException without swallowing', async () => {
+      // 1. AiTimeoutException
+      // eslint-disable-next-line require-yield
+      mockLlmProvider.streamChat.mockImplementationOnce(async function* () {
+        throw new AiTimeoutException('Timeout connecting to Cloudflare', 5000);
+      });
+
+      const timeoutGen = service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Quantos clientes temos?' }],
+        simulateTool: 'count_customers',
+      });
+
+      await expect(async () => {
+        for await (const _ of timeoutGen) {
+          // drain
+        }
+      }).rejects.toThrow(AiTimeoutException);
+
+      // 2. AiDisabledException
+      // eslint-disable-next-line require-yield
+      mockLlmProvider.streamChat.mockImplementationOnce(async function* () {
+        throw new AiDisabledException('AI disabled');
+      });
+
+      const disabledGen = service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Quantos clientes temos?' }],
+        simulateTool: 'count_customers',
+      });
+
+      await expect(async () => {
+        for await (const _ of disabledGen) {
+          // drain
+        }
+      }).rejects.toThrow(AiDisabledException);
+
+      // 3. AiProviderUnavailableException
+      // eslint-disable-next-line require-yield
+      mockLlmProvider.streamChat.mockImplementationOnce(async function* () {
+        throw new AiProviderUnavailableException('Service down', 'cloudflare');
+      });
+
+      const unavailGen = service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Quantos clientes temos?' }],
+        simulateTool: 'count_customers',
+      });
+
+      await expect(async () => {
+        for await (const _ of unavailGen) {
+          // drain
+        }
+      }).rejects.toThrow(AiProviderUnavailableException);
     });
   });
 
@@ -174,6 +238,153 @@ describe('AssistantSpikeService', () => {
       expect(approvalEvent?.data.customerName).toBe('Borracharia Limpa');
       expect(approvalEvent?.data.action).toBe('schedule_followup');
     });
+
+    it('returns safe message and does NOT create approval intent when customer is not found (no cust_simulated)', async () => {
+      mockPrisma.lead.findFirst.mockResolvedValue(null);
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Agende contato com Padaria Fantasma' }],
+        simulateTool: 'propose_customer_action',
+        simulateCustomerName: 'Padaria Fantasma',
+      })) {
+        events.push(event);
+      }
+
+      // Must NOT emit approval_required
+      const approvalEvent = events.find((e) => e.type === 'approval_required');
+      expect(approvalEvent).toBeUndefined();
+
+      // Must NOT contain any simulated customer intent
+      const toolCall = events.find((e) => e.type === 'tool_call');
+      expect(toolCall).toBeUndefined();
+
+      const textChunks = events
+        .filter((e) => e.type === 'chunk')
+        .map((e) => String(e.data.text ?? ''))
+        .join('');
+      expect(textChunks).toContain('Cliente "Padaria Fantasma" não encontrado na organização');
+
+      const done = events.find((e) => e.type === 'done');
+      expect(done?.data.status).toBe('customer_not_found');
+    });
+
+    it('searches customer filtering deletedAt: null and matching companyName or tradeName', async () => {
+      mockPrisma.lead.findFirst.mockResolvedValue({
+        id: 'cust-trade',
+        companyName: 'Razão Social X Ltda',
+        tradeName: 'Nome Fantasia Central',
+        email: 'contato@central.com',
+        phone: '11999998888',
+        doNotContact: false,
+      });
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Agende contato com Nome Fantasia Central' }],
+        simulateTool: 'propose_customer_action',
+        simulateCustomerName: 'Nome Fantasia Central',
+      })) {
+        events.push(event);
+      }
+
+      expect(mockPrisma.lead.findFirst).toHaveBeenCalledWith({
+        where: {
+          organizationId: orgId,
+          deletedAt: null,
+          OR: [
+            { companyName: { contains: 'Nome Fantasia Central', mode: 'insensitive' } },
+            { tradeName: { contains: 'Nome Fantasia Central', mode: 'insensitive' } },
+          ],
+        },
+        select: expect.objectContaining({
+          id: true,
+          companyName: true,
+          tradeName: true,
+          email: true,
+          phone: true,
+          whatsapp: true,
+          domain: true,
+          doNotContact: true,
+        }),
+      });
+
+      const approvalEvent = events.find((e) => e.type === 'approval_required');
+      expect(approvalEvent).toBeDefined();
+    });
+
+    it('checks suppression for whatsapp channel when phone is empty string', async () => {
+      mockPrisma.lead.findFirst.mockResolvedValue({
+        id: 'cust-whatsapp',
+        companyName: 'Lava Rápido Zap',
+        tradeName: null,
+        email: 'zap@example.com',
+        phone: '', // empty string should fall through to whatsapp
+        whatsapp: '+5511988887777',
+        doNotContact: false,
+      });
+      // Mock isSuppressed to return true when called with whatsapp
+      mockSuppression.isSuppressed.mockImplementation(async (_orgId, identifiers) => {
+        return identifiers.phone === '+5511988887777';
+      });
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Agende contato com Lava Rápido Zap' }],
+        simulateTool: 'propose_customer_action',
+        simulateCustomerName: 'Lava Rápido Zap',
+      })) {
+        events.push(event);
+      }
+
+      const approvalEvent = events.find((e) => e.type === 'approval_required');
+      expect(approvalEvent).toBeUndefined();
+
+      const textChunks = events
+        .filter((e) => e.type === 'chunk')
+        .map((e) => String(e.data.text ?? ''))
+        .join('');
+      expect(textChunks).toContain('suprimido');
+    });
+
+    it.each([
+      ['email', 'suprimido@example.com'],
+      ['domain', 'suprimido.com.br'],
+    ])('blocks whatsapp-only customer suppressed by %s', async (key, value) => {
+      mockPrisma.lead.findFirst.mockResolvedValue({
+        id: 'cust-whatsapp-only',
+        companyName: 'Oficina Só Zap',
+        tradeName: null,
+        email: 'suprimido@example.com',
+        domain: 'suprimido.com.br',
+        phone: null,
+        whatsapp: '+5511977776666',
+        doNotContact: false,
+      });
+      mockSuppression.isSuppressed.mockImplementation(
+        async (_orgId, identifiers: Record<string, string | null | undefined>) =>
+          identifiers[key] === value,
+      );
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.streamConversation({
+        organizationId: orgId,
+        userId,
+        messages: [{ role: 'user', content: 'Agende contato com Oficina Só Zap' }],
+        simulateTool: 'propose_customer_action',
+        simulateCustomerName: 'Oficina Só Zap',
+      })) {
+        events.push(event);
+      }
+
+      expect(events.find((e) => e.type === 'approval_required')).toBeUndefined();
+    });
   });
 
   describe('approval_required + resumption decision', () => {
@@ -259,6 +470,91 @@ describe('AssistantSpikeService', () => {
       });
 
       await expect(generator.next()).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects decision when userId does not match intent creator (H1)', async () => {
+      const generator = service.resumeDecision({
+        organizationId: orgId,
+        userId: 'different-user-id',
+        intentId,
+        decision: 'approve',
+      });
+
+      await expect(generator.next()).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects decision when user has role VIEWER (H1)', async () => {
+      const generator = service.resumeDecision({
+        organizationId: orgId,
+        userId,
+        userRole: 'VIEWER',
+        intentId,
+        decision: 'approve',
+      });
+
+      await expect(generator.next()).rejects.toThrow(ForbiddenException);
+    });
+
+    it('fails closed and cancels action if customer was deleted or missing at decision time (H2, M1)', async () => {
+      mockPrisma.lead.findFirst.mockResolvedValue(null);
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.resumeDecision({
+        organizationId: orgId,
+        userId,
+        intentId,
+        decision: 'approve',
+      })) {
+        events.push(event);
+      }
+
+      expect(mockPrisma.lead.findFirst).toHaveBeenCalledWith({
+        where: { id: 'cust-123', organizationId: orgId, deletedAt: null },
+        select: expect.objectContaining({ id: true, doNotContact: true }),
+      });
+
+      const text = events
+        .filter((e) => e.type === 'chunk')
+        .map((e) => String(e.data.text ?? ''))
+        .join('');
+      expect(text).toContain('não foi encontrado ou foi excluído');
+
+      const done = events.find((e) => e.type === 'done');
+      expect(done?.data.status).toBe('customer_missing');
+    });
+
+    it('re-checks suppression on whatsapp channel during decision resumption (H2)', async () => {
+      mockPrisma.lead.findFirst.mockResolvedValue({
+        id: 'cust-123',
+        companyName: 'Mecânica Central',
+        tradeName: null,
+        email: 'central@example.com',
+        phone: '',
+        whatsapp: '+5511977776666',
+        doNotContact: false,
+      });
+      mockSuppression.isSuppressed.mockImplementation(async (_orgId, identifiers) => {
+        return identifiers.phone === '+5511977776666';
+      });
+
+      const events: AssistantSpikeStreamEvent[] = [];
+      for await (const event of service.resumeDecision({
+        organizationId: orgId,
+        userId,
+        intentId,
+        decision: 'approve',
+      })) {
+        events.push(event);
+      }
+
+      const text = events
+        .filter((e) => e.type === 'chunk')
+        .map((e) => String(e.data.text ?? ''))
+        .join('');
+      expect(text).toContain('lista de supressão');
+
+      const done = events.find((e) => e.type === 'done');
+      expect(done?.data.status).toBe('blocked_suppressed');
     });
 
     it('rejects duplicate decision on already-decided intent', async () => {
