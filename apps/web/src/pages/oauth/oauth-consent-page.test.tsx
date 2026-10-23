@@ -48,6 +48,23 @@ describe('OauthConsentPage', () => {
     });
   });
 
+  it('shows the real role of each authorizable organization', async () => {
+    mocks.fetchAuthorizableOrgs.mockResolvedValue([
+      { id: 'org-owner', name: 'Acme', role: 'OWNER' },
+      { id: 'org-admin', name: 'Beta', role: 'ADMIN' },
+    ]);
+    renderPage();
+    expect(await screen.findByText('Proprietária')).toBeInTheDocument();
+    expect(screen.getByText('Administrador')).toBeInTheDocument();
+  });
+
+  it('describes only the read-only scopes the MCP server exposes', async () => {
+    renderPage();
+    expect(await screen.findByText('Ler clientes, sem contatos nem notas')).toBeInTheDocument();
+    expect(screen.getByText('Não pode alterar nem apagar dados')).toBeInTheDocument();
+    expect(screen.queryByText(/etapas|histórico/)).not.toBeInTheDocument();
+  });
+
   it('lists only OWNER/ADMIN orgs returned by the API', async () => {
     renderPage();
     expect(await screen.findByRole('option', { name: 'Acme' })).toBeInTheDocument();

@@ -63,4 +63,36 @@ describe('SegmentedControl', () => {
     await user.click(screen.getByRole('button', { name: 'Quadro' }));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('supports role="tablist" with arrow key navigation', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SegmentedControl
+        role="tablist"
+        ariaLabel="Abas de visualização"
+        options={options}
+        value="lista"
+        onChange={onChange}
+      />,
+    );
+
+    const listaTab = screen.getByRole('tab', { name: 'Lista' });
+    const quadroTab = screen.getByRole('tab', { name: 'Quadro' });
+    const mapaTab = screen.getByRole('tab', { name: 'Mapa' });
+
+    expect(listaTab).toHaveAttribute('aria-selected', 'true');
+    expect(quadroTab).toHaveAttribute('aria-selected', 'false');
+    expect(mapaTab).toHaveAttribute('aria-selected', 'false');
+
+    listaTab.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenCalledWith('quadro');
+
+    await user.keyboard('{End}');
+    expect(onChange).toHaveBeenCalledWith('mapa');
+
+    await user.keyboard('{Home}');
+    expect(onChange).toHaveBeenCalledWith('lista');
+  });
 });

@@ -185,7 +185,25 @@
     "resetSubmit": "Save new password",
     "newPassword": "New password",
     "confirmPassword": "Confirm password",
-    "passwordMismatch": "Passwords do not match"
+    "passwordMismatch": "Passwords do not match",
+    "panelEyebrow": "LOCAL PROSPECTING",
+    "panelTitleLogin": "Back to your client portfolio.",
+    "panelTitleRegister": "400 credits to start prospecting.",
+    "panelTitleForgot": "Your portfolio is still here.",
+    "panelTitleReset": "Almost there.",
+    "panelTitleVerify": "One step to your first client.",
+    "panelDescription": "Find companies without websites, save the best ones, and organize contact in one place.",
+    "loginBack": "Back to sign in",
+    "useOtherEmail": "Use another email",
+    "emailSentCardTitle": "Link sent",
+    "emailSentCardSubtitle": "Didn't arrive? Check spam or resend below.",
+    "passwordStrong": "Strong password",
+    "passwordMedium": "Medium password",
+    "passwordWeak": "Weak password",
+    "passwordHelper": "Minimum 8 characters, with letters and numbers.",
+    "benefit1Subtitle": "Find businesses that don't have an online presence yet.",
+    "benefit2Subtitle": "Two sources, one search.",
+    "benefit3Subtitle": "No credit card to get started."
   },
   "oauth": {
     "consentTitle": "Authorize MCP connection",
@@ -195,7 +213,20 @@
     "deny": "Deny",
     "noOrgs": "You must be OWNER or ADMIN of an organization to authorize.",
     "consentError": "We could not complete authorization. Please try again.",
-    "missingParams": "Incomplete OAuth request. Return to the client and try again."
+    "missingParams": "Incomplete OAuth request. Return to the client and try again.",
+    "agentLabel": "AGENT",
+    "orgLabel": "ORGANIZATION",
+    "agentCanLabel": "THE AGENT WILL BE ABLE TO",
+    "defaultClientName": "Claude Desktop · MCP client",
+    "scopeSummary": "View organization summary: plan, credits and totals",
+    "scopeLeads": "Read clients, without contacts or notes",
+    "scopeSearches": "Read saved searches",
+    "scopeRestriction": "Cannot change or delete data",
+    "scopeContacts": "Cannot see emails, phone numbers or notes",
+    "roleOwner": "Owner",
+    "roleAdmin": "Administrator",
+    "roleMember": "Member",
+    "clientsCount": "{{count}} clients"
   },
   "principal": {
     "greeting": {
@@ -1195,7 +1226,12 @@
     "saveDefault": "Save persona",
     "otherLabel": "How do you work?",
     "otherLabelPlaceholder": "e.g. photographer, consultant",
-    "otherLabelRequired": "Describe it in 2 to 40 characters."
+    "otherLabelRequired": "Describe it in 2 to 40 characters.",
+    "vendedorDesc": "Prospects and closes local accounts.",
+    "desenvolvedorDesc": "Sells websites to businesses without one.",
+    "trafego_pagoDesc": "Runs local ads for businesses.",
+    "marketingDesc": "Manages social media and online presence.",
+    "outroDesc": "Describe in a few words."
   },
   "leadWebsites": {
     "title": "Sites",
@@ -1482,9 +1518,21 @@
       "TASK": "New task"
     },
     "quickPhrases": {
-      "WHATSAPP": ["Message sent", "Asked to call back this afternoon", "Voicemail"],
-      "CALL": ["Voicemail", "Asked to call back this afternoon", "No answer"],
-      "NOTE": ["Voicemail", "Asked to call back this afternoon", "Message sent"]
+      "WHATSAPP": [
+        "Message sent",
+        "Asked to call back this afternoon",
+        "Voicemail"
+      ],
+      "CALL": [
+        "Voicemail",
+        "Asked to call back this afternoon",
+        "No answer"
+      ],
+      "NOTE": [
+        "Voicemail",
+        "Asked to call back this afternoon",
+        "Message sent"
+      ]
     },
     "activity": "Activity",
     "taskStatuses": {

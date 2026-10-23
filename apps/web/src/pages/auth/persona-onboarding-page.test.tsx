@@ -40,6 +40,11 @@ describe('PersonaOnboardingPage', () => {
     });
   });
 
+  it('does not show a step counter, since onboarding is a single step', () => {
+    renderWithProviders(<PersonaOnboardingPage />, { initialEntries: ['/onboarding/persona'] });
+    expect(screen.queryByText(/Passo \d de \d/)).not.toBeInTheDocument();
+  });
+
   it('patches the organization default persona and stores onboarding as complete', async () => {
     orgApi.updateOrganizationPersona.mockResolvedValueOnce({
       defaultPersona: 'desenvolvedor',

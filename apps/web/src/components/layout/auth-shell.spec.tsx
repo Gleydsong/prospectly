@@ -23,12 +23,12 @@ describe('AuthShell', () => {
     );
 
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Entrar no Prospectly' }),
+      screen.getByRole('heading', { level: 1, name: 'Entrar no Prospectly' }),
     ).toBeInTheDocument();
     expect(screen.getByText('SSL seguro')).toBeInTheDocument();
     expect(screen.getByText('Fluxo alinhado à LGPD')).toBeInTheDocument();
     expect(screen.getByText('Comece grátis')).toBeInTheDocument();
-    expect(screen.getByText(/Ache empresas locais sem site/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ache empresas locais sem site/i)[0]).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: /tema/i })).toBeInTheDocument();
   });
 });

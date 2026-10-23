@@ -185,7 +185,25 @@
     "resetSubmit": "Salvar nova senha",
     "newPassword": "Nova senha",
     "confirmPassword": "Confirmar senha",
-    "passwordMismatch": "As senhas não coincidem"
+    "passwordMismatch": "As senhas não coincidem",
+    "panelEyebrow": "PROSPECÇÃO LOCAL",
+    "panelTitleLogin": "Volte para a sua carteira de clientes.",
+    "panelTitleRegister": "400 créditos para começar a prospectar.",
+    "panelTitleForgot": "Sua carteira continua aqui.",
+    "panelTitleReset": "Quase lá.",
+    "panelTitleVerify": "Um passo para o primeiro cliente.",
+    "panelDescription": "Encontre empresas sem site, salve as melhores e organize o contato em um só lugar.",
+    "loginBack": "Voltar para entrar",
+    "useOtherEmail": "Usar outro e-mail",
+    "emailSentCardTitle": "Link enviado",
+    "emailSentCardSubtitle": "Não chegou? Veja o spam ou reenvie abaixo.",
+    "passwordStrong": "Senha forte",
+    "passwordMedium": "Senha média",
+    "passwordWeak": "Senha fraca",
+    "passwordHelper": "Mínimo de 8 caracteres, com letras e números.",
+    "benefit1Subtitle": "Ache quem ainda não tem presença online.",
+    "benefit2Subtitle": "Duas fontes, uma busca.",
+    "benefit3Subtitle": "Sem cartão para começar."
   },
   "oauth": {
     "consentTitle": "Autorizar ligação MCP",
@@ -195,7 +213,20 @@
     "deny": "Recusar",
     "noOrgs": "Você precisa ser OWNER ou ADMIN de uma organização para autorizar.",
     "consentError": "Não foi possível concluir a autorização. Tente novamente.",
-    "missingParams": "Pedido OAuth incompleto. Volte ao cliente e tente de novo."
+    "missingParams": "Pedido OAuth incompleto. Volte ao cliente e tente de novo.",
+    "agentLabel": "AGENTE",
+    "orgLabel": "ORGANIZAÇÃO",
+    "agentCanLabel": "O AGENTE PODERÁ",
+    "defaultClientName": "Claude Desktop · cliente MCP",
+    "scopeSummary": "Ver resumo da organização: plano, créditos e totais",
+    "scopeLeads": "Ler clientes, sem contatos nem notas",
+    "scopeSearches": "Ler buscas salvas",
+    "scopeRestriction": "Não pode alterar nem apagar dados",
+    "scopeContacts": "Não vê e-mails, telefones nem notas",
+    "roleOwner": "Proprietária",
+    "roleAdmin": "Administrador",
+    "roleMember": "Membro",
+    "clientsCount": "{{count}} clientes"
   },
   "principal": {
     "greeting": {
@@ -1195,7 +1226,12 @@
     "saveDefault": "Salvar persona",
     "otherLabel": "Como você trabalha?",
     "otherLabelPlaceholder": "Ex.: fotógrafo, consultor",
-    "otherLabelRequired": "Descreva em 2 a 40 caracteres."
+    "otherLabelRequired": "Descreva em 2 a 40 caracteres.",
+    "vendedorDesc": "Prospecta e fecha contas locais.",
+    "desenvolvedorDesc": "Vende sites para quem não tem.",
+    "trafego_pagoDesc": "Oferece anúncios a negócios locais.",
+    "marketingDesc": "Cuida de redes e presença online.",
+    "outroDesc": "Conte em poucas palavras."
   },
   "leadWebsites": {
     "title": "Sites",
@@ -1482,9 +1518,21 @@
       "TASK": "Nova tarefa"
     },
     "quickPhrases": {
-      "WHATSAPP": ["Mensagem enviada", "Pediu para retornar à tarde", "Caixa postal"],
-      "CALL": ["Caixa postal", "Pediu para retornar à tarde", "Sem resposta"],
-      "NOTE": ["Caixa postal", "Pediu para retornar à tarde", "Mensagem enviada"]
+      "WHATSAPP": [
+        "Mensagem enviada",
+        "Pediu para retornar à tarde",
+        "Caixa postal"
+      ],
+      "CALL": [
+        "Caixa postal",
+        "Pediu para retornar à tarde",
+        "Sem resposta"
+      ],
+      "NOTE": [
+        "Caixa postal",
+        "Pediu para retornar à tarde",
+        "Mensagem enviada"
+      ]
     },
     "activity": "Atividade",
     "taskStatuses": {
