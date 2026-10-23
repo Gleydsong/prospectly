@@ -239,13 +239,13 @@ export function RegisterPage() {
           <Input
             label={t('auth.name')}
             autoComplete="name"
-            placeholder="Marina Costa"
+            placeholder={t('auth.placeholderName')}
             error={errors.name?.message}
             {...register('name')}
           />
           <Input
             label={t('auth.organization')}
-            placeholder="Agência Norte Digital"
+            placeholder={t('auth.placeholderOrg')}
             error={errors.organizationName?.message}
             {...register('organizationName')}
           />
@@ -255,7 +255,7 @@ export function RegisterPage() {
           label={t('auth.email')}
           type="email"
           autoComplete="email"
-          placeholder="marina@nortedigital.com.br"
+          placeholder={t('auth.placeholderEmail')}
           error={errors.email?.message}
           {...register('email')}
         />

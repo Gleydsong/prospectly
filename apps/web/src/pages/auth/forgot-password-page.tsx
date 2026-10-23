@@ -71,7 +71,7 @@ export function ForgotPasswordPage() {
             label={t('auth.email')}
             type="email"
             autoComplete="email"
-            placeholder="voce@empresa.com.br"
+            placeholder={t('auth.placeholderEmail')}
             error={errors.email?.message}
             {...register('email')}
           />

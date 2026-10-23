@@ -20,6 +20,7 @@ export interface AuthShellProps {
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  contentClassName?: string;
 }
 
 export function AuthShell({
@@ -33,6 +34,7 @@ export function AuthShell({
   children,
   footer,
   className,
+  contentClassName,
 }: AuthShellProps) {
   const { t } = useTranslation();
 
@@ -62,7 +64,7 @@ export function AuthShell({
         <div className="grid flex-1 items-stretch gap-6 lg:grid-cols-12 lg:gap-10">
           {/* Painel escuro à esquerda (Desktop: card com anel/esferas CSS; Mobile: cabeçalho compacto) */}
           <aside
-            aria-label="Apresentação do produto"
+            aria-label={t('auth.productPresentation')}
             className={cn(
               'relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-[#1c2a42] bg-[#0b1220] p-6 text-white shadow-2xl sm:rounded-[28px] sm:p-8 lg:col-span-5 lg:min-h-[640px] lg:p-10 xl:col-span-5',
             )}
@@ -81,7 +83,10 @@ export function AuthShell({
             </div>
 
             {/* Mobile: Cabeçalho compacto com resumo do anel */}
-            <div className="my-4 flex items-center justify-between gap-4 lg:hidden">
+            <div
+              data-testid="auth-shell-mobile"
+              className="my-4 flex items-center justify-between gap-4 lg:hidden"
+            >
               <div className="space-y-1">
                 <MonoLabel className="text-[#709ac0]">{eyebrow}</MonoLabel>
                 <p className="font-display text-base font-bold leading-snug text-white">
@@ -115,7 +120,10 @@ export function AuthShell({
             </div>
 
             {/* Desktop: Bloco de texto do painel escuro */}
-            <div className="z-10 hidden space-y-3 lg:block">
+            <div
+              data-testid="auth-shell-desktop"
+              className="z-10 hidden space-y-3 lg:block"
+            >
               <MonoLabel className="text-[#709ac0]">{eyebrow}</MonoLabel>
               <h2 className="font-display text-2xl font-extrabold tracking-display text-white sm:text-3xl lg:text-[2rem] leading-tight">
                 {mainTitle}
@@ -133,7 +141,7 @@ export function AuthShell({
               className,
             )}
           >
-            <div className="mx-auto w-full max-w-lg">
+            <div className={cn('mx-auto w-full max-w-lg', contentClassName)}>
               <PageHeader
                 title={title}
                 description={subtitle}

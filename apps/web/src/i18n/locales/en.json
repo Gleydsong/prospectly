@@ -192,6 +192,10 @@
     "panelTitleForgot": "Your portfolio is still here.",
     "panelTitleReset": "Almost there.",
     "panelTitleVerify": "One step to your first client.",
+    "panelTitleOauth": "Connect your AI securely.",
+    "panelDescriptionOauth": "Authorize external agents to query your data with restricted read-only scopes.",
+    "panelTitlePersona": "Tailor Prospectly to how you work.",
+    "panelDescriptionPersona": "We tailor suggestions and workflows to match your professional profile.",
     "panelDescription": "Find companies without websites, save the best ones, and organize contact in one place.",
     "loginBack": "Back to sign in",
     "useOtherEmail": "Use another email",
@@ -203,7 +207,11 @@
     "passwordHelper": "Minimum 8 characters, with letters and numbers.",
     "benefit1Subtitle": "Find businesses that don't have an online presence yet.",
     "benefit2Subtitle": "Two sources, one search.",
-    "benefit3Subtitle": "No credit card to get started."
+    "benefit3Subtitle": "No credit card to get started.",
+    "productPresentation": "Product presentation",
+    "placeholderEmail": "you@company.com",
+    "placeholderName": "Your name",
+    "placeholderOrg": "Your company"
   },
   "oauth": {
     "consentTitle": "Authorize MCP connection",
@@ -217,7 +225,8 @@
     "agentLabel": "AGENT",
     "orgLabel": "ORGANIZATION",
     "agentCanLabel": "THE AGENT WILL BE ABLE TO",
-    "defaultClientName": "Claude Desktop · MCP client",
+    "defaultClientName": "MCP app",
+    "mcpClientSuffix": "· MCP client",
     "scopeSummary": "View organization summary: plan, credits and totals",
     "scopeLeads": "Read clients, without contacts or notes",
     "scopeSearches": "Read saved searches",
@@ -1224,6 +1233,7 @@
     "override": "Your persona in this organization",
     "readOnly": "Read-only. Ask a member to change the persona.",
     "saveDefault": "Save persona",
+    "options": "Options",
     "otherLabel": "How do you work?",
     "otherLabelPlaceholder": "e.g. photographer, consultant",
     "otherLabelRequired": "Describe it in 2 to 40 characters.",
@@ -1518,21 +1528,9 @@
       "TASK": "New task"
     },
     "quickPhrases": {
-      "WHATSAPP": [
-        "Message sent",
-        "Asked to call back this afternoon",
-        "Voicemail"
-      ],
-      "CALL": [
-        "Voicemail",
-        "Asked to call back this afternoon",
-        "No answer"
-      ],
-      "NOTE": [
-        "Voicemail",
-        "Asked to call back this afternoon",
-        "Message sent"
-      ]
+      "WHATSAPP": ["Message sent", "Asked to call back this afternoon", "Voicemail"],
+      "CALL": ["Voicemail", "Asked to call back this afternoon", "No answer"],
+      "NOTE": ["Voicemail", "Asked to call back this afternoon", "Message sent"]
     },
     "activity": "Activity",
     "taskStatuses": {

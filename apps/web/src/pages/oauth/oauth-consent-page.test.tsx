@@ -90,4 +90,19 @@ describe('OauthConsentPage', () => {
       'http://127.0.0.1:10000/cb',
     );
   });
+
+  it('renders both client name and client_id when client_name is provided to prevent UI spoofing', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/oauth/consent" element={<OauthConsentPage />} />
+      </Routes>,
+      {
+        initialEntries: [
+          '/oauth/consent?client_id=cursor-client-id&client_name=Cursor&redirect_uri=http%3A%2F%2F127.0.0.1%3A10000%2Fcb&code_challenge=abc&code_challenge_method=S256&resource=http://127.0.0.1:3000/mcp&state=xyz',
+        ],
+        withGoogle: false,
+      },
+    );
+    expect(await screen.findByText('Cursor (cursor-client-id) · cliente MCP')).toBeInTheDocument();
+  });
 });

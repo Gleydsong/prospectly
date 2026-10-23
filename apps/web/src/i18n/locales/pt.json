@@ -192,6 +192,10 @@
     "panelTitleForgot": "Sua carteira continua aqui.",
     "panelTitleReset": "Quase lá.",
     "panelTitleVerify": "Um passo para o primeiro cliente.",
+    "panelTitleOauth": "Conecte sua IA com segurança.",
+    "panelDescriptionOauth": "Autorize agentes externos a consultarem seus dados com escopos restritos e somente leitura.",
+    "panelTitlePersona": "Personalize o Prospectly para você.",
+    "panelDescriptionPersona": "Adaptamos as sugestões e fluxos de acordo com o seu perfil profissional.",
     "panelDescription": "Encontre empresas sem site, salve as melhores e organize o contato em um só lugar.",
     "loginBack": "Voltar para entrar",
     "useOtherEmail": "Usar outro e-mail",
@@ -203,7 +207,11 @@
     "passwordHelper": "Mínimo de 8 caracteres, com letras e números.",
     "benefit1Subtitle": "Ache quem ainda não tem presença online.",
     "benefit2Subtitle": "Duas fontes, uma busca.",
-    "benefit3Subtitle": "Sem cartão para começar."
+    "benefit3Subtitle": "Sem cartão para começar.",
+    "productPresentation": "Apresentação do produto",
+    "placeholderEmail": "voce@empresa.com.br",
+    "placeholderName": "Seu nome",
+    "placeholderOrg": "Sua empresa"
   },
   "oauth": {
     "consentTitle": "Autorizar ligação MCP",
@@ -217,7 +225,8 @@
     "agentLabel": "AGENTE",
     "orgLabel": "ORGANIZAÇÃO",
     "agentCanLabel": "O AGENTE PODERÁ",
-    "defaultClientName": "Claude Desktop · cliente MCP",
+    "defaultClientName": "Aplicativo MCP",
+    "mcpClientSuffix": "· cliente MCP",
     "scopeSummary": "Ver resumo da organização: plano, créditos e totais",
     "scopeLeads": "Ler clientes, sem contatos nem notas",
     "scopeSearches": "Ler buscas salvas",
@@ -1224,6 +1233,7 @@
     "override": "Sua persona nesta organização",
     "readOnly": "Apenas leitura. Peça a um membro para alterar a persona.",
     "saveDefault": "Salvar persona",
+    "options": "Opções",
     "otherLabel": "Como você trabalha?",
     "otherLabelPlaceholder": "Ex.: fotógrafo, consultor",
     "otherLabelRequired": "Descreva em 2 a 40 caracteres.",
@@ -1518,21 +1528,9 @@
       "TASK": "Nova tarefa"
     },
     "quickPhrases": {
-      "WHATSAPP": [
-        "Mensagem enviada",
-        "Pediu para retornar à tarde",
-        "Caixa postal"
-      ],
-      "CALL": [
-        "Caixa postal",
-        "Pediu para retornar à tarde",
-        "Sem resposta"
-      ],
-      "NOTE": [
-        "Caixa postal",
-        "Pediu para retornar à tarde",
-        "Mensagem enviada"
-      ]
+      "WHATSAPP": ["Mensagem enviada", "Pediu para retornar à tarde", "Caixa postal"],
+      "CALL": ["Caixa postal", "Pediu para retornar à tarde", "Sem resposta"],
+      "NOTE": ["Caixa postal", "Pediu para retornar à tarde", "Mensagem enviada"]
     },
     "activity": "Atividade",
     "taskStatuses": {
