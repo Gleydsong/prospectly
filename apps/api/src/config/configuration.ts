@@ -125,4 +125,7 @@ export const configuration = () => ({
     maxRetries: parseEnvInt(process.env.AI_MAX_RETRIES, 2),
     dailyBudgetTokens: parseEnvInt(process.env.AI_DAILY_BUDGET_TOKENS, 100000),
   },
+  assistantSpike: {
+    enabled: process.env.ASSISTANT_SPIKE_ENABLED === 'true',
+  },
 });

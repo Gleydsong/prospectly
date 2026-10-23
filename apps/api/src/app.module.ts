@@ -55,6 +55,7 @@ import { AgentsModule } from './modules/agents/agents.module';
 import { OpportunityFinderModule } from './modules/opportunity-finder/opportunity-finder.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ApiDispatchModule } from './modules/api-runtime/api-dispatch.module';
+import { AssistantSpikeModule } from './modules/assistant-spike/assistant-spike.module';
 import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-redact-paths';
 
 @Module({
@@ -137,6 +138,7 @@ import { PINO_REDACT_CENSOR, PINO_REDACT_PATHS } from './common/logging/pino-red
     OpportunityFinderModule,
     PrivacyModule,
     ApiDispatchModule,
+    AssistantSpikeModule,
     ...(shouldEnableEmailPreview() ? [EmailPreviewModule] : []),
   ],
   providers: [

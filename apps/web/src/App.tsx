@@ -69,6 +69,9 @@ const ResearchPage = lazy(() =>
   import('@/pages/sdr/research-page').then((m) => ({ default: m.ResearchPage })),
 );
 const SdrPage = lazy(() => import('@/pages/sdr/sdr-page').then((m) => ({ default: m.SdrPage })));
+const AssistantSpikePage = lazy(() =>
+  import('@/pages/assistant/assistant-spike-page').then((m) => ({ default: m.AssistantSpikePage })),
+);
 
 function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
@@ -238,6 +241,14 @@ export function App() {
             element={
               <LazyPage>
                 <SettingsPrivacyPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="assistant/spike"
+            element={
+              <LazyPage>
+                <AssistantSpikePage />
               </LazyPage>
             }
           />
