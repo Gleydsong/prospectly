@@ -75,11 +75,8 @@ export function TopNav({
             aria-hidden
           />
           <span className="truncate text-sm font-normal text-[color:var(--ink-muted)]">
-            {t('nav.globalSearch', { defaultValue: 'Buscar ⌘K' })}
+            {t('nav.globalSearch')}
           </span>
-          <kbd className="ml-auto pointer-events-none hidden items-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-2 py-0.5 text-[10px] font-mono text-[color:var(--ink-muted)] md:inline-flex">
-            ⌘K
-          </kbd>
         </Link>
 
         <div className="flex-1" />

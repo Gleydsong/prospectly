@@ -3,8 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/test/render';
-import { ProspectDestination } from './navigation-pages';
+import { HomeDestination, ProspectDestination } from './navigation-pages';
 
+vi.mock('./dashboard-page', () => ({ DashboardPage: () => <p>Home dashboard</p> }));
+vi.mock('./reports-page', () => ({ ReportsPage: () => <p>Reports tab</p> }));
 vi.mock('./search-page', () => ({ SearchPage: () => <p>Category search</p> }));
 vi.mock('./opportunity-finder-page', () => ({
   OpportunityFinderPage: ({ embedded }: { embedded?: boolean }) => (
@@ -19,6 +21,21 @@ vi.mock('./imports-page', () => ({
 function Location() {
   return <output data-testid="url">{useLocation().search}</output>;
 }
+
+describe('home destinations', () => {
+  it('opens the Relatórios tab for /?aba=relatorios and the dashboard otherwise', async () => {
+    const { unmount } = renderWithProviders(<HomeDestination />, {
+      initialEntries: ['/?aba=relatorios'],
+    });
+    expect(await screen.findByText('Reports tab')).toBeInTheDocument();
+    expect(screen.queryByText('Home dashboard')).not.toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(<HomeDestination />, { initialEntries: ['/'] });
+    expect(await screen.findByText('Home dashboard')).toBeInTheDocument();
+    expect(screen.queryByText('Reports tab')).not.toBeInTheDocument();
+  });
+});
 
 describe('unified prospecting destinations', () => {
   it('switches the three existing flows while preserving city and state query parameters', async () => {

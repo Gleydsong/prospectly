@@ -86,7 +86,7 @@ describe('AppLayout shell', () => {
       '/settings',
       '/clientes/listas',
       '/workflows',
-      '/reports',
+      '/?aba=relatorios',
       '/agents',
       '/sdr',
     ]);

@@ -1,14 +1,15 @@
 import { PanelLeftClose, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { SignalRing } from '@/components/ui/signal-ring';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useBillingStatus } from '@/features/billing/hooks';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { AccountMenu } from './account-menu';
-import { TOOLS_NAV_ITEMS, WORKSPACE_NAV_ITEMS } from './nav-items';
+import { TOOLS_NAV_ITEMS, WORKSPACE_NAV_ITEMS, isNavItemActive } from './nav-items';
 import { TodaySummary } from './today-summary';
 
 export function Sidebar({
@@ -25,12 +26,16 @@ export function Sidebar({
   onCollapse: () => void;
 }) {
   const { t } = useTranslation();
+  const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const billing = useBillingStatus();
   const closeRef = useRef<HTMLButtonElement>(null);
   const expanded = isDesktop ? !collapsed : open;
 
-  const creditBalance = billing.data?.creditBalance ?? 0;
+  const hasBillingData = billing.data !== undefined;
+  const isCreditsLoading = billing.isLoading || (!hasBillingData && !billing.isError);
+  const isCreditsError = Boolean(billing.isError || (!isCreditsLoading && !hasBillingData));
+  const creditBalance = billing.data?.creditBalance;
 
   useEffect(() => {
     if (open && !isDesktop) {
@@ -59,7 +64,7 @@ export function Sidebar({
       >
         {/* Topo da sidebar com logo P. Prospectly */}
         <div className="flex h-16 items-center justify-between gap-2 border-b border-[color:var(--border-default)] px-5">
-          <NavLink
+          <Link
             to="/"
             aria-label="Prospectly"
             className="inline-flex min-w-0 items-center gap-2 text-lg font-extrabold tracking-tight text-[color:var(--ink)] font-display"
@@ -69,7 +74,7 @@ export function Sidebar({
               P<span className="inline-block h-2 w-2 rounded-full bg-[color:var(--brand)]" aria-hidden="true" />
             </span>
             <span className="truncate leading-none">Prospectly</span>
-          </NavLink>
+          </Link>
           {isDesktop ? (
             <button
               type="button"
@@ -104,38 +109,35 @@ export function Sidebar({
               {t('nav.workspace')}
             </p>
             <div className="space-y-1">
-              {WORKSPACE_NAV_ITEMS.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === '/'}
-                  onClick={onClose}
-                  tabIndex={expanded ? undefined : -1}
-                  className={({ isActive }) =>
-                    cn(
+              {WORKSPACE_NAV_ITEMS.map((item) => {
+                const active = isNavItemActive(item.to, location.pathname, location.search);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={onClose}
+                    tabIndex={expanded ? undefined : -1}
+                    className={cn(
                       'group flex min-h-10 items-center gap-3 rounded-full px-3.5 text-sm font-medium transition-all duration-180',
-                      isActive
+                      active
                         ? 'bg-[color:var(--bg-nav-active)] font-semibold text-white dark:bg-[#233552] dark:text-white shadow-soft'
                         : 'text-[color:var(--ink-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-[color:var(--ink)]',
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span
-                        className={cn(
-                          'h-2 w-2 shrink-0 rounded-full transition-colors',
-                          isActive
-                            ? 'bg-[#D4F56A]'
-                            : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400',
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{t(item.labelKey)}</span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'h-2 w-2 shrink-0 rounded-full transition-colors',
+                        active
+                          ? 'bg-[#D4F56A]'
+                          : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400',
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{t(item.labelKey)}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -145,37 +147,35 @@ export function Sidebar({
               {t('nav.ferramentas')}
             </p>
             <div className="space-y-1">
-              {TOOLS_NAV_ITEMS.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={onClose}
-                  tabIndex={expanded ? undefined : -1}
-                  className={({ isActive }) =>
-                    cn(
+              {TOOLS_NAV_ITEMS.map((item) => {
+                const active = isNavItemActive(item.to, location.pathname, location.search);
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={onClose}
+                    tabIndex={expanded ? undefined : -1}
+                    className={cn(
                       'group flex min-h-10 items-center gap-3 rounded-full px-3.5 text-sm font-medium transition-all duration-180',
-                      isActive
+                      active
                         ? 'bg-[color:var(--bg-nav-active)] font-semibold text-white dark:bg-[#233552] dark:text-white shadow-soft'
                         : 'text-[color:var(--ink-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-[color:var(--ink)]',
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <span
-                        className={cn(
-                          'h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
-                          isActive
-                            ? 'bg-[#D4F56A]'
-                            : 'bg-transparent group-hover:bg-slate-300 dark:group-hover:bg-slate-600',
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className="truncate">{t(item.labelKey)}</span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
+                        active
+                          ? 'bg-[#D4F56A]'
+                          : 'bg-transparent group-hover:bg-slate-300 dark:group-hover:bg-slate-600',
+                      )}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{t(item.labelKey)}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </nav>
@@ -189,11 +189,20 @@ export function Sidebar({
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="font-display text-3xl font-extrabold tracking-tight leading-none text-white">
-                  {creditBalance.toLocaleString()}
-                </div>
+                {isCreditsLoading ? (
+                  <Skeleton
+                    data-testid="sidebar-credits-skeleton"
+                    className="h-8 w-24 rounded-control bg-slate-800"
+                  />
+                ) : (
+                  <div className="font-display text-3xl font-extrabold tracking-tight leading-none text-white">
+                    {isCreditsError ? '—' : creditBalance?.toLocaleString()}
+                  </div>
+                )}
                 <p className="mt-1 text-xs text-slate-300">
-                  {t('settings.creditsRemaining')}
+                  {isCreditsError
+                    ? t('settings.creditsError')
+                    : t('settings.creditsRemaining')}
                 </p>
                 <Link
                   to="/credits"

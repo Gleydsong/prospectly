@@ -26,13 +26,10 @@ export const WORKSPACE_NAV_ITEMS: NavItem[] = [
 export const TOOLS_NAV_ITEMS: NavItem[] = [
   { to: '/clientes/listas', labelKey: 'nav.campaigns' },
   { to: '/workflows', labelKey: 'nav.workflows' },
-  { to: '/reports', labelKey: 'nav.reports' },
+  { to: '/?aba=relatorios', labelKey: 'nav.reports' },
   { to: '/agents', labelKey: 'nav.agents' },
   { to: '/sdr', labelKey: 'nav.sdr' },
 ];
-
-/** Compatibilidade com testes existentes. */
-export const TOP_NAV_ITEMS = WORKSPACE_NAV_ITEMS;
 
 export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/$/, labelKey: 'nav.principal' },
@@ -58,11 +55,37 @@ export const ROUTE_TITLES: Array<{ pattern: RegExp; labelKey: string }> = [
   { pattern: /^\/settings/, labelKey: 'nav.settings' },
 ];
 
-export function routeTitleKey(pathname: string): string | undefined {
+export function routeTitleKey(pathname: string, search = ''): string | undefined {
+  const searchParams = new URLSearchParams(search);
+  if (pathname === '/' && searchParams.get('aba') === 'relatorios') {
+    return 'nav.reports';
+  }
   return ROUTE_TITLES.find((entry) => entry.pattern.test(pathname))?.labelKey;
 }
 
-export function isTopNavActive(pathname: string, to: string): boolean {
-  if (to === '/') return pathname === '/';
+export function isNavItemActive(to: string, pathname: string, search = ''): boolean {
+  const [targetPath, targetQuery] = to.split('?');
+  const searchParams = new URLSearchParams(search);
+
+  if (targetQuery) {
+    const targetParams = new URLSearchParams(targetQuery);
+    if (pathname !== targetPath) return false;
+    for (const [key, value] of targetParams.entries()) {
+      if (searchParams.get(key) !== value) return false;
+    }
+    return true;
+  }
+
+  if (to === '/') {
+    return pathname === '/' && searchParams.get('aba') !== 'relatorios';
+  }
+
+  if (to === '/clientes') {
+    return (
+      (pathname === '/clientes' || pathname.startsWith('/clientes/')) &&
+      !pathname.startsWith('/clientes/listas')
+    );
+  }
+
   return pathname === to || pathname.startsWith(`${to}/`);
 }

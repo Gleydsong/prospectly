@@ -18,8 +18,6 @@
     "@fontsource/geist-mono": "^5.3.0",
     "@fontsource/inter": "^5.3.0",
     "@fontsource/inter-tight": "^5.3.0",
-    "@fontsource/jetbrains-mono": "^5.3.0",
-    "@fontsource/outfit": "^5.3.0",
     "@hookform/resolvers": "^3.9.1",
     "@prospectly/shared-types": "workspace:*",
     "@react-oauth/google": "^0.13.5",

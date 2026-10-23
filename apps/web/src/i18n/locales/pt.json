@@ -73,7 +73,7 @@
     "mainNav": "Navegação principal",
     "skipToContent": "Pular para o conteúdo principal",
     "searchClients": "Buscar clientes",
-    "globalSearch": "Busca global...",
+    "globalSearch": "Buscar ⌘K",
     "credits": "Créditos",
     "creditsBalance": "{{count}} créditos",
     "creditsFree": "{{count}} buscas grátis",
@@ -393,6 +393,7 @@
   },
   "settings": {
     "creditsRemaining": "créditos restantes",
+    "creditsError": "Não foi possível carregar o saldo",
     "buyMoreCredits": "Comprar mais →",
     "title": "Configurações",
     "navLabel": "Seções de configurações",

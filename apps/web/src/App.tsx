@@ -219,7 +219,7 @@ export function App() {
             }
           />
           <Route path="workflows" element={<WorkflowsPage />} />
-          <Route path="reports" element={<LegacyRedirect to="/" />} />
+          <Route path="reports" element={<LegacyRedirect to="/?aba=relatorios" />} />
           <Route
             path="credits"
             element={
