@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import i18n from '@/i18n';
 import { ThemeProvider } from '@/features/theme/theme-provider';
 import { TopNav } from './top-nav';
 
@@ -26,12 +27,12 @@ vi.mock('@/stores/auth.store', () => ({
   }),
 }));
 
-function renderNav(props?: { onOpenNav?: () => void; navOpen?: boolean }) {
+function renderNav(props?: { onOpenNav?: () => void; navOpen?: boolean; initialEntries?: string[] }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={props?.initialEntries ?? ['/']}>
           <TopNav onOpenNav={props?.onOpenNav ?? vi.fn()} navOpen={props?.navOpen ?? false} />
         </MemoryRouter>
       </ThemeProvider>
@@ -40,8 +41,9 @@ function renderNav(props?: { onOpenNav?: () => void; navOpen?: boolean }) {
 }
 
 describe('TopNav', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('pt');
   });
 
   it('keeps account and billing actions in the sidebar footer', () => {
@@ -58,9 +60,15 @@ describe('TopNav', () => {
     ).toHaveAttribute('href', '/prospectar');
   });
 
-  it('renders global search with shortcut badge', () => {
+  it('renders global search placeholder with shortcut in pt and en', async () => {
+    await i18n.changeLanguage('pt');
+    const { unmount } = renderNav();
+    expect(screen.getByText('Buscar ⌘K')).toBeInTheDocument();
+    unmount();
+
+    await i18n.changeLanguage('en');
     renderNav();
-    expect(screen.getByText('⌘K')).toBeInTheDocument();
+    expect(screen.getByText('Search ⌘K')).toBeInTheDocument();
   });
 
   it('exposes a menu control for the sidebar drawer', () => {

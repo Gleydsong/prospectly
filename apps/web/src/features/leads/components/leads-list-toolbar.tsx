@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Select } from '@/components/ui/select';
 import type { CustomFieldDefinition } from '@/features/custom-fields/api';
 import { pickerCustomFields, opsForType } from '@/features/custom-fields/lead-list-custom-fields';
@@ -145,36 +146,23 @@ export function LeadsListToolbar({
           {t('clientsViews.search')}
         </Button>
       </div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('leads.layout')}>
-        <Button
-          type="button"
-          variant={!isMap && layout === 'table' ? 'primary' : 'outline'}
-          aria-pressed={!isMap && layout === 'table'}
-          onClick={() => onLayoutChange('table')}
-        >
-          {t('nav.list')}
-        </Button>
-        <Button
-          type="button"
-          variant={!isMap && layout === 'kanban' ? 'primary' : 'outline'}
-          aria-pressed={!isMap && layout === 'kanban'}
-          onClick={() => onLayoutChange('kanban')}
-        >
-          {t('nav.board')}
-        </Button>
-        {onMap ? (
-          <Button
-            type="button"
-            variant={isMap ? 'primary' : 'outline'}
-            aria-pressed={isMap}
-            onClick={onMap}
-          >
-            {t('nav.map')}
-          </Button>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <SegmentedControl
+          ariaLabel={t('leads.layout')}
+          value={isMap ? 'mapa' : layout}
+          onChange={(val) => {
+            if (val === 'mapa') onMap?.();
+            else onLayoutChange(val as LeadViewLayout);
+          }}
+          options={[
+            { value: 'table', label: t('nav.list') },
+            { value: 'kanban', label: t('nav.board') },
+            ...(onMap ? [{ value: 'mapa', label: t('nav.map') }] : []),
+          ]}
+        />
         <Link
           to="/clientes/listas"
-          className="inline-flex items-center rounded-control border border-[color:var(--border-default)] px-4 py-2 text-sm font-medium"
+          className="inline-flex items-center rounded-full border border-[color:var(--border-default)] px-4 py-1.5 text-sm font-medium text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)] transition-colors"
         >
           {t('nav.campaigns')}
         </Link>

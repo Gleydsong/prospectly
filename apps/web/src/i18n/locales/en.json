@@ -64,7 +64,7 @@
     "sdrRejected": "Rejected",
     "workflows": "Flows",
     "reports": "Reports",
-    "agents": "Agents",
+    "agents": "Assistants",
     "principal": "Home",
     "clientes": "Customers",
     "conversas": "Conversations",
@@ -73,7 +73,7 @@
     "mainNav": "Main navigation",
     "skipToContent": "Skip to main content",
     "searchClients": "Search customers",
-    "globalSearch": "Global search...",
+    "globalSearch": "Search ⌘K",
     "credits": "Credits",
     "creditsBalance": "{{count}} credits",
     "creditsFree": "{{count}} free searches",
@@ -392,6 +392,9 @@
     }
   },
   "settings": {
+    "creditsRemaining": "credits remaining",
+    "creditsError": "Could not load balance",
+    "buyMoreCredits": "Buy more →",
     "title": "Settings",
     "navLabel": "Settings sections",
     "navAccount": "Account",

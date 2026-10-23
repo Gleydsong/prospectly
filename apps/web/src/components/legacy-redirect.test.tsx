@@ -37,7 +37,7 @@ describe('Legacy routes in the authenticated app', () => {
     ['/pipeline', '/clientes/etapas'],
     ['/campaigns', '/clientes?vista=listas'],
     ['/campaigns/list-123', '/clientes/listas/list-123'],
-    ['/reports', '/'],
+    ['/reports', '/?aba=relatorios'],
     [
       '/leads?reportBucket=wins&period=30d#results',
       '/clientes?reportBucket=wins&period=30d#results',

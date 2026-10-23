@@ -2,17 +2,18 @@ import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-type Surface = 'default' | 'elevated' | 'bento' | 'accent';
+export type CardSurface = 'default' | 'panel' | 'elevated' | 'bento' | 'accent';
 
-const surfaces: Record<Surface, string> = {
-  default: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-panel',
-  elevated: 'rounded-card border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] shadow-panel',
-  bento: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-panel',
-  accent: 'rounded-card border-[color:var(--border-default)] bg-[color:var(--brand-well)] shadow-panel',
+const surfaces: Record<CardSurface, string> = {
+  default: 'rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-soft',
+  panel: 'rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-soft',
+  elevated: 'rounded-card border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] shadow-elevated',
+  bento: 'rounded-card border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] shadow-soft',
+  accent: 'rounded-card border border-[color:var(--border-default)] bg-[color:var(--brand-well)] shadow-soft',
 };
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  surface?: Surface;
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  surface?: CardSurface;
   /** Realce discreto no hover. Use apenas em cards clicáveis. */
   interactive?: boolean;
 }
@@ -21,9 +22,10 @@ export function Card({ className, surface = 'default', interactive, ...props }: 
   return (
     <div
       className={cn(
-        'border transition-[background-color,border-color,box-shadow] duration-200',
+        'transition-[background-color,border-color,box-shadow] duration-200',
         surfaces[surface],
-        interactive && 'cursor-pointer hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-hover)]',
+        interactive &&
+          'cursor-pointer hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-hover)]',
         className,
       )}
       {...props}
@@ -50,7 +52,9 @@ export function CardHeader({
       )}
     >
       <div className="min-w-0">
-        <h3 className="text-base font-semibold tracking-tight text-[color:var(--ink)]">{title}</h3>
+        <h3 className="font-display text-base font-semibold tracking-tight text-[color:var(--ink)]">
+          {title}
+        </h3>
         {description ? (
           <p className="mt-0.5 text-sm text-[color:var(--ink-secondary)]">{description}</p>
         ) : null}
@@ -61,5 +65,5 @@ export function CardHeader({
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-4', className)} {...props} />;
+  return <div className={cn('p-4 sm:p-5', className)} {...props} />;
 }
