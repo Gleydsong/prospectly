@@ -28,6 +28,8 @@ const clientIslands = [
   'components/brand-intro.tsx',
   'components/cookie-banner.tsx',
   'components/waitlist-form.tsx',
+  'components/signal-hero-scene.tsx',
+  'components/signal-hero-3d.tsx',
 ] as const;
 
 describe('landing V2 island split', () => {

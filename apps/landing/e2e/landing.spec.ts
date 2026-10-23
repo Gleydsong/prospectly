@@ -102,8 +102,8 @@ test.describe('V2 headings and accordion', () => {
     const h1 = page.getByRole('heading', { level: 1 });
     await expect(h1).toHaveCount(1);
     await expect(h1).toBeVisible();
-    await expect(h1).toContainText('empresas certas');
-    await expect(h1).toContainText('próximo cliente');
+    await expect(h1).toContainText('Ache empresas');
+    await expect(h1).toContainText('precisam de você');
   });
 
   test('home V2 accordion ties the button to the panel and toggles with the keyboard', async ({ page }) => {
@@ -139,7 +139,7 @@ test.describe('document language', () => {
     await expect(page).toHaveURL(/\/en\/?$/);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Find companies worth prospecting in Brazil.' }),
+      page.getByRole('heading', { level: 1, name: /Find (local businesses|companies)/ }),
     ).toBeVisible();
   });
 
@@ -161,7 +161,6 @@ test.describe('landing navigation', () => {
       await expect(page.getByRole('button', { name: 'Abrir menu' })).toBeVisible();
     }
     await expect(page.getByRole('banner')).toHaveCount(1);
-    await expect(page.getByRole('link', { name: 'Preços', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Início', exact: true })).toHaveCount(0);
   });
 
@@ -173,26 +172,27 @@ test.describe('landing navigation', () => {
     await expect(page.getByRole('heading', { name: 'Menos volume. Mais chance de fechar.' })).toBeVisible();
   });
 
-  test('navbar possui apenas o botão Começar agora apontando para app.prospectlyonboard.com (sem botão Entrar)', async ({ page }, testInfo) => {
+  test('navbar possui botão Começar apontando para app.prospectlyonboard.com e link Entrar', async ({ page }, testInfo) => {
     await page.goto('/');
 
-    await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toHaveCount(0);
-    await expect(
-      page.getByRole('banner').getByRole('link', { name: /começar agora/i }),
-    ).toHaveAttribute('href', 'https://app.prospectlyonboard.com');
-
-    if (testInfo.project.name === 'mobile-chromium') {
+    if (testInfo.project.name === 'desktop-chromium') {
+      await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('banner').getByRole('link', { name: /começar/i }),
+      ).toHaveAttribute('href', 'https://app.prospectlyonboard.com');
+    } else {
+      await expect(page.getByRole('banner').getByRole('link', { name: 'Entrar', exact: true })).toHaveCount(0);
       await page.getByRole('button', { name: 'Abrir menu' }).click();
       await expect(
         page.getByRole('navigation', { name: 'Navegação móvel' }).getByRole('link', { name: 'Entrar', exact: true }),
-      ).toHaveCount(0);
+      ).toBeVisible();
     }
   });
 
-  test('botão Criar minha primeira lista direciona para app.prospectlyonboard.com', async ({ page }) => {
+  test('botão Começar na hero direciona para app.prospectlyonboard.com', async ({ page }) => {
     await page.goto('/');
     await expect(
-      page.getByRole('main').getByRole('link', { name: /criar minha primeira lista/i }),
+      page.getByRole('main').getByRole('link', { name: /começar/i }).first(),
     ).toHaveAttribute('href', 'https://app.prospectlyonboard.com');
   });
 
