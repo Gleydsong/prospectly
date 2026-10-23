@@ -108,7 +108,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 size="icon"
                 aria-expanded={menuOpen}
                 aria-controls="mobile-nav"
-                aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+                aria-label={menuOpen ? t(locale, 'navCloseMenu') : t(locale, 'navOpenMenu')}
                 onClick={() => setMenuOpen((open) => !open)}
               >
                 {menuOpen ? <X weight="bold" className="h-5 w-5" /> : <List weight="bold" className="h-5 w-5" />}

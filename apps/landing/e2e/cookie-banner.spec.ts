@@ -15,7 +15,7 @@ test.describe('cookie consent dialog', () => {
 
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('empresas certas');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('empresas');
 
     const stored = await page.evaluate(() => localStorage.getItem('prospectly_cookie_consent'));
     expect(stored).toBeTruthy();

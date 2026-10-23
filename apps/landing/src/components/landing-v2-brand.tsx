@@ -11,7 +11,7 @@ export function V2Brand() {
         aria-hidden
         priority
       />
-      <span className="landing-v2-brand-word">rospectly</span>
+      <span className="landing-v2-brand-word">Prospectly</span>
     </span>
   );
 }

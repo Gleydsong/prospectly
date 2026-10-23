@@ -6,8 +6,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Redesign editorial (00-fundamentos.png)
+        tinta: '#0B1220',
+        grafite: '#263541',
+        'azul-prospectly': '#2563EB',
+        eletrico: '#4C8DFF',
+        sinal: '#B9D8EF',
+        'sinal-profundo': '#709AC0',
+        lima: '#D4F56A',
+        papel: '#F3F5F7',
+        linha: '#DCE3EA',
         ink: {
-          DEFAULT: '#18181b',
+          DEFAULT: '#0B1220',
           muted: '#52525b',
           soft: '#71717a',
         },
@@ -52,16 +62,21 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-jetbrains)', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-inter-tight)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-inter-tight)', 'system-ui', 'sans-serif'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       maxWidth: {
         shell: '1400px',
       },
       borderRadius: {
-        control: '14px',
-        panel: '18px',
-        bento: '22px',
+        control: '12px',
+        panel: '28px',
+        bento: '20px',
+        campo: '12px',
+        cartao: '20px',
+        painel: '28px',
+        pilula: '9999px',
       },
       boxShadow: {
         soft: '0 18px 50px -28px rgb(24 24 27 / 0.35)',

@@ -1,4 +1,4 @@
-import { JetBrains_Mono, Outfit } from 'next/font/google';
+import { Inter_Tight } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import type { HtmlLang } from '@/lib/document-locale';
@@ -7,15 +7,9 @@ import './globals.css';
 
 export { landingDocumentMetadata } from '@/lib/landing-og';
 
-const outfit = Outfit({
+const interTight = Inter_Tight({
   subsets: ['latin'],
-  variable: '--font-outfit',
-  display: 'swap',
-});
-
-const jetbrains = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains',
+  variable: '--font-inter-tight',
   display: 'swap',
 });
 
@@ -65,7 +59,7 @@ const jsonLd = {
 
 export function LandingHtmlDocument({ lang, children }: { lang: HtmlLang; children: ReactNode }) {
   return (
-    <html lang={lang} className={`${outfit.variable} ${jetbrains.variable}`}>
+    <html lang={lang} className={interTight.variable}>
       <body className="font-sans antialiased">
         <script
           type="application/ld+json"

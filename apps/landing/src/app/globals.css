@@ -259,7 +259,7 @@ body {
   --v2-navy: #20252a;
   background: #fff;
   color: var(--v2-ink);
-  font-family: var(--font-outfit), sans-serif;
+  font-family: var(--font-inter), sans-serif;
   overflow: hidden;
 }
 
@@ -331,7 +331,7 @@ body {
   align-items: center;
   gap: 0;
   color: #f1f6fa;
-  font-family: var(--font-outfit), sans-serif;
+  font-family: var(--font-inter-tight), var(--font-inter), sans-serif;
   font-size: clamp(2.2rem, 6vw, 5rem);
   font-weight: 600;
   letter-spacing: -.06em;
