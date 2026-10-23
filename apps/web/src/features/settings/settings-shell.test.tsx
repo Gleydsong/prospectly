@@ -8,18 +8,22 @@ import { SettingsShell } from './settings-shell';
 import { parseSettingsTab, settingsTabPath } from './settings-tabs';
 
 describe('parseSettingsTab', () => {
-  it('defaults to account', () => {
-    expect(parseSettingsTab(null)).toBe('account');
-    expect(parseSettingsTab('unknown')).toBe('account');
+  it('defaults to organization', () => {
+    expect(parseSettingsTab(null)).toBe('organization');
+    expect(parseSettingsTab('unknown')).toBe('organization');
   });
 
-  it('accepts team and integrations', () => {
+  it('accepts account, team, scoring, preferences and integrations', () => {
+    expect(parseSettingsTab('account')).toBe('account');
     expect(parseSettingsTab('team')).toBe('team');
+    expect(parseSettingsTab('scoring')).toBe('scoring');
+    expect(parseSettingsTab('preferences')).toBe('preferences');
     expect(parseSettingsTab('integrations')).toBe('integrations');
   });
 
   it('builds hub paths', () => {
-    expect(settingsTabPath('account')).toBe('/settings');
+    expect(settingsTabPath('organization')).toBe('/settings');
+    expect(settingsTabPath('account')).toBe('/settings?tab=account');
     expect(settingsTabPath('team')).toBe('/settings?tab=team');
   });
 });
@@ -32,16 +36,23 @@ describe('SettingsShell', () => {
   it('marks the active section and hides integrations for members', () => {
     render(
       <MemoryRouter>
-        <SettingsShell active="account">conteúdo</SettingsShell>
+        <SettingsShell active="organization">conteúdo</SettingsShell>
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Conta' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Equipe' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Organização' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: 'Perfil' })).not.toHaveAttribute('aria-current');
     expect(screen.queryByRole('link', { name: 'Integrações' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Privacidade' })).toHaveAttribute(
       'href',
       '/settings/privacy',
+    );
+    expect(screen.getByRole('link', { name: 'Campos personalizados' })).toHaveAttribute(
+      'href',
+      '/custom-fields',
     );
   });
 

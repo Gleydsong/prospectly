@@ -430,6 +430,7 @@
     "orgSaved": "Organização atualizada.",
     "orgError": "Não foi possível salvar o nome da organização.",
     "orgReadOnly": "Apenas proprietários ou administradores podem alterar o nome.",
+    "usageUnavailable": "O histórico de consumo por período ainda não está disponível nesta conta.",
     "flagsTitle": "Flags da organização",
     "flagsDesc": "Ligue capacidades novas só nesta organização. Desligar esconde a UI/API; não apaga dados já criados.",
     "flagsReadOnly": "Apenas proprietários ou administradores podem alterar flags.",
@@ -1482,9 +1483,21 @@
       "TASK": "Nova tarefa"
     },
     "quickPhrases": {
-      "WHATSAPP": ["Mensagem enviada", "Pediu para retornar à tarde", "Caixa postal"],
-      "CALL": ["Caixa postal", "Pediu para retornar à tarde", "Sem resposta"],
-      "NOTE": ["Caixa postal", "Pediu para retornar à tarde", "Mensagem enviada"]
+      "WHATSAPP": [
+        "Mensagem enviada",
+        "Pediu para retornar à tarde",
+        "Caixa postal"
+      ],
+      "CALL": [
+        "Caixa postal",
+        "Pediu para retornar à tarde",
+        "Sem resposta"
+      ],
+      "NOTE": [
+        "Caixa postal",
+        "Pediu para retornar à tarde",
+        "Mensagem enviada"
+      ]
     },
     "activity": "Atividade",
     "taskStatuses": {
@@ -1621,5 +1634,10 @@
     "searchAction": "Buscar empresas",
     "activeFilters": "Filtros ativos",
     "withoutWebsiteFilter": "Sem site"
+  },
+  "notFound": {
+    "title": "Esta página saiu do mapa.",
+    "subtitle": "O endereço pode ter mudado ou você não tem acesso a ele.",
+    "backHome": "Voltar ao Início"
   }
 }

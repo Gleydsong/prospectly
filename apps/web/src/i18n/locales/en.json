@@ -430,6 +430,7 @@
     "orgSaved": "Organization updated.",
     "orgError": "Could not save the organization name.",
     "orgReadOnly": "Only OWNER or ADMIN can rename the organization.",
+    "usageUnavailable": "Usage history by period is not available for this account yet.",
     "flagsTitle": "Organization flags",
     "flagsDesc": "Turn on new capabilities only for this organization. Turning off hides UI/API; it does not delete existing data.",
     "flagsReadOnly": "Only OWNER or ADMIN can change organization flags.",
@@ -1482,9 +1483,21 @@
       "TASK": "New task"
     },
     "quickPhrases": {
-      "WHATSAPP": ["Message sent", "Asked to call back this afternoon", "Voicemail"],
-      "CALL": ["Voicemail", "Asked to call back this afternoon", "No answer"],
-      "NOTE": ["Voicemail", "Asked to call back this afternoon", "Message sent"]
+      "WHATSAPP": [
+        "Message sent",
+        "Asked to call back this afternoon",
+        "Voicemail"
+      ],
+      "CALL": [
+        "Voicemail",
+        "Asked to call back this afternoon",
+        "No answer"
+      ],
+      "NOTE": [
+        "Voicemail",
+        "Asked to call back this afternoon",
+        "Message sent"
+      ]
     },
     "activity": "Activity",
     "taskStatuses": {
@@ -1621,5 +1634,10 @@
     "searchAction": "Search businesses",
     "activeFilters": "Active filters",
     "withoutWebsiteFilter": "No website"
+  },
+  "notFound": {
+    "title": "This page is off the map.",
+    "subtitle": "The address may have changed or you do not have access to it.",
+    "backHome": "Back to Home"
   }
 }

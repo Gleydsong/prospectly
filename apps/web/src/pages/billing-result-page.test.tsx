@@ -137,3 +137,39 @@ describe('BillingSuccessPage', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('BillingSuccessPage figures', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('pt');
+    sessionStorage.clear();
+    getBillingStatus.mockReset();
+  });
+
+  it('does not show a balance before the status loads', async () => {
+    saveCheckoutIntent({
+      purpose: 'credits',
+      offer: 'credits-2000',
+      baselineCreditBalance: 400,
+      provider: 'ASAAS',
+    });
+    getBillingStatus.mockReturnValue(new Promise(() => {}));
+
+    renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
+    expect(await screen.findByText(/^\+2\.000/)).toBeInTheDocument();
+    expect(screen.queryByText(/no saldo/)).not.toBeInTheDocument();
+  });
+
+  it('does not add a fixed credit amount after a plan purchase', async () => {
+    saveCheckoutIntent({
+      purpose: 'plan',
+      plan: 'monthly',
+      baselineCreditBalance: 400,
+      provider: 'ASAAS',
+    });
+    getBillingStatus.mockReturnValue(new Promise(() => {}));
+
+    renderWithProviders(<BillingSuccessPage />, { initialEntries: ['/billing/success'] });
+    expect(await screen.findByRole('heading', { name: 'Confirmando pagamento' })).toBeInTheDocument();
+    expect(screen.queryByText(/^\+\d/)).not.toBeInTheDocument();
+  });
+});

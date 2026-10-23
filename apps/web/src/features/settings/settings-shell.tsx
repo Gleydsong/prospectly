@@ -1,98 +1,126 @@
-import { Plug, Shield, User, Users, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { PageHeader } from '@/components/ui/page-header';
 import { cn } from '@/lib/utils';
-
 import { settingsTabPath, type SettingsTab } from './settings-tabs';
 
-const ACCOUNT_NAV = {
-  id: 'account' as const,
-  icon: User,
-  labelKey: 'settings.navAccount',
-  descKey: 'settings.navAccountDesc',
-  to: settingsTabPath('account'),
-};
-
-const NAV: Array<{
-  id: SettingsTab;
-  icon: LucideIcon;
+export interface SettingsNavItem {
+  id: SettingsTab | 'customFields';
   labelKey: string;
-  descKey: string;
+  defaultLabel: string;
   to: string;
   adminOnly?: boolean;
-}> = [
-  ACCOUNT_NAV,
+}
+
+export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  {
+    id: 'account',
+    labelKey: 'settings.navProfile',
+    defaultLabel: 'Perfil',
+    to: settingsTabPath('account'),
+  },
+  {
+    id: 'organization',
+    labelKey: 'settings.navOrganization',
+    defaultLabel: 'Organização',
+    to: settingsTabPath('organization'),
+  },
   {
     id: 'team',
-    icon: Users,
     labelKey: 'settings.navTeam',
-    descKey: 'settings.navTeamDesc',
+    defaultLabel: 'Usuários e permissões',
     to: settingsTabPath('team'),
   },
   {
+    id: 'scoring',
+    labelKey: 'settings.navScoring',
+    defaultLabel: 'Pontuação',
+    to: settingsTabPath('scoring'),
+  },
+  {
+    id: 'preferences',
+    labelKey: 'settings.navPreferences',
+    defaultLabel: 'Preferências',
+    to: settingsTabPath('preferences'),
+  },
+  {
     id: 'integrations',
-    icon: Plug,
     labelKey: 'settings.navIntegrations',
-    descKey: 'settings.navIntegrationsDesc',
+    defaultLabel: 'Integrações',
     to: settingsTabPath('integrations'),
     adminOnly: true,
   },
   {
     id: 'privacy',
-    icon: Shield,
     labelKey: 'settings.navPrivacy',
-    descKey: 'settings.navPrivacyDesc',
+    defaultLabel: 'Privacidade',
     to: '/settings/privacy',
+  },
+  {
+    id: 'customFields',
+    labelKey: 'settings.navCustomFields',
+    defaultLabel: 'Campos personalizados',
+    to: '/custom-fields',
   },
 ];
 
 export function SettingsShell({
   active,
   showIntegrations = false,
+  breadcrumb,
+  headerTitle,
+  headerDescription,
   children,
 }: {
-  active: SettingsTab;
+  active: SettingsTab | 'customFields';
   showIntegrations?: boolean;
+  breadcrumb?: string;
+  headerTitle?: string;
+  headerDescription?: string;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const items = NAV.filter((item) => !item.adminOnly || showIntegrations);
-  const current = NAV.find((item) => item.id === active) ?? ACCOUNT_NAV;
+  const items = SETTINGS_NAV_ITEMS.filter((item) => !item.adminOnly || showIntegrations);
+
+  const title = headerTitle ?? t('settings.title', { defaultValue: 'Configurações' });
+  const description =
+    headerDescription ??
+    t('settings.headerSubtitle', {
+      defaultValue: 'Perfil, organização, equipe e preferências.',
+    });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
-        eyebrow={t('settings.title')}
-        title={t(current.labelKey)}
-        description={t(current.descKey)}
+        breadcrumb={breadcrumb}
+        title={title}
+        description={description}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[13.5rem_minmax(0,1fr)] lg:gap-10">
+      <div className="grid items-start gap-6 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
         <nav
-          aria-label={t('settings.navLabel')}
-          className="flex gap-1 overflow-x-auto pb-1 lg:sticky lg:top-24 lg:flex-col lg:overflow-visible lg:pb-0"
+          aria-label={t('settings.navLabel', { defaultValue: 'Configurações' })}
+          className="flex gap-1 overflow-x-auto rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-2 shadow-soft lg:sticky lg:top-24 lg:flex-col lg:overflow-visible"
         >
           {items.map((item) => {
-            const Icon = item.icon;
             const isActive = item.id === active;
+            const label = t(item.labelKey, { defaultValue: item.defaultLabel });
             return (
               <Link
                 key={item.id}
                 to={item.to}
                 aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-control px-3 py-2 text-sm font-medium tracking-tight transition-colors duration-200',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)]',
+                  'inline-flex min-h-10 shrink-0 items-center rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]',
                   isActive
-                    ? 'bg-[color:var(--ink)] text-[color:var(--bg)]'
-                    : 'text-[color:var(--ink-muted)] hover:bg-[color:var(--surface-hover)] hover:text-[color:var(--ink)]',
+                    ? 'bg-[color:var(--ink)] text-white shadow-soft'
+                    : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]',
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                {t(item.labelKey)}
+                {label}
               </Link>
             );
           })}

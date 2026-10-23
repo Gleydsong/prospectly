@@ -52,4 +52,30 @@ describe('PixCheckoutPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Voltar' }));
     expect(createCreditCheckout).not.toHaveBeenCalled();
   });
+
+  it('shows the credit amount for a known package price', async () => {
+    renderWithProviders(<PixCheckoutPage />, { initialEntries: ['/billing/pix'] });
+    expect(await screen.findByText(/Valor: R\$\s?14,99 · 2\.000 créditos/)).toBeInTheDocument();
+  });
+
+  it('does not guess a credit amount for an unknown price', async () => {
+    sessionStorage.setItem(
+      'prospectly.pixCheckout',
+      JSON.stringify({
+        mode: 'pix',
+        provider: 'ASAAS',
+        brCode: '000201',
+        brCodeBase64: 'cG5n',
+        externalPaymentId: 'pay_pix_2',
+        amountCentavos: 9999,
+        purpose: 'credits',
+        offer: 'credits-2000',
+        baselineCreditBalance: 400,
+      }),
+    );
+
+    renderWithProviders(<PixCheckoutPage />, { initialEntries: ['/billing/pix'] });
+    expect(await screen.findByText(/Valor: R\$\s?99,99/)).toBeInTheDocument();
+    expect(screen.queryByText(/créditos/)).not.toBeInTheDocument();
+  });
 });
