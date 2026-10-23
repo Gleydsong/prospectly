@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { MonoLabel } from '@/components/ui/mono-label';
 import { getBillingStatus } from '@/features/billing/api';
 import type { PixCheckoutMeta } from '@/features/billing/handle-checkout';
 import type { CheckoutResult } from '@/features/billing/types';
@@ -101,51 +101,93 @@ export function PixCheckoutPage() {
     return null;
   }
 
+  const creditsAmount = CREDITS_BY_AMOUNT[pix.amountCentavos];
+  const priceFormatted = formatBrl(pix.amountCentavos);
+  const creditsSuffix = creditsAmount
+    ? ` · ${creditsAmount.toLocaleString('pt-BR')} créditos`
+    : '';
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg items-center px-4 py-10">
-      <Card className="w-full">
-        <CardHeader
-          title={t('billing.pixTitle')}
-          description={t('billing.pixDesc', { amount: formatBrl(pix.amountCentavos) })}
-        />
-        <CardContent className="space-y-4">
+    <div className="relative flex min-h-screen flex-col justify-between bg-[color:var(--bg)] p-6 sm:p-10 select-none overflow-hidden">
+      {/* Brand logo at top left */}
+      <header className="relative z-10">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 font-display text-base font-bold tracking-tight text-[color:var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] rounded-control"
+        >
+          <span className="font-display font-black text-xl text-[color:var(--ink)]">P.</span>
+          <span className="font-display text-base font-bold text-[color:var(--ink)]">Prospectly</span>
+        </Link>
+      </header>
+
+      {/* Main Content */}
+      <main className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center text-center py-8">
+        <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-display text-[color:var(--ink)]">
+          Pague com PIX
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-secondary)] max-w-md">
+          {`Escaneie o QR Code ou copie o código. Valor: ${priceFormatted}${creditsSuffix}`}
+        </p>
+
+        {/* Card matching 06-cobranca-pix.png */}
+        <section className="mt-8 w-full rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-6 sm:p-8 shadow-card space-y-6 text-left">
+          {/* QR code */}
           {qrSrc ? (
-            <img
-              src={qrSrc}
-              alt={t('billing.pixQrAlt')}
-              className="mx-auto h-56 w-56 rounded-lg border border-[color:var(--border)] bg-[color:var(--surface-card)] p-2"
-            />
+            <div className="flex justify-center">
+              <img
+                src={qrSrc}
+                alt={t('billing.pixQrAlt', { defaultValue: 'QR Code Pix' })}
+                className="h-56 w-56 sm:h-64 sm:w-64 rounded-card border border-[color:var(--border-default)] bg-white p-4 object-contain shadow-sm"
+              />
+            </div>
           ) : null}
 
+          {/* Copia e Cola */}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-[color:var(--ink)]">{t('billing.pixCopyLabel')}</p>
-            <textarea
-              readOnly
-              value={pix.brCode}
-              className="h-24 w-full resize-none rounded-control border border-[color:var(--border)] bg-[color:var(--surface-card)] p-3 font-mono text-xs text-[color:var(--ink)]"
-            />
+            <MonoLabel>PIX COPIA E COLA</MonoLabel>
+            <div className="relative">
+              <div className="rounded-xl border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] p-3 font-mono text-xs text-[color:var(--ink)] truncate select-all">
+                {pix.brCode}
+              </div>
+            </div>
+
             <Button
               type="button"
-              variant="secondary"
+              className="w-full rounded-full py-3 shadow-soft font-semibold"
               onClick={async () => {
                 await navigator.clipboard.writeText(pix.brCode);
                 setCopied(true);
                 window.setTimeout(() => setCopied(false), 2000);
               }}
             >
-              {copied ? t('billing.pixCopied') : t('billing.pixCopy')}
+              {copied ? 'Código copiado!' : 'Copiar código'}
             </Button>
           </div>
 
-          <p className="text-sm text-[color:var(--ink-muted)]" role="status">
-            {t('billing.pixWaiting')}
-          </p>
+          {/* Polling indicator */}
+          <div className="flex items-center justify-center gap-2 pt-1" role="status">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#D4F56A] animate-pulse" />
+            <span className="text-xs font-medium text-[color:var(--ink-secondary)]">
+              Aguardando confirmação do pagamento...
+            </span>
+          </div>
 
-          <Button type="button" variant="ghost" onClick={() => navigate('/credits')}>
-            {t('common.back')}
-          </Button>
-        </CardContent>
-      </Card>
+          {/* Back/Cancel */}
+          <div className="flex justify-center pt-1">
+            <button
+              type="button"
+              aria-label="Voltar"
+              onClick={() => navigate('/credits')}
+              className="text-xs text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)] hover:underline"
+            >
+              Cancelar e voltar
+            </button>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer spacer */}
+      <div className="h-6" aria-hidden="true" />
     </div>
   );
 }

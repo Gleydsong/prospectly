@@ -63,4 +63,45 @@ describe('SegmentedControl', () => {
     await user.click(screen.getByRole('button', { name: 'Quadro' }));
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('supports role="tablist" pattern with aria-selected and arrow key navigation', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <SegmentedControl
+        role="tablist"
+        ariaLabel="Abas de configuração"
+        options={options}
+        value="lista"
+        onChange={onChange}
+      />,
+    );
+
+    const tablist = screen.getByRole('tablist', { name: 'Abas de configuração' });
+    expect(tablist).toBeInTheDocument();
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(3);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
+    expect(tabs[0]).toHaveAttribute('tabIndex', '0');
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'false');
+    expect(tabs[1]).toHaveAttribute('tabIndex', '-1');
+
+    tabs[0]?.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenCalledWith('quadro');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenCalledWith('lista');
+
+    tabs[0]?.focus();
+    await user.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenCalledWith('mapa');
+
+    await user.keyboard('{Home}');
+    expect(onChange).toHaveBeenCalledWith('lista');
+
+    await user.keyboard('{End}');
+    expect(onChange).toHaveBeenCalledWith('mapa');
+  });
 });

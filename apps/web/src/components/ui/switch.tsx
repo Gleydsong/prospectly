@@ -40,7 +40,7 @@ export function Switch({
           'relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg)]',
           'disabled:cursor-not-allowed disabled:opacity-60',
-          checked ? 'bg-[color:var(--ink)]' : 'bg-zinc-600',
+          checked ? 'bg-[color:var(--brand-blue)]' : 'bg-[color:var(--border-default)] dark:bg-zinc-700',
         )}
       >
         <span

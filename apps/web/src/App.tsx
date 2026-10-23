@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 import { AppLayout } from '@/components/layout/app-layout';
 import { ProtectedRoute } from '@/components/protected-route';
@@ -71,6 +71,9 @@ const ResearchPage = lazy(() =>
 const SdrPage = lazy(() => import('@/pages/sdr/sdr-page').then((m) => ({ default: m.SdrPage })));
 const AssistantSpikePage = lazy(() =>
   import('@/pages/assistant/assistant-spike-page').then((m) => ({ default: m.AssistantSpikePage })),
+);
+const NotFoundPage = lazy(() =>
+  import('@/pages/not-found-page').then((m) => ({ default: m.NotFoundPage })),
 );
 
 function LazyPage({ children }: { children: ReactNode }) {
@@ -255,7 +258,14 @@ export function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="*"
+        element={
+          <LazyPage>
+            <NotFoundPage />
+          </LazyPage>
+        }
+      />
     </Routes>
   );
 }

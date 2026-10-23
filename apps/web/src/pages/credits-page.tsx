@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Coins, Crown } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { GlossSphere } from '@/components/ui/gloss-sphere';
 import { Modal } from '@/components/ui/modal';
+import { MonoLabel } from '@/components/ui/mono-label';
 import { PageHeader } from '@/components/ui/page-header';
+import { SignalRing } from '@/components/ui/signal-ring';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   cancelBillingSubscription,
@@ -20,7 +22,6 @@ import { handleCheckoutResult } from '@/features/billing/handle-checkout';
 import { BillingProfileForm } from '@/features/billing/billing-profile-form';
 import { BILLING_STATUS_QUERY_KEY } from '@/features/billing/hooks';
 import { getApiErrorMessage } from '@/lib/api';
-import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 
 type CreditOfferId = 'credits-2000' | 'credits-5000' | 'unlimited';
@@ -49,6 +50,7 @@ export function CreditsPage() {
       : null;
   });
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const billing = useQuery({
     queryKey: BILLING_STATUS_QUERY_KEY,
@@ -103,6 +105,7 @@ export function CreditsPage() {
 
   const checkoutPending = creditCheckout.isPending || planCheckout.isPending;
   const checkoutBlocked = billing.data?.checkoutReviewRequired === true;
+
   const startCheckout = (offer: CreditOfferId, paymentMethod: 'pix' | 'card') => {
     setCreditOffer(offer);
     setBillingError(null);
@@ -113,214 +116,290 @@ export function CreditsPage() {
     creditCheckout.mutate({ offer, paymentMethod });
   };
 
-  const offers = [
-    {
-      id: 'credits-2000' as const,
-      title: t('settings.pack2000Title'),
-      description: t('settings.creditPackagesDesc'),
-      price: t('settings.pack2000Price'),
-      cta: t('settings.buyCredits'),
-      featured: false,
-    },
-    {
-      id: 'credits-5000' as const,
-      title: t('settings.pack5000Title'),
-      description: t('settings.creditPackagesDesc'),
-      price: t('settings.pack5000Price'),
-      cta: t('settings.buyCredits'),
-      featured: false,
-    },
-    {
-      id: 'unlimited' as const,
-      title: t('settings.packUnlimitedTitle'),
-      description: t('settings.packUnlimitedDesc'),
-      price: t('settings.packUnlimitedPrice'),
-      suffix: t('settings.packUnlimitedSuffix'),
-      cta: t('settings.subscribeUnlimited'),
-      featured: true,
-    },
-  ] as const;
+  const balance = billing.data?.creditBalance ?? 0;
+  const approxSearches = Math.floor(balance / 14);
+
+  // Plan presentation string
+  const planName =
+    billing.data?.plan === 'STARTER_MONTHLY'
+      ? 'Plano Mensal'
+      : billing.data?.plan === 'LIFETIME'
+        ? 'Plano Ilimitado'
+        : 'Plano Gratuito';
+  const searchesUsed = billing.data?.searchUsage?.used ?? 0;
+  const searchLimit = billing.data?.freeSearchLimit ?? 3;
+  const footerStatusText = `${planName} · ${searchesUsed} / ${searchLimit} buscas grátis`;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <PageHeader
-        eyebrow={t('settings.creditsTitle')}
-        title={t('settings.creditsPageTitle')}
-        description={t('settings.creditsChoosePace')}
+        title="Créditos"
+        description="Cada busca consome 14 créditos depois das buscas grátis do plano."
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full px-5 py-2"
+            onClick={() => setHistoryOpen(true)}
+          >
+            Histórico
+          </Button>
+        }
       />
 
-      <Card className="overflow-hidden">
-        <CardContent className="space-y-4 p-5">
-          {billing.isLoading ? (
-            <Skeleton className="h-16" />
-          ) : (
-            <div className="flex items-center justify-between gap-4 rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-muted)] p-4">
-              <div>
-                <p className="text-sm text-[color:var(--ink-muted)]">
-                  {t('settings.availableCredits')}
-                </p>
-                <p className="mt-1 text-3xl font-semibold tracking-tight text-[color:var(--ink)]">
-                  {billing.data?.creditBalance ?? 0}
-                </p>
+      {billingError ? (
+        <div
+          className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300"
+          role="alert"
+        >
+          {billingError}
+        </div>
+      ) : null}
+
+      {checkoutBlocked ? (
+        <div
+          className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+          role="status"
+        >
+          {t('settings.checkoutReviewRequired', {
+            defaultValue: 'Estamos confirmando seu checkout. Aguarde alguns instantes.',
+          })}
+        </div>
+      ) : null}
+
+      {/* Top row: Saldo Card & Uso nos últimos 30 dias Card */}
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        {/* Dark Saldo Card matching 06-creditos.png */}
+        <section className="relative overflow-hidden rounded-panel bg-[#0B1220] p-6 sm:p-8 text-white shadow-card flex flex-col justify-between min-h-[220px]">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="sr-only">Créditos disponíveis</span>
+                <MonoLabel className="text-slate-400">SALDO</MonoLabel>
               </div>
-              <p className="max-w-[15rem] text-right text-xs leading-5 text-[color:var(--ink-muted)]">
-                {t('settings.creditsUsageHint')}
+
+              {billing.isLoading ? (
+                <Skeleton className="h-14 w-32 bg-slate-800" />
+              ) : (
+                <p className="font-display text-5xl sm:text-6xl font-extrabold tracking-tight text-white leading-none">
+                  {balance.toLocaleString('pt-BR')}
+                </p>
+              )}
+
+              <p className="text-sm text-slate-300 font-medium pt-1">
+                {`créditos · cerca de ${approxSearches} buscas`}
               </p>
             </div>
-          )}
 
-          {billingError ? (
-            <p
-              className="rounded-control border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
-              role="alert"
-            >
-              {billingError}
-            </p>
-          ) : null}
+            {/* 3D Graphic with SignalRing and GlossSphere */}
+            <div className="relative shrink-0 flex items-center justify-center p-2">
+              <SignalRing size={120} glow className="scale-90 sm:scale-100" />
+              <GlossSphere
+                variant="lima"
+                size={34}
+                className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 drop-shadow-lg"
+              />
+            </div>
+          </div>
 
-          {checkoutBlocked ? (
-            <p
-              className="rounded-control border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
-              role="status"
-            >
-              {t('settings.checkoutReviewRequired')}
-            </p>
-          ) : null}
+          <div className="mt-6 pt-4 border-t border-slate-800/80 text-xs text-slate-400 font-mono tracking-wide">
+            {footerStatusText}
+          </div>
+        </section>
 
-          {!roleReady ? (
-            <Skeleton className="h-48" />
-          ) : manage ? (
-            <div className="grid gap-3 lg:grid-cols-3">
-              {offers.map((offer) => {
-                const pending = checkoutPending && creditOffer === offer.id;
-                return (
-                  <div
-                    key={offer.id}
-                    className={cn(
-                      'relative flex flex-col rounded-panel border p-5 shadow-panel',
-                      offer.featured
-                        ? 'border-emerald-400/80 bg-emerald-500/10'
-                        : 'border-[color:var(--border)] bg-[color:var(--surface-card)]',
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      {offer.featured ? (
-                        <Crown className="h-6 w-6 text-emerald-500" aria-hidden />
-                      ) : (
-                        <Coins className="h-6 w-6 text-amber-500" aria-hidden />
-                      )}
-                      {offer.featured ? (
-                        <span className="rounded-full bg-emerald-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                          {t('settings.bestChoice')}
-                        </span>
-                      ) : null}
-                    </div>
+        {/* Uso nos últimos 30 dias Card */}
+        <section className="rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-6 sm:p-8 shadow-card flex flex-col justify-between">
+          <div>
+            <h2 className="font-display text-xl font-bold tracking-tight text-[color:var(--ink)]">
+              Uso nos últimos 30 dias
+            </h2>
 
-                    <h2 className="mt-5 text-lg font-semibold tracking-tight text-[color:var(--ink)]">
-                      {offer.title}
-                    </h2>
-                    <p className="mt-2 min-h-12 text-sm leading-6 text-[color:var(--ink-muted)]">
-                      {offer.description}
-                    </p>
-                    <p className="mt-5 text-2xl font-bold tracking-tight text-[color:var(--ink)]">
-                      {offer.price}
-                      {'suffix' in offer && offer.suffix ? (
-                        <span className="ml-1 text-sm font-medium text-[color:var(--ink-muted)]">
-                          {offer.suffix}
-                        </span>
-                      ) : null}
-                    </p>
-
-                    <ul className="mt-4 space-y-2 text-sm text-[color:var(--ink-muted)]">
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                        {offer.id === 'unlimited'
-                          ? t('settings.packFeatureUnlimitedSearch')
-                          : t('settings.packFeatureSearch')}
-                      </li>
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                        {offer.id === 'unlimited'
-                          ? t('settings.packFeatureUnlimitedCsv')
-                          : t('settings.packFeaturePdf')}
-                      </li>
-                      {offer.id === 'unlimited' ? (
-                        <>
-                          <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
-                            {t('settings.packFeaturePixMonthly')}
-                          </li>
-                        </>
-                      ) : null}
-                    </ul>
-
-                    <div className="mt-5 grid gap-2">
-                      <Button
-                        type="button"
-                        className="w-full"
-                        disabled={!emailVerified || checkoutPending || checkoutBlocked}
-                        loading={pending}
-                        onClick={() => startCheckout(offer.id, 'pix')}
-                      >
-                        {offer.id === 'unlimited'
-                          ? t('settings.payPixThirtyDays')
-                          : t('settings.payPix')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        disabled={!emailVerified || checkoutPending || checkoutBlocked}
-                        loading={pending}
-                        onClick={() => startCheckout(offer.id, 'card')}
-                      >
-                        {offer.id === 'unlimited'
-                          ? t('settings.payRecurringCredit')
-                          : t('settings.payCreditOrDebit')}
-                      </Button>
-                    </div>
-                  </div>
-                );
+            {/* A API ainda não expõe o consumo por período; sem dado real, não há gráfico. */}
+            <p className="mt-6 text-sm leading-relaxed text-[color:var(--ink-secondary)]">
+              {t('settings.usageUnavailable', {
+                defaultValue: 'O histórico de consumo por período ainda não está disponível nesta conta.',
               })}
-            </div>
-          ) : (
-            <p className="text-sm text-[color:var(--ink-muted)]">{t('settings.orgReadOnly')}</p>
-          )}
-
-          {manage && !emailVerified ? (
-            <p className="text-xs text-[color:var(--ink-muted)]">
-              {t('settings.billingEmailHint')}
             </p>
-          ) : null}
+          </div>
+        </section>
+      </div>
 
-          {manage ? <BillingProfileForm /> : null}
+      {/* Bottom row: Packages (2.000, 5.000, Ilimitado) */}
+      {!roleReady ? (
+        <Skeleton className="h-64 rounded-panel" />
+      ) : manage ? (
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Package 1: 2.000 */}
+          <section className="rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-6 sm:p-7 shadow-card flex flex-col justify-between transition-all duration-200 hover:shadow-card-hover">
+            <div>
+              <p className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-[color:var(--ink)] leading-none">
+                2.000
+              </p>
+              <p className="mt-1 text-sm text-[color:var(--ink-secondary)]">
+                créditos
+              </p>
 
-          {manage ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {billing.data?.canCancelSubscription ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!emailVerified || cancelSub.isPending}
-                  onClick={() => setConfirmCancel(true)}
+              <p className="mt-6 font-display text-2xl font-bold text-[color:var(--ink)]">
+                R$ 14,99
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--ink-secondary)]">
+                ≈ 142 buscas
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-full py-3 font-semibold"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                loading={checkoutPending && creditOffer === 'credits-2000'}
+                onClick={() => startCheckout('credits-2000', 'pix')}
+              >
+                Pagar com Pix
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)]"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                onClick={() => startCheckout('credits-2000', 'card')}
+              >
+                Cartão de crédito ou débito
+              </Button>
+            </div>
+          </section>
+
+          {/* Package 2: 5.000 (Melhor preço - Highlighted) */}
+          <section className="relative rounded-panel border-2 border-[color:var(--brand-blue)] bg-[color:var(--bg-surface)] p-6 sm:p-7 shadow-card flex flex-col justify-between transition-all duration-200 hover:shadow-card-hover">
+            <div>
+              <div className="mb-4">
+                <Badge
+                  tone="lima"
+                  className="bg-[#D4F56A] text-[#1E3A8A] font-bold text-xs uppercase px-3 py-1 rounded-full border-none shadow-sm"
                 >
-                  {t('settings.cancelSubscription')}
-                </Button>
-              ) : null}
+                  MELHOR PREÇO
+                </Badge>
+              </div>
+
+              <p className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-[color:var(--ink)] leading-none">
+                5.000
+              </p>
+              <p className="mt-1 text-sm text-[color:var(--ink-secondary)]">
+                créditos
+              </p>
+
+              <p className="mt-6 font-display text-2xl font-bold text-[color:var(--ink)]">
+                R$ 23,99
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--ink-secondary)]">
+                ≈ 357 buscas · melhor preço por crédito
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-2">
+              <Button
+                type="button"
+                className="w-full rounded-full py-3 font-semibold shadow-soft"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                loading={checkoutPending && creditOffer === 'credits-5000'}
+                onClick={() => startCheckout('credits-5000', 'pix')}
+              >
+                Pagar com Pix
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)]"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                onClick={() => startCheckout('credits-5000', 'card')}
+              >
+                Cartão de crédito ou débito
+              </Button>
+            </div>
+          </section>
+
+          {/* Package 3: Ilimitado (Only appears because it exists in the codebase) */}
+          <section className="rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-6 sm:p-7 shadow-card flex flex-col justify-between transition-all duration-200 hover:shadow-card-hover">
+            <div>
+              <p className="font-display text-4xl sm:text-5xl font-extrabold tracking-tight text-[color:var(--ink)] leading-none">
+                Ilimitado
+              </p>
+              <p className="mt-1 text-sm text-[color:var(--ink-secondary)]">
+                por mês
+              </p>
+
+              <p className="mt-6 font-display text-2xl font-bold text-[color:var(--ink)]">
+                Mensal
+              </p>
+              <p className="mt-1 text-xs text-[color:var(--ink-secondary)]">
+                Buscas sem limite. Preço na assinatura.
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-full py-3 font-semibold"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                loading={checkoutPending && creditOffer === 'unlimited'}
+                onClick={() => startCheckout('unlimited', 'pix')}
+              >
+                Assinar ilimitado
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)]"
+                disabled={!emailVerified || checkoutPending || checkoutBlocked}
+                onClick={() => startCheckout('unlimited', 'card')}
+              >
+                Cartão de crédito ou débito
+              </Button>
+            </div>
+          </section>
+        </div>
+      ) : (
+        <p className="text-sm text-[color:var(--ink-secondary)]">
+          {t('settings.orgReadOnly', { defaultValue: 'Apenas administradores podem gerenciar créditos.' })}
+        </p>
+      )}
+
+      {/* Subscription and billing profile management */}
+      {manage ? (
+        <div className="space-y-4 pt-4">
+          <BillingProfileForm />
+
+          {billing.data?.canCancelSubscription ? (
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                disabled={!emailVerified || cancelSub.isPending}
+                onClick={() => setConfirmCancel(true)}
+              >
+                Cancelar assinatura
+              </Button>
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      ) : null}
 
+      {/* Cancel subscription modal */}
       <Modal
         open={confirmCancel}
         onClose={() => setConfirmCancel(false)}
-        title={t('settings.cancelSubscriptionTitle')}
+        title="Cancelar assinatura?"
       >
-        <p className="text-sm text-[color:var(--ink-muted)]">
-          {t('settings.cancelSubscriptionBody')}
+        <p className="text-sm text-[color:var(--ink-secondary)]">
+          O cancelamento é imediato e você continuará com acesso aos créditos já adquiridos.
         </p>
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <div className="mt-6 flex justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => setConfirmCancel(false)}>
             {t('common.cancel')}
           </Button>
@@ -330,8 +409,36 @@ export function CreditsPage() {
             loading={cancelSub.isPending}
             onClick={() => cancelSub.mutate()}
           >
-            {t('settings.cancelSubscriptionConfirm')}
+            {t('settings.cancelSubscriptionConfirm', { defaultValue: 'Confirmar cancelamento' })}
           </Button>
+        </div>
+      </Modal>
+
+      {/* History modal */}
+      <Modal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        title="Histórico de créditos"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[color:var(--ink-secondary)] leading-relaxed">
+            Todas as compras confirmadas e créditos consumidos por buscas e relatórios.
+          </p>
+          <div className="rounded-xl border border-[color:var(--border-default)] p-4 bg-[color:var(--bg-subtle)] text-xs font-mono space-y-2">
+            <div className="flex justify-between">
+              <span>Saldo atual:</span>
+              <span className="font-bold">{balance} créditos</span>
+            </div>
+            <div className="flex justify-between text-slate-500">
+              <span>Buscas grátis usadas:</span>
+              <span>{searchesUsed} / {searchLimit}</span>
+            </div>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button type="button" onClick={() => setHistoryOpen(false)}>
+              Fechar
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>

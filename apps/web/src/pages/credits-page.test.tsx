@@ -67,6 +67,16 @@ describe('CreditsPage', () => {
     });
   });
 
+  it('does not invent a usage figure for the last 30 days', async () => {
+    renderWithProviders(<CreditsPage />, { initialEntries: ['/credits'] });
+
+    expect(await screen.findByText('Uso nos últimos 30 dias')).toBeInTheDocument();
+    expect(
+      screen.getByText('O histórico de consumo por período ainda não está disponível nesta conta.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/créditos usados/)).not.toBeInTheDocument();
+  });
+
   it('starts a PIX credit checkout directly', async () => {
     const user = userEvent.setup();
     createCreditCheckout.mockResolvedValue({
