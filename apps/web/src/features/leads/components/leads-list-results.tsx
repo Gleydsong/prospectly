@@ -201,7 +201,7 @@ export function LeadsListResults({
 
   return (
     <>
-      <ClientDenseList className="lg:[&_.client-dense-row]:h-16 lg:[&_.client-dense-row]:py-2 lg:[&_.client-dense-row__status]:flex-nowrap lg:[&_.client-dense-row__identity_.mt-1]:hidden">
+      <ClientDenseList className="lg:[&_.client-dense-row]:min-h-16 lg:[&_.client-dense-row]:py-2.5">
         {leads.map((lead) => (
           <li key={lead.id}>
             <LeadListDenseRow

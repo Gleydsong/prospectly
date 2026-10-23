@@ -719,10 +719,11 @@ html.light .surface-bento-accent {
 
   .client-dense-row {
     display: grid;
+    min-height: 4rem;
     align-items: center;
     column-gap: 0.75rem;
     row-gap: 0.4rem;
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1rem;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       'identity actions'
@@ -797,13 +798,16 @@ html.light .surface-bento-accent {
 
   @media (min-width: 1024px) {
     .client-dense-row {
+      min-height: 4rem;
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
       grid-template-areas: none;
       grid-template-columns:
         minmax(0, 1fr)
-        7.25rem
+        8.5rem
         10rem
         7.5rem
-        10rem
+        9rem
         2.75rem;
     }
 
@@ -811,10 +815,10 @@ html.light .surface-bento-accent {
       grid-template-columns:
         1.15rem
         minmax(0, 1fr)
-        7.25rem
+        8.5rem
         10rem
         7.5rem
-        10rem
+        9rem
         2.75rem;
     }
 
@@ -849,10 +853,10 @@ html.light .surface-bento-accent {
     .client-dense-row {
       grid-template-columns:
         minmax(0, 1fr)
-        7.5rem
+        9.5rem
         10.5rem
-        9.75rem
-        10.25rem
+        8.75rem
+        9.25rem
         2.75rem;
     }
 
@@ -860,10 +864,10 @@ html.light .surface-bento-accent {
       grid-template-columns:
         1.15rem
         minmax(0, 1fr)
-        7.5rem
+        9.5rem
         10.5rem
-        9.75rem
-        10.25rem
+        8.75rem
+        9.25rem
         2.75rem;
     }
   }

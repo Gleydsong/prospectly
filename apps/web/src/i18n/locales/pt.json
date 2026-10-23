@@ -1541,7 +1541,8 @@
   },
   "clientsMap": {
     "title": "Mapa de clientes",
-    "count": "{{count}} cliente com localização nesta área",
+    "count_zero": "0 clientes com localização nesta área",
+    "count_one": "{{count}} cliente com localização nesta área",
     "count_other": "{{count}} clientes com localização nesta área",
     "prospectArea": "Prospectar nesta área",
     "selectAreaHint": "Selecione um cliente ou filtre uma cidade",

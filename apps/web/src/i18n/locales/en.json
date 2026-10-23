@@ -1541,7 +1541,8 @@
   },
   "clientsMap": {
     "title": "Clients map",
-    "count": "{{count}} client with a location in this area",
+    "count_zero": "0 clients with a location in this area",
+    "count_one": "{{count}} client with a location in this area",
     "count_other": "{{count}} clients with a location in this area",
     "prospectArea": "Prospect in this area",
     "selectAreaHint": "Select a client or filter by city",
