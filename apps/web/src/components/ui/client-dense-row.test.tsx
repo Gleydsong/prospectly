@@ -2,7 +2,11 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Badge } from '@/components/ui/badge';
+import { LeadStatusBadge } from '@/components/ui/lead-status-badge';
+import { ScoreBadge } from '@/components/ui/score-badge';
 import { renderWithProviders } from '@/test/render';
+import { LeadStatus } from '@/types';
 
 import { ClientDenseRow } from './client-dense-row';
 
@@ -115,7 +119,47 @@ describe('ClientDenseRow', () => {
     expect(container.querySelector('[data-slot="phone"]')?.textContent).toMatch(/—/);
     expect(container.querySelector('[data-slot="channel"]')?.textContent).toMatch(/—/);
     expect(container.querySelector('[data-slot="menu"]')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Mais ações|More actions/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /Mais ações|More actions/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar para CRM' })).toBeInTheDocument();
+  });
+
+  it('renders a row with all badges and tags (status, score, sem site, tags) without layout collision', () => {
+    renderWithProviders(
+      <ClientDenseRow
+        name="Padaria Forno Antigo"
+        subtitle="Padaria · Porto Alegre · RS"
+        phone="(51) 99876-5432"
+        email="contato@fornoantigo.com.br"
+        channel="whatsapp"
+        whatsappHref="https://wa.me/5551998765432"
+        status={<LeadStatusBadge status={LeadStatus.QUALIFIED} />}
+        extraBadges={
+          <>
+            <ScoreBadge score={85} />
+            <Badge tone="mint" title="Sem website">
+              sem site
+            </Badge>
+          </>
+        }
+        tags={[
+          { id: 't1', label: 'prioridade' },
+          { id: 't2', label: 'site-antigo' },
+          { id: 't3', label: 'lento' },
+        ]}
+        primaryAction={{ label: 'Abrir', onClick: vi.fn() }}
+      />,
+      { withGoogle: false },
+    );
+
+    expect(screen.getByText('Padaria Forno Antigo')).toBeInTheDocument();
+    expect(screen.getByText('Qualificado')).toBeInTheDocument();
+    expect(screen.getByText('85 pts')).toBeInTheDocument();
+    expect(screen.getByText('sem site')).toBeInTheDocument();
+    expect(screen.getByText('prioridade')).toBeInTheDocument();
+    expect(screen.getByText('site-antigo')).toBeInTheDocument();
+    expect(screen.getByText('lento')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Abrir' })).toBeInTheDocument();
   });
 });
