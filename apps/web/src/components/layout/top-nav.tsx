@@ -37,12 +37,12 @@ export function TopNav({
   }, [navigate]);
 
   return (
-    <header className="sticky top-0 z-30 h-14 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)]">
-      <div className="flex h-full items-center gap-2 px-3 lg:px-5">
+    <header className="sticky top-0 z-30 h-16 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface)] backdrop-blur-md">
+      <div className="flex h-full items-center gap-3 px-4 lg:px-6">
         {showNavToggle ? (
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)]"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)] transition-colors"
             onClick={onOpenNav}
             aria-label={isDesktop ? t('nav.showSidebar') : t('nav.openMenu')}
             title={isDesktop ? t('nav.showSidebar') : t('nav.openMenu')}
@@ -59,7 +59,7 @@ export function TopNav({
 
         <Link
           to="/prospectar"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] sm:hidden"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] sm:hidden transition-colors"
           aria-label={t('nav.searchClients')}
         >
           <Search className="h-4 w-4" />
@@ -67,7 +67,7 @@ export function TopNav({
 
         <Link
           to="/prospectar"
-          className="group relative hidden h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] px-3 text-sm text-[color:var(--ink)] transition-colors hover:border-[color:var(--border-strong)] focus:bg-[color:var(--bg-surface)] focus:outline-none sm:inline-flex sm:max-w-xs lg:max-w-sm"
+          className="group relative hidden h-10 min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] px-4 text-sm text-[color:var(--ink)] transition-all hover:border-[color:var(--border-strong)] focus:bg-[color:var(--bg-surface)] focus:outline-none sm:inline-flex sm:max-w-xs lg:max-w-sm"
           aria-label={t('nav.searchClients')}
         >
           <Search
@@ -75,16 +75,15 @@ export function TopNav({
             aria-hidden
           />
           <span className="truncate text-sm font-normal text-[color:var(--ink-muted)]">
-            {t('nav.globalSearch', { defaultValue: 'Busca global...' })}
+            {t('nav.globalSearch')}
           </span>
-          <kbd className="ml-auto pointer-events-none hidden items-center rounded border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--ink-muted)] md:inline-flex">
-            ⌘K
-          </kbd>
         </Link>
 
         <div className="flex-1" />
 
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
