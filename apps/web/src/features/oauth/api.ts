@@ -17,11 +17,13 @@ export type OauthConsentInput = {
   decision: 'allow' | 'deny';
 };
 
-export async function fetchAuthorizableOrgs(): Promise<Array<{ id: string; name: string }>> {
+export async function fetchAuthorizableOrgs(): Promise<
+  Array<{ id: string; name: string; role: OauthMembership['role'] }>
+> {
   const { data } = await api.get<{ memberships?: OauthMembership[] }>('/users/me');
   return (data.memberships ?? [])
     .filter((item) => item.role === 'OWNER' || item.role === 'ADMIN')
-    .map((item) => ({ id: item.organization.id, name: item.organization.name }));
+    .map((item) => ({ id: item.organization.id, name: item.organization.name, role: item.role }));
 }
 
 export async function submitOauthConsent(input: OauthConsentInput): Promise<{ redirect: string }> {

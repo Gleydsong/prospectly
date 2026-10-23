@@ -46,35 +46,51 @@ export function ForgotPasswordPage() {
     <AuthShell
       title={t('auth.forgotTitle')}
       subtitle={t('auth.forgotSubtitle')}
+      panelTitle={t('auth.panelTitleForgot')}
+      panelEyebrow={t('auth.panelEyebrow')}
+      panelDescription={t('auth.panelDescription')}
+      leftSphereVariant="sinal"
+      rightSphereVariant="lima"
       footer={
-        <>
-          <Link to="/login" className="font-medium text-brand-400 hover:text-brand-300">
-            {t('auth.backToLogin')}
-          </Link>
-        </>
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1.5 font-medium link-brand hover:underline"
+        >
+          <span>←</span>
+          <span>{t('auth.loginBack')}</span>
+        </Link>
       }
     >
       {sent ? (
-        <p className="rounded-control bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-300" role="status">
           {t('auth.forgotSuccess')}
-        </p>
+        </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <Input
             label={t('auth.email')}
             type="email"
             autoComplete="email"
+            placeholder={t('auth.placeholderEmail')}
             error={errors.email?.message}
             {...register('email')}
           />
 
           {serverError ? (
-            <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+            <p
+              className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]"
+              role="alert"
+            >
               {serverError}
             </p>
           ) : null}
 
-          <Button type="submit" className="w-full" loading={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary-tinta"
+            className="w-full text-base font-semibold shadow-lg"
+            loading={isSubmitting}
+          >
             {t('auth.forgotSubmit')}
           </Button>
         </form>

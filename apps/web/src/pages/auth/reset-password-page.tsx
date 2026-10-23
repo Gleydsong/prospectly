@@ -40,8 +40,25 @@ export function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ResetForm>({ resolver: zodResolver(schema) });
+
+  const newPasswordValue = watch('newPassword') || '';
+
+  const passwordStrength = useMemo(() => {
+    if (!newPasswordValue) return { score: 0, label: '', percent: 0 };
+    let score = 0;
+    if (newPasswordValue.length >= 8) score++;
+    if (newPasswordValue.length >= 10) score++;
+    if (/[A-Z]/.test(newPasswordValue) && /[a-z]/.test(newPasswordValue)) score++;
+    if (/\d/.test(newPasswordValue)) score++;
+    if (/[^A-Za-z0-9]/.test(newPasswordValue)) score++;
+
+    if (score >= 4) return { score: 3, label: t('auth.passwordStrong'), percent: 100 };
+    if (score >= 2) return { score: 2, label: t('auth.passwordMedium'), percent: 65 };
+    return { score: 1, label: t('auth.passwordWeak'), percent: 35 };
+  }, [newPasswordValue, t]);
 
   const onSubmit = async (values: ResetForm) => {
     setServerError(null);
@@ -57,26 +74,33 @@ export function ResetPasswordPage() {
     <AuthShell
       title={t('auth.resetTitle')}
       subtitle={t('auth.resetSubtitle')}
+      panelTitle={t('auth.panelTitleReset')}
+      panelEyebrow={t('auth.panelEyebrow')}
+      panelDescription={t('auth.panelDescription')}
+      leftSphereVariant="sinal"
+      rightSphereVariant="lima"
       footer={
-        <>
-          <Link to="/login" className="font-medium text-brand-400 hover:text-brand-300">
-            {t('auth.backToLogin')}
-          </Link>
-        </>
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1.5 font-medium link-brand hover:underline"
+        >
+          <span>←</span>
+          <span>{t('auth.loginBack')}</span>
+        </Link>
       }
     >
       {!token ? (
-        <p className="text-sm text-red-300" role="alert">
+        <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]" role="alert">
           {t('auth.resetMissingToken')}
         </p>
       ) : status === 'ok' ? (
         <div className="space-y-4 text-sm">
-          <p className="rounded-control bg-emerald-500/10 p-3 text-emerald-300" role="status">
+          <p className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-300" role="status">
             {t('auth.resetSuccess')}
           </p>
           <Link
             to="/login"
-            className="cta-glass inline-flex h-10 items-center justify-center rounded-control px-4 text-sm font-medium"
+            className="cta-primary-tinta inline-flex h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold shadow-md"
           >
             {t('auth.backToLogin')}
           </Link>
@@ -87,6 +111,7 @@ export function ResetPasswordPage() {
             label={t('auth.newPassword')}
             type="password"
             autoComplete="new-password"
+            placeholder="••••••••••"
             error={errors.newPassword?.message}
             {...register('newPassword')}
           />
@@ -94,17 +119,37 @@ export function ResetPasswordPage() {
             label={t('auth.confirmPassword')}
             type="password"
             autoComplete="new-password"
+            placeholder="••••••••••"
             error={errors.confirmPassword?.message}
             {...register('confirmPassword')}
           />
 
+          {newPasswordValue ? (
+            <div className="space-y-1.5 pt-1">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--bg-subtle)] border border-[color:var(--border-default)]">
+                <div
+                  className="h-full bg-[color:var(--brand)] transition-all duration-300"
+                  style={{ width: `${passwordStrength.percent}%` }}
+                />
+              </div>
+              <span className="font-mono text-xs text-[color:var(--brand)]">
+                {passwordStrength.label}
+              </span>
+            </div>
+          ) : null}
+
           {serverError ? (
-            <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+            <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]" role="alert">
               {serverError}
             </p>
           ) : null}
 
-          <Button type="submit" className="w-full" loading={isSubmitting}>
+          <Button
+            type="submit"
+            variant="primary-tinta"
+            className="w-full text-base font-semibold shadow-lg"
+            loading={isSubmitting}
+          >
             {t('auth.resetSubmit')}
           </Button>
         </form>

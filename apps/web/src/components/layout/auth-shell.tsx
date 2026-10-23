@@ -1,37 +1,51 @@
-import { Filter, Lock, MapPinned, Search, ShieldCheck } from 'lucide-react';
+import { Lock, Search, ShieldCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { MonoLabel } from '@/components/ui/mono-label';
+import { PageHeader } from '@/components/ui/page-header';
+import { SignalRing } from '@/components/ui/signal-ring';
+import { GlossSphere, type GlossSphereVariant } from '@/components/ui/gloss-sphere';
 import { ThemeToggle } from '@/features/theme/theme-toggle';
-import prospectlyMark from '@/assets/prospectly-mark.png';
+import { cn } from '@/lib/utils';
 
-interface AuthShellProps {
+export interface AuthShellProps {
   title: string;
   subtitle: string;
+  panelTitle?: string;
+  panelEyebrow?: string;
+  panelDescription?: string;
+  leftSphereVariant?: GlossSphereVariant;
+  rightSphereVariant?: GlossSphereVariant;
   children: ReactNode;
   footer?: ReactNode;
+  className?: string;
+  contentClassName?: string;
 }
 
-export function AuthShell({ title, subtitle, children, footer }: AuthShellProps) {
+export function AuthShell({
+  title,
+  subtitle,
+  panelTitle,
+  panelEyebrow,
+  panelDescription,
+  leftSphereVariant = 'sinal',
+  rightSphereVariant = 'lima',
+  children,
+  footer,
+  className,
+  contentClassName,
+}: AuthShellProps) {
   const { t } = useTranslation();
 
-  const benefits = [
-    {
-      icon: Filter,
-      title: t('auth.benefit1Title'),
-      body: t('auth.benefit1Body'),
-    },
-    {
-      icon: MapPinned,
-      title: t('auth.benefit2Title'),
-      body: t('auth.benefit2Body'),
-    },
-    {
-      icon: Search,
-      title: t('auth.benefit3Title'),
-      body: t('auth.benefit3Body'),
-    },
-  ] as const;
+  const eyebrow = panelEyebrow ?? t('auth.panelEyebrow', 'PROSPECÇÃO LOCAL');
+  const mainTitle = panelTitle ?? t('auth.brandManifesto');
+  const mainDescription =
+    panelDescription ??
+    t(
+      'auth.panelDescription',
+      'Encontre empresas sem site, salve as melhores e organize o contato em um só lugar.',
+    );
 
   const trustItems = [
     { icon: Lock, label: t('auth.trustSsl') },
@@ -40,82 +54,123 @@ export function AuthShell({ title, subtitle, children, footer }: AuthShellProps)
   ] as const;
 
   return (
-    <div className="relative min-h-[100dvh] bg-[color:var(--bg-app)] lg:grid lg:grid-cols-2">
-      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+    <div className="relative min-h-[100dvh] bg-[color:var(--bg-app)] text-[color:var(--ink)] transition-colors duration-200">
+      {/* Botão de alternância de tema no canto superior direito */}
+      <div className="absolute right-4 top-4 z-30 sm:right-6 sm:top-6">
         <ThemeToggle />
       </div>
 
-      <aside className="auth-shell-panel relative overflow-hidden border-b border-[color:var(--border-default)] bg-[color:var(--bg-sidebar)] px-6 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:px-12 lg:py-14">
-        <div className="mx-auto flex h-full max-w-lg flex-col justify-center lg:mx-0">
-          <div className="flex items-center gap-1">
-            <span className="flex h-11 w-11 items-center justify-center rounded-control border border-[color:var(--border-default)] bg-[color:var(--brand-soft)] p-1.5">
-              <img src={prospectlyMark} alt="" aria-hidden className="h-full w-full object-contain" />
-            </span>
-            <p className="text-lg font-semibold tracking-tight text-[color:var(--ink)]">Prospectly</p>
-          </div>
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8">
+        <div className="grid flex-1 items-stretch gap-6 lg:grid-cols-12 lg:gap-10">
+          {/* Painel escuro à esquerda (Desktop: card com anel/esferas CSS; Mobile: cabeçalho compacto) */}
+          <aside
+            aria-label={t('auth.productPresentation')}
+            className={cn(
+              'relative flex flex-col justify-between overflow-hidden rounded-[24px] border border-[#1c2a42] bg-[#0b1220] p-6 text-white shadow-2xl sm:rounded-[28px] sm:p-8 lg:col-span-5 lg:min-h-[640px] lg:p-10 xl:col-span-5',
+            )}
+          >
+            {/* Topo: Marca */}
+            <div className="z-10 flex items-center gap-2.5">
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-base font-extrabold text-[#0b1220] shadow-sm"
+              >
+                P.
+              </span>
+              <span className="font-display text-lg font-bold tracking-tight text-white">
+                Prospectly
+              </span>
+            </div>
 
-          <h1 className="mt-8 max-w-[18ch] text-balance text-3xl font-semibold tracking-tight text-[color:var(--ink)] sm:text-4xl">
-            {t('auth.brandManifesto')}
-          </h1>
-          <p className="mt-4 max-w-[42ch] text-base leading-relaxed text-[color:var(--ink-secondary)]">
-            {t('auth.brandManifestoBody')}
-          </p>
-
-          <ul className="mt-8 hidden space-y-5 lg:block">
-            {benefits.map(({ icon: Icon, title: benefitTitle, body }) => (
-              <li key={benefitTitle} className="flex gap-3">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-[color:var(--border-default)] bg-[color:var(--brand-soft)] text-[color:var(--brand)]">
-                  <Icon className="h-4 w-4" aria-hidden />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-[color:var(--ink)]">{benefitTitle}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-[color:var(--ink-secondary)]">
-                    {body}
-                  </p>
+            {/* Mobile: Cabeçalho compacto com resumo do anel */}
+            <div
+              data-testid="auth-shell-mobile"
+              className="my-4 flex items-center justify-between gap-4 lg:hidden"
+            >
+              <div className="space-y-1">
+                <MonoLabel className="text-[#709ac0]">{eyebrow}</MonoLabel>
+                <p className="font-display text-base font-bold leading-snug text-white">
+                  {mainTitle}
+                </p>
+              </div>
+              <div className="relative shrink-0">
+                <SignalRing size={56} glow />
+                <div className="absolute -bottom-1 -left-1">
+                  <GlossSphere variant={leftSphereVariant} size={22} />
                 </div>
-              </li>
-            ))}
-          </ul>
+                <div className="absolute -right-1 -top-1">
+                  <GlossSphere variant={rightSphereVariant} size={16} />
+                </div>
+              </div>
+            </div>
 
-          <ul className="mt-6 grid gap-2 sm:grid-cols-3 lg:hidden">
-            {benefits.map(({ title: benefitTitle }) => (
-              <li
-                key={benefitTitle}
-                className="rounded-control border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs font-medium text-[color:var(--ink-secondary)]"
-              >
-                {benefitTitle}
-              </li>
-            ))}
-          </ul>
+            {/* Desktop: Composição 3D volumétrica central (CSS/SVG) */}
+            <div className="relative my-auto hidden items-center justify-center py-10 lg:flex">
+              <div className="relative inline-flex items-center justify-center select-none">
+                <SignalRing size={180} glow className="relative z-10 drop-shadow-2xl" />
+                {/* Esfera inferior esquerda */}
+                <div className="absolute -bottom-3 -left-5 z-20 transition-transform duration-300">
+                  <GlossSphere variant={leftSphereVariant} size={64} />
+                </div>
+                {/* Esfera superior direita */}
+                <div className="absolute -right-3 -top-3 z-20 transition-transform duration-300">
+                  <GlossSphere variant={rightSphereVariant} size={44} />
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop: Bloco de texto do painel escuro */}
+            <div
+              data-testid="auth-shell-desktop"
+              className="z-10 hidden space-y-3 lg:block"
+            >
+              <MonoLabel className="text-[#709ac0]">{eyebrow}</MonoLabel>
+              <h2 className="font-display text-2xl font-extrabold tracking-display text-white sm:text-3xl lg:text-[2rem] leading-tight">
+                {mainTitle}
+              </h2>
+              <p className="text-sm leading-relaxed text-[#b9d8ef]/80">
+                {mainDescription}
+              </p>
+            </div>
+          </aside>
+
+          {/* Área do formulário à direita */}
+          <main
+            className={cn(
+              'flex flex-col justify-center px-2 py-4 sm:px-6 lg:col-span-7 lg:px-10 xl:col-span-7',
+              className,
+            )}
+          >
+            <div className={cn('mx-auto w-full max-w-lg', contentClassName)}>
+              <PageHeader
+                title={title}
+                description={subtitle}
+                className="mb-6"
+              />
+
+              <div className="space-y-6">
+                {children}
+
+                {/* Sinais de confiança */}
+                <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[color:var(--border-default)] pt-5 text-xs text-[color:var(--ink-secondary)]">
+                  {trustItems.map(({ icon: Icon, label }) => (
+                    <li key={label} className="flex items-center gap-1.5 font-medium">
+                      <Icon className="h-3.5 w-3.5 text-[color:var(--brand)]" aria-hidden="true" />
+                      <span>{label}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {footer ? (
+                  <div className="text-center text-sm text-[color:var(--ink-secondary)]">
+                    {footer}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </main>
         </div>
-      </aside>
-
-      <main className="flex items-center justify-center bg-[color:var(--bg-app)] px-4 py-10 sm:px-8 lg:px-12 lg:py-14">
-        <div className="w-full max-w-md rounded-panel border border-[color:var(--border-default)] bg-[color:var(--bg-surface)] p-6 shadow-panel sm:p-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-[color:var(--ink)]">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[color:var(--ink-secondary)]">{subtitle}</p>
-          </div>
-
-          {children}
-
-          <ul className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border-default)] pt-6">
-            {trustItems.map(({ icon: Icon, label }) => (
-              <li
-                key={label}
-                className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--ink-secondary)]"
-              >
-                <Icon className="h-3.5 w-3.5 text-[color:var(--brand)]" aria-hidden />
-                {label}
-              </li>
-            ))}
-          </ul>
-
-          {footer ? (
-            <div className="mt-6 text-center text-sm text-[color:var(--ink-secondary)]">{footer}</div>
-          ) : null}
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

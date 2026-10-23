@@ -151,15 +151,20 @@ export function LoginPage() {
 
   return (
     <AuthShell
-      title={t('auth.loginTitle')}
+      title={t('auth.login')}
       subtitle={t('auth.loginSubtitle')}
+      panelTitle={t('auth.panelTitleLogin')}
+      panelEyebrow={t('auth.panelEyebrow')}
+      panelDescription={t('auth.panelDescription')}
+      leftSphereVariant="sinal"
+      rightSphereVariant="lima"
       footer={
-        <>
-          {t('auth.noAccount')}{' '}
-          <Link to={registerHref} className="font-medium link-brand">
+        <div className="flex items-center justify-center gap-2">
+          <span>{t('auth.noAccount')}</span>
+          <Link to={registerHref} className="font-semibold link-brand hover:underline">
             {t('auth.createAccount')}
           </Link>
-        </>
+        </div>
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -167,6 +172,7 @@ export function LoginPage() {
           label={t('auth.email')}
           type="email"
           autoComplete="email"
+          placeholder={t('auth.placeholderEmail')}
           error={errors.email?.message}
           {...register('email')}
         />
@@ -174,6 +180,7 @@ export function LoginPage() {
           label={t('auth.password')}
           type="password"
           autoComplete="current-password"
+          placeholder="••••••••••"
           error={errors.password?.message}
           {...register('password')}
         />
@@ -181,19 +188,22 @@ export function LoginPage() {
         <div className="flex justify-end">
           <Link
             to="/forgot-password"
-            className="text-sm font-medium link-brand"
+            className="text-xs font-medium text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)] transition-colors"
           >
             {t('auth.forgotLink')}
           </Link>
         </div>
 
         {serverError ? (
-          <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]" role="alert">
+          <p
+            className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]"
+            role="alert"
+          >
             {serverError}
           </p>
         ) : null}
 
-        <Button type="submit" className="w-full" loading={isSubmitting}>
+        <Button type="submit" variant="primary" className="w-full shadow-fab" loading={isSubmitting}>
           {t('auth.login')}
         </Button>
       </form>

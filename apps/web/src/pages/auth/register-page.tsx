@@ -19,9 +19,9 @@ import {
 import { GoogleSignInButton } from '@/features/auth/google-sign-in-button';
 import { billingAuthQuery } from '@/features/billing/auth-query';
 import { handleCheckoutResult } from '@/features/billing/handle-checkout';
-import { setAppLocale } from '@/i18n';
+import { getAppLocale, setAppLocale } from '@/i18n';
 import { getApiErrorCode, getApiErrorMessage, isApiTimeoutError } from '@/lib/api';
-import { detectBrowserLocale, type AppLocale } from '@/lib/locale';
+import type { AppLocale } from '@/lib/locale';
 import { useAuthStore } from '@/stores/auth.store';
 import {
   PROFESSIONAL_PERSONAS,
@@ -99,7 +99,7 @@ export function RegisterPage() {
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      locale: detectBrowserLocale(),
+      locale: getAppLocale(),
       defaultPersona: 'vendedor',
       personaOtherLabel: '',
       acceptTerms: false,
@@ -215,75 +215,100 @@ export function RegisterPage() {
             })
           : t('auth.registerSubtitle')
       }
+      panelTitle={t('auth.panelTitleRegister')}
+      panelEyebrow={t('auth.panelEyebrow')}
+      panelDescription={t('auth.panelDescription')}
+      leftSphereVariant="sinal"
+      rightSphereVariant="lima"
       footer={
-        <>
-          {t('auth.hasAccount')}{' '}
-          <Link
-            to={`/login${billingAuthQuery({ offer, plan })}`}
-            className="font-medium text-brand-400 hover:text-brand-300"
-          >
-            {t('auth.login')}
-          </Link>
-        </>
+        <div className="space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <span>{t('auth.hasAccount')}</span>
+            <Link
+              to={`/login${billingAuthQuery({ offer, plan })}`}
+              className="font-semibold link-brand hover:underline"
+            >
+              {t('auth.login')}
+            </Link>
+          </div>
+        </div>
       }
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <Input
-          label={t('auth.name')}
-          autoComplete="name"
-          error={errors.name?.message}
-          {...register('name')}
-        />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label={t('auth.name')}
+            autoComplete="name"
+            placeholder={t('auth.placeholderName')}
+            error={errors.name?.message}
+            {...register('name')}
+          />
+          <Input
+            label={t('auth.organization')}
+            placeholder={t('auth.placeholderOrg')}
+            error={errors.organizationName?.message}
+            {...register('organizationName')}
+          />
+        </div>
+
         <Input
           label={t('auth.email')}
           type="email"
           autoComplete="email"
+          placeholder={t('auth.placeholderEmail')}
           error={errors.email?.message}
           {...register('email')}
         />
-        <Input
-          label={t('auth.password')}
-          type="password"
-          autoComplete="new-password"
-          error={errors.password?.message}
-          {...register('password')}
-        />
-        <Input
-          label={t('auth.organization')}
-          error={errors.organizationName?.message}
-          {...register('organizationName')}
-        />
-        <Select
-          label={t('auth.language')}
-          value={locale}
-          error={errors.locale?.message}
-          onChange={(event) => {
-            const next = event.target.value as AppLocale;
-            setValue('locale', next, { shouldValidate: true });
-            void setAppLocale(next);
-          }}
-        >
-          <option value="pt">{t('auth.languagePt')}</option>
-          <option value="en">{t('auth.languageEn')}</option>
-        </Select>
-        <Select
-          label={t('persona.label')}
-          value={defaultPersona}
-          error={errors.defaultPersona?.message}
-          onChange={(event) => {
-            const next = event.target.value as ProfessionalPersona;
-            setValue('defaultPersona', next, { shouldValidate: true });
-            if (next !== 'outro') {
-              setValue('personaOtherLabel', '', { shouldValidate: true });
-            }
-          }}
-        >
-          {PROFESSIONAL_PERSONAS.map((value) => (
-            <option key={value} value={value}>
-              {t(`persona.${value}`)}
-            </option>
-          ))}
-        </Select>
+
+        <div>
+          <Input
+            label={t('auth.password')}
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••••"
+            error={errors.password?.message}
+            {...register('password')}
+          />
+          <p className="mt-1.5 text-xs text-[color:var(--ink-muted)]">
+            {t('auth.passwordHelper')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Select
+            label={t('auth.language')}
+            value={locale}
+            error={errors.locale?.message}
+            onChange={(event) => {
+              const next = event.target.value as AppLocale;
+              setValue('locale', next, { shouldValidate: true });
+              void setAppLocale(next);
+            }}
+          >
+            <option value="pt">{t('auth.languagePt')}</option>
+            <option value="en">{t('auth.languageEn')}</option>
+          </Select>
+
+          <Select
+            label={t('persona.label')}
+            value={defaultPersona}
+            error={errors.defaultPersona?.message}
+            onChange={(event) => {
+              const next = event.target.value as ProfessionalPersona;
+              setValue('defaultPersona', next, { shouldValidate: true });
+              if (next !== 'outro') {
+                setValue('personaOtherLabel', '', { shouldValidate: true });
+              }
+            }}
+          >
+            {PROFESSIONAL_PERSONAS.map((value) => (
+              <option key={value} value={value}>
+                {t(`persona.${value}`)}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         {defaultPersona === 'outro' ? (
           <Input
             label={t('persona.otherLabel')}
@@ -294,12 +319,56 @@ export function RegisterPage() {
           />
         ) : null}
 
-        <label className="flex items-start gap-2 text-sm text-zinc-300">
-          <input type="checkbox" className="mt-1" {...register('acceptTerms')} />
+        {/* Lista de benefícios do cadastro fiel a 03-acesso-criar-conta.png */}
+        <div className="my-5 space-y-3 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] p-4 text-xs">
+          <div className="flex items-start gap-2.5">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#d4f56a] font-bold text-[10px] text-[#0b1220]"
+            >
+              ✓
+            </span>
+            <div>
+              <p className="font-semibold text-[color:var(--ink)]">{t('auth.benefit1Title')}</p>
+              <p className="text-[color:var(--ink-secondary)]">{t('auth.benefit1Subtitle')}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#d4f56a] font-bold text-[10px] text-[#0b1220]"
+            >
+              ✓
+            </span>
+            <div>
+              <p className="font-semibold text-[color:var(--ink)]">{t('auth.benefit2Title')}</p>
+              <p className="text-[color:var(--ink-secondary)]">{t('auth.benefit2Subtitle')}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#d4f56a] font-bold text-[10px] text-[#0b1220]"
+            >
+              ✓
+            </span>
+            <div>
+              <p className="font-semibold text-[color:var(--ink)]">{t('auth.benefit3Title')}</p>
+              <p className="text-[color:var(--ink-secondary)]">{t('auth.benefit3Subtitle')}</p>
+            </div>
+          </div>
+        </div>
+
+        <label className="flex items-start gap-2.5 text-xs text-[color:var(--ink-secondary)]">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 rounded border-[color:var(--border-default)] text-[color:var(--brand)] focus:ring-[color:var(--ring)]"
+            {...register('acceptTerms')}
+          />
           <span>
             {t('auth.acceptTermsPrefix')}{' '}
             <a
-              className="font-medium text-brand-400 hover:text-brand-300"
+              className="font-medium underline hover:text-[color:var(--ink)]"
               href={`${LANDING_URL}/terms`}
               target="_blank"
               rel="noreferrer"
@@ -308,7 +377,7 @@ export function RegisterPage() {
             </a>{' '}
             {t('auth.acceptTermsAnd')}{' '}
             <a
-              className="font-medium text-brand-400 hover:text-brand-300"
+              className="font-medium underline hover:text-[color:var(--ink)]"
               href={`${LANDING_URL}/privacy`}
               target="_blank"
               rel="noreferrer"
@@ -319,18 +388,21 @@ export function RegisterPage() {
           </span>
         </label>
         {errors.acceptTerms?.message ? (
-          <p className="text-sm text-red-400">{errors.acceptTerms.message}</p>
+          <p className="text-xs text-[color:var(--status-danger-ink)]">{errors.acceptTerms.message}</p>
         ) : null}
 
         {serverError ? (
-          <p className="rounded-control bg-red-500/10 p-3 text-sm text-red-300" role="alert">
+          <p
+            className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-sm text-[color:var(--status-danger-ink)]"
+            role="alert"
+          >
             {serverError}
             {conflictEmail ? (
               <>
                 {' '}
                 <Link
                   to={conflictLoginHref}
-                  className="font-medium text-brand-400 hover:text-brand-300"
+                  className="font-semibold underline"
                 >
                   {t('auth.registerConflictLogin')}
                 </Link>
@@ -339,7 +411,12 @@ export function RegisterPage() {
           </p>
         ) : null}
 
-        <Button type="submit" className="w-full" loading={isSubmitting}>
+        <Button
+          type="submit"
+          variant="primary-tinta"
+          className="w-full text-base font-semibold shadow-lg"
+          loading={isSubmitting}
+        >
           {plan ? t('auth.createAndPay') : t('auth.createAccount')}
         </Button>
       </form>

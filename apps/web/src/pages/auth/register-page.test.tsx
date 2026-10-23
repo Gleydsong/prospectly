@@ -36,6 +36,22 @@ describe('RegisterPage', () => {
     vi.clearAllMocks();
   });
 
+  it('starts with the current interface language selected', async () => {
+    await i18n.changeLanguage('en');
+    try {
+      renderWithProviders(<RegisterPage />, { initialEntries: ['/register'] });
+      expect(screen.getByLabelText('Language')).toHaveValue('en');
+    } finally {
+      await i18n.changeLanguage('pt');
+    }
+  });
+
+  it('offers a single terms acceptance mechanism: the checkbox', () => {
+    renderWithProviders(<RegisterPage />, { initialEntries: ['/register'] });
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+    expect(screen.queryByText(/Ao criar a conta/)).not.toBeInTheDocument();
+  });
+
   it('translates rate limited responses', async () => {
     authApiMocks.register.mockRejectedValueOnce({
       isAxiosError: true,

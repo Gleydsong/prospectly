@@ -55,6 +55,14 @@ describe('VerifyEmailPage', () => {
     });
   });
 
+  it('keeps a way back to login', async () => {
+    renderPage();
+    expect(await screen.findByRole('link', { name: 'Ir para login' })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+  });
+
   it('requests a new verification email instead of reloading the page', async () => {
     const user = userEvent.setup();
     mocks.resendVerification.mockResolvedValue({ message: 'ok' });

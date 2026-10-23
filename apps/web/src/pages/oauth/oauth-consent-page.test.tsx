@@ -48,6 +48,23 @@ describe('OauthConsentPage', () => {
     });
   });
 
+  it('shows the real role of each authorizable organization', async () => {
+    mocks.fetchAuthorizableOrgs.mockResolvedValue([
+      { id: 'org-owner', name: 'Acme', role: 'OWNER' },
+      { id: 'org-admin', name: 'Beta', role: 'ADMIN' },
+    ]);
+    renderPage();
+    expect(await screen.findByText('Proprietária')).toBeInTheDocument();
+    expect(screen.getByText('Administrador')).toBeInTheDocument();
+  });
+
+  it('describes only the read-only scopes the MCP server exposes', async () => {
+    renderPage();
+    expect(await screen.findByText('Ler clientes, sem contatos nem notas')).toBeInTheDocument();
+    expect(screen.getByText('Não pode alterar nem apagar dados')).toBeInTheDocument();
+    expect(screen.queryByText(/etapas|histórico/)).not.toBeInTheDocument();
+  });
+
   it('lists only OWNER/ADMIN orgs returned by the API', async () => {
     renderPage();
     expect(await screen.findByRole('option', { name: 'Acme' })).toBeInTheDocument();
@@ -72,5 +89,20 @@ describe('OauthConsentPage', () => {
       'http://127.0.0.1:10000/cb?error=access_denied&state=xyz',
       'http://127.0.0.1:10000/cb',
     );
+  });
+
+  it('renders both client name and client_id when client_name is provided to prevent UI spoofing', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/oauth/consent" element={<OauthConsentPage />} />
+      </Routes>,
+      {
+        initialEntries: [
+          '/oauth/consent?client_id=cursor-client-id&client_name=Cursor&redirect_uri=http%3A%2F%2F127.0.0.1%3A10000%2Fcb&code_challenge=abc&code_challenge_method=S256&resource=http://127.0.0.1:3000/mcp&state=xyz',
+        ],
+        withGoogle: false,
+      },
+    );
+    expect(await screen.findByText('Cursor (cursor-client-id) · cliente MCP')).toBeInTheDocument();
   });
 });

@@ -1,17 +1,17 @@
-import { Mail } from 'lucide-react';
+import { AtSign } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { AuthShell } from '@/components/layout/auth-shell';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/features/theme/theme-toggle';
 import { resendVerification, verifyEmail } from '@/features/auth/api';
 import { getApiErrorMessage } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth.store';
 
 /**
- * Confirm email — layout Facilitey (card centrado + grelha), acento cinza.
+ * VerifyEmailPage — Tela de confirmação de e-mail fiel a 03-acesso-verificar-email.png.
  */
 export function VerifyEmailPage() {
   const { t } = useTranslation();
@@ -40,64 +40,98 @@ export function VerifyEmailPage() {
   }, [token]);
 
   return (
-    <div className="auth-confirm relative flex min-h-[100dvh] items-center justify-center px-4 py-12">
-      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
-        <ThemeToggle />
-      </div>
-
-      <div className="relative w-full max-w-md rounded-panel border border-[color:var(--border)] bg-[color:var(--surface-card)] p-8 shadow-panel backdrop-blur-xl sm:p-10">
-        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-control bg-[color:var(--status-success-bg)] text-[color:var(--status-success-ink)]">
-          <Mail className="h-5 w-5" aria-hidden />
-        </div>
-        <p className="text-center text-sm font-semibold text-[color:var(--status-success-ink)]">{t('auth.verifyEyebrow')}</p>
-        <h1 className="mt-2 text-center text-2xl font-bold tracking-tight text-[color:var(--ink)] sm:text-[1.75rem]">
-          {t('auth.verifyTitleCard')}
-        </h1>
-        <p className="mt-3 text-center text-sm leading-relaxed text-[color:var(--ink-muted)]">
-          {user?.email
-            ? t('auth.verifyBodyWithEmail', { email: user.email })
-            : t('auth.verifySubtitle')}
-        </p>
-
-        <div className="mt-8 space-y-3 text-center text-sm">
-          {!token ? (
-            <p className="text-[color:var(--ink-muted)]" role="alert">
-              {t('auth.verifyMissingToken')}
+    <AuthShell
+      title={t('auth.verifyTitleCard', 'Confira seu e-mail')}
+      subtitle={
+        user?.email
+          ? t('auth.verifyBodyWithEmail', { email: user.email })
+          : t('auth.verifySubtitle')
+      }
+      panelTitle={t('auth.panelTitleVerify')}
+      panelEyebrow={t('auth.panelEyebrow')}
+      panelDescription={t('auth.panelDescription')}
+      leftSphereVariant="lima"
+      rightSphereVariant="lima"
+      footer={
+        <Link
+          to="/login"
+          className="font-medium text-xs text-[color:var(--ink-secondary)] hover:text-[color:var(--ink)] underline transition-colors"
+        >
+          {t('auth.useOtherEmail')}
+        </Link>
+      }
+    >
+      <div className="space-y-6">
+        {/* Cartão de status do e-mail com ícone @ */}
+        <div className="flex items-center gap-4 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-subtle)] p-5 shadow-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[color:var(--brand)] text-white shadow-md">
+            <AtSign className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm text-[color:var(--ink)]">
+              {t('auth.emailSentCardTitle')}
             </p>
-          ) : status === 'ok' ? (
-            <p className="font-medium text-[color:var(--status-success-ink)]">{t('auth.verifySuccess')}</p>
-          ) : status === 'error' ? (
-            <p className="text-red-400" role="alert">
-              {getApiErrorMessage(mutation.error) || t('auth.verifyError')}
+            <p className="text-xs leading-relaxed text-[color:var(--ink-secondary)]">
+              {t('auth.emailSentCardSubtitle')}
             </p>
-          ) : (
-            <p className="text-[color:var(--ink-muted)]">{t('auth.verifyPending')}</p>
-          )}
+          </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-2">
+        {/* Mensagens de feedback da verificação */}
+        {!token ? (
+          <p className="rounded-control bg-[color:var(--bg-subtle)] p-3 text-xs text-[color:var(--ink-muted)] text-center" role="alert">
+            {t('auth.verifyMissingToken')}
+          </p>
+        ) : status === 'ok' ? (
+          <div className="rounded-control bg-emerald-500/10 p-3 text-center text-sm font-medium text-emerald-400" role="status">
+            {t('auth.verifySuccess')}
+          </div>
+        ) : status === 'error' ? (
+          <p className="rounded-control bg-[color:var(--status-danger-bg)] p-3 text-center text-xs text-[color:var(--status-danger-ink)]" role="alert">
+            {getApiErrorMessage(mutation.error) || t('auth.verifyError')}
+          </p>
+        ) : (
+          <p className="text-center text-xs text-[color:var(--ink-muted)]">
+            {t('auth.verifyPending')}
+          </p>
+        )}
+
+        {resend.isError ? (
+          <p className="rounded-control bg-[color:var(--status-danger-bg)] p-2.5 text-center text-xs text-[color:var(--status-danger-ink)]" role="alert">
+            {getApiErrorMessage(resend.error)}
+          </p>
+        ) : null}
+
+        {/* Ações */}
+        <div className="space-y-3">
           <Button
-            className="w-full"
-            size="lg"
+            type="button"
+            variant="secondary-outline"
+            className="w-full text-sm font-semibold"
             loading={resend.isPending}
             disabled={resend.isPending}
             onClick={() => resend.mutate()}
           >
             {resend.isSuccess ? t('auth.verifyResent') : t('auth.resendLink')}
           </Button>
-          {resend.isError ? (
-            <p className="text-center text-xs text-red-400" role="alert">
-              {getApiErrorMessage(resend.error)}
-            </p>
+
+          {status === 'ok' ? (
+            <Link
+              to="/"
+              className="cta-primary-tinta inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-semibold shadow-md"
+            >
+              {t('auth.verifyGoApp', 'Ir para o aplicativo')}
+            </Link>
           ) : null}
+
           <Link
             to="/login"
-            className="inline-flex h-11 w-full items-center justify-center rounded-control border border-[color:var(--border)] text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--surface-hover)]"
+            className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[color:var(--border-default)] text-sm font-semibold text-[color:var(--ink)] hover:bg-[color:var(--bg-subtle)]"
           >
             {t('auth.goToLogin')}
           </Link>
         </div>
       </div>
-    </div>
+    </AuthShell>
   );
 }
