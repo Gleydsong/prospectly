@@ -1,10 +1,16 @@
-@import '@fontsource/outfit/latin-400.css';
-@import '@fontsource/outfit/latin-500.css';
-@import '@fontsource/outfit/latin-600.css';
-@import '@fontsource/outfit/latin-700.css';
-@import '@fontsource/jetbrains-mono/latin-400.css';
-@import '@fontsource/jetbrains-mono/latin-500.css';
-@import '@fontsource/jetbrains-mono/latin-600.css';
+@import '@fontsource/inter-tight/latin-400.css';
+@import '@fontsource/inter-tight/latin-500.css';
+@import '@fontsource/inter-tight/latin-600.css';
+@import '@fontsource/inter-tight/latin-700.css';
+@import '@fontsource/inter-tight/latin-800.css';
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+@import '@fontsource/inter/latin-800.css';
+@import '@fontsource/geist-mono/latin-400.css';
+@import '@fontsource/geist-mono/latin-500.css';
+@import '@fontsource/geist-mono/latin-600.css';
 
 @tailwind base;
 @tailwind components;
@@ -13,56 +19,56 @@
 :root,
 html.dark {
   color-scheme: dark;
-  /* Azul-noite (dark) — RGB channels for Tailwind alpha support */
+  /* Dark derivado de Tinta (#0B1220) e Sinal */
   --zinc-50: 248 250 252;
   --zinc-100: 241 245 249;
   --zinc-200: 226 232 240;
   --zinc-300: 203 213 225;
-  --zinc-400: 182 196 217;
-  --zinc-500: 182 196 217;
+  --zinc-400: 185 216 239;
+  --zinc-500: 112 154 192;
   --zinc-600: 71 85 105;
-  --zinc-700: 49 67 93;
-  --zinc-800: 33 49 73;
-  --zinc-900: 23 34 55;
-  --zinc-950: 15 23 42;
+  --zinc-700: 38 53 65;
+  --zinc-800: 20 31 50;
+  --zinc-900: 14 23 38;
+  --zinc-950: 11 18 32;
 
-  --bg-app: #0f172a;
-  --bg-sidebar: #172237;
-  --bg-surface: #172237;
-  --bg-subtle: #213149;
-  --bg-nav-active: #1e3a67;
+  --bg-app: #0b1220;
+  --bg-sidebar: #0e1726;
+  --bg-surface: #141f32;
+  --bg-subtle: #1c2a42;
+  --bg-nav-active: #233552;
   --ink: #f8fafc;
-  --ink-secondary: #b6c4d9;
-  --ink-muted: #b6c4d9;
+  --ink-secondary: #b9d8ef;
+  --ink-muted: #709ac0;
   --brand: #2563eb;
-  --brand-hover: #1d4ed8;
-  --brand-soft: #1e3a67;
-  --brand-well: #213149;
+  --brand-hover: #4c8dff;
+  --brand-soft: #1c2a42;
+  --brand-well: #141f32;
   --brand-on: #ffffff;
-  --border-default: #31435d;
-  --border-strong: #475569;
-  --shadow-rest: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-fab: 0 8px 20px -8px rgb(37 99 235 / 0.45);
+  --border-default: #263541;
+  --border-strong: #3b5066;
+  --shadow-rest: 0 2px 8px -2px rgb(0 0 0 / 0.5), 0 8px 24px -4px rgb(0 0 0 / 0.4);
+  --shadow-fab: 0 8px 20px -8px rgb(76 141 255 / 0.45);
 
-  --kanban-prospecting-header: #1d4ed8;
-  --kanban-prospecting-well: #213149;
+  --kanban-prospecting-header: #2563eb;
+  --kanban-prospecting-well: #1c2a42;
   --kanban-prospecting-ink: #ffffff;
   --kanban-contact-header: #c4922e;
   --kanban-contact-well: #2a261c;
-  --kanban-contact-ink: #0f172a;
+  --kanban-contact-ink: #0b1220;
   --kanban-closed-header: #3d8f7d;
   --kanban-closed-well: #1c2626;
   --kanban-closed-ink: #ffffff;
   --kanban-neutral-header: #6b7580;
-  --kanban-neutral-well: #1a1d22;
+  --kanban-neutral-well: #172133;
   --kanban-neutral-ink: #ffffff;
 
   --bg: var(--bg-app);
   --bg-raised: var(--bg-surface);
   --bg-sunken: var(--bg-subtle);
-  --accent: #93bfff;
-  --accent-hover: #bfdbfe;
-  --ring: rgb(37 99 235 / 0.45);
+  --accent: #4c8dff;
+  --accent-hover: #b9d8ef;
+  --ring: rgb(76 141 255 / 0.45);
   --border: var(--border-default);
   --cta-secondary-bg: rgb(255 255 255 / 0.04);
   --cta-secondary-border: var(--border-default);
@@ -90,10 +96,10 @@ html.dark {
   --chrome-sidebar: var(--bg-sidebar);
   --chrome-overlay: rgb(9 10 12 / 0.64);
   --surface-card: var(--bg-surface);
-  --surface-hover: #213149;
+  --surface-hover: #1c2a42;
   --surface-subtle: var(--bg-subtle);
   --surface-muted: var(--bg-subtle);
-  --status-neutral-bg: #2a3038;
+  --status-neutral-bg: #263541;
   --status-neutral-ink: #d1d5db;
   --status-success-bg: #1f3a2e;
   --status-success-ink: #8fd5ab;
@@ -111,58 +117,58 @@ html.dark {
   --status-teal-ink: #7dcebb;
 }
 
-/* Dia — superfícies claras e ações cobalto. */
+/* Dia — Tema claro: papel #F3F5F7, Tinta #0B1220, Linha #DCE3EA */
 html.light {
   color-scheme: light;
-  --zinc-50: 26 29 38;
-  --zinc-100: 39 44 54;
-  --zinc-200: 91 100 114;
-  --zinc-300: 91 100 114;
-  --zinc-400: 139 147 160;
-  --zinc-500: 91 100 114;
-  --zinc-600: 213 215 220;
-  --zinc-700: 232 234 237;
-  --zinc-800: 243 245 244;
-  --zinc-900: 252 252 252;
-  --zinc-950: 253 253 253;
+  --zinc-50: 11 18 32;
+  --zinc-100: 38 53 65;
+  --zinc-200: 71 85 105;
+  --zinc-300: 100 116 139;
+  --zinc-400: 148 163 184;
+  --zinc-500: 100 116 139;
+  --zinc-600: 220 227 234;
+  --zinc-700: 243 245 247;
+  --zinc-800: 255 255 255;
+  --zinc-900: 255 255 255;
+  --zinc-950: 255 255 255;
 
-  --bg-app: #f4f6fb;
+  --bg-app: #f3f5f7;
   --bg-sidebar: #ffffff;
   --bg-surface: #ffffff;
-  --bg-subtle: #eef2f8;
-  --bg-nav-active: #e6efff;
-  --ink: #0f172a;
-  --ink-secondary: #475569;
-  --ink-muted: #475569;
+  --bg-subtle: #f8fafc;
+  --bg-nav-active: #0b1220;
+  --ink: #0b1220;
+  --ink-secondary: #263541;
+  --ink-muted: #64748b;
   --brand: #2563eb;
   --brand-hover: #1d4ed8;
-  --brand-soft: #e6efff;
-  --brand-well: #e6efff;
+  --brand-soft: #b9d8ef;
+  --brand-well: #eef4f9;
   --brand-on: #ffffff;
-  --border-default: #dce3ee;
-  --border-strong: #b6c4d9;
-  --shadow-rest: 0 1px 2px rgb(16 24 40 / 0.06);
+  --border-default: #dce3ea;
+  --border-strong: #709ac0;
+  --shadow-rest: 0 2px 8px -2px rgb(11 18 32 / 0.05), 0 8px 24px -4px rgb(11 18 32 / 0.08);
   --shadow-fab: 0 8px 20px -8px rgb(37 99 235 / 0.4);
 
-  --kanban-prospecting-header: #1d4ed8;
-  --kanban-prospecting-well: #e6efff;
+  --kanban-prospecting-header: #2563eb;
+  --kanban-prospecting-well: #eef4f9;
   --kanban-prospecting-ink: #ffffff;
   --kanban-contact-header: #f0b452;
   --kanban-contact-well: #f7f2ea;
-  --kanban-contact-ink: #0f172a;
+  --kanban-contact-ink: #0b1220;
   --kanban-closed-header: #3d8f7d;
   --kanban-closed-well: #edf2f5;
   --kanban-closed-ink: #ffffff;
   --kanban-neutral-header: #6b7580;
-  --kanban-neutral-well: #f4f6fb;
+  --kanban-neutral-well: #f3f5f7;
   --kanban-neutral-ink: #ffffff;
 
   --bg: var(--bg-app);
   --bg-raised: var(--bg-surface);
   --bg-sunken: var(--bg-subtle);
-  --accent: #1d4ed8;
-  --accent-hover: var(--brand-hover);
-  --ring: rgb(37 99 235 / 0.35);
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --ring: rgb(76 141 255 / 0.45);
   --border: var(--border-default);
   --cta-secondary-bg: var(--bg-surface);
   --cta-secondary-border: var(--border-default);
@@ -183,23 +189,23 @@ html.light {
 
   --chrome-bg: var(--bg-surface);
   --chrome-sidebar: var(--bg-sidebar);
-  --chrome-overlay: rgb(16 24 40 / 0.28);
+  --chrome-overlay: rgb(11 18 32 / 0.28);
   --surface-card: var(--bg-surface);
-  --surface-hover: #eef2f8;
+  --surface-hover: #f3f5f7;
   --surface-subtle: var(--bg-subtle);
   --surface-muted: var(--bg-subtle);
-  --status-neutral-bg: var(--kanban-neutral-well);
-  --status-neutral-ink: #475569;
+  --status-neutral-bg: #eef2f6;
+  --status-neutral-ink: #263541;
   --status-success-bg: #d8f0e0;
   --status-success-ink: #1f7a4a;
   --status-warning-bg: var(--kanban-contact-well);
   --status-warning-ink: #8a5a12;
   --status-danger-bg: #fff0f0;
   --status-danger-ink: #b42318;
-  --status-info-bg: var(--brand-soft);
-  --status-info-ink: var(--brand-hover);
-  --status-purple-bg: var(--brand-soft);
-  --status-purple-ink: var(--brand-hover);
+  --status-info-bg: #e0f0fe;
+  --status-info-ink: #1d4ed8;
+  --status-purple-bg: #f3e8ff;
+  --status-purple-ink: #7e22ce;
   --status-mint-bg: #d8f0e0;
   --status-mint-ink: #1f7a4a;
   --status-teal-bg: var(--kanban-closed-well);
@@ -323,6 +329,47 @@ html.light {
   .theme-toggle-ios:hover {
     background: var(--bg-nav-active);
     color: var(--ink);
+  }
+
+  .vidro-fosco {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+  }
+
+  html.dark .vidro-fosco {
+    background: rgba(11, 18, 32, 0.45);
+    border: 1px solid rgba(185, 216, 239, 0.15);
+  }
+
+  .mono-label {
+    font-family: var(--font-mono, 'Geist Mono', ui-monospace, monospace);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .cta-primary-tinta {
+    background: #0b1220;
+    color: #ffffff;
+    box-shadow: var(--shadow-rest);
+    border: 1px solid transparent;
+  }
+
+  .cta-primary-tinta:hover {
+    background: #182538;
+  }
+
+  html.dark .cta-primary-tinta {
+    background: #f8fafc;
+    color: #0b1220;
+  }
+
+  html.dark .cta-primary-tinta:hover {
+    background: #e2e8f0;
   }
 
   .cta-primary {

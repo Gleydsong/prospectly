@@ -6,18 +6,28 @@ export default {
   theme: {
     extend: {
       colors: {
+        tinta: '#0B1220',
+        grafite: '#263541',
+        eletrico: '#4C8DFF',
+        sinal: {
+          DEFAULT: '#B9D8EF',
+          profundo: '#709AC0',
+        },
+        lima: '#D4F56A',
+        papel: '#F3F5F7',
+        linha: '#DCE3EA',
         brand: {
           50: '#eff6ff',
           100: '#dbeafe',
           200: '#bfdbfe',
-          300: '#93bfff',
-          400: '#60a5fa',
+          300: '#b9d8ef',
+          400: '#4c8dff',
           500: '#2563eb',
           600: '#1d4ed8',
           700: '#1e40af',
           800: '#1e3a8a',
           900: '#172554',
-          950: '#0f172a',
+          950: '#0b1220',
         },
         zinc: {
           50: 'rgb(var(--zinc-50) / <alpha-value>)',
@@ -34,25 +44,32 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Outfit', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Inter Tight"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
+      },
+      letterSpacing: {
+        display: '-0.04em',
+        title: '-0.02em',
+        'mono-label': '0.12em',
       },
       borderRadius: {
-        control: '10px',
-        card: '16px',
-        panel: '16px',
-        bento: '16px',
+        control: '12px',
+        card: '20px',
+        panel: '28px',
+        bento: '20px',
       },
       boxShadow: {
-        soft: 'var(--shadow-rest)',
-        panel: 'var(--shadow-rest)',
-        elevated: 'var(--shadow-rest)',
-        fab: 'var(--shadow-fab)',
-        'panel-light': 'var(--shadow-rest)',
+        soft: '0 2px 8px -2px rgb(11 18 32 / 0.05), 0 8px 24px -4px rgb(11 18 32 / 0.08)',
+        panel: '0 2px 8px -2px rgb(11 18 32 / 0.05), 0 8px 24px -4px rgb(11 18 32 / 0.08)',
+        elevated: '0 4px 16px -4px rgb(11 18 32 / 0.08), 0 16px 32px -8px rgb(11 18 32 / 0.12)',
+        fab: '0 8px 20px -8px rgb(37 99 235 / 0.4)',
+        'panel-light': '0 2px 8px -2px rgb(11 18 32 / 0.05), 0 8px 24px -4px rgb(11 18 32 / 0.08)',
+        'glow-eletrico': '0 0 24px -4px rgba(76, 141, 255, 0.45)',
       },
       spacing: {
         4.5: '1.125rem',
-        sidebar: '13.75rem',
+        sidebar: '15rem',
       },
       keyframes: {
         'fade-rise': {

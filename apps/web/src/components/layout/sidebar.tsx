@@ -1,13 +1,14 @@
 import { PanelLeftClose, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
+import { SignalRing } from '@/components/ui/signal-ring';
+import { useBillingStatus } from '@/features/billing/hooks';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
-import prospectlyMark from '@/assets/prospectly-mark.png';
-import { TOP_NAV_ITEMS } from './nav-items';
 import { AccountMenu } from './account-menu';
+import { TOOLS_NAV_ITEMS, WORKSPACE_NAV_ITEMS } from './nav-items';
 import { TodaySummary } from './today-summary';
 
 export function Sidebar({
@@ -25,8 +26,11 @@ export function Sidebar({
 }) {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
+  const billing = useBillingStatus();
   const closeRef = useRef<HTMLButtonElement>(null);
   const expanded = isDesktop ? !collapsed : open;
+
+  const creditBalance = billing.data?.creditBalance ?? 0;
 
   useEffect(() => {
     if (open && !isDesktop) {
@@ -53,79 +57,161 @@ export function Sidebar({
           expanded ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        <div className="flex h-14 items-center justify-between gap-2 border-b border-[color:var(--border-default)] px-4">
+        {/* Topo da sidebar com logo P. Prospectly */}
+        <div className="flex h-16 items-center justify-between gap-2 border-b border-[color:var(--border-default)] px-5">
           <NavLink
             to="/"
             aria-label="Prospectly"
-            className="inline-flex min-w-0 items-center gap-0 text-[15px] font-semibold tracking-tight text-[color:var(--ink)]"
+            className="inline-flex min-w-0 items-center gap-2 text-lg font-extrabold tracking-tight text-[color:var(--ink)] font-display"
             onClick={onClose}
           >
-            <img src={prospectlyMark} alt="" aria-hidden className="-ml-0.5 h-7 w-7 shrink-0" />
-            <span className="-ml-0.5 truncate leading-none">Prospectly</span>
+            <span className="flex items-center gap-1 font-display font-extrabold text-xl text-[color:var(--ink)]">
+              P<span className="inline-block h-2 w-2 rounded-full bg-[color:var(--brand)]" aria-hidden="true" />
+            </span>
+            <span className="truncate leading-none">Prospectly</span>
           </NavLink>
           {isDesktop ? (
             <button
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)] transition-colors"
               onClick={onCollapse}
               aria-label={t('nav.hideSidebar')}
               title={t('nav.hideSidebar')}
             >
-              <PanelLeftClose className="h-5 w-5" aria-hidden />
+              <PanelLeftClose className="h-4 w-4" aria-hidden />
             </button>
           ) : (
             <button
               ref={closeRef}
               type="button"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-control text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)] transition-colors"
               onClick={onClose}
               aria-label={t('nav.closeMenu')}
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto p-3" aria-label={t('nav.mainNav')}>
-          <p className="px-2.5 pb-2 text-xs uppercase tracking-wider text-[color:var(--ink-secondary)]">
-            {t('nav.workspace')}
-          </p>
-          <div className="space-y-0.5">
-            {TOP_NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={onClose}
-                tabIndex={expanded ? undefined : -1}
-                className={({ isActive }) =>
-                  cn(
-                    'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-[color:var(--bg-nav-active)] font-semibold text-[color:var(--brand-hover)]'
-                      : 'text-[color:var(--ink-secondary)] hover:bg-[color:var(--bg-subtle)] hover:text-[color:var(--ink)]',
-                  )
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    <item.icon
-                      className={cn(
-                        'h-4 w-4',
-                        isActive ? 'text-[color:var(--brand)]' : 'text-[color:var(--ink-muted)]',
-                      )}
-                      aria-hidden
-                    />
-                    {t(item.labelKey)}
-                  </>
-                )}
-              </NavLink>
-            ))}
+        {/* Navegação principal em 2 seções */}
+        <nav
+          className="flex-1 space-y-6 overflow-y-auto px-3 py-4"
+          aria-label={t('nav.mainNav')}
+        >
+          {/* Seção 1: ESPAÇO DE TRABALHO */}
+          <div className="space-y-1">
+            <p className="px-3 pb-1.5 font-mono text-xs font-medium uppercase tracking-mono-label text-[color:var(--ink-muted)]">
+              {t('nav.workspace')}
+            </p>
+            <div className="space-y-1">
+              {WORKSPACE_NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={onClose}
+                  tabIndex={expanded ? undefined : -1}
+                  className={({ isActive }) =>
+                    cn(
+                      'group flex min-h-10 items-center gap-3 rounded-full px-3.5 text-sm font-medium transition-all duration-180',
+                      isActive
+                        ? 'bg-[color:var(--bg-nav-active)] font-semibold text-white dark:bg-[#233552] dark:text-white shadow-soft'
+                        : 'text-[color:var(--ink-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-[color:var(--ink)]',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={cn(
+                          'h-2 w-2 shrink-0 rounded-full transition-colors',
+                          isActive
+                            ? 'bg-[#D4F56A]'
+                            : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-slate-400',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{t(item.labelKey)}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+
+          {/* Seção 2: FERRAMENTAS */}
+          <div className="space-y-1">
+            <p className="px-3 pb-1.5 font-mono text-xs font-medium uppercase tracking-mono-label text-[color:var(--ink-muted)]">
+              {t('nav.ferramentas')}
+            </p>
+            <div className="space-y-1">
+              {TOOLS_NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={onClose}
+                  tabIndex={expanded ? undefined : -1}
+                  className={({ isActive }) =>
+                    cn(
+                      'group flex min-h-10 items-center gap-3 rounded-full px-3.5 text-sm font-medium transition-all duration-180',
+                      isActive
+                        ? 'bg-[color:var(--bg-nav-active)] font-semibold text-white dark:bg-[#233552] dark:text-white shadow-soft'
+                        : 'text-[color:var(--ink-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.05] hover:text-[color:var(--ink)]',
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 shrink-0 rounded-full transition-colors',
+                          isActive
+                            ? 'bg-[#D4F56A]'
+                            : 'bg-transparent group-hover:bg-slate-300 dark:group-hover:bg-slate-600',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate">{t(item.labelKey)}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           </div>
         </nav>
 
-        <div className="shrink-0 space-y-3 p-3">
+        {/* Rodapé da sidebar: Cartão de créditos escuro + Menu de conta */}
+        <div className="shrink-0 space-y-3 p-3 pt-0">
+          {/* Cartão de Créditos redesenhado fiel a 02-app-inicio.png */}
+          <div
+            data-testid="sidebar-credits-card"
+            className="relative overflow-hidden rounded-[20px] bg-[#0B1220] p-4 text-white shadow-soft border border-slate-800/60"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-display text-3xl font-extrabold tracking-tight leading-none text-white">
+                  {creditBalance.toLocaleString()}
+                </div>
+                <p className="mt-1 text-xs text-slate-300">
+                  {t('settings.creditsRemaining')}
+                </p>
+                <Link
+                  to="/credits"
+                  onClick={onClose}
+                  className="mt-3 inline-block text-xs font-semibold text-[#D4F56A] hover:underline transition-colors"
+                >
+                  {t('settings.buyMoreCredits')}
+                </Link>
+              </div>
+              <div className="shrink-0 -mr-1">
+                <SignalRing size={52} glow />
+              </div>
+            </div>
+          </div>
+
           <TodaySummary />
+
+          {/* Menu de Conta preservado */}
           {user ? <AccountMenu onNavigate={onClose} /> : null}
         </div>
       </aside>

@@ -9,7 +9,18 @@ import { Sidebar } from './sidebar';
 
 vi.mock('./today-summary', () => ({ TodaySummary: () => <div>Resumo de hoje</div> }));
 
-describe('Sidebar persona tag', () => {
+vi.mock('@/features/billing/hooks', () => ({
+  useBillingStatus: () => ({
+    data: {
+      plan: 'FREE',
+      planStatus: 'INACTIVE',
+      freeSearchLimit: 3,
+      creditBalance: 312,
+    },
+  }),
+}));
+
+describe('Sidebar persona tag and redesign', () => {
   beforeAll(async () => {
     await i18n.changeLanguage('pt');
   });
@@ -64,7 +75,7 @@ describe('Sidebar persona tag', () => {
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
   });
 
-  it('shows the translated persona when it is not Outro', () => {
+  it('shows the translated persona and renders workspace and tools links', () => {
     renderWithProviders(
       <Sidebar
         open
@@ -77,8 +88,12 @@ describe('Sidebar persona tag', () => {
     );
 
     expect(screen.getByText('Vendedor')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'SDR' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Prospectar' })).toHaveAttribute('href', '/prospectar');
+    expect(screen.getByRole('link', { name: 'SDR' })).toHaveAttribute('href', '/sdr');
+    expect(screen.getByRole('link', { name: /comprar mais/i })).toHaveAttribute('href', '/credits');
+    expect(screen.getByText('312')).toBeInTheDocument();
+    expect(screen.getByText('créditos restantes')).toBeInTheDocument();
+    expect(screen.getByText('Resumo de hoje')).toBeInTheDocument();
     expect(screen.queryByText('Fotógrafo')).not.toBeInTheDocument();
   });
 });

@@ -78,7 +78,18 @@ describe('AppLayout shell', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/', '/prospectar', '/clientes', '/tasks', '/settings']);
+    ).toEqual([
+      '/',
+      '/prospectar',
+      '/clientes',
+      '/tasks',
+      '/settings',
+      '/clientes/listas',
+      '/workflows',
+      '/reports',
+      '/agents',
+      '/sdr',
+    ]);
     expect(screen.getByRole('button', { name: /esconder menu|hide menu/i })).toBeInTheDocument();
   });
 

@@ -392,6 +392,8 @@
     }
   },
   "settings": {
+    "creditsRemaining": "credits remaining",
+    "buyMoreCredits": "Buy more →",
     "title": "Settings",
     "navLabel": "Settings sections",
     "navAccount": "Account",
