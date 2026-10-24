@@ -10,14 +10,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, id, leadingIcon, ...props }, ref) => {
-    const autoId = useId().replace(/:/g, '');
-    const inputId = id ?? props.name ?? autoId;
-
-    const ariaDescribedBy = [
-      error ? `${inputId}-error` : undefined,
-      props['aria-describedby'],
-    ].filter(Boolean).join(' ') || undefined;
-
+    const autoId = useId();
+    const inputId = (id ?? props.name ?? autoId).replace(/:/g, '');
     return (
       <div className="w-full">
         {label ? (
@@ -40,6 +34,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${inputId}-error` : undefined}
             className={cn(
               'field-control h-11 w-full rounded-control px-3 text-sm',
               'placeholder:text-[color:var(--ink-muted)]',
@@ -49,8 +45,6 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               className,
             )}
             {...props}
-            aria-invalid={error ? true : props['aria-invalid']}
-            aria-describedby={ariaDescribedBy}
           />
         </div>
         {error ? (
